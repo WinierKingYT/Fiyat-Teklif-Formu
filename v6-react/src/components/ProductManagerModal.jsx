@@ -532,8 +532,43 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="form-group">
-                            <label className="form-label" htmlFor="productName">Ürün Adı</label>
-                            <input type="text" className="form-control" id="productName" name="name" value={formData.name} onChange={handleInputChange} autoComplete="off" />
+                            <label className="form-label" htmlFor="productName">Ürün Adı <span className="text-red-500">*</span></label>
+                            <input type="text" className="form-control" id="productName" name="name" value={formData.name} onChange={handleInputChange} autoComplete="off" required />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="productPrice">Birim Fiyat (₺) <span className="text-red-500">*</span></label>
+                                <input type="number" className="form-control" id="productPrice" name="price" value={formData.price} onChange={handleInputChange} min="0" step="0.01" required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="productUnit">Birim</label>
+                                <select className="form-control form-select" id="productUnit" name="unit" value={formData.unit} onChange={handleInputChange}>
+                                    <option value="Adet">Adet</option>
+                                    <option value="Metre">Metre</option>
+                                    <option value="Kg">Kg</option>
+                                    <option value="Litre">Litre</option>
+                                    <option value="Saat">Saat</option>
+                                    <option value="Gün">Gün</option>
+                                    <option value="Ay">Ay</option>
+                                    <option value="Yıl">Yıl</option>
+                                    <option value="Paket">Paket</option>
+                                    <option value="Koli">Koli</option>
+                                    <option value="Set">Set</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="productTax">KDV Oranı (%)</label>
+                            <select className="form-control form-select" id="productTax" name="taxRate" value={formData.taxRate} onChange={handleInputChange}>
+                                <option value="0">%0</option>
+                                <option value="1">%1</option>
+                                <option value="8">%8</option>
+                                <option value="10">%10</option>
+                                <option value="18">%18</option>
+                                <option value="20">%20</option>
+                            </select>
                         </div>
 
                         <div className="form-group">
@@ -586,6 +621,51 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                     <option key={cat} value={cat}>{cat}</option>
                                 ))}
                             </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="productDescription">Açıklama</label>
+                            <textarea
+                                className="form-control"
+                                id="productDescription"
+                                name="description"
+                                value={formData.description}
+                                onChange={handleInputChange}
+                                rows="3"
+                                placeholder="Ürün özellikleri, detaylar vb."
+                            ></textarea>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Ürün Görseli</label>
+                            <div className="flex items-center gap-4">
+                                {formData.image ? (
+                                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-[var(--border-color)] group">
+                                        <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                                            onClick={() => setFormData(prev => ({ ...prev, image: null }))}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)]">
+                                        <ImageIcon size={24} />
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <label className="btn btn-outline btn-sm cursor-pointer inline-flex items-center gap-2">
+                                        <Upload size={16} />
+                                        Görsel Seç
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                    </label>
+                                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                                        PNG, JPG, WEBP (Max 2MB)
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="flex justify-end gap-2 pt-4">
