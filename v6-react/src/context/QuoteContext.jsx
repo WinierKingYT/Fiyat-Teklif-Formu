@@ -91,6 +91,9 @@ export const QuoteProvider = ({ children }) => {
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [isUndoing, setIsUndoing] = useState(false);
 
+    // Data Loading State
+    const [isLoaded, setIsLoaded] = useState(false);
+
     // Calculate Valid Until Date
     useEffect(() => {
         if (quoteData.date && quoteData.validUntilDays) {
@@ -117,6 +120,8 @@ export const QuoteProvider = ({ children }) => {
                     }
                 } catch (error) {
                     Logger.error('Error loading draft from IndexedDB', error);
+                } finally {
+                    setIsLoaded(true);
                 }
             };
             loadDraft();
@@ -125,7 +130,7 @@ export const QuoteProvider = ({ children }) => {
 
     // Auto-save draft to IndexedDB (Debounced)
     useEffect(() => {
-        if (!isReady || !db) return;
+        if (!isReady || !db || !isLoaded) return;
 
         const saveToDB = async () => {
             const draft = {
@@ -147,7 +152,7 @@ export const QuoteProvider = ({ children }) => {
 
         const timer = setTimeout(saveToDB, 1000);
         return () => clearTimeout(timer);
-    }, [quoteData, customerData, companyData, items, discount, bankData, isReady, db]);
+    }, [quoteData, customerData, companyData, items, discount, bankData, isReady, db, isLoaded]);
 
     // Load initial data or settings if needed
     useEffect(() => {
