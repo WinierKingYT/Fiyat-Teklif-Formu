@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeklifMaster Pro - PDF Önizleme</title>
+    
+    <!-- Modern Fontlar -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.4;
+            color: #1e293b;
+            background: #f8fafc;
+            padding: 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+            font-size: 12px;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .preview-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .pdf-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pdf-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #000000, #ededed);
+        }
+        
+        .pdf-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+            flex: 1;
+        }
+        
+        .company-logo {
+            width: 120px;
+            height: 60px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            color: #000000;
+            font-size: 0.6rem;
+            text-align: center;
+            padding: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .company-logo img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+        
+        .company-details {
+            font-size: 0.7rem;
+            color: #000000;
+            line-height: 1.3;
+        }
+        
+        .quote-info {
+            text-align: right;
+            background: #f8fafc;
+            padding: 0.8rem;
+            border-radius: 6px;
+            border-left: 3px solid #000000;
+            min-width: 200px;
+        }
+        
+        .quote-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quote-meta {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+        
+        .quote-meta div {
+            margin-bottom: 0.125rem;
+        }
+        
+        .quote-number {
+            font-weight: 600;
+            color: #000000;
+        }
+        
+        .customer-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .customer-box {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 0.8rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .section-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        
+        .section-title i {
+            color: #000000;
+            font-size: 0.7rem;
+        }
+        
+        .info-grid {
+            display: grid;
+            gap: 0.3rem;
+        }
+        
+        .info-line {
+            display: flex;
+            font-size: 0.7rem;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: #475569;
+            min-width: 60px;
+        }
+        
+        .info-value {
+            color: #1e293b;
+            flex: 1;
+        }
+        
+        .pdf-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.7rem;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .pdf-items-table th {
+            background: #f1f5f9;
+            padding: 0.5rem 0.3rem;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .pdf-items-table td {
+            padding: 0.4rem 0.3rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+        }
+        
+        .pdf-items-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .pdf-items-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .item-image {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            object-fit: cover;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 0.5rem;
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        .item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .item-description {
+            font-weight: 500;
+            color: #1e293b;
+        }
+        
+        .item-details {
+            font-size: 0.6rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+            line-height: 1.2;
+        }
+        
+        .item-price, .item-total {
+            font-weight: 500;
+            color: #1e293b;
+            text-align: right;
+        }
+        
+        .item-quantity, .item-tax, .item-unit {
+            color: #64748b;
+            text-align: center;
+        }
+        
+        .pdf-summary {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 0.8rem;
+            margin: 1rem 0;
+            border: 1px solid #e2e8f0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .totals-section {
+            background: white;
+            border-radius: 6px;
+            padding: 0.8rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.7rem;
+        }
+        
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-row.grand-total {
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: #1e293b;
+            padding-top: 0.5rem;
+            margin-top: 0.25rem;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .payment-info {
+            font-size: 0.7rem;
+        }
+        
+        .payment-info h3 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .bank-info {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .bank-info h3 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .signature-box {
+            text-align: center;
+            padding: 0.8rem;
+        }
+        
+        .signature-area {
+            height: 60px;
+            border-bottom: 1px solid #cbd5e1;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .stamp-area {
+            height: 60px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 0.6rem;
+            margin-bottom: 0.5rem;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+        
+        .stamp-area img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .signature-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .terms-section {
+            margin: 1rem 0;
+        }
+        
+        .terms-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+        }
+        
+        .term-card {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 0.8rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .term-card h3 {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .term-content {
+            font-size: 0.7rem;
+            line-height: 1.3;
+            color: #475569;
+        }
+        
+        .pdf-footer {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+        
+        .footer-contact div {
+            margin-bottom: 0.125rem;
+        }
+        
+        .footer-thanks {
+            text-align: right;
+        }
+        
+        .footer-thanks .thanks-text {
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.7rem;
+            background: white;
+            color: #374151;
+        }
+        
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        
+        .btn-outline:hover {
+            background: #f9fafb;
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        
+        /* PDF Optimizasyon Stilleri */
+        .pdf-compact-mode .pdf-items-table {
+            font-size: 6px !important;
+        }
+
+        .pdf-compact-mode .pdf-items-table td,
+        .pdf-compact-mode .pdf-items-table th {
+            padding: 2px 1px !important;
+            line-height: 1 !important;
+        }
+
+        .pdf-compact-mode .item-image {
+            width: 25px !important;
+            height: 25px !important;
+        }
+
+        .pdf-compact-mode .section-title {
+            font-size: 7px !important;
+            margin-bottom: 3px !important;
+        }
+
+        .pdf-compact-mode body {
+            font-size: 8px !important;
+            line-height: 1.1 !important;
+        }
+
+        /* Ultra kompakt mod */
+        .pdf-ultra-compact .pdf-items-table {
+            font-size: 5px !important;
+        }
+
+        .pdf-ultra-compact .pdf-items-table td,
+        .pdf-ultra-compact .pdf-items-table th {
+            padding: 1px 0.5px !important;
+            line-height: 0.9 !important;
+        }
+
+        .pdf-ultra-compact .item-image {
+            width: 20px !important;
+            height: 20px !important;
+        }
+
+        /* Sayfa sonu optimizasyonu */
+        .page-break-avoid {
+            page-break-inside: avoid;
+        }
+
+        .keep-together {
+            page-break-inside: avoid;
+        }
+
+        /* PDF Sayfa Düzeni Optimizasyonları */
+        .pdf-items-table-compact {
+            font-size: 9px !important;
+            line-height: 1.1 !important;
+        }
+
+        .pdf-items-table-compact th,
+        .pdf-items-table-compact td {
+            padding: 3px 2px !important;
+            line-height: 1.1 !important;
+        }
+
+        .pdf-items-table-compact th {
+            font-size: 8px !important;
+            padding: 4px 2px !important;
+        }
+
+        .item-image-compact {
+            width: 25px !important;
+            height: 25px !important;
+            min-width: 25px !important;
+            min-height: 25px !important;
+        }
+
+        .item-image-compact img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+        }
+
+        /* Tablo başlığını her sayfada tekrarla */
+        .pdf-items-table thead {
+            display: table-header-group;
+        }
+
+        .pdf-items-table tbody {
+            display: table-row-group;
+        }
+
+        /* Özet bölümü için sayfa sonu optimizasyonu */
+        .pdf-summary {
+            page-break-inside: avoid;
+        }
+
+        /* İmza bölümü için sayfa sonu optimizasyonu */
+        .signature-section {
+            page-break-inside: avoid;
+            margin-top: 20px;
+        }
+
+        /* Yeni sayfa için */
+        .new-page {
+            page-break-before: always;
+        }
+
+        /* Loading overlay styles */
+        .pdf-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+        }
+        
+        .pdf-loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            min-width: 300px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        .loading-message {
+            font-weight: 500;
+            color: #1e293b;
+            font-size: 1.1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            background: #10b981;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        
+        .notification.error {
+            background: #ef4444;
+        }
+        
+        .notification.warning {
+            background: #f59e0b;
+        }
+        
+        .notification.info {
+            background: #3b82f6;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            
+            .preview-header, .preview-actions {
+                display: none !important;
+            }
+            
+            .pdf-preview {
+                box-shadow: none;
+                padding: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            
+            .preview-header {
+                flex-direction: column;
+                gap: 0.75rem;
+                text-align: center;
+            }
+            
+            .pdf-preview {
+                padding: 1rem;
+            }
+            
+            .pdf-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .header-left {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            
+            .quote-info {
+                text-align: left;
+            }
+            
+            .customer-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .pdf-summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .terms-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .signature-section {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .pdf-footer {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            
+            .footer-thanks {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-header">
+        <h1 style="font-weight: 700; color: #1e293b; font-size: 1.1rem;">PDF Önizleme - TeklifMaster Pro</h1>
+        <div class="preview-actions">
+            <button class="btn btn-outline" onclick="generatePDF('download')">
+                <i class="fas fa-download"></i> PDF İndir
+            </button>
+            <button class="btn btn-outline" onclick="generatePDF('open')">
+                <i class="fas fa-external-link-alt"></i> Yeni Pencerede Aç
+            </button>
+            <button class="btn btn-outline" onclick="window.print()">
+                <i class="fas fa-print"></i> Yazdır
+            </button>
+            <button class="btn btn-outline" onclick="loadLastData()">
+                <i class="fas fa-sync"></i> Son Veriyi Yükle
+            </button>
+            <button class="btn btn-primary" onclick="window.close()">
+                <i class="fas fa-times"></i> Kapat
+            </button>
+        </div>
+    </div>
+    
+    <div class="pdf-preview" id="pdfContent">
+        <div class="pdf-header">
+            <div class="header-left">
+                <div class="company-logo" id="companyLogo">
+                    <div>LOGO</div>
+                </div>
+                <div class="company-info">
+                    <div class="company-name" id="previewCompanyName">Firma Adı</div>
+                    <div class="company-details">
+                        <div><strong>Tel:</strong> <span id="previewCompanyPhone">Belirtilmemiş</span></div>
+                        <div id="previewCompanyAddress">Adres belirtilmemiş</div>
+                        <div><strong>E-posta:</strong> <span id="previewCompanyEmail">Belirtilmemiş</span></div>
+                        <div><strong>Web:</strong> <span id="previewCompanyWebsite">Belirtilmemiş</span></div>
+                        <div><strong>Yetkili:</strong> <span id="previewCompanyAuthorized">Belirtilmemiş</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="quote-info">
+                <div class="quote-title">FİYAT TEKLİFİ</div>
+                <div class="quote-meta">
+                    <div><strong>Teklif No:</strong> <span class="quote-number" id="previewQuoteNumber">Belirtilmemiş</span></div>
+                    <div><strong>Tarih:</strong> <span id="previewQuoteDate">Belirtilmemiş</span></div>
+                    <div><strong>Teslimat:</strong> <span id="previewValidUntil">Belirtilmemiş</span></div>
+                    <div><strong>Ödeme:</strong> <span id="previewPaymentTerms">Belirtilmemiş</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="customer-section">
+            <div class="customer-box">
+                <div class="section-title">
+                    <i class="fas fa-building"></i> SATICI
+                </div>
+                <div class="info-grid">
+                    <div class="info-line">
+                        <span class="info-label">Firma:</span>
+                        <span class="info-value" id="previewCompanyName2">Firma Adı</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">Yetkili:</span>
+                        <span class="info-value" id="previewCompanyAuthorized2">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="customer-box">
+                <div class="section-title">
+                    <i class="fas fa-user"></i> MÜŞTERİ
+                </div>
+                <div class="info-grid">
+                    <div class="info-line">
+                        <span class="info-label">Firma:</span>
+                        <span class="info-value" id="previewCustomerCompany">Belirtilmemiş</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">Yetkili:</span>
+                        <span class="info-value" id="previewCustomerName">-</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">Tel:</span>
+                        <span class="info-value" id="previewCustomerPhone">-</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">E-posta:</span>
+                        <span class="info-value" id="previewCustomerEmail">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <table class="pdf-items-table" id="itemsTable">
+            <thead>
+                <tr>
+                    <th width="25">#</th>
+                    <th width="45">Görsel</th>
+                    <th>Ürün/Hizmet Açıklaması</th>
+                    <th width="50">Birim</th>
+                    <th width="40">Miktar</th>
+                    <th width="70">Birim Fiyat (₺)</th>
+                    <th width="40">KDV</th>
+                    <th width="70">Toplam (₺)</th>
+                </tr>
+            </thead>
+            <tbody id="previewItemsTable">
+                <!-- Örnek veriler buraya eklenecek -->
+            </tbody>
+        </table>
+        
+        <div class="pdf-summary keep-together" id="summarySection">
+            <div class="totals-section">
+                <div class="section-title">
+                    <i class="fas fa-calculator"></i> ÖZET
+                </div>
+                <div class="summary-row">
+                    <span>Ara Toplam:</span>
+                    <span id="previewSubtotal">0,00</span> ₺
+                </div>
+                <div class="summary-row">
+                    <span>İndirim:</span>
+                    <span id="previewDiscount">0,00</span> ₺
+                </div>
+                <div id="previewTaxSummary">
+                    <!-- Vergi özeti buraya eklenecek -->
+                </div>
+                <div class="summary-row grand-total">
+                    <span>GENEL TOPLAM:</span>
+                    <span id="previewGrandTotal">0,00</span> ₺
+                </div>
+            </div>
+            
+            <div class="payment-info">
+                <h3>ÖDEME BİLGİLERİ</h3>
+                <div class="info-grid">
+                    <div class="info-line">
+                        <span class="info-label">Banka:</span>
+                        <span class="info-value" id="previewBankName">-</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">Şube:</span>
+                        <span class="info-value" id="previewBankBranch">-</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">Hesap No:</span>
+                        <span class="info-value" id="previewAccountNumber">-</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">IBAN:</span>
+                        <span class="info-value" id="previewIban">-</span>
+                    </div>
+                    <div class="info-line">
+                        <span class="info-label">Hesap Sahibi:</span>
+                        <span class="info-value" id="previewAccountHolder">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="signature-section keep-together" id="signatureSection">
+            <div class="signature-box">
+                <div class="signature-area" id="sellerSignatureArea">
+                    <img id="sellerSignatureImage" style="max-width: 100%; max-height: 100%; display: none;">
+                    <div id="sellerSignaturePlaceholder">İmza</div>
+                </div>
+                <div class="signature-label">SATICI YETKİLİSİ</div>
+            </div>
+            
+            <div class="signature-box">
+                <div class="stamp-area" id="customerStampArea">
+                    <img id="customerStampImage" style="max-width: 100%; max-height: 100%; display: none;">
+                    <div id="customerStampPlaceholder">KAŞE / MÜHÜR</div>
+                </div>
+                <div class="signature-label">FİRMA MÜHÜRÜ</div>
+            </div>
+        </div>
+        
+        <div class="terms-section">
+            <div class="terms-grid">
+                <div class="term-card">
+                    <h3>Teslimat Koşulları</h3>
+                    <div class="term-content" id="previewDeliveryTerms">
+                        Teslimat koşulları belirtilmemiş.
+                    </div>
+                </div>
+                
+                <div class="term-card">
+                    <h3>Garanti Koşulları</h3>
+                    <div class="term-content" id="previewWarrantyTerms">
+                        Garanti koşulları belirtilmemiş.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pdf-footer">
+            <div class="footer-contact">
+                <div><strong id="previewFooterCompany">Firma Adı</strong></div>
+                <div id="previewFooterAddress">Adres belirtilmemiş</div>
+                <div><strong>Tel:</strong> <span id="previewFooterPhone">Belirtilmemiş</span></div>
+                <div><strong>E-posta:</strong> <span id="previewFooterEmail">Belirtilmemiş</span></div>
+            </div>
+            
+            <div class="footer-thanks">
+                <div class="thanks-text">Teşekkür ederiz!</div>
+                <div>Bizimle çalışmayı tercih ettiğiniz için teşekkür ederiz.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="pdfLoading" class="pdf-loading-overlay">
+        <div class="pdf-loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-message">PDF oluşturuluyor...</div>
+        </div>
+    </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+    // Global değişkenler
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Sürüm hesaplama fonksiyonu
+    function calculateVersion(appVersion) {
+        const parts = appVersion.split('.').map(Number);
+        return parts[0] * 10000 + parts[1] * 100 + parts[2];
+    }
+    
+    const DB_VERSION = calculateVersion('2.2.0');
+    
+    const defaultQuoteData = {
+        quote: { 
+            title: "FİYAT TEKLİFİ",
+            number: "TEKLIF-001",
+            date: new Date().toISOString().split('T')[0],
+            validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            paymentTerms: "Ödeme koşulları belirtilmemiş"
+        },
+        company: { 
+            name: "Firma Adı",
+            address: "Adres belirtilmemiş",
+            phone: "Belirtilmemiş",
+            email: "Belirtilmemiş",
+            website: "",
+            authorized: "Yetkili Satıcı",
+            logo: null
+        },
+        customer: {
+            company: "Müşteri Firma Adı",
+            name: "",
+            address: "",
+            phone: "",
+            email: ""
+        },
+        bank: {
+            bankName: "",
+            bankBranch: "",
+            accountNumber: "",
+            iban: "",
+            accountHolder: ""
+        },
+        items: [],
+        summary: {
+            subtotal: 0,
+            discount: 0,
+            grandTotal: 0,
+            totalTax: 0
+        },
+        terms: {
+            delivery: "Teslimat koşulları belirtilmemiş.",
+            warranty: "Garanti koşulları belirtilmemiş.",
+            payment: "Ödeme koşulları belirtilmemiş.",
+            notes: ""
+        },
+        signatures: {
+            seller: null,
+            stamp: null
+        }
+    };
+
+    // IndexedDB'den veri çekme
+    async function getPreviewDataFromIndexedDB() {
+        return new Promise((resolve, reject) => {
+            try {
+                const request = indexedDB.open('TeklifMasterDB', DB_VERSION);
+                
+                request.onerror = () => {
+                    console.error('IndexedDB açma hatası:', request.error);
+                    resolve(null);
+                };
+                
+                request.onsuccess = () => {
+                    const db = request.result;
+                    try {
+                        if (!db.objectStoreNames.contains('previewData')) {
+                            console.log('previewData store bulunamadı');
+                            resolve(null);
+                            return;
+                        }
+                        
+                        const transaction = db.transaction(['previewData'], 'readonly');
+                        const store = transaction.objectStore('previewData');
+                        const getRequest = store.get('currentPreview');
+                        
+                        getRequest.onsuccess = () => {
+                            console.log('IndexedDB veri çekme başarılı:', getRequest.result);
+                            resolve(getRequest.result);
+                        };
+                        
+                        getRequest.onerror = () => {
+                            console.error('Veri çekme hatası:', getRequest.error);
+                            resolve(null);
+                        };
+                    } catch (error) {
+                        console.error('Transaction hatası:', error);
+                        resolve(null);
+                    }
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    console.log('IndexedDB upgrade gerekli');
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('previewData')) {
+                        db.createObjectStore('previewData', { keyPath: 'id' });
+                    }
+                };
+            } catch (error) {
+                console.error('IndexedDB genel hata:', error);
+                resolve(null);
+            }
+        });
+    }
+
+    // IndexedDB'ye veri kaydet
+    async function savePreviewDataToIndexedDB(data) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('TeklifMasterDB', DB_VERSION);
+            
+            request.onsuccess = () => {
+                const db = request.result;
+                try {
+                    const transaction = db.transaction(['previewData'], 'readwrite');
+                    const store = transaction.objectStore('previewData');
+                    
+                    const item = {
+                        id: 'currentPreview',
+                        data: data,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    const putRequest = store.put(item);
+                    
+                    putRequest.onsuccess = () => {
+                        console.log('✅ IndexedDB veri kaydedildi');
+                        resolve(putRequest.result);
+                    };
+                    putRequest.onerror = () => {
+                        console.error('IndexedDB kaydetme hatası:', putRequest.error);
+                        reject(putRequest.error);
+                    };
+                } catch (error) {
+                    console.error('IndexedDB transaction hatası:', error);
+                    reject(error);
+                }
+            };
+            
+            request.onerror = () => {
+                console.error('IndexedDB açma hatası:', request.error);
+                reject(request.error);
+            };
+        });
+    }
+
+    // Gelişmiş veri senkronizasyonu
+    async function enhancedDataSync() {
+        try {
+            const localStorageData = localStorage.getItem('currentQuoteData');
+            const dbData = await getPreviewDataFromIndexedDB();
+            
+            let finalData = null;
+            
+            if (dbData && dbData.data) {
+                finalData = dbData.data;
+                localStorage.setItem('currentQuoteData', JSON.stringify(finalData));
+                console.log('✅ IndexedDB verisi kullanıldı ve localStorage güncellendi');
+            } else if (localStorageData) {
+                finalData = JSON.parse(localStorageData);
+                await savePreviewDataToIndexedDB(finalData);
+                console.log('✅ localStorage verisi kullanıldı ve IndexedDB güncellendi');
+            } else {
+                finalData = defaultQuoteData;
+                console.log('⚠️ Varsayılan veri kullanılıyor');
+            }
+            
+            return finalData;
+        } catch (error) {
+            console.error('Veri senkronizasyon hatası:', error);
+            return defaultQuoteData;
+        }
+    }
+
+    // Görsel optimizasyon fonksiyonu
+    function optimizeImageForPDF(imgElement) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const maxWidth = 100;
+            const maxHeight = 60;
+            
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+            
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, maxWidth, maxHeight);
+            
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, maxWidth, maxHeight);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.onerror = () => resolve(null);
+            img.src = imgElement.src;
+        });
+    }
+
+    // Tüm görselleri optimize et
+    async function optimizeAllImages() {
+        const images = document.querySelectorAll('#pdfContent img');
+        for (let img of images) {
+            try {
+                const optimizedSrc = await optimizeImageForPDF(img);
+                if (optimizedSrc) {
+                    img.src = optimizedSrc;
+                }
+            } catch (error) {
+                console.error('Görsel optimize hatası:', error);
+            }
+        }
+    }
+
+    // Gelişmiş hata yönetimi
+    function handleDataError(error, context) {
+        console.error(`❌ ${context} hatası:`, error);
+        
+        const errorMessage = `
+            <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 1rem; border-radius: 6px; margin: 1rem 0;">
+                <h4 style="color: #dc2626; margin: 0 0 0.5rem 0;">Veri Yükleme Hatası</h4>
+                <p style="margin: 0; color: #7f1d1d;">${context} işlemi sırasında hata oluştu. Örnek veri gösteriliyor.</p>
+            </div>
+        `;
+        
+        const previewHeader = document.querySelector('.preview-header');
+        if (previewHeader) {
+            previewHeader.insertAdjacentHTML('afterend', errorMessage);
+        }
+        
+        setTimeout(() => {
+            const errorDiv = document.querySelector('[style*="background: #fef2f2"]');
+            if (errorDiv) errorDiv.remove();
+        }, 5000);
+    }
+
+    // Güvenli içerik ayarlama fonksiyonu
+    function safeSetContent(elementId, content) {
+        try {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = content;
+            } else {
+                console.warn(`Element bulunamadı: ${elementId}`);
+            }
+        } catch (error) {
+            console.error(`Element içerik ayarlama hatası (${elementId}):`, error);
+        }
+    }
+
+    // Görsel doğrulama
+    function isValidImageData(imageSrc) {
+        return imageSrc && 
+               imageSrc !== 'null' && 
+               imageSrc !== 'undefined' && 
+               imageSrc !== '' &&
+               (typeof imageSrc === 'string') &&
+               (imageSrc.startsWith('data:image') || imageSrc.startsWith('blob:'));
+    }
+
+    // Kalemler tablosunu render et
+    function renderItemsTable(items) {
+        const itemsTable = document.getElementById('previewItemsTable');
+        if (!itemsTable) {
+            console.error('itemsTable elementi bulunamadı');
+            return;
+        }
+        
+        let itemsHtml = '';
+        const itemCount = items ? items.length : 0;
+        
+        if (items && items.length > 0) {
+            items.forEach((item, index) => {
+                const price = parseFloat(item.price || 0);
+                const quantity = parseInt(item.quantity || 1);
+                const taxRate = parseInt(item.taxRate || 0);
+                const unit = item.unit || "Adet";
+                const total = parseFloat(item.total || (price * quantity * (1 + taxRate/100)));
+                const hasImage = isValidImageData(item.image);
+                
+                itemsHtml += `
+                    <tr class="keep-together">
+                        <td style="text-align: center; font-size: 8px;">${index + 1}</td>
+                        <td style="text-align: center;">
+                            <div class="item-image item-image-compact">
+                                ${hasImage ? 
+                                    `<img src="${item.image}" alt="${item.description || 'Ürün'}" 
+                                          style="width: 100%; height: 100%; object-fit: cover; border-radius: 2px;"
+                                          onerror="this.style.display='none';">` : 
+                                    '-'}
+                            </div>
+                        </td>
+                        <td style="font-size: 9px; line-height: 1.1;">
+                            <div style="font-weight: 500; margin-bottom: 2px;">${item.description || 'Ürün/Hizmet'}</div>
+                            ${item.notes ? `<div style="font-size: 7px; color: #666; line-height: 1.1;">${item.notes}</div>` : ''}
+                        </td>
+                        <td style="text-align: center; font-size: 8px;">${unit}</td>
+                        <td style="text-align: center; font-size: 8px;">${quantity}</td>
+                        <td style="text-align: right; font-size: 8px;">${formatCurrency(price)}</td>
+                        <td style="text-align: center; font-size: 8px;">%${taxRate}</td>
+                        <td style="text-align: right; font-weight: 500; font-size: 8px;">${formatCurrency(total)}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            itemsHtml = '<tr><td colspan="8" style="text-align: center; color: #64748b; padding: 0.5rem; font-size: 9px;">Kalem bulunmamaktadır</td></tr>';
+        }
+        
+        itemsTable.innerHTML = itemsHtml;
+        
+        const table = document.getElementById('itemsTable');
+        if (table) {
+            table.classList.add('pdf-items-table-compact');
+        }
+    }
+
+    // Özet bölümünü render et
+    function renderSummary(summary) {
+        if (!summary) {
+            summary = { subtotal: 0, discount: 0, grandTotal: 0, totalTax: 0 };
+        }
+        
+        const subtotal = parseFloat(summary.subtotal || 0);
+        const discountAmount = parseFloat(summary.discount || 0);
+        const grandTotal = parseFloat(summary.grandTotal || 0);
+        const totalTax = parseFloat(summary.totalTax || 0);
+        
+        safeSetContent('previewSubtotal', formatCurrency(subtotal));
+        safeSetContent('previewDiscount', formatCurrency(discountAmount));
+        safeSetContent('previewGrandTotal', formatCurrency(grandTotal));
+        
+        const taxSummaryEl = document.getElementById('previewTaxSummary');
+        if (taxSummaryEl) {
+            taxSummaryEl.innerHTML = '';
+            
+            const taxSummary = summary.taxSummary || {};
+            let hasTax = false;
+            
+            Object.keys(taxSummary).forEach(rate => {
+                const amount = parseFloat(taxSummary[rate] || 0);
+                if (amount > 0) {
+                    hasTax = true;
+                    const taxRow = document.createElement('div');
+                    taxRow.className = 'summary-row';
+                    taxRow.innerHTML = `
+                        <span>KDV (%${rate}):</span>
+                        <span>${formatCurrency(amount)}</span> ₺
+                    `;
+                    taxSummaryEl.appendChild(taxRow);
+                }
+            });
+            
+            if (totalTax > 0) {
+                const totalTaxRow = document.createElement('div');
+                totalTaxRow.className = 'summary-row total-tax';
+                totalTaxRow.innerHTML = `
+                    <span><strong>Toplam KDV:</strong></span>
+                    <span><strong>${formatCurrency(totalTax)}</strong></span> ₺
+                `;
+                taxSummaryEl.appendChild(totalTaxRow);
+            } else if (!hasTax) {
+                taxSummaryEl.innerHTML = '<div class="summary-row"><span>KDV:</span><span>0,00 ₺</span></div>';
+            }
+        }
+    }
+
+    // İmza ve kaşe render
+    function renderSignatures(signatures) {
+        if (!signatures) return;
+        
+        if (signatures.seller && isValidImageData(signatures.seller)) {
+            const placeholder = document.getElementById('sellerSignaturePlaceholder');
+            const image = document.getElementById('sellerSignatureImage');
+            if (placeholder && image) {
+                placeholder.style.display = 'none';
+                image.src = signatures.seller;
+                image.style.display = 'block';
+                image.onerror = () => {
+                    image.style.display = 'none';
+                    placeholder.style.display = 'block';
+                };
+            }
+        }
+        
+        if (signatures.stamp && isValidImageData(signatures.stamp)) {
+            const placeholder = document.getElementById('customerStampPlaceholder');
+            const image = document.getElementById('customerStampImage');
+            if (placeholder && image) {
+                placeholder.style.display = 'none';
+                image.src = signatures.stamp;
+                image.style.display = 'block';
+                image.onerror = () => {
+                    image.style.display = 'none';
+                    placeholder.style.display = 'block';
+                };
+            }
+        }
+    }
+
+    // Para birimi formatı
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('tr-TR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount);
+    }
+
+    // Tarih formatı
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('tr-TR');
+        } catch (error) {
+            return dateString;
+        }
+    }
+
+    // Preview ekranını doldurma fonksiyonu
+    async function populatePreview(quoteData) {
+        console.log('Preview dolduruluyor:', quoteData);
+        
+        if (!quoteData) {
+            console.error('Geçersiz quoteData');
+            quoteData = defaultQuoteData;
+        }
+
+        if (quoteData.compactMode) {
+            document.body.classList.add(quoteData.compactMode);
+        }
+
+        safeSetContent('previewCompanyName', quoteData.company?.name || 'Firma Adı');
+        safeSetContent('previewCompanyName2', quoteData.company?.name || 'Firma Adı');
+        safeSetContent('previewCompanyPhone', quoteData.company?.phone || 'Belirtilmemiş');
+        safeSetContent('previewCompanyAddress', quoteData.company?.address || 'Adres belirtilmemiş');
+        safeSetContent('previewCompanyEmail', quoteData.company?.email || 'Belirtilmemiş');
+        safeSetContent('previewCompanyWebsite', quoteData.company?.website || 'Belirtilmemiş');
+        safeSetContent('previewCompanyAuthorized', quoteData.company?.authorized || 'Belirtilmemiş');
+        safeSetContent('previewCompanyAuthorized2', quoteData.company?.authorized || 'Belirtilmemiş');
+        
+        const logoContainer = document.getElementById('companyLogo');
+        if (logoContainer && quoteData.company?.logo && isValidImageData(quoteData.company.logo)) {
+            logoContainer.innerHTML = `<img src="${quoteData.company.logo}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+        }
+        
+        safeSetContent('previewQuoteNumber', quoteData.quote?.number || 'Belirtilmemiş');
+        safeSetContent('previewQuoteDate', formatDate(quoteData.quote?.date) || 'Belirtilmemiş');
+        safeSetContent('previewValidUntil', formatDate(quoteData.quote?.validUntil) || 'Belirtilmemiş');
+        safeSetContent('previewPaymentTerms', quoteData.quote?.paymentTerms || quoteData.terms?.payment || 'Belirtilmemiş');
+        
+        safeSetContent('previewCustomerCompany', quoteData.customer?.company || quoteData.customer?.name || 'Belirtilmemiş');
+        safeSetContent('previewCustomerName', quoteData.customer?.name || '-');
+        safeSetContent('previewCustomerPhone', quoteData.customer?.phone || '-');
+        safeSetContent('previewCustomerEmail', quoteData.customer?.email || '-');
+        
+        safeSetContent('previewBankName', quoteData.bank?.bankName || '-');
+        safeSetContent('previewBankBranch', quoteData.bank?.bankBranch || '-');
+        safeSetContent('previewAccountNumber', quoteData.bank?.accountNumber || '-');
+        safeSetContent('previewIban', quoteData.bank?.iban || '-');
+        safeSetContent('previewAccountHolder', quoteData.bank?.accountHolder || '-');
+        
+        renderItemsTable(quoteData.items || []);
+        
+        renderSummary(quoteData.summary);
+        
+        renderSignatures(quoteData.signatures);
+        
+        safeSetContent('previewDeliveryTerms', quoteData.terms?.delivery || 'Teslimat koşulları belirtilmemiş.');
+        safeSetContent('previewWarrantyTerms', quoteData.terms?.warranty || 'Garanti koşulları belirtilmemiş.');
+        
+        safeSetContent('previewFooterCompany', quoteData.company?.name || 'Firma Adı');
+        safeSetContent('previewFooterAddress', quoteData.company?.address || 'Adres belirtilmemiş');
+        safeSetContent('previewFooterPhone', quoteData.company?.phone || 'Belirtilmemiş');
+        safeSetContent('previewFooterEmail', quoteData.company?.email || 'Belirtilmemiş');
+
+        console.log('✅ Preview başarıyla dolduruldu');
+    }
+
+    async function loadQuoteData() {
+        console.log('🔄 Veri yükleme başlatılıyor...');
+        
+        try {
+            showLoading('Veriler yükleniyor...');
+            
+            const quoteData = await enhancedDataSync();
+            
+            if (!quoteData) {
+                throw new Error('Hiçbir kaynaktan veri alınamadı');
+            }
+            
+            await populatePreview(quoteData);
+            
+            console.log('✅ Veri başarıyla yüklendi');
+            showNotification('Veriler başarıyla yüklendi!', 'success');
+            
+        } catch (error) {
+            console.error('Veri yükleme hatası:', error);
+            handleDataError(error, 'Veri yükleme');
+            
+            await populatePreview(defaultQuoteData);
+            showNotification('Örnek veri gösteriliyor. Ana uygulamadan veri yükleyin.', 'warning');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function loadLastData() {
+        showNotification('Veriler yeniden yükleniyor...', 'info');
+        await loadQuoteData();
+    }
+
+    async function generatePDF(action = 'download') {
+        let success = false;
+        
+        try {
+            showLoading('PDF optimize ediliyor...');
+            
+            await optimizeAllImages();
+            
+            const element = document.getElementById('pdfContent');
+            const customerCompany = document.getElementById('previewCustomerCompany').textContent || 'teklif';
+            const quoteNumber = document.getElementById('previewQuoteNumber').textContent || 'teklif';
+            
+            const cleanName = customerCompany.replace(/[^\w\s]/gi, '').replace(/\s+/g, '-').toLowerCase();
+            const cleanQuote = quoteNumber.replace(/[^\w\s]/gi, '').replace(/\s+/g, '-').toLowerCase();
+            
+            const items = document.querySelectorAll('#previewItemsTable tr');
+            let compactClass = '';
+            if (items.length > 15) {
+                compactClass = 'pdf-ultra-compact';
+            } else if (items.length > 8) {
+                compactClass = 'pdf-compact-mode';
+            }
+            
+            if (compactClass) {
+                element.classList.add(compactClass);
+            }
+
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: `teklif-${cleanName}-${cleanQuote}.pdf`,
+                image: { 
+                    type: 'jpeg', 
+                    quality: 0.6
+                },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#FFFFFF',
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait',
+                    compress: true
+                }
+            };
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            if (action === 'download') {
+                await html2pdf().set(opt).from(element).save();
+                showNotification('PDF başarıyla indirildi!', 'success');
+                success = true;
+            } else if (action === 'open') {
+                const pdfOutput = html2pdf().set(opt).from(element).outputPdf('bloburl');
+                window.open(pdfOutput, '_blank');
+                success = true;
+            }
+
+        } catch (error) {
+            console.error('PDF oluşturma hatası:', error);
+            showNotification('PDF oluşturulurken hata oluştu: ' + error.message, 'error');
+        } finally {
+            const element = document.getElementById('pdfContent');
+            element.classList.remove('pdf-compact-mode', 'pdf-ultra-compact');
+            hideLoading();
+        }
+        
+        return success;
+    }
+
+    function showLoading(message) {
+        const loadingEl = document.getElementById('pdfLoading');
+        const messageEl = loadingEl.querySelector('.loading-message');
+        if (messageEl) messageEl.textContent = message;
+        loadingEl.style.display = 'flex';
+    }
+
+    function hideLoading() {
+        const loadingEl = document.getElementById('pdfLoading');
+        loadingEl.style.display = 'none';
+    }
+
+    function showNotification(message, type = 'info') {
+        try {
+            let container = document.getElementById('notificationContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'notificationContainer';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                `;
+                document.body.appendChild(container);
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="background: none; border: none; color: white; cursor: pointer; font-size: 16px;">
+                        ×
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        } catch (error) {
+            console.error('Bildirim hatası:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('Preview sayfası yükleniyor...');
+        await loadQuoteData();
+        
+        if (urlParams.has('autoDownload')) {
+            console.log('Otomatik indirme başlatılıyor...');
+            setTimeout(() => {
+                generatePDF('download').catch(error => {
+                    console.error('Otomatik indirme hatası:', error);
+                });
+            }, 1500);
+        }
+
+        window.addEventListener('beforeunload', () => {
+            document.querySelectorAll('img[src^="blob:"]').forEach(img => {
+                URL.revokeObjectURL(img.src);
+            });
+        });
+    });
+</script>
+</body>
+</html>

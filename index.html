@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+    <meta name="description" content="TeklifMaster Pro - Profesyonel Fiyat Teklif Platformu">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeklifMaster Pro - Profesyonel Fiyat Teklif Platformu</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">    
+    <!-- Modern Fontlar -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Modern Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>TeklifMaster Pro</span>
+                    <span class="version-badge">v2.2</span>
+                </div>
+                
+                <div class="header-actions">
+                    <!-- Depolama temizleme butonu -->
+                    <button class="btn btn-outline" onclick="app.clearLocalStorageData()">
+                        <i class="fas fa-broom"></i> Depolamayı Temizle
+                    </button>
+                    
+                    <!-- Auth Section -->
+                    <div class="auth-section">
+                        <span class="user-welcome">Hoş Geldiniz!</span>
+                        <button class="btn btn-outline" onclick="app.createBackup()">
+                            <i class="fas fa-save"></i> Yedek Al
+                        </button>
+                        <button class="btn btn-outline" onclick="app.restoreBackup()">
+                            <i class="fas fa-upload"></i> Yedek Yükle
+                        </button>
+                    </div>
+
+                    <button class="btn btn-outline" onclick="app.showAnalytics()">
+                        <i class="fas fa-chart-bar"></i> Analitik
+                    </button>
+                    <button class="btn btn-outline" onclick="app.showSavedQuotes()">
+                        <i class="fas fa-history"></i> Geçmiş
+                    </button>
+                    <button class="btn btn-outline theme-toggle" onclick="app.toggleTheme()">
+                        <i class="fas fa-moon"></i> Tema
+                    </button>
+                    <button class="btn btn-primary" onclick="app.quickPreviewAndDownload()">
+                        <i class="fas fa-file-pdf"></i> PDF Oluştur
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="quick-action" onclick="app.showAdvancedCustomerManager()">
+                    <i class="fas fa-users"></i>
+                    <div>Müşteri Yönetimi</div>
+                    <span class="quick-action-badge" id="customerCount">0</span>
+                </div>
+                <div class="quick-action" onclick="app.showAdvancedProductCatalog()">
+                    <i class="fas fa-boxes"></i>
+                    <div>Ürün Kataloğu</div>
+                    <span class="quick-action-badge" id="productCount">0</span>
+                </div>
+                <div class="quick-action" onclick="app.showTemplates()">
+                    <i class="fas fa-layer-group"></i>
+                    <div>Şablonlar</div>
+                    <span class="quick-action-badge" id="templateCount">0</span>
+                </div>
+                <div class="quick-action" onclick="app.showDatabaseManager()">
+                    <i class="fas fa-database"></i>
+                    <div>Veritabanı</div>
+                </div>
+                <div class="quick-action" onclick="app.showBankInfoManager()">
+                    <i class="fas fa-university"></i>
+                    <div>Banka Bilgileri</div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-item">
+                    <i class="fas fa-circle text-success"></i>
+                    <span>Çevrimiçi</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-save"></i>
+                    <span id="lastSaved">Henüz kaydedilmedi</span>
+                </div>
+                <div class="status-item">
+                    <span>Durum: </span>
+                    <span class="status-badge" id="formStatus">Yeni</span>
+                </div>
+            </div>
+
+            <!-- Teklif Formu -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Yeni Teklif Oluştur</h2>
+                    <div class="card-actions">
+                        <button class="btn btn-outline btn-sm" onclick="app.showQuickHelp()">
+                            <i class="fas fa-question-circle"></i> Yardım
+                        </button>
+                        <button type="button" class="btn btn-info btn-sm" onclick="app.testSaveFunction()">
+                            <i class="fas fa-bug"></i> Test Kayıt
+                        </button>
+                    </div>
+                </div>
+                
+                <form id="quoteForm">
+                    <div class="card-body">
+                        <!-- Teklif Bilgileri -->
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-file-invoice"></i>
+                                Teklif Bilgileri
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="quoteTitle">
+                                        <i class="fas fa-heading"></i>
+                                        Teklif Başlığı
+                                    </label>
+                                    <input type="text" class="form-control" id="quoteTitle" placeholder="Teklif başlığını girin">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="quoteNumber">
+                                        <i class="fas fa-hashtag"></i>
+                                        Teklif Numarası
+                                    </label>
+                                    <input type="text" class="form-control" id="quoteNumber" placeholder="Otomatik oluşturulacak">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="quoteDate">
+                                        <i class="fas fa-calendar"></i>
+                                        Teklif Tarihi
+                                    </label>
+                                    <input type="date" class="form-control" id="quoteDate">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="validUntilDays">
+                                        <i class="fas fa-clock"></i>
+                                        Geçerlilik Süresi
+                                    </label>
+                                    <select class="form-control form-select" id="validUntilDays" onchange="app.updateValidUntilDate()">
+                                        <option value="3">3 Gün</option>
+                                        <option value="5">5 Gün</option>
+                                        <option value="7">7 Gün</option>
+                                        <option value="10" selected>10 Gün</option>
+                                        <option value="15">15 Gün</option>
+                                        <option value="30">30 Gün</option>
+                                        <option value="60">60 Gün</option>
+                                        <option value="90">90 Gün</option>
+                                    </select>
+                                    <input type="date" class="form-control" id="validUntil">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="quoteDescription">
+                                    <i class="fas fa-align-left"></i>
+                                    Teklif Açıklaması
+                                </label>
+                                <textarea class="form-control" id="quoteDescription" placeholder="Teklif açıklamasını girin" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Müşteri Bilgileri -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h3 class="section-title">
+                                    <i class="fas fa-user"></i>
+                                    Müşteri Bilgileri
+                                </h3>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="app.showAdvancedCustomerManager()">
+                                    <i class="fas fa-users"></i> Müşteri Seç
+                                </button>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="customerName">Müşteri Adı</label>
+                                    <input type="text" class="form-control" id="customerName" placeholder="Müşteri adını girin">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="customerCompany">Firma</label>
+                                    <input type="text" class="form-control" id="customerCompany" placeholder="Firma adını girin">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="customerEmail">E-posta</label>
+                                    <input type="email" class="form-control" id="customerEmail" placeholder="E-posta adresini girin">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="customerPhone">Telefon</label>
+                                    <input type="tel" class="form-control" id="customerPhone" placeholder="Telefon numarasını girin">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="customerAddress">Adres</label>
+                                <textarea class="form-control" id="customerAddress" placeholder="Adres bilgisini girin" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Firma Bilgileri -->
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-building"></i>
+                                Firma Bilgileri
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="companyName">Firma Adı</label>
+                                    <input type="text" class="form-control" id="companyName" placeholder="Firma adını girin">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="companyAuthorized">Yetkili Satıcı</label>
+                                    <input type="text" class="form-control" id="companyAuthorized" placeholder="Yetkili satıcı adını girin">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="companyPhone">Telefon</label>
+                                    <input type="tel" class="form-control" id="companyPhone" placeholder="Telefon numarasını girin">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="companyEmail">E-posta</label>
+                                    <input type="email" class="form-control" id="companyEmail" placeholder="E-posta adresini girin">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="companyWebsite">Web Sitesi</label>
+                                    <input type="url" class="form-control" id="companyWebsite" placeholder="Web sitesi adresini girin">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="companyAddress">Adres</label>
+                                <textarea class="form-control" id="companyAddress" placeholder="Adres bilgisini girin" rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="fas fa-image"></i>
+                                    Logo
+                                </label>
+                                <div class="image-upload-container">
+                                    <div class="logo-preview" id="logoPreview" onclick="document.getElementById('logoUpload').click()">
+                                        <div class="logo-placeholder">
+                                            <i class="fas fa-image"></i>
+                                            <div>Logo Yükle</div>
+                                        </div>
+                                        <img id="companyLogo" style="display: none;">
+                                    </div>
+                                    <div class="upload-actions">
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('logoUpload').click()">
+                                            <i class="fas fa-upload"></i> Logo Seç
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="app.clearLogo()">
+                                            <i class="fas fa-trash"></i> Temizle
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="file" id="logoUpload" accept="image/*" style="display: none;" onchange="app.handleLogoUpload(this)">
+                            </div>
+                        </div>
+
+                        <!-- Banka Bilgileri -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h3 class="section-title">
+                                    <i class="fas fa-university"></i>
+                                    Banka Bilgileri
+                                </h3>
+                                <div class="section-actions">
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="app.showBankInfoManager()">
+                                        <i class="fas fa-university"></i> Banka Yönetimi
+                                    </button>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="app.toggleBankSelection()">
+                                        <i class="fas fa-list"></i> Banka Seç
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Banka Seçim Dropdown -->
+                            <div class="form-group" id="bankSelectionContainer" style="display: none;">
+                                <label class="form-label">Kayıtlı Bankalardan Seç</label>
+                                <select class="form-control form-select" id="bankSelection" onchange="app.selectBankFromDropdown(this.value)">
+                                    <option value="">Banka seçin...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="bankName">Banka Adı</label>
+                                    <input type="text" class="form-control" id="bankName" placeholder="Banka adını girin">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="bankBranch">Şube</label>
+                                    <input type="text" class="form-control" id="bankBranch" placeholder="Şube adını girin">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="accountNumber">Hesap Numarası</label>
+                                    <input type="text" class="form-control" id="accountNumber" placeholder="Hesap numarasını girin">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="iban">IBAN</label>
+                                    <input type="text" class="form-control" id="iban" placeholder="IBAN numarasını girin">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="accountHolder">Hesap Sahibi</label>
+                                <input type="text" class="form-control" id="accountHolder" placeholder="Hesap sahibi adını girin">
+                            </div>
+                        </div>
+
+                        <!-- Kalemler -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h3 class="section-title">
+                                    <i class="fas fa-list"></i>
+                                    Teklif Kalemleri
+                                </h3>
+                                <div class="section-actions">
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="app.showAdvancedProductCatalog()">
+                                        <i class="fas fa-boxes"></i> Ürün Kataloğu
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="app.addItem()">
+                                        <i class="fas fa-plus"></i> Kalem Ekle
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table items-table">
+                                    <thead>
+                                        <tr>
+                                            <th width="120">Görsel</th>
+                                            <th>Ürün/Hizmet Açıklaması</th>
+                                            <th width="80">Miktar</th>
+                                            <th width="100">Birim</th>
+                                            <th width="120">Birim Fiyat (₺)</th>
+                                            <th width="100">KDV (%)</th>
+                                            <th width="120">Toplam (₺)</th>
+                                            <th width="100">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsTableBody">
+                                        <!-- Kalemler buraya eklenecek -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="table-actions">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="app.addItemGroup()">
+                                    <i class="fas fa-layer-group"></i> Örnek Grup Ekle
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="app.clearAllItems()">
+                                    <i class="fas fa-trash"></i> Tümünü Temizle
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Özet ve İndirim -->
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-calculator"></i>
+                                Özet ve İndirim
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="discountType">İndirim Türü</label>
+                                    <select class="form-control form-select" id="discountType" onchange="app.updateDiscount()">
+                                        <option value="none">İndirim Yok</option>
+                                        <option value="fixed">Sabit Tutar</option>
+                                        <option value="percentage">Yüzde</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" id="discountValueLabel">İndirim Tutarı</label>
+                                    <input type="number" class="form-control" id="discountValue" min="0" step="0.01" value="0" onchange="app.updateDiscount()">
+                                </div>
+                            </div>
+                            
+                            <div class="summary-section">
+                                <div class="summary-row">
+                                    <span>Ara Toplam:</span>
+                                    <span id="subtotal">0,00</span> ₺
+                                </div>
+                                <div class="summary-row">
+                                    <span>İndirim:</span>
+                                    <span id="discountAmount">0,00</span> ₺
+                                    <span id="discountPreview" class="discount-preview"></span>
+                                </div>
+                                <div id="taxSummary" class="tax-summary">
+                                    <!-- Vergi özeti buraya eklenecek -->
+                                </div>
+                                <div class="summary-row grand-total">
+                                    <span>GENEL TOPLAM:</span>
+                                    <span id="grandTotal">0,00</span> ₺
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Koşul ve Notlar -->
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-file-contract"></i>
+                                Koşul ve Notlar
+                            </h3>
+                            <div class="form-group">
+                                <label class="form-label" for="terms">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    Ödeme Koşulları
+                                </label>
+                                <textarea class="form-control" id="terms" placeholder="Ödeme koşullarını girin" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="deliveryTerms">
+                                    <i class="fas fa-truck"></i>
+                                    Teslimat Koşulları
+                                </label>
+                                <textarea class="form-control" id="deliveryTerms" placeholder="Teslimat koşullarını girin" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="warrantyTerms">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Garanti Koşulları
+                                </label>
+                                <textarea class="form-control" id="warrantyTerms" placeholder="Garanti koşullarını girin" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="notes">
+                                    <i class="fas fa-sticky-note"></i>
+                                    Ek Notlar
+                                </label>
+                                <textarea class="form-control" id="notes" placeholder="Ek notları girin" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- İmza ve Kaşe -->
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-signature"></i>
+                                İmza ve Kaşe
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Satıcı İmzası</label>
+                                    <div class="image-upload-container">
+                                        <div class="signature-preview" id="sellerSignaturePreview" onclick="app.openSignatureModal()">
+                                            <div class="signature-placeholder">
+                                                <i class="fas fa-signature"></i>
+                                                <div>İmza Ekle</div>
+                                            </div>
+                                            <img id="sellerSignature" style="display: none;">
+                                        </div>
+                                        <div class="upload-actions">
+                                            <button type="button" class="btn btn-outline btn-sm" onclick="app.openSignatureModal()">
+                                                <i class="fas fa-pen"></i> İmza Oluştur
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="app.clearSignature()">
+                                                <i class="fas fa-trash"></i> Temizle
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Firma Kaşesi</label>
+                                    <div class="image-upload-container">
+                                        <div class="signature-preview" id="stampPreview" onclick="document.getElementById('stampUpload').click()">
+                                            <div class="signature-placeholder">
+                                                <i class="fas fa-stamp"></i>
+                                                <div>Kaşe Ekle</div>
+                                            </div>
+                                            <img id="stampImage" style="display: none;">
+                                        </div>
+                                        <div class="upload-actions">
+                                            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('stampUpload').click()">
+                                                <i class="fas fa-upload"></i> Kaşe Yükle
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="app.clearStamp()">
+                                                <i class="fas fa-trash"></i> Temizle
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <input type="file" id="stampUpload" accept="image/*" style="display: none;" onchange="app.handleStampUpload(this)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="app.createNewQuote()">
+                                <i class="fas fa-plus"></i> Yeni Teklif
+                            </button>
+                            <button type="button" class="btn btn-warning" onclick="app.saveDraft()">
+                                <i class="fas fa-save"></i> Taslak Kaydet
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check"></i> Teklifi Tamamla
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="app.previewPDF()">
+                                <i class="fas fa-eye"></i> PDF Önizleme
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Database Manager Modal -->
+    <div id="databaseModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-database"></i>
+                    Veritabanı Yönetimi
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('databaseModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="database-stats">
+                    <h4>Veritabanı İstatistikleri</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span>Müşteriler:</span>
+                            <span id="dbCustomerCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Ürünler:</span>
+                            <span id="dbProductCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Teklifler:</span>
+                            <span id="dbQuoteCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Taslaklar:</span>
+                            <span id="dbDraftCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Şablonlar:</span>
+                            <span id="dbTemplateCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Banka Bilgileri:</span>
+                            <span id="dbBankInfoCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Toplam Boyut:</span>
+                            <span id="dbTotalSize">0 MB</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="database-actions">
+                    <h4>Veri İşlemleri</h4>
+                    <div class="action-buttons">
+                        <button class="btn btn-outline" onclick="app.exportAllData()">
+                            <i class="fas fa-download"></i> Tüm Veriyi Dışa Aktar
+                        </button>
+                        <button class="btn btn-outline" onclick="app.importData()">
+                            <i class="fas fa-upload"></i> Veri İçe Aktar
+                        </button>
+                        <button class="btn btn-warning" onclick="app.clearAllData()">
+                            <i class="fas fa-trash"></i> Tüm Veriyi Temizle
+                        </button>
+                        <button class="btn btn-primary" onclick="app.refreshDatabaseStats()">
+                            <i class="fas fa-sync"></i> İstatistikleri Yenile
+                        </button>
+                    </div>
+                </div>
+
+                <div class="migration-section">
+                    <h4>Veri Taşıma</h4>
+                    <p class="migration-info">
+                        Eski localStorage verilerini IndexedDB'ye taşıyın.
+                    </p>
+                    <button class="btn btn-outline" onclick="app.migrateFromLocalStorage()">
+                        <i class="fas fa-exchange-alt"></i> localStorage'tan Taşı
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Customer Modal -->
+    <div id="advancedCustomerModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-users"></i>
+                    Müşteri Yönetimi
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('advancedCustomerModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="search-section">
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="customerSearch" class="form-control" placeholder="Müşteri ara..." 
+                               oninput="app.searchCustomers()">
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Yeni Müşteri Ekle</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="advancedCustomerName">Müşteri Adı</label>
+                            <input type="text" class="form-control" id="advancedCustomerName" placeholder="Müşteri adını girin">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="advancedCustomerCompany">Firma</label>
+                            <input type="text" class="form-control" id="advancedCustomerCompany" placeholder="Firma adını girin">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="advancedCustomerEmail">E-posta</label>
+                            <input type="email" class="form-control" id="advancedCustomerEmail" placeholder="E-posta adresini girin">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="advancedCustomerPhone">Telefon</label>
+                            <input type="tel" class="form-control" id="advancedCustomerPhone" placeholder="Telefon numarasını girin">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="advancedCustomerAddress">Adres</label>
+                        <textarea class="form-control" id="advancedCustomerAddress" placeholder="Adres bilgisini girin" rows="2"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="app.addAdvancedCustomer()">
+                        <i class="fas fa-plus"></i> Müşteri Ekle
+                    </button>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Müşteri Listesi</h4>
+                    <div id="advancedCustomerList" class="customer-list">
+                        <!-- Müşteri listesi buraya eklenecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Product Modal -->
+    <div id="advancedProductModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-boxes"></i>
+                    Ürün Kataloğu
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('advancedProductModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="search-section">
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="productSearch" class="form-control" placeholder="Ürün ara..." 
+                               oninput="app.searchProducts()">
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Yeni Ürün Ekle</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="advancedProductName">Ürün Adı</label>
+                            <input type="text" class="form-control" id="advancedProductName" placeholder="Ürün adını girin">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="advancedProductPrice">Fiyat (₺)</label>
+                            <input type="number" class="form-control" id="advancedProductPrice" min="0" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    
+                    <!-- Ürün Resmi Ekleme -->
+                    <div class="form-group">
+                        <label class="form-label">Ürün Görseli</label>
+                        <div class="image-upload-container">
+                            <div class="product-image-preview" id="advancedProductImagePreview" onclick="document.getElementById('advancedProductImage').click()">
+                                <div class="image-placeholder">
+                                    <i class="fas fa-image"></i>
+                                    <div>Görsel Seç</div>
+                                </div>
+                                <img id="advancedProductImageDisplay" style="display: none;">
+                            </div>
+                            <div class="upload-actions">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('advancedProductImage').click()">
+                                    <i class="fas fa-upload"></i> Görsel Seç
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="app.clearAdvancedProductImage()">
+                                    <i class="fas fa-trash"></i> Temizle
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" id="advancedProductImage" accept="image/*" style="display: none;" onchange="app.handleAdvancedProductImageUpload(this)">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="advancedProductTaxRate">KDV Oranı (%)</label>
+                            <select class="form-control form-select" id="advancedProductTaxRate">
+                                <option value="20">%20</option>
+                                <option value="18">%18</option>
+                                <option value="8">%8</option>
+                                <option value="1">%1</option>
+                                <option value="0">%0</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="advancedProductUnit">Birim</label>
+                            <select class="form-control form-select" id="advancedProductUnit">
+                                <option value="Adet">Adet</option>
+                                <option value="Metre">Metre</option>
+                                <option value="Kg">Kg</option>
+                                <option value="Litre">Litre</option>
+                                <option value="Saat">Saat</option>
+                                <option value="Gün">Gün</option>
+                                <option value="Ay">Ay</option>
+                                <option value="Paket">Paket</option>
+                                <option value="Koli">Koli</option>
+                                <option value="Takım">Takım</option>
+                                <option value="Set">Set</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="advancedProductDescription">Açıklama</label>
+                        <textarea class="form-control" id="advancedProductDescription" placeholder="Ürün açıklamasını girin" rows="3"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="app.addAdvancedProduct()">
+                        <i class="fas fa-plus"></i> Ürün Ekle
+                    </button>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Ürün Listesi</h4>
+                    <div id="advancedProductList" class="product-list">
+                        <!-- Ürün listesi buraya eklenecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Modal -->
+    <div id="templateModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-layer-group"></i>
+                    Şablon Yönetimi
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('templateModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-section">
+                    <h4 class="section-title">Yeni Şablon Oluştur</h4>
+                    <div class="form-group">
+                        <label class="form-label" for="templateName">Şablon Adı</label>
+                        <input type="text" class="form-control" id="templateName" placeholder="Şablon adını girin">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="templateDescription">Açıklama</label>
+                        <textarea class="form-control" id="templateDescription" placeholder="Şablon açıklamasını girin" rows="3"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="app.saveTemplate()">
+                        <i class="fas fa-save"></i> Şablonu Kaydet
+                    </button>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Kayıtlı Şablonlar</h4>
+                    <div id="templateList" class="template-list">
+                        <!-- Şablon listesi buraya eklenecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bank Info Modal -->
+    <div id="bankInfoModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-university"></i>
+                    Banka Bilgileri Yönetimi
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('bankInfoModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="search-section">
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="bankSearch" class="form-control" placeholder="Banka ara..." 
+                               oninput="app.searchBankInfo()">
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Yeni Banka Bilgisi Ekle</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="bankName">Banka Adı</label>
+                            <input type="text" class="form-control" id="bankName" placeholder="Banka adını girin">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="bankBranch">Şube</label>
+                            <input type="text" class="form-control" id="bankBranch" placeholder="Şube adını girin">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="accountNumber">Hesap Numarası</label>
+                            <input type="text" class="form-control" id="accountNumber" placeholder="Hesap numarasını girin">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="iban">IBAN</label>
+                            <input type="text" class="form-control" id="iban" placeholder="IBAN numarasını girin">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="accountHolder">Hesap Sahibi</label>
+                        <input type="text" class="form-control" id="accountHolder" placeholder="Hesap sahibi adını girin">
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="app.saveBankInfo()">
+                        <i class="fas fa-plus"></i> Banka Bilgisi Ekle
+                    </button>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Kayıtlı Banka Bilgileri</h4>
+                    <div id="bankInfoList" class="bank-list">
+                        <!-- Banka bilgileri listesi buraya eklenecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saved Quotes Modal -->
+    <div id="savedQuotesModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-history"></i>
+                    Kayıtlı Teklifler
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('savedQuotesModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="savedQuotesList" class="quote-list">
+                    <!-- Teklif listesi buraya eklenecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Modal -->
+    <div id="analyticsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Sistem Analitiği
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('analyticsModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid analytics-grid">
+                    <div class="stat-item">
+                        <span>Toplam Teklif:</span>
+                        <span id="totalQuotes">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Toplam Müşteri:</span>
+                        <span id="totalCustomers">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Toplam Ürün:</span>
+                        <span id="totalProducts">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Toplam Ciro:</span>
+                        <span id="totalRevenue">0 ₺</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Son 30 Gün:</span>
+                        <span id="recentQuotes">0 teklif</span>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4 class="section-title">Hızlı İşlemler</h4>
+                    <div class="action-buttons">
+                        <button class="btn btn-outline" onclick="app.createBackup()">
+                            <i class="fas fa-download"></i> Veri Yedekle
+                        </button>
+                        <button class="btn btn-outline" onclick="app.showDatabaseManager()">
+                            <i class="fas fa-database"></i> Veritabanı Yönetimi
+                        </button>
+                        <button class="btn btn-primary" onclick="app.updateAnalytics()">
+                            <i class="fas fa-sync"></i> Verileri Yenile
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signature Modal -->
+    <div id="signatureModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-signature"></i>
+                    İmza Oluştur
+                </h3>
+                <button type="button" class="btn btn-outline btn-sm" onclick="app.closeModal('signatureModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="signature-container">
+                    <canvas id="signatureCanvas"></canvas>
+                </div>
+                <div class="signature-actions">
+                    <button type="button" class="btn btn-outline" onclick="app.clearSignatureCanvas()">
+                        <i class="fas fa-eraser"></i> Temizle
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="app.saveSignature()">
+                        <i class="fas fa-save"></i> Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <!-- Scripts -->
+<!-- Diğer head içeriği aynı kalacak -->
+
+<!-- Scriptler -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
+
+<!-- Modüller -->
+<script src="js/logger.js"></script>
+<script src="js/debouncer.js"></script>
+<script src="js/imageOptimizer.js"></script>
+<script src="js/indexedDBManager.js"></script>
+
+<!-- Ana uygulama -->
+<script src="js/teklifMasterApp.js"></script>
+
+<!-- Yardımcı modüller -->
+<script src="modules/formManager.js"></script>
+<script src="modules/itemManager.js"></script>
+<script src="modules/pdfManager.js"></script>
+<script src="modules/modalManager.js"></script>
+<script src="modules/storageManager.js"></script>
+
+<!-- Uygulama başlatıcı -->
+<script src="js/app.js"></script>
+
+</body>
+</html>

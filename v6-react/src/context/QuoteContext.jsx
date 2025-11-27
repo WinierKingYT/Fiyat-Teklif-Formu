@@ -349,7 +349,6 @@ export const QuoteProvider = ({ children }) => {
         undo, redo,
         canUndo: historyIndex > 0,
         canRedo: historyIndex < history.length - 1,
-        canRedo: historyIndex < history.length - 1,
         isPdfModalOpen, setIsPdfModalOpen,
         viewMode, setViewMode,
         db
