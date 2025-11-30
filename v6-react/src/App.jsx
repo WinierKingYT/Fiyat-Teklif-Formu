@@ -11,7 +11,7 @@ import CustomerSelectModal from './components/CustomerSelectModal';
 import ProductSelectModal from './components/ProductSelectModal';
 import SavedQuotesModal from './components/SavedQuotesModal';
 import AnalyticsModal from './components/AnalyticsModal';
-import PdfPreviewModal from './components/PdfPreviewModal';
+
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import TermsAndNotes from './components/TermsAndNotes';
@@ -47,8 +47,9 @@ const QuoteBuilder = ({
     bankData, updateBankData,
     saveQuote,
     undo, redo,
-    isPdfModalOpen, setIsPdfModalOpen,
-    db
+    isLivePreviewMode, setIsLivePreviewMode,
+    db,
+    focusMode
   } = useQuote();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -62,7 +63,7 @@ const QuoteBuilder = ({
   };
 
   const handlePdfShortcut = () => {
-    setIsPdfModalOpen(true);
+    setIsLivePreviewMode(prev => !prev);
   };
 
   const handleNewQuote = async () => {
@@ -182,17 +183,21 @@ const QuoteBuilder = ({
 
   return (
     <>
-      <QuickActions
-        onOpenHistory={() => setIsHistoryModalOpen(true)}
-        onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
-        onOpenCustomerManager={onOpenCustomerManager}
-        onOpenProductManager={onOpenProductManager}
-        onOpenTemplateManager={onOpenTemplateManager}
-        onOpenDatabaseManager={onOpenDatabaseManager}
-        onOpenBankManager={onOpenBankManager}
-        onOpenRecycleBin={onOpenRecycleBin}
-      />
-      <StatusBar />
+      {!focusMode && (
+        <>
+          <QuickActions
+            onOpenHistory={() => setIsHistoryModalOpen(true)}
+            onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
+            onOpenCustomerManager={onOpenCustomerManager}
+            onOpenProductManager={onOpenProductManager}
+            onOpenTemplateManager={onOpenTemplateManager}
+            onOpenDatabaseManager={onOpenDatabaseManager}
+            onOpenBankManager={onOpenBankManager}
+            onOpenRecycleBin={onOpenRecycleBin}
+          />
+          <StatusBar />
+        </>
+      )}
 
       <div className="card" id="quote-content">
         <div className="card-header">
@@ -269,16 +274,7 @@ const QuoteBuilder = ({
         onClose={() => setIsAnalyticsModalOpen(false)}
       />
 
-      <PdfPreviewModal
-        isOpen={isPdfModalOpen}
-        onClose={() => setIsPdfModalOpen(false)}
-        quoteData={quoteData}
-        items={items}
-        customerData={customerData}
-        companyData={companyData}
-        bankData={bankData}
-        discount={discount}
-      />
+
     </>
   );
 };

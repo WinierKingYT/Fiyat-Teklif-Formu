@@ -1,10 +1,23 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { FileText, Moon, Sun, LayoutDashboard, Settings, FileDown, Save, Upload, Download, Smartphone, Monitor } from 'lucide-react';
+import { FileText, Moon, Sun, LayoutDashboard, Settings, FileDown, Save, Upload, Download, Smartphone, Monitor, Maximize, Columns } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { generatePDF } from '../utils/pdfGenerator';
 
 const Header = ({ theme, toggleTheme, currentView, onNavigate }) => {
-    const { createBackup, restoreBackup, quoteData, setIsPdfModalOpen } = useQuote();
+    const {
+        createBackup,
+        restoreBackup,
+        quoteData,
+        setIsPdfModalOpen,
+        appFontSize,
+        setAppFontSize,
+        setFocusMode,
+        fillTestData,
+        isLivePreviewMode,
+        setIsLivePreviewMode,
+        viewMode,
+        setViewMode
+    } = useQuote();
     const fileInputRef = useRef(null);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
 
@@ -54,13 +67,13 @@ const Header = ({ theme, toggleTheme, currentView, onNavigate }) => {
                                 <span className="hidden md:inline">Yükle</span>
                             </button>
                         )}
-                        <button className="btn btn-sm btn-outline" onClick={createBackup} title="Yedek Al">
+                        <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={createBackup} title="Yedek Al">
                             <Save size={16} />
-                            <span className="hidden md:inline">Yedekle</span>
+                            <span className="hidden lg:inline">Yedekle</span>
                         </button>
-                        <button className="btn btn-sm btn-outline" onClick={() => fileInputRef.current?.click()} title="Yedek Yükle">
+                        <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={() => fileInputRef.current?.click()} title="Yedek Yükle">
                             <Upload size={16} />
-                            <span className="hidden md:inline">Geri Yükle</span>
+                            <span className="hidden lg:inline">Geri Yükle</span>
                         </button>
                         <input
                             type="file"
@@ -91,11 +104,27 @@ const Header = ({ theme, toggleTheme, currentView, onNavigate }) => {
                         </button>
                         <button
                             className="btn btn-sm theme-toggle"
-                            onClick={() => useQuote().setViewMode(prev => prev === 'mobile' ? 'desktop' : 'mobile')}
-                            title={useQuote().viewMode === 'mobile' ? 'Masaüstü Görünümüne Geç' : 'Mobil Görünüme Geç'}
+                            onClick={() => setViewMode(prev => prev === 'mobile' ? 'desktop' : 'mobile')}
+                            title={viewMode === 'mobile' ? 'Masaüstü Görünümüne Geç' : 'Mobil Görünüme Geç'}
                         >
-                            {useQuote().viewMode === 'mobile' ? <Monitor size={16} /> : <Smartphone size={16} />}
+                            {viewMode === 'mobile' ? <Monitor size={16} /> : <Smartphone size={16} />}
                         </button>
+                        <button
+                            className="btn btn-sm btn-outline hidden md:inline-flex"
+                            onClick={() => setFocusMode(true)}
+                            title="Odak Modu"
+                        >
+                            <Maximize size={16} />
+                        </button>
+
+                        <button
+                            className="btn btn-sm btn-outline"
+                            onClick={fillTestData}
+                            title="Test Verisi Doldur"
+                        >
+                            <span className="font-bold text-xs">TEST</span>
+                        </button>
+
                         <button
                             className="btn btn-sm theme-toggle"
                             onClick={toggleTheme}
@@ -103,9 +132,13 @@ const Header = ({ theme, toggleTheme, currentView, onNavigate }) => {
                         >
                             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                         </button>
-                        <button className="btn btn-sm btn-primary" onClick={handleDownloadPDF}>
-                            <FileDown size={16} />
-                            <span>PDF Oluştur</span>
+                        <button
+                            className={`btn ${isLivePreviewMode ? 'btn-primary' : 'btn-outline'} px-6 py-2 text-base font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5`}
+                            onClick={() => setIsLivePreviewMode(!isLivePreviewMode)}
+                            title="PDF Önizle ve Oluştur"
+                        >
+                            <FileDown size={20} className="mr-2" />
+                            <span className="hidden lg:inline">PDF DÜZENLE</span>
                         </button>
                     </div>
                 </div>

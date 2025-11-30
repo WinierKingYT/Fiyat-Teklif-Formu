@@ -185,6 +185,30 @@ class IndexedDBManager {
         });
     }
 
+    async getByIndex(storeName, indexName, key) {
+        await this.ensureConnection();
+
+        return new Promise((resolve, reject) => {
+            try {
+                const transaction = this.db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const index = store.index(indexName);
+                const request = index.get(key);
+
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+                request.onerror = () => {
+                    Logger.error(`${storeName} getByIndex işlemi hatası:`, request.error);
+                    reject(request.error);
+                };
+            } catch (error) {
+                Logger.error(`${storeName} getByIndex işlemi exception:`, error);
+                reject(error);
+            }
+        });
+    }
+
     async getAll(storeName, indexName = null) {
         await this.ensureConnection();
 

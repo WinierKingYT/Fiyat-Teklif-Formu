@@ -56,8 +56,17 @@ const SortableItem = ({ id, label, enabled, onToggle }) => {
 
 const Settings = () => {
     const { db } = useIndexedDB();
-    const { pdfLayout, setPdfLayout, viewMode, setViewMode } = useQuote();
+    const {
+        pdfLayout, setPdfLayout,
+        viewMode, setViewMode,
+        performanceMode, setPerformanceMode,
+        compactMode, setCompactMode,
+        appFontSize, setAppFontSize
+    } = useQuote();
     const [activeTab, setActiveTab] = useState('general');
+    // ... (rest of the component)
+
+
     const [settings, setSettings] = useState({
         defaultTaxRate: 20,
         currency: 'TRY',
@@ -133,35 +142,35 @@ const Settings = () => {
 
     return (
         <div className="settings-container p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6">Uygulama Ayarları</h1>
+            <h1 className="text-2xl font-bold mb-6 dark:text-white">Uygulama Ayarları</h1>
 
             {/* Tabs */}
-            <div className="flex border-b mb-6">
+            <div className="flex border-b border-gray-200 dark:border-slate-700 mb-6">
                 <button
-                    className={`px-4 py-2 font-medium ${activeTab === 'general' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-4 py-2 font-medium transition-colors ${activeTab === 'general' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                     onClick={() => setActiveTab('general')}
                 >
                     Genel Ayarlar
                 </button>
                 <button
-                    className={`px-4 py-2 font-medium ${activeTab === 'pdf' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-4 py-2 font-medium transition-colors ${activeTab === 'pdf' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                     onClick={() => setActiveTab('pdf')}
                 >
                     PDF Düzeni
                 </button>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 space-y-6">
 
                 {activeTab === 'general' && (
                     <>
                         {/* General Settings */}
                         <div>
-                            <h3 className="text-lg font-semibold mb-4 border-b pb-2">Görünüm Ayarları</h3>
+                            <h3 className="text-lg font-semibold mb-4 border-b dark:border-slate-700 pb-2 dark:text-white">Görünüm Ayarları</h3>
                             <div className="form-group mb-6">
-                                <label className="form-label mb-2">Cihaz Görünümü</label>
+                                <label className="form-label mb-2 dark:text-gray-300">Cihaz Görünümü</label>
                                 <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors flex-1">
+                                    <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800 transition-colors flex-1">
                                         <input
                                             type="radio"
                                             name="viewMode"
@@ -171,11 +180,11 @@ const Settings = () => {
                                             className="form-radio text-blue-600"
                                         />
                                         <div className="flex flex-col">
-                                            <span className="font-medium">Bilgisayar (Masaüstü)</span>
-                                            <span className="text-xs text-gray-500">Geniş ekran görünümü</span>
+                                            <span className="font-medium dark:text-gray-200">Bilgisayar (Masaüstü)</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Geniş ekran görünümü</span>
                                         </div>
                                     </label>
-                                    <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors flex-1">
+                                    <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800 transition-colors flex-1">
                                         <input
                                             type="radio"
                                             name="viewMode"
@@ -185,10 +194,74 @@ const Settings = () => {
                                             className="form-radio text-blue-600"
                                         />
                                         <div className="flex flex-col">
-                                            <span className="font-medium">Mobil</span>
-                                            <span className="text-xs text-gray-500">Dar ekran görünümü</span>
+                                            <span className="font-medium dark:text-gray-200">Mobil</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Dar ekran görünümü</span>
                                         </div>
                                     </label>
+                                </div>
+                            </div>
+
+                            <div className="form-group mb-6">
+                                <label className="form-label mb-2 dark:text-gray-300">Performans</label>
+                                <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800 transition-colors cursor-pointer">
+                                    <div className="form-check form-switch">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            checked={performanceMode}
+                                            onChange={(e) => setPerformanceMode(e.target.checked)}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium dark:text-gray-200">Performans Modu (Hafif Mod)</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            Daha hızlı çalışması için animasyonları ve geçiş efektlerini kapatır.
+                                            Eski cihazlar için önerilir.
+                                        </span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="form-group mb-6">
+                                <label className="form-label mb-2 dark:text-gray-300">Görünüm Yoğunluğu</label>
+                                <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800 transition-colors cursor-pointer">
+                                    <div className="form-check form-switch">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            checked={compactMode}
+                                            onChange={(e) => setCompactMode(e.target.checked)}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium dark:text-gray-200">Kompakt Mod (Sıkışık Görünüm)</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            Daha fazla veriyi ekrana sığdırmak için boşlukları azaltır.
+                                        </span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="form-group mb-6">
+                                <label className="form-label mb-2 dark:text-gray-300">Uygulama Yazı Boyutu</label>
+                                <div className="p-4 border rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-600">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Küçük</span>
+                                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{appFontSize}px</span>
+                                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Büyük</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="12"
+                                        max="20"
+                                        step="1"
+                                        value={appFontSize}
+                                        onChange={(e) => setAppFontSize(parseInt(e.target.value))}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                                        Uygulama genelindeki metin boyutunu ayarlar.
+                                    </p>
                                 </div>
                             </div>
 

@@ -136,6 +136,43 @@
   display: none !important;
 }
 
+/* ==================== PERFORMANCE MODE ==================== */
+.performance-mode * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ==================== COMPACT MODE ==================== */
+.compact-mode {
+  --space-1: 0.1rem;
+  --space-2: 0.2rem;
+  --space-3: 0.3rem;
+  --space-4: 0.4rem;
+  --space-5: 0.6rem;
+  --space-6: 0.8rem;
+  --space-8: 1rem;
+  --space-10: 1.2rem;
+  --font-size-sm: 0.75rem;
+  --font-size-base: 0.85rem;
+}
+
+.compact-mode .btn {
+  padding: var(--space-1) var(--space-2);
+}
+
+.compact-mode .form-control {
+  padding: var(--space-1) var(--space-2);
+}
+
+.compact-mode .card-body {
+  padding: var(--space-3);
+}
+
+.compact-mode .table td,
+.compact-mode .table th {
+  padding: var(--space-1) var(--space-2);
+}
+
 /* ==================== BASE STYLES ==================== */
 * {
   margin: 0;
@@ -2242,5 +2279,52 @@ p {
   .product-image-preview {
     width: 80px;
     height: 80px;
+  }
+}
+
+/* ==================== PRINT / PDF STYLES ==================== */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+
+  html,
+  body {
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  /* Hide UI elements during print */
+  .app-header,
+  .app-sidebar,
+  .no-print,
+  button,
+  .theme-toggle,
+  .status-bar,
+  .quick-actions {
+    display: none !important;
+  }
+
+  /* Ensure containers fit A4 */
+  .main-content,
+  .app-container {
+    width: 100%;
+    max-width: 210mm;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Reset text colors for print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 }
