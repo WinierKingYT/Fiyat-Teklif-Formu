@@ -2341,7 +2341,9 @@ p {
 [data-theme="dark"] .layout-wrapper {
   background-color: #0f172a;
   background-image: radial-gradient(#1e293b 1px, transparent 1px);
+  background-size: 24px 24px;
 }
+
 
 /* Rich Gradients */
 .bg-gradient-primary {
@@ -2363,6 +2365,10 @@ p {
   background-image: linear-gradient(to right, #2563eb, #7c3aed);
   font-weight: 800;
   letter-spacing: -0.025em;
+}
+
+[data-theme="dark"] .text-gradient {
+  background-image: linear-gradient(to right, #60a5fa, #c084fc);
 }
 
 [data-theme="dark"] .text-gradient {

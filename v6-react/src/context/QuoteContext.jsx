@@ -454,6 +454,14 @@ export const QuoteProvider = ({ children }) => {
         }
     }, [appTheme]);
 
+    // App Accent Color State
+    const [appColor, setAppColor] = useState(() => localStorage.getItem('appColor') || 'blue');
+
+    useEffect(() => {
+        localStorage.setItem('appColor', appColor);
+        document.documentElement.setAttribute('data-color', appColor);
+    }, [appColor]);
+
     // Font Size State
     const [appFontSize, setAppFontSize] = useState(() => {
         return parseInt(localStorage.getItem('appFontSize')) || 14;
@@ -648,6 +656,22 @@ export const QuoteProvider = ({ children }) => {
             loadSettings();
         }
     }, [isReady, db]);
+
+    const saveCompanyDefaults = async (data) => {
+        if (!isReady || !db) return;
+        try {
+            await db.put('settings', {
+                id: 'company_defaults',
+                key: 'company_defaults',
+                value: data
+            });
+            setCompanyDefaults(data);
+            toast.success('Firma bilgileri varsayılan olarak kaydedildi.');
+        } catch (error) {
+            console.error('Error saving company defaults:', error);
+            toast.error('Varsayılanlar kaydedilemedi.');
+        }
+    };
 
     // Current Quote ID for updates
     const [currentQuoteId, setCurrentQuoteId] = useState(null);
@@ -848,8 +872,9 @@ export const QuoteProvider = ({ children }) => {
             discount: { type: 'percentage', value: 10 }
         };
 
+        console.log('Filling test data for tab:', activeTab.id);
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (tab.id === activeTab.id) {
                 return {
                     ...tab,
                     data: testData
@@ -883,11 +908,27 @@ export const QuoteProvider = ({ children }) => {
         isLivePreviewMode, setIsLivePreviewMode,
         pdfConfig, setPdfConfig,
         appLayout, setAppLayout,
-        appTheme, setAppTheme
+        appTheme, setAppTheme,
+        appColor, setAppColor,
+        viewMode, setViewMode,
+        companyDefaults,
+        saveCompanyDefaults,
+        fillTestData,
+        createBackup,
+        restoreBackup,
+        saveQuote,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
+        db,
+        setCurrentQuoteId,
+        loadQuote,
+        bankData, updateBankData
     }), [
         tabs, activeTabId, quoteData, customerData, companyData, items, discount, bankData,
         pdfLayout, viewMode, db, appFontSize, performanceMode, compactMode,
-        focusMode, isLivePreviewMode, pdfConfig, appLayout, appTheme
+        focusMode, isLivePreviewMode, pdfConfig, appLayout, appTheme, appColor
     ]);
 
     return (

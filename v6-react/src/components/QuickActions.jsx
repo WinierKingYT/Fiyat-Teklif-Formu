@@ -9,7 +9,8 @@ const QuickActions = ({
     onOpenTemplateManager,
     onOpenDatabaseManager,
     onOpenBankManager,
-    onOpenRecycleBin
+    onOpenRecycleBin,
+    onFillTestData
 }) => {
     const actions = [
         { icon: Users, label: 'Müşteri Yönetimi', count: null, onClick: onOpenCustomerManager },
@@ -19,6 +20,7 @@ const QuickActions = ({
         { icon: Landmark, label: 'Banka Bilgileri', count: null, onClick: onOpenBankManager },
         { icon: History, label: 'Tekliflerim', count: null, onClick: onOpenHistory },
         { icon: Trash2, label: 'Geri Dönüşüm', count: null, onClick: onOpenRecycleBin },
+        { icon: Database, label: 'Test Verisi', count: null, onClick: onFillTestData, className: 'text-orange-600 bg-orange-50 hover:bg-orange-100' },
     ];
 
     return (

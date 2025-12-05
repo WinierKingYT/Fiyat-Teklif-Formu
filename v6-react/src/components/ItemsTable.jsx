@@ -692,6 +692,21 @@ const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) =>
                 <button type="button" className="btn btn-sm shadow-sm border-0" style={{ backgroundColor: '#16a34a', color: 'white' }} onClick={() => fileInputRef.current?.click()}>
                     <Upload size={16} /> Excel'den Yükle
                 </button>
+                <button
+                    type="button"
+                    className="btn btn-sm shadow-sm border-0 bg-orange-500 text-white hover:bg-orange-600"
+                    onClick={() => {
+                        const testItems = [
+                            { id: `test-${Date.now()}-1`, name: 'Profesyonel Web Tasarım', description: 'Kurumsal kimliğe uygun responsive tasarım', quantity: 1, unit: 'Adet', price: 15000, taxRate: 20, total: 15000 },
+                            { id: `test-${Date.now()}-2`, name: 'Hosting ve Domain', description: '1 Yıllık sınırsız hosting ve .com domain', quantity: 1, unit: 'Yıl', price: 2500, taxRate: 20, total: 2500 },
+                            { id: `test-${Date.now()}-3`, name: 'SEO Optimizasyonu', description: 'Google arama motoru optimizasyonu', quantity: 3, unit: 'Ay', price: 5000, taxRate: 20, total: 15000 }
+                        ];
+                        onItemsChange([...items, ...testItems]);
+                        alert('Test verileri eklendi!');
+                    }}
+                >
+                    <Package size={16} /> Test Verisi Ekle
+                </button>
                 <input
                     type="file"
                     ref={fileInputRef}

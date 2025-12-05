@@ -55,7 +55,9 @@ const QuoteBuilder = ({
     focusMode,
     setCurrentQuoteId,
     loadQuote,
-    appLayout
+    appLayout,
+    fillTestData,
+    companyDefaults
   } = useQuote();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -126,14 +128,28 @@ const QuoteBuilder = ({
       updateCustomerData('address', '');
 
       // Reset Company Data
-      updateCompanyData('name', '');
-      updateCompanyData('address', '');
-      updateCompanyData('taxId', '');
-      updateCompanyData('phone', '');
-      updateCompanyData('email', '');
-      updateCompanyData('website', '');
-      updateCompanyData('signature', null);
-      updateCompanyData('stamp', null);
+      // Reset Company Data (Use defaults if available)
+      if (companyDefaults) {
+        updateCompanyData('name', companyDefaults.name || '');
+        updateCompanyData('address', companyDefaults.address || '');
+        updateCompanyData('taxId', companyDefaults.taxId || '');
+        updateCompanyData('phone', companyDefaults.phone || '');
+        updateCompanyData('email', companyDefaults.email || '');
+        updateCompanyData('website', companyDefaults.website || '');
+        updateCompanyData('signature', companyDefaults.signature || null);
+        updateCompanyData('stamp', companyDefaults.stamp || null);
+        updateCompanyData('authorized', companyDefaults.authorized || '');
+      } else {
+        updateCompanyData('name', '');
+        updateCompanyData('address', '');
+        updateCompanyData('taxId', '');
+        updateCompanyData('phone', '');
+        updateCompanyData('email', '');
+        updateCompanyData('website', '');
+        updateCompanyData('signature', null);
+        updateCompanyData('stamp', null);
+        updateCompanyData('authorized', '');
+      }
 
       // Reset Bank Data
       updateBankData('bankName', '');
@@ -223,18 +239,19 @@ const QuoteBuilder = ({
         <>
           {/* Modern Sticky Header */}
           <div className="sticky-actions glass-panel rounded-xl shadow-sm mb-6">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gradient m-0 hidden md:block">Teklif Oluşturucu</h1>
-
-              {/* Quick Stats Chips */}
-              <div className="flex gap-2 text-xs font-medium">
-                <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                  {items.length} Kalem
-                </div>
-                <div className="px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">
-                  Toplam: {items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString('tr-TR', { style: 'currency', currency: quoteData.currency })}
-                </div>
-              </div>
+            {/* Quick Actions Replaced Title */}
+            <div className="flex-1 overflow-x-auto">
+              <QuickActions
+                onOpenHistory={() => setIsHistoryModalOpen(true)}
+                onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
+                onOpenCustomerManager={() => setIsCustomerManagerOpen(true)}
+                onOpenProductManager={() => setIsProductManagerOpen(true)}
+                onOpenTemplateManager={() => setIsTemplateManagerOpen(true)}
+                onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
+                onOpenBankManager={() => setIsBankManagerOpen(true)}
+                onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
+                onFillTestData={fillTestData}
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -502,6 +519,8 @@ function App() {
 
   return (
     <QuoteProvider>
+
+
       <Layout
         currentView={currentView}
         onNavigate={setCurrentView}
@@ -574,4 +593,4 @@ function App() {
 }
 
 export default App;
-// Force refresh
+// Force refresh 2

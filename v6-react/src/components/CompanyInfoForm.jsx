@@ -1,12 +1,12 @@
 import React, { useRef } from 'react';
 import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save } from 'lucide-react';
 import SignatureCanvas from './SignatureCanvas';
-import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useQuote } from '../context/QuoteContext';
 import toast from 'react-hot-toast';
 
 const CompanyInfoForm = ({ data, onChange }) => {
     const fileInputRef = useRef(null);
-    const { db } = useIndexedDB();
+    const { saveCompanyDefaults } = useQuote();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -31,15 +31,8 @@ const CompanyInfoForm = ({ data, onChange }) => {
         }
     };
 
-    const handleSaveAsDefault = async () => {
-        if (!db) return;
-        try {
-            await db.put('company_defaults', { id: 'default', ...data });
-            toast.success('Firma bilgileri varsayılan olarak kaydedildi.');
-        } catch (error) {
-            console.error('Error saving defaults:', error);
-            toast.error('Varsayılanlar kaydedilemedi.');
-        }
+    const handleSaveAsDefault = () => {
+        saveCompanyDefaults(data);
     };
 
     return (
