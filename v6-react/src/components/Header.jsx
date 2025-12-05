@@ -1,9 +1,20 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { FileText, Moon, Sun, LayoutDashboard, Settings, FileDown, Save, Upload, Download, Smartphone, Monitor, Maximize, Columns } from 'lucide-react';
+import { FileText, Moon, Sun, LayoutDashboard, Settings, FileDown, Save, Upload, Download, Smartphone, Monitor, Maximize, Columns, Undo, Redo, PlusCircle, Users, Package, LayoutTemplate, Database, Landmark, Trash2 } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { generatePDF } from '../utils/pdfGenerator';
 
-const Header = ({ theme, toggleTheme, currentView, onNavigate }) => {
+const Header = ({
+    theme,
+    toggleTheme,
+    currentView,
+    onNavigate,
+    onOpenCustomerManager,
+    onOpenProductManager,
+    onOpenTemplateManager,
+    onOpenDatabaseManager,
+    onOpenBankManager,
+    onOpenRecycleBin
+}) => {
     const {
         createBackup,
         restoreBackup,
@@ -16,7 +27,12 @@ const Header = ({ theme, toggleTheme, currentView, onNavigate }) => {
         isLivePreviewMode,
         setIsLivePreviewMode,
         viewMode,
-        setViewMode
+        setViewMode,
+        saveQuote,
+        undo,
+        redo,
+        canUndo,
+        canRedo
     } = useQuote();
     const fileInputRef = useRef(null);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -67,8 +83,41 @@ const Header = ({ theme, toggleTheme, currentView, onNavigate }) => {
                                 <span className="hidden md:inline">Yükle</span>
                             </button>
                         )}
+
+                        <div className="flex gap-1 mr-2 border-r border-slate-200 dark:border-slate-700 pr-2">
+                            <button
+                                className="btn btn-sm btn-ghost"
+                                onClick={undo}
+                                disabled={!canUndo}
+                                title="Geri Al"
+                            >
+                                <Undo size={16} />
+                            </button>
+                            <button
+                                className="btn btn-sm btn-ghost"
+                                onClick={redo}
+                                disabled={!canRedo}
+                                title="Yinele"
+                            >
+                                <Redo size={16} />
+                            </button>
+                        </div>
+
+                        <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={() => onNavigate('builder')} title="Yeni Teklif">
+                            <PlusCircle size={16} />
+                            <span className="hidden lg:inline">Yeni</span>
+                        </button>
+                        <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={() => document.dispatchEvent(new CustomEvent('open-history-modal'))} title="Tekliflerim">
+                            <FileText size={16} />
+                            <span className="hidden lg:inline">Tekliflerim</span>
+                        </button>
+
+                        <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={saveQuote} title="Taslağı Kaydet">
+                            <Save size={16} className="text-blue-600" />
+                            <span className="hidden lg:inline">Kaydet</span>
+                        </button>
                         <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={createBackup} title="Yedek Al">
-                            <Save size={16} />
+                            <Download size={16} />
                             <span className="hidden lg:inline">Yedekle</span>
                         </button>
                         <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={() => fileInputRef.current?.click()} title="Yedek Yükle">

@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash } from 'lucide-react';
+import SignatureCanvas from './SignatureCanvas';
 
 const CompanyInfoForm = ({ data, onChange }) => {
     const fileInputRef = useRef(null);
@@ -185,56 +186,13 @@ const CompanyInfoForm = ({ data, onChange }) => {
                     />
                 </div>
 
-                {/* Signature Upload */}
+                {/* Signature Upload/Draw */}
                 <div className="form-group">
                     <label className="form-label">Satıcı İmzası</label>
-                    <div className="image-upload-container">
-                        <div
-                            className="logo-preview"
-                            onClick={() => document.getElementById('signatureUpload').click()}
-                            style={{ cursor: 'pointer', border: '2px dashed var(--border-color)', padding: '1rem', textAlign: 'center', borderRadius: 'var(--radius)', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                            {data.signature ? (
-                                <img src={data.signature} alt="Signature" style={{ maxHeight: '100px', maxWidth: '100%' }} />
-                            ) : (
-                                <div className="logo-placeholder text-muted">
-                                    <Upload size={24} className="mx-auto mb-2" />
-                                    <div>İmza Yükle</div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="upload-actions mt-2 flex gap-2 justify-center">
-                            <button
-                                type="button"
-                                className="btn btn-outline btn-sm"
-                                onClick={() => document.getElementById('signatureUpload').click()}
-                            >
-                                <Upload size={14} /> Seç
-                            </button>
-                            {data.signature && (
-                                <button
-                                    type="button"
-                                    className="btn btn-danger btn-sm"
-                                    onClick={() => onChange('signature', null)}
-                                >
-                                    <Trash size={14} /> Sil
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                    <input
-                        type="file"
-                        id="signatureUpload"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (e) => onChange('signature', e.target.result);
-                                reader.readAsDataURL(file);
-                            }
-                        }}
+                    <SignatureCanvas
+                        savedSignature={data.signature}
+                        onSave={(signatureData) => onChange('signature', signatureData)}
+                        onClear={() => onChange('signature', null)}
                     />
                 </div>
 

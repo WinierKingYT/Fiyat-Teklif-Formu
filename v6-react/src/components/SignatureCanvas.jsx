@@ -26,6 +26,24 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
                     ctx.lineJoin = 'round';
                     ctx.strokeStyle = '#000000';
                     ctx.lineWidth = lineWidth;
+
+                    // Redraw saved signature if exists
+                    if (savedSignature) {
+                        const img = new Image();
+                        img.onload = () => {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            const scale = Math.min(
+                                canvas.width / img.width,
+                                canvas.height / img.height
+                            ) * 0.8;
+                            const w = img.width * scale;
+                            const h = img.height * scale;
+                            const x = (canvas.width - w) / 2;
+                            const y = (canvas.height - h) / 2;
+                            ctx.drawImage(img, x, y, w, h);
+                        };
+                        img.src = savedSignature;
+                    }
                 }
             };
 
@@ -34,7 +52,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
 
             return () => window.removeEventListener('resize', resizeCanvas);
         }
-    }, [lineWidth]);
+    }, [lineWidth, savedSignature]);
 
     const startDrawing = (e) => {
         const canvas = canvasRef.current;
@@ -84,11 +102,64 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
         }
     };
 
+    const trimCanvas = (canvas) => {
+        const ctx = canvas.getContext('2d');
+        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const l = pixels.data.length;
+        let bound = { top: null, left: null, right: null, bottom: null };
+        let x, y;
+
+        for (let i = 0; i < l; i += 4) {
+            if (pixels.data[i + 3] !== 0) {
+                x = (i / 4) % canvas.width;
+                y = Math.floor((i / 4) / canvas.width);
+
+                if (bound.top === null) bound.top = y;
+                if (bound.left === null) bound.left = x;
+                else if (x < bound.left) bound.left = x;
+                if (bound.right === null) bound.right = x;
+                else if (bound.right < x) bound.right = x;
+                if (bound.bottom === null) bound.bottom = y;
+                else if (bound.bottom < y) bound.bottom = y;
+            }
+        }
+
+        if (bound.top === null) return null;
+
+        const trimHeight = bound.bottom - bound.top + 1;
+        const trimWidth = bound.right - bound.left + 1;
+
+        // Add some padding
+        const padding = 10;
+        const trimmed = document.createElement('canvas');
+        trimmed.width = trimWidth + (padding * 2);
+        trimmed.height = trimHeight + (padding * 2);
+        const trimmedCtx = trimmed.getContext('2d');
+
+        trimmedCtx.drawImage(
+            canvas,
+            bound.left, bound.top, trimWidth, trimHeight,
+            padding, padding, trimWidth, trimHeight
+        );
+
+        return trimmed.toDataURL('image/png');
+    };
+
     const handleSave = () => {
         const canvas = canvasRef.current;
         if (canvas) {
-            const dataUrl = canvas.toDataURL('image/png');
-            onSave(dataUrl);
+            // Use trimmed version for saving to avoid whitespace issues
+            const trimmedDataUrl = trimCanvas(canvas);
+            if (trimmedDataUrl) {
+                onSave(trimmedDataUrl);
+            } else {
+                // If empty (cleared), save null or empty
+                // But if we are here, it might be just after drawing
+                // If trimmed returns null, it means empty canvas
+                // We might want to save the full canvas if trim fails? 
+                // No, if trim fails it means empty.
+                // onSave(null); // Don't clear if just empty?
+            }
         }
     };
 

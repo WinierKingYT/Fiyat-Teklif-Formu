@@ -49,13 +49,21 @@ const QuoteBuilder = ({
     undo, redo,
     isLivePreviewMode, setIsLivePreviewMode,
     db,
-    focusMode
+    focusMode,
+    setCurrentQuoteId,
+    loadQuote
   } = useQuote();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenHistory = () => setIsHistoryModalOpen(true);
+    document.addEventListener('open-history-modal', handleOpenHistory);
+    return () => document.removeEventListener('open-history-modal', handleOpenHistory);
+  }, []);
 
   // Keyboard Shortcuts Handlers
   const handleSaveShortcut = () => {
@@ -68,6 +76,8 @@ const QuoteBuilder = ({
 
   const handleNewQuote = async () => {
     if (window.confirm('Mevcut teklif temizlenecek. Emin misiniz?')) {
+      setCurrentQuoteId(null); // Reset current quote ID
+
       // Reset Quote Data
       updateQuoteData('title', '');
       updateQuoteData('number', '');
@@ -162,23 +172,7 @@ const QuoteBuilder = ({
   };
 
   const handleLoadQuote = (quote) => {
-    if (quote.quoteData) {
-      Object.entries(quote.quoteData).forEach(([key, value]) => updateQuoteData(key, value));
-    }
-    if (quote.customerData) {
-      Object.entries(quote.customerData).forEach(([key, value]) => updateCustomerData(key, value));
-    }
-    if (quote.companyData) {
-      Object.entries(quote.companyData).forEach(([key, value]) => updateCompanyData(key, value));
-    }
-    if (quote.bankData) {
-      Object.entries(quote.bankData).forEach(([key, value]) => updateBankData(key, value));
-    }
-    if (quote.items) setItems(quote.items);
-    if (quote.discount) setDiscount(quote.discount);
-    else if (quote.discountRate) setDiscount({ type: 'percentage', value: quote.discountRate });
-
-    toast.success('Teklif yüklendi');
+    loadQuote(quote);
   };
 
   return (
@@ -207,7 +201,7 @@ const QuoteBuilder = ({
               <PlusCircle size={16} /> Yeni
             </button>
             <button className="btn btn-outline btn-sm" onClick={() => setIsHistoryModalOpen(true)}>
-              <FileText size={16} /> Geçmiş
+              <FileText size={16} /> Tekliflerim
             </button>
             <button className="btn btn-primary btn-sm" onClick={saveQuote} title="Kaydet (Ctrl+S)">
               <Save size={16} /> Kaydet
@@ -267,6 +261,7 @@ const QuoteBuilder = ({
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         onLoadQuote={handleLoadQuote}
+        onNewQuote={handleNewQuote}
       />
 
       <AnalyticsModal
@@ -295,6 +290,12 @@ function App() {
       <Layout
         currentView={currentView}
         onNavigate={setCurrentView}
+        onOpenCustomerManager={() => setIsCustomerManagerOpen(true)}
+        onOpenProductManager={() => setIsProductManagerOpen(true)}
+        onOpenTemplateManager={() => setIsTemplateManagerOpen(true)}
+        onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
+        onOpenBankManager={() => setIsBankManagerOpen(true)}
+        onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
       >
         {currentView === 'builder' && (
           <QuoteBuilder

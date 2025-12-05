@@ -46,7 +46,12 @@ export const translations = {
         deliveryWarranty: 'Teslimat & Garanti',
         validUntilDate: 'tarihine kadar geçerlidir',
         dear: 'Sayın',
-        details: 'Teklif Detayları'
+        details: 'Teklif Detayları',
+        thankYou: 'Teşekkür Ederiz',
+        regards: 'Saygılarımızla',
+        noImage: 'Görsel Yok',
+        logo: 'LOGO',
+        companyStamp: 'Firma Kaşesi'
     },
     en: {
         quote: 'QUOTE',
@@ -95,7 +100,12 @@ export const translations = {
         deliveryWarranty: 'Delivery & Warranty',
         validUntilDate: 'valid until',
         dear: 'Dear',
-        details: 'Quote Details'
+        details: 'Quote Details',
+        thankYou: 'Thank You',
+        regards: 'Regards',
+        noImage: 'No Image',
+        logo: 'LOGO',
+        companyStamp: 'Company Stamp'
     },
     de: {
         quote: 'ANGEBOT',
@@ -144,6 +154,11 @@ export const translations = {
         deliveryWarranty: 'Lieferung & Garantie',
         validUntilDate: 'gültig bis',
         dear: 'Sehr geehrte(r)',
-        details: 'Angebotsdetails'
+        details: 'Angebotsdetails',
+        thankYou: 'Vielen Dank',
+        regards: 'Mit freundlichen Grüßen',
+        noImage: 'Kein Bild',
+        logo: 'LOGO',
+        companyStamp: 'Firmenstempel'
     }
 };

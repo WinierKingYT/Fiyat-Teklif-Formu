@@ -17,7 +17,7 @@ const QuickActions = ({
         { icon: LayoutTemplate, label: 'Şablonlar', count: null, onClick: onOpenTemplateManager },
         { icon: Database, label: 'Veritabanı', count: null, onClick: onOpenDatabaseManager },
         { icon: Landmark, label: 'Banka Bilgileri', count: null, onClick: onOpenBankManager },
-        { icon: History, label: 'Geçmiş', count: null, onClick: onOpenHistory },
+        { icon: History, label: 'Tekliflerim', count: null, onClick: onOpenHistory },
         { icon: Trash2, label: 'Geri Dönüşüm', count: null, onClick: onOpenRecycleBin },
     ];
 

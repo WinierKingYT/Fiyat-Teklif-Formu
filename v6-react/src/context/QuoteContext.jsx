@@ -394,7 +394,8 @@ export const QuoteProvider = ({ children }) => {
             summaryTotalFontWeight: '700',
 
             footerFontSize: '0.7rem',
-            footerFontWeight: 'normal'
+            footerFontWeight: 'normal',
+            itemsPerPage: 14
         };
     });
 
@@ -408,7 +409,7 @@ export const QuoteProvider = ({ children }) => {
         return savedLayout ? JSON.parse(savedLayout) : [
             { id: 'header', label: 'Logo ve Başlık', enabled: true },
             { id: 'customer', label: 'Müşteri Bilgileri', enabled: true },
-            { id: 'table', label: 'Ürün Tablosu', enabled: true },
+            { id: 'items', label: 'Ürün Tablosu', enabled: true },
             { id: 'notes', label: 'Notlar ve Şartlar', enabled: true },
             { id: 'signatures', label: 'İmza Alanı', enabled: true },
             { id: 'footer', label: 'Alt Bilgi', enabled: true }
@@ -468,29 +469,109 @@ export const QuoteProvider = ({ children }) => {
 
 
     // History State (Per Tab)
-    // We need to implement history logic that updates the *active tab's* history
-    // For simplicity in this refactor, I will temporarily disable complex history or simplify it
-    // to just save snapshots to the tab object.
+    const historyTimeoutRef = React.useRef(null);
+    const isNavigatingHistory = React.useRef(false);
 
-    // Simplified History: The 'history' and 'historyIndex' are already part of the tab object.
-    // We just need undo/redo functions that update the tab's data from its history.
+    const undo = useCallback(() => {
+        setTabs(prev => prev.map(tab => {
+            if (tab.id === activeTabId) {
+                if (tab.historyIndex > 0) {
+                    isNavigatingHistory.current = true;
+                    const newIndex = tab.historyIndex - 1;
+                    const previousData = tab.history[newIndex];
+                    return {
+                        ...tab,
+                        data: JSON.parse(JSON.stringify(previousData)), // Deep copy to avoid reference issues
+                        historyIndex: newIndex
+                    };
+                }
+            }
+            return tab;
+        }));
+        toast.success('Geri alındı');
+    }, [activeTabId]);
 
-    const saveSnapshot = useCallback(() => {
-        // This needs to be called when data changes. 
-        // Since we are updating state directly in actions, we might need a different approach 
-        // or just rely on the fact that we have the data.
-        // For now, let's skip auto-history to avoid infinite loops with the new structure 
-        // and focus on getting tabs working. We can re-enable history later.
-    }, []);
+    const redo = useCallback(() => {
+        setTabs(prev => prev.map(tab => {
+            if (tab.id === activeTabId) {
+                if (tab.historyIndex < tab.history.length - 1) {
+                    isNavigatingHistory.current = true;
+                    const newIndex = tab.historyIndex + 1;
+                    const nextData = tab.history[newIndex];
+                    return {
+                        ...tab,
+                        data: JSON.parse(JSON.stringify(nextData)), // Deep copy
+                        historyIndex: newIndex
+                    };
+                }
+            }
+            return tab;
+        }));
+        toast.success('Yinelendi');
+    }, [activeTabId]);
 
-    const undo = () => {
-        // Placeholder
-        toast('Geri alma özelliği çoklu sekme modunda geçici olarak devre dışı.');
-    };
+    // Auto-save history effect
+    useEffect(() => {
+        // Skip history update if we just performed undo/redo
+        if (isNavigatingHistory.current) {
+            isNavigatingHistory.current = false;
+            return;
+        }
 
-    const redo = () => {
-        // Placeholder
-    };
+        const activeTab = tabs.find(t => t.id === activeTabId);
+        if (!activeTab) return;
+
+        // Initialize history if empty
+        if (!activeTab.history || activeTab.history.length === 0) {
+            setTabs(prev => prev.map(t => {
+                if (t.id === activeTabId) {
+                    return {
+                        ...t,
+                        history: [JSON.parse(JSON.stringify(t.data))],
+                        historyIndex: 0
+                    };
+                }
+                return t;
+            }));
+            return;
+        }
+
+        const currentHistoryState = activeTab.history[activeTab.historyIndex];
+
+        // Check if data has changed
+        if (JSON.stringify(activeTab.data) !== JSON.stringify(currentHistoryState)) {
+            // Clear existing timeout
+            if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+
+            // Set new timeout (Debounce)
+            historyTimeoutRef.current = setTimeout(() => {
+                setTabs(prev => prev.map(t => {
+                    if (t.id === activeTabId) {
+                        const newHistory = t.history.slice(0, t.historyIndex + 1);
+                        newHistory.push(JSON.parse(JSON.stringify(t.data)));
+
+                        // Limit history size to 50 steps
+                        if (newHistory.length > 50) newHistory.shift();
+
+                        return {
+                            ...t,
+                            history: newHistory,
+                            historyIndex: newHistory.length - 1
+                        };
+                    }
+                    return t;
+                }));
+            }, 1000); // 1 second debounce
+        }
+
+        return () => {
+            if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+        };
+    }, [tabs, activeTabId]);
+
+    const activeTabObj = tabs.find(t => t.id === activeTabId);
+    const canUndo = activeTabObj ? activeTabObj.historyIndex > 0 : false;
+    const canRedo = activeTabObj ? activeTabObj.historyIndex < (activeTabObj.history?.length || 0) - 1 : false;
 
 
     // Calculate Valid Until Date (Effect on Active Tab)
@@ -531,6 +612,9 @@ export const QuoteProvider = ({ children }) => {
         }
     }, [isReady, db]);
 
+    // Current Quote ID for updates
+    const [currentQuoteId, setCurrentQuoteId] = useState(null);
+
     const saveQuote = async () => {
         if (!isReady) {
             alert('Veritabanı hazır değil!');
@@ -538,24 +622,67 @@ export const QuoteProvider = ({ children }) => {
         }
 
         const quote = {
-            id: Date.now(),
+            id: currentQuoteId || Date.now(),
             quoteData,
             customerData,
             companyData,
             items,
             discount,
             bankData,
-            createdAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            createdAt: currentQuoteId ? undefined : new Date().toISOString() // Keep original createdAt if updating
         };
 
+        // If updating, we need to preserve the original createdAt. 
+        // However, db.put replaces the object. We should fetch it first if we want to be strictly safe, 
+        // but for now let's assume if we have an ID, we are updating.
+
         try {
-            await db.add('quotes', quote);
+            if (currentQuoteId) {
+                // Get existing to preserve createdAt if possible, or just rely on what we have
+                const existing = await db.get('quotes', currentQuoteId);
+                if (existing) {
+                    quote.createdAt = existing.createdAt;
+                }
+                await db.put('quotes', quote);
+                toast.success('Teklif güncellendi!');
+            } else {
+                await db.add('quotes', quote);
+                setCurrentQuoteId(quote.id); // Set ID after saving new
+                toast.success('Teklif başarıyla kaydedildi!');
+            }
             Logger.log('Quote saved successfully', quote);
-            toast.success('Teklif başarıyla kaydedildi!');
         } catch (error) {
             Logger.error('Error saving quote', error);
             toast.error('Teklif kaydedilirken bir hata oluştu.');
         }
+    };
+
+    const loadQuote = (quote) => {
+        setCurrentQuoteId(quote.id);
+        if (quote.quoteData) {
+            Object.entries(quote.quoteData).forEach(([key, value]) => updateQuoteData(key, value));
+        }
+        if (quote.customerData) {
+            Object.entries(quote.customerData).forEach(([key, value]) => updateCustomerData(key, value));
+        }
+        if (quote.companyData) {
+            Object.entries(quote.companyData).forEach(([key, value]) => updateCompanyData(key, value));
+        }
+        if (quote.bankData) {
+            Object.entries(quote.bankData).forEach(([key, value]) => updateBankData(key, value));
+        }
+        if (quote.items) setItems(quote.items);
+        if (quote.discount) setDiscount(quote.discount);
+        else if (quote.discountRate) setDiscount({ type: 'percentage', value: quote.discountRate });
+
+        toast.success('Teklif yüklendi');
+    };
+
+    const resetQuote = () => {
+        setCurrentQuoteId(null);
+        // ... (rest of reset logic handled in App.jsx or here? App.jsx handles it currently. 
+        // We should expose setCurrentQuoteId or a reset wrapper)
     };
 
     const createBackup = async () => {
@@ -622,40 +749,64 @@ export const QuoteProvider = ({ children }) => {
         const testData = {
             quoteData: {
                 ...getInitialQuoteData(),
-                title: 'Web Sitesi Tasarım ve Geliştirme',
-                number: 'T-2023-001',
-                description: 'Kurumsal web sitesi projesi için hazırlanan fiyat teklifidir.',
-                validUntilDays: '15',
-                terms: '1. Ödeme %50 peşin, %50 teslimatta.\n2. Fiyatlara KDV dahil değildir.\n3. Teslim süresi 15 iş günüdür.',
-                notes: 'Lütfen teklifi onaylamak için imzalayıp geri gönderiniz.'
+                title: 'Kapsamlı Kurumsal Web Projesi ve Dijital Dönüşüm Hizmetleri',
+                number: 'T-2023-TEST-001',
+                description: 'Bu teklif, firmanızın dijital dönüşüm süreçlerini hızlandırmak, kurumsal kimliğinizi modern web teknolojileriyle yenilemek ve e-ticaret altyapınızı güçlendirmek amacıyla hazırlanmıştır. Teklif içeriğinde detaylı analiz, tasarım, geliştirme, test ve bakım süreçleri yer almaktadır.',
+                validUntilDays: '30',
+                terms: '1. Ödeme Planı: %30 Peşin, %40 Proje Ortasında, %30 Teslimatta.\n2. Fiyatlara KDV (%20) dahil değildir.\n3. Teslim süresi, proje başlangıç tarihinden itibaren 45 iş günüdür.\n4. Ek geliştirmeler ve revizyon talepleri ayrıca ücretlendirilecektir.\n5. Yıllık bakım ve destek hizmetleri ilk yıl ücretsizdir, sonraki yıllar için ayrıca sözleşme yapılacaktır.',
+                notes: 'Lütfen teklifi onaylamak için her sayfayı paraflayıp, son sayfayı imzalayıp kaşeleyerek tarafımıza iletiniz. Sorularınız için 7/24 destek hattımızdan bize ulaşabilirsiniz.'
             },
             customerData: {
                 name: 'Ahmet Yılmaz',
-                company: 'Yılmaz Teknoloji A.Ş.',
-                email: 'ahmet@yilmazteknoloji.com',
-                phone: '0555 123 45 67',
-                address: 'Teknopark İstanbul, Sanayi Mah. No:1\nPendik/İstanbul'
+                company: 'Yılmaz Teknoloji ve İnovasyon A.Ş.',
+                email: 'ahmet.yilmaz@yilmazteknoloji.com.tr',
+                phone: '+90 (555) 123 45 67',
+                address: 'Teknopark İstanbul, Sanayi Mahallesi, Teknoloji Bulvarı, No: 123, Blok: B, Kat: 4, Ofis: 402\nPendik / İstanbul',
+                taxOffice: 'Pendik Vergi Dairesi',
+                taxNo: '1234567890'
             },
             companyData: {
-                name: 'TeklifMaster Bilişim Hizmetleri',
+                name: 'TeklifMaster Bilişim ve Yazılım Hizmetleri Ltd. Şti.',
                 authorized: 'Mehmet Demir',
-                email: 'info@teklifmaster.com',
-                phone: '0850 123 45 67',
-                website: 'www.teklifmaster.com',
-                address: 'Maslak Mah. Büyükdere Cad. No:123\nSarıyer/İstanbul'
+                email: 'kurumsal@teklifmaster.com',
+                phone: '+90 (850) 987 65 43',
+                website: 'https://www.teklifmaster.com',
+                address: 'Maslak Mahallesi, Büyükdere Caddesi, Noramin İş Merkezi, No: 234, Kat: 12\nSarıyer / İstanbul',
+                logo: '' // Logo URL'si eklenebilir
             },
             items: [
-                { id: 1, name: 'Web Tasarım', description: 'UI/UX Tasarımı ve Prototipleme', quantity: 1, unit: 'Adet', price: 15000, taxRate: 20 },
-                { id: 2, name: 'Frontend Geliştirme', description: 'React.js ile arayüz kodlaması', quantity: 1, unit: 'Proje', price: 25000, taxRate: 20 },
-                { id: 3, name: 'Backend Geliştirme', description: 'Node.js API ve Veritabanı', quantity: 1, unit: 'Proje', price: 20000, taxRate: 20 },
-                { id: 4, name: 'Sunucu Kurulumu', description: 'AWS altyapı yapılandırması', quantity: 5, unit: 'Saat', price: 2000, taxRate: 20 }
+                { id: 1, name: 'Kurumsal Web Tasarımı (UI/UX)', description: 'Figma üzerinde modern, responsive ve kullanıcı dostu arayüz tasarımı.', quantity: 1, unit: 'Proje', price: 25000, taxRate: 20 },
+                { id: 2, name: 'Frontend Geliştirme (React.js)', description: 'Next.js framework kullanılarak SEO uyumlu, hızlı ve modern arayüz kodlaması.', quantity: 1, unit: 'Hizmet', price: 35000, taxRate: 20 },
+                { id: 3, name: 'Backend Geliştirme (Node.js)', description: 'Ölçeklenebilir, güvenli RESTful API geliştirme ve mikroservis mimarisi.', quantity: 1, unit: 'Hizmet', price: 30000, taxRate: 20 },
+                { id: 4, name: 'Veritabanı Tasarımı (PostgreSQL)', description: 'İlişkisel veritabanı modelleme, optimizasyon ve yedekleme yapılandırması.', quantity: 1, unit: 'Adet', price: 15000, taxRate: 20 },
+                { id: 5, name: 'Yönetim Paneli (Admin Dashboard)', description: 'Kullanıcı yetkilendirme, içerik yönetimi ve raporlama modülleri.', quantity: 1, unit: 'Modül', price: 20000, taxRate: 20 },
+                { id: 6, name: 'E-Ticaret Entegrasyonu', description: 'Sanal POS, sepet, sipariş yönetimi ve kargo entegrasyonları.', quantity: 1, unit: 'Paket', price: 45000, taxRate: 20 },
+                { id: 7, name: 'SEO Optimizasyonu', description: 'Site içi teknik SEO, meta etiketleri, sitemap ve performans iyileştirmeleri.', quantity: 1, unit: 'Hizmet', price: 10000, taxRate: 20 },
+                { id: 8, name: 'Sunucu ve Cloud Yapılandırması', description: 'AWS/DigitalOcean üzerinde load balancer, CDN ve güvenlik duvarı kurulumu.', quantity: 10, unit: 'Saat', price: 2500, taxRate: 20 },
+                { id: 9, name: 'Mobil Uyumluluk Testleri', description: 'iOS ve Android cihazlarda responsive tasarım testleri ve optimizasyon.', quantity: 5, unit: 'Gün', price: 3000, taxRate: 20 },
+                { id: 10, name: 'Güvenlik Testleri (Penetration Testing)', description: 'Uygulama güvenliği, SQL injection ve XSS açıklarına karşı tarama.', quantity: 1, unit: 'Rapor', price: 15000, taxRate: 20 },
+                { id: 11, name: 'İçerik Girişi ve Düzenleme', description: 'Mevcut içeriklerin yeni sisteme aktarılması ve düzenlenmesi.', quantity: 50, unit: 'Sayfa', price: 200, taxRate: 20 },
+                { id: 12, name: 'Eğitim ve Dokümantasyon', description: 'Yönetim paneli kullanımı eğitimi ve teknik dokümantasyon hazırlanması.', quantity: 2, unit: 'Oturum', price: 5000, taxRate: 20 },
+                { id: 13, name: 'Yıllık Hosting Hizmeti', description: 'Yüksek performanslı, SSD diskli ve sınırsız trafikli hosting paketi.', quantity: 1, unit: 'Yıl', price: 8000, taxRate: 20 },
+                { id: 14, name: 'SSL Sertifikası (EV)', description: 'Genişletilmiş doğrulama özellikli, yeşil bar SSL sertifikası.', quantity: 1, unit: 'Yıl', price: 4000, taxRate: 20 },
+                { id: 15, name: 'Domain Yenileme', description: 'com.tr ve .com uzantılı alan adlarının 5 yıllık yenilenmesi.', quantity: 2, unit: 'Adet', price: 1500, taxRate: 20 },
+                { id: 16, name: 'Sosyal Medya Entegrasyonu', description: 'Instagram, LinkedIn ve Twitter API entegrasyonları.', quantity: 3, unit: 'Platform', price: 3000, taxRate: 20 },
+                { id: 17, name: 'Google Analytics & Tag Manager', description: 'Gelişmiş e-ticaret takibi ve dönüşüm optimizasyonu kurulumları.', quantity: 1, unit: 'Hizmet', price: 5000, taxRate: 20 },
+                { id: 18, name: 'Çoklu Dil Desteği (İngilizce)', description: 'Sistemin İngilizce dil altyapısının kurulması ve çeviri modülü.', quantity: 1, unit: 'Dil', price: 12000, taxRate: 20 },
+                { id: 19, name: 'Canlı Destek Sistemi', description: 'Zendesk veya Intercom entegrasyonu ve chatbot yapılandırması.', quantity: 1, unit: 'Entegrasyon', price: 8000, taxRate: 20 },
+                { id: 20, name: 'Veri Yedekleme Çözümü', description: 'Günlük otomatik yedekleme ve felaket kurtarma senaryoları.', quantity: 12, unit: 'Ay', price: 1000, taxRate: 20 },
+                { id: 21, name: 'Performans Optimizasyonu', description: 'Core Web Vitals skorlarının iyileştirilmesi ve cache yapılandırması.', quantity: 1, unit: 'Hizmet', price: 7500, taxRate: 20 },
+                { id: 22, name: 'KVKK & GDPR Uyumluluğu', description: 'Çerez politikası, aydınlatma metinleri ve onay mekanizmaları.', quantity: 1, unit: 'Paket', price: 6000, taxRate: 20 },
+                { id: 23, name: 'Mail Server Kurulumu', description: 'Kurumsal e-posta altyapısı, SPF, DKIM ve DMARC ayarları.', quantity: 1, unit: 'Kurulum', price: 4000, taxRate: 20 },
+                { id: 24, name: 'Proje Yönetimi ve Danışmanlık', description: 'Agile metodolojisi ile proje takibi ve haftalık raporlama.', quantity: 3, unit: 'Ay', price: 10000, taxRate: 20 },
+                { id: 25, name: 'Lansman Sonrası Destek', description: 'Yayın sonrası 1 aylık yerinde teknik destek ve acil müdahale.', quantity: 1, unit: 'Ay', price: 15000, taxRate: 20 }
             ],
             bankData: {
                 bankName: 'Garanti BBVA',
-                branch: 'Maslak Şubesi',
-                accountNumber: '1234567',
-                iban: 'TR12 3456 7890 1234 5678 9012 34',
-                accountHolder: 'TeklifMaster Bilişim Ltd. Şti.'
+                branch: 'Maslak Ticari Şube',
+                accountNumber: '9876543',
+                iban: 'TR12 0006 2000 0001 2345 6789 01',
+                accountHolder: 'TeklifMaster Bilişim ve Yazılım Hizmetleri Ltd. Şti.'
             },
             discount: { type: 'percentage', value: 10 }
         };
@@ -691,13 +842,19 @@ export const QuoteProvider = ({ children }) => {
         bankData, updateBankData, setBankData,
         fillTestData, // Exposed function
 
+        // Quote Actions
+        saveQuote,
+        loadQuote,
+        currentQuoteId,
+        setCurrentQuoteId,
+
         // Global State
         pdfLayout, setPdfLayout,
         saveQuote,
         createBackup, restoreBackup,
         undo, redo,
-        canUndo: false, // Temporarily disabled
-        canRedo: false, // Temporarily disabled
+        canUndo,
+        canRedo,
         viewMode, setViewMode,
         db,
         appFontSize, setAppFontSize,

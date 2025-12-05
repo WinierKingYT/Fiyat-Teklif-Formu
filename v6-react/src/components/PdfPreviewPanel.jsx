@@ -4,7 +4,6 @@ import { calculateQuoteTotals } from '../utils/calculations';
 import { generatePDF } from '../utils/pdfGenerator';
 import { exportQuoteToExcel } from '../utils/excelExporter';
 import PrintableQuote from './PrintableQuoteV2';
-import SignatureCanvas from './SignatureCanvas';
 import { useQuote } from '../context/QuoteContext';
 import toast from 'react-hot-toast';
 
@@ -491,6 +490,19 @@ const PdfPreviewPanel = () => {
                                     <h4 className="font-semibold text-xs text-slate-900 dark:text-slate-100 border-b pb-1 dark:border-slate-800">Ürünler Tablosu</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
+                                            <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Başlık Boyutu</label>
+                                            <input
+                                                type="range"
+                                                min="10"
+                                                max="30"
+                                                step="1"
+                                                value={parseInt(pdfConfig.tableHeaderFontSize) || 14}
+                                                onChange={(e) => handleConfigChange('tableHeaderFontSize', parseInt(e.target.value))}
+                                                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
+                                            />
+                                            <div className="text-[10px] text-right text-slate-400">{parseInt(pdfConfig.tableHeaderFontSize) || 14}px</div>
+                                        </div>
+                                        <div>
                                             <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Başlık Kalınlığı</label>
                                             <select
                                                 value={pdfConfig.tableHeaderFontWeight || '600'}
@@ -814,19 +826,6 @@ const PdfPreviewPanel = () => {
                                                 />
                                             </div>
                                         </div>
-                                        <div className="col-span-2">
-                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Başlık Boyutu</label>
-                                            <select
-                                                value={pdfConfig.tableHeaderFontSize || '0.65rem'}
-                                                onChange={(e) => handleConfigChange('tableHeaderFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-slate-300 rounded dark:bg-slate-800 dark:border-slate-600"
-                                            >
-                                                <option value="0.6rem">Küçük</option>
-                                                <option value="0.65rem">Normal</option>
-                                                <option value="0.75rem">Büyük</option>
-                                                <option value="0.85rem">Çok Büyük</option>
-                                            </select>
-                                        </div>
                                     </div>
 
                                     {/* Border Color */}
@@ -1129,16 +1128,64 @@ const PdfPreviewPanel = () => {
 
                         {/* SIGNATURE TAB */}
                         {activeTab === 'signature' && (
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <h4 className="font-semibold text-xs text-slate-900 dark:text-slate-100">Dijital İmza</h4>
-                                <div className="border border-slate-200 dark:border-slate-700 rounded overflow-hidden">
-                                    <SignatureCanvas
-                                        onSave={setSignature}
-                                        onClear={() => setSignature(null)}
-                                        savedSignature={signature}
-                                    />
-                                </div>
-                                <p className="text-[10px] text-slate-500">İmza PDF'e eklenecektir.</p>
+
+                                {signature ? (
+                                    <div className="space-y-2">
+                                        <div className="border border-slate-200 dark:border-slate-700 rounded p-4 bg-white flex justify-center items-center h-32">
+                                            <img src={signature} alt="Signature" className="max-h-full max-w-full object-contain" />
+                                        </div>
+                                        <button
+                                            onClick={() => setSignature(null)}
+                                            className="w-full py-2 text-xs text-red-600 hover:text-red-700 font-medium border border-red-200 hover:border-red-300 rounded bg-red-50 hover:bg-red-100 transition-colors"
+                                        >
+                                            İmzayı Kaldır
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors bg-slate-50 dark:bg-slate-800/50">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => {
+                                                            setSignature(reader.result);
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }}
+                                                className="hidden"
+                                                id="signature-upload"
+                                            />
+                                            <label
+                                                htmlFor="signature-upload"
+                                                className="cursor-pointer flex flex-col items-center gap-2"
+                                            >
+                                                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                        <polyline points="17 8 12 3 7 8" />
+                                                        <line x1="12" y1="3" x2="12" y2="15" />
+                                                    </svg>
+                                                </div>
+                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                                    İmza Yükle
+                                                </span>
+                                                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                    PNG veya JPG (Max 2MB)
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-slate-500">
+                                    Yüklenen imza PDF'e eklenecektir. Arkaplanı şeffaf PNG önerilir.
+                                </p>
                             </div>
                         )}
                     </div>

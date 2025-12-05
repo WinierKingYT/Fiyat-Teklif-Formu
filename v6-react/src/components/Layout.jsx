@@ -4,7 +4,17 @@ import TabBar from './TabBar';
 import PdfPreviewPanel from './PdfPreviewPanel';
 import { useQuote } from '../context/QuoteContext';
 
-const Layout = ({ children, currentView, onNavigate }) => {
+const Layout = ({
+    children,
+    currentView,
+    onNavigate,
+    onOpenCustomerManager,
+    onOpenProductManager,
+    onOpenTemplateManager,
+    onOpenDatabaseManager,
+    onOpenBankManager,
+    onOpenRecycleBin
+}) => {
     const [theme, setTheme] = useState(localStorage.getItem('appTheme') || 'light');
     const { viewMode, focusMode, setFocusMode, isLivePreviewMode } = useQuote();
 
@@ -48,6 +58,12 @@ const Layout = ({ children, currentView, onNavigate }) => {
                         toggleTheme={toggleTheme}
                         currentView={currentView}
                         onNavigate={onNavigate}
+                        onOpenCustomerManager={onOpenCustomerManager}
+                        onOpenProductManager={onOpenProductManager}
+                        onOpenTemplateManager={onOpenTemplateManager}
+                        onOpenDatabaseManager={onOpenDatabaseManager}
+                        onOpenBankManager={onOpenBankManager}
+                        onOpenRecycleBin={onOpenRecycleBin}
                     />
                 )}
 

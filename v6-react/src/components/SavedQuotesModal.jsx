@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { Search, FileText, Trash, Eye, Clock } from 'lucide-react';
+import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
+import { useQuote } from '../context/QuoteContext';
 import Logger from '../utils/logger';
+import { toast } from 'react-hot-toast';
 
-const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote }) => {
+const SavedQuotesModal = ({
+    isOpen,
+    onClose,
+    onLoadQuote,
+    onNewQuote
+}) => {
     const { db, isReady } = useIndexedDB();
+    const { saveQuote, currentQuoteId, setCurrentQuoteId } = useQuote();
     const [quotes, setQuotes] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
@@ -31,14 +39,39 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote }) => {
     };
 
     const handleDelete = async (id, e) => {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         if (window.confirm('Bu teklifi silmek istediğinize emin misiniz?')) {
             try {
                 await db.delete('quotes', id);
+                toast.success('Teklif silindi');
                 loadQuotes(); // Reload list
+
+                // If we deleted the currently active quote, reset the ID
+                if (currentQuoteId === id) {
+                    setCurrentQuoteId(null);
+                }
             } catch (error) {
                 Logger.error('Error deleting quote:', error);
+                toast.error('Silme işlemi başarısız');
             }
+        }
+    };
+
+    const handleSaveCurrent = async () => {
+        await saveQuote();
+        loadQuotes(); // Reload list to show updated/new quote
+    };
+
+    const handleNew = () => {
+        onNewQuote();
+        onClose();
+    };
+
+    const handleDeleteCurrent = () => {
+        if (currentQuoteId) {
+            handleDelete(currentQuoteId);
+            onClose();
+            onNewQuote();
         }
     };
 
@@ -66,8 +99,40 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Kayıtlı Teklifler" size="xl">
-            <div className="space-y-4 h-[60vh] flex flex-col">
+        <Modal isOpen={isOpen} onClose={onClose} title="Teklif İşlemleri" size="xl">
+            <div className="space-y-4 h-[70vh] flex flex-col">
+                {/* Quote Actions Toolbar */}
+                <div className="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <button
+                        className="btn btn-primary flex-1 py-3"
+                        onClick={handleSaveCurrent}
+                        title="Mevcut Teklifi Kaydet"
+                    >
+                        <Save size={20} className="mb-1 mx-auto block" />
+                        <span className="text-sm font-medium">Kaydet</span>
+                    </button>
+
+                    <button
+                        className="btn btn-outline flex-1 py-3"
+                        onClick={handleNew}
+                        title="Yeni Teklif Oluştur"
+                    >
+                        <PlusCircle size={20} className="mb-1 mx-auto block" />
+                        <span className="text-sm font-medium">Yeni</span>
+                    </button>
+
+                    {currentQuoteId && (
+                        <button
+                            className="btn btn-danger flex-1 py-3"
+                            onClick={handleDeleteCurrent}
+                            title="Mevcut Teklifi Sil"
+                        >
+                            <Trash2 size={20} className="mb-1 mx-auto block" />
+                            <span className="text-sm font-medium">Sil</span>
+                        </button>
+                    )}
+                </div>
+
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input
