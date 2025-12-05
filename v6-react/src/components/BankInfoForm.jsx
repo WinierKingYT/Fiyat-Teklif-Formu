@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Landmark, CreditCard, User, Building } from 'lucide-react';
 
-const BankInfoForm = ({ data, onChange, onOpenManager }) => {
+const BankInfoForm = ({ data = {}, onChange, onOpenManager }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         onChange(name, value);

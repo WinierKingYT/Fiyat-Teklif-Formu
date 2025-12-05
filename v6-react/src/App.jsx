@@ -13,6 +13,7 @@ import SavedQuotesModal from './components/SavedQuotesModal';
 import AnalyticsModal from './components/AnalyticsModal';
 
 import Dashboard from './components/Dashboard';
+import DashboardHero from './components/DashboardHero';
 import Settings from './components/Settings';
 import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
@@ -36,7 +37,9 @@ const QuoteBuilder = ({
   onOpenTemplateManager,
   onOpenDatabaseManager,
   onOpenBankManager,
-  onOpenRecycleBin
+  onOpenRecycleBin,
+  isMobileMenuOpen,
+  onToggleMobileMenu
 }) => {
   const {
     quoteData, updateQuoteData,
@@ -51,13 +54,26 @@ const QuoteBuilder = ({
     db,
     focusMode,
     setCurrentQuoteId,
-    loadQuote
+    loadQuote,
+    appLayout
   } = useQuote();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+
+  // Collapsible Sections State
+  const [sections, setSections] = useState({
+    customer: true,
+    company: false, // Collapsed by default to save space
+    settings: false,
+    bank: false
+  });
+
+  const toggleSection = (section) => {
+    setSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   useEffect(() => {
     const handleOpenHistory = () => setIsHistoryModalOpen(true);
@@ -154,10 +170,15 @@ const QuoteBuilder = ({
     updateCustomerData('phone', customer.phone);
     updateCustomerData('address', customer.address);
     toast.success('Müşteri bilgileri yüklendi');
+    // Auto-expand customer section if collapsed
+    if (!sections.customer) toggleSection('customer');
   };
 
-  const handleProductSelect = (product) => {
-    setItems(prev => [...prev, {
+  const handleProductSelect = (products) => {
+    // Handle both single product (legacy) and array of products
+    const productList = Array.isArray(products) ? products : [products];
+
+    const newItems = productList.map(product => ({
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Ensure ID for drag & drop
       name: product.name,
       description: product.description || '',
@@ -165,85 +186,279 @@ const QuoteBuilder = ({
       unit: product.unit || 'Adet',
       price: product.price,
       taxRate: product.taxRate || 20,
+      discountRate: 0,
       total: product.price, // 1 * price
       image: product.image
-    }]);
-    toast.success('Ürün eklendi');
+    }));
+
+    setItems(prev => [...prev, ...newItems]);
+    toast.success(`${newItems.length} ürün eklendi`);
   };
 
   const handleLoadQuote = (quote) => {
     loadQuote(quote);
   };
 
+  // Helper component for collapsible section headers
+  const SectionHeader = ({ title, isOpen, onToggle, icon: Icon }) => (
+    <div
+      className="collapsible-header p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-t-lg"
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
+        {Icon && <Icon size={18} className="text-blue-500" />}
+        {title}
+      </div>
+      <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+    </div>
+  );
+
   return (
-    <>
-      {!focusMode && (
+    <div className="fade-in-up">
+      {!focusMode && appLayout === 'modern' && (
         <>
-          <QuickActions
-            onOpenHistory={() => setIsHistoryModalOpen(true)}
-            onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
-            onOpenCustomerManager={onOpenCustomerManager}
-            onOpenProductManager={onOpenProductManager}
-            onOpenTemplateManager={onOpenTemplateManager}
-            onOpenDatabaseManager={onOpenDatabaseManager}
-            onOpenBankManager={onOpenBankManager}
-            onOpenRecycleBin={onOpenRecycleBin}
-          />
-          <StatusBar />
+          {/* Modern Sticky Header */}
+          <div className="sticky-actions glass-panel rounded-xl shadow-sm mb-6">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-gradient m-0 hidden md:block">Teklif Oluşturucu</h1>
+
+              {/* Quick Stats Chips */}
+              <div className="flex gap-2 text-xs font-medium">
+                <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                  {items.length} Kalem
+                </div>
+                <div className="px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800">
+                  Toplam: {items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString('tr-TR', { style: 'currency', currency: quoteData.currency })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                className="btn btn-outline btn-sm glass-card hover:bg-white/50"
+                onClick={handleNewQuote}
+                title="Yeni Teklif (Ctrl+N)"
+              >
+                <PlusCircle size={16} /> <span className="hidden sm:inline">Yeni</span>
+              </button>
+              <button
+                className="btn btn-outline btn-sm glass-card hover:bg-white/50"
+                onClick={() => setIsHistoryModalOpen(true)}
+              >
+                <FileText size={16} /> <span className="hidden sm:inline">Geçmiş</span>
+              </button>
+              <button
+                className="btn btn-primary btn-sm shadow-lg shadow-blue-500/30"
+                onClick={saveQuote}
+                title="Kaydet (Ctrl+S)"
+              >
+                <Save size={16} /> <span className="hidden sm:inline">Kaydet</span>
+              </button>
+            </div>
+          </div>
         </>
       )}
 
-      <div className="card" id="quote-content">
-        <div className="card-header">
-          <h2 className="card-title">Yeni Teklif Oluştur</h2>
-          <div className="card-actions">
-            <button className="btn btn-outline btn-sm" onClick={handleNewQuote} title="Yeni Teklif (Ctrl+N)">
-              <PlusCircle size={16} /> Yeni
-            </button>
-            <button className="btn btn-outline btn-sm" onClick={() => setIsHistoryModalOpen(true)}>
-              <FileText size={16} /> Tekliflerim
-            </button>
-            <button className="btn btn-primary btn-sm" onClick={saveQuote} title="Kaydet (Ctrl+S)">
-              <Save size={16} /> Kaydet
-            </button>
+      {appLayout === 'modern' ? (
+        <>
+          <DashboardHero
+            quoteData={quoteData}
+            items={items}
+            totalAmount={items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString('tr-TR', { style: 'currency', currency: quoteData.currency })}
+            onToggleMobileMenu={onToggleMobileMenu}
+          />
+          <div className="dashboard-grid">
+            {/* LEFT COLUMN - SIDEBAR (Sticky) */}
+            <div className={`dashboard-sidebar space-y-4 ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+
+              {/* Customer Info Card */}
+              <div className="glass-card bg-white/80 dark:bg-slate-800/80">
+                <SectionHeader
+                  title="Müşteri Bilgileri"
+                  isOpen={sections.customer}
+                  onToggle={() => toggleSection('customer')}
+                  icon={props => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>}
+                />
+                <div className={`collapsible-content ${sections.customer ? 'expanded' : 'collapsed'}`}>
+                  <div className="p-4 pt-0">
+                    <CustomerInfoForm
+                      data={customerData}
+                      onChange={updateCustomerData}
+                      onSelectCustomer={() => setIsCustomerModalOpen(true)}
+                      compact={true} // Pass compact prop for tighter layout
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Company Info Card */}
+              <div className="glass-card bg-white/80 dark:bg-slate-800/80">
+                <SectionHeader
+                  title="Firma Bilgileri"
+                  isOpen={sections.company}
+                  onToggle={() => toggleSection('company')}
+                  icon={props => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18" /><path d="M5 21V7l8-4 8 4v14" /><path d="M17 21v-8H7v8" /></svg>}
+                />
+                <div className={`collapsible-content ${sections.company ? 'expanded' : 'collapsed'}`}>
+                  <div className="p-4 pt-0">
+                    <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quote Settings Card */}
+              <div className="glass-card bg-white/80 dark:bg-slate-800/80">
+                <SectionHeader
+                  title="Teklif Detayları"
+                  isOpen={sections.settings}
+                  onToggle={() => toggleSection('settings')}
+                  icon={props => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>}
+                />
+                <div className={`collapsible-content ${sections.settings ? 'expanded' : 'collapsed'}`}>
+                  <div className="p-4 pt-0">
+                    <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                      <h5 className="text-sm font-medium mb-2 text-gray-500">Banka Bilgileri</h5>
+                      <BankInfoForm
+                        data={bankData}
+                        onChange={updateBankData}
+                        onOpenManager={onOpenBankManager}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* RIGHT COLUMN - MAIN CONTENT */}
+            <div className="space-y-6">
+
+              {/* Items Table - The Star of the Show */}
+              <div className="glass-card bg-white/90 dark:bg-slate-800/90 p-1 shadow-lg border-t-4 border-blue-500">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-900 dark:text-blue-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                    </span>
+                    Ürün ve Hizmetler
+                  </h3>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setIsProductModalOpen(true)}
+                  >
+                    <PlusCircle size={16} /> Ürün Ekle
+                  </button>
+                </div>
+                <div className="p-4">
+                  <ItemsTable
+                    items={items}
+                    onItemsChange={setItems}
+                    onAddProduct={() => setIsProductModalOpen(true)}
+                    currency={quoteData.currency}
+                  />
+                </div>
+              </div>
+
+              {/* Summary Section */}
+              <div className="glass-card bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 p-6">
+                <SummarySection
+                  items={items}
+                  discount={discount}
+                  onDiscountChange={setDiscount}
+                  currency={quoteData.currency}
+                />
+              </div>
+
+              {/* Terms and Notes */}
+              <div className="glass-card bg-white/80 dark:bg-slate-800/80 p-6">
+                <h4 className="text-md font-semibold mb-4 text-gray-700 dark:text-gray-200 border-b pb-2">Notlar ve Şartlar</h4>
+                <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+              </div>
+
+            </div>
           </div>
-        </div>
+        </>
+      ) : (
+        /* CLASSIC LAYOUT (Single Column) */
+        <div className="space-y-6 max-w-5xl mx-auto">
+          {/* Classic Quick Actions */}
+          <QuickActions
+            onSave={saveQuote}
+            onNew={handleNewQuote}
+            onHistory={() => setIsHistoryModalOpen(true)}
+            onPreview={() => setIsLivePreviewMode(true)}
+          />
 
-        <div className="card-body">
-          <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
+          {/* Info Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="card p-6 bg-white dark:bg-slate-800 shadow-sm rounded-lg border border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white border-b pb-2">Müşteri Bilgileri</h3>
+              <CustomerInfoForm
+                data={customerData}
+                onChange={updateCustomerData}
+                onSelectCustomer={() => setIsCustomerModalOpen(true)}
+              />
+            </div>
 
-          <div className="grid-2">
-            <CustomerInfoForm
-              data={customerData}
-              onChange={updateCustomerData}
-              onSelectCustomer={() => setIsCustomerModalOpen(true)}
+            <div className="card p-6 bg-white dark:bg-slate-800 shadow-sm rounded-lg border border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white border-b pb-2">Firma Bilgileri</h3>
+              <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
+            </div>
+          </div>
+
+          <div className="card p-6 bg-white dark:bg-slate-800 shadow-sm rounded-lg border border-gray-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white border-b pb-2">Teklif Detayları</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
+              <BankInfoForm
+                data={bankData}
+                onChange={updateBankData}
+                onOpenManager={onOpenBankManager}
+              />
+            </div>
+          </div>
+
+          <div className="card p-6 bg-white dark:bg-slate-800 shadow-sm rounded-lg border border-gray-200 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Ürün ve Hizmetler</h3>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => setIsProductModalOpen(true)}
+              >
+                <PlusCircle size={16} /> Ürün Ekle
+              </button>
+            </div>
+            <ItemsTable
+              items={items}
+              onItemsChange={setItems}
+              onAddProduct={() => setIsProductModalOpen(true)}
+              currency={quoteData.currency}
             />
-            <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
           </div>
 
-          <BankInfoForm
-            data={bankData}
-            onChange={updateBankData}
-            onOpenManager={onOpenBankManager}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="card p-6 bg-white dark:bg-slate-800 shadow-sm rounded-lg border border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white border-b pb-2">Notlar ve Şartlar</h3>
+              <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+            </div>
 
-          <ItemsTable
-            items={items}
-            onItemsChange={setItems}
-            onAddProduct={() => setIsProductModalOpen(true)}
-            currency={quoteData.currency}
-          />
-
-          <SummarySection
-            items={items}
-            discount={discount}
-            onDiscountChange={setDiscount}
-            currency={quoteData.currency}
-          />
-
-          <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+            <div className="card p-6 bg-white dark:bg-slate-800 shadow-sm rounded-lg border border-gray-200 dark:border-slate-700">
+              <SummarySection
+                items={items}
+                discount={discount}
+                onDiscountChange={setDiscount}
+                currency={quoteData.currency}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )
+      }
 
       <CustomerSelectModal
         isOpen={isCustomerModalOpen}
@@ -268,9 +483,7 @@ const QuoteBuilder = ({
         isOpen={isAnalyticsModalOpen}
         onClose={() => setIsAnalyticsModalOpen(false)}
       />
-
-
-    </>
+    </div >
   );
 };
 
@@ -284,6 +497,8 @@ function App() {
   const [isDatabaseManagerOpen, setIsDatabaseManagerOpen] = useState(false);
   const [isBankManagerOpen, setIsBankManagerOpen] = useState(false);
   const [isRecycleBinModalOpen, setIsRecycleBinModalOpen] = useState(false);
+  // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <QuoteProvider>
@@ -297,6 +512,13 @@ function App() {
         onOpenBankManager={() => setIsBankManagerOpen(true)}
         onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
       >
+        {/* Mobile Menu Backdrop */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
         {currentView === 'builder' && (
           <QuoteBuilder
             onNavigate={setCurrentView}
@@ -306,46 +528,50 @@ function App() {
             onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
             onOpenBankManager={() => setIsBankManagerOpen(true)}
             onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
+            isMobileMenuOpen={isMobileMenuOpen}
+            onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           />
         )}
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
         {currentView === 'settings' && <Settings />}
-      </Layout>
+      </Layout >
 
       {/* Global Modals - Rendered outside Layout to avoid stacking context issues */}
-      <CustomerManagerModal
+      < CustomerManagerModal
         isOpen={isCustomerManagerOpen}
-        onClose={() => setIsCustomerManagerOpen(false)}
+        onClose={() => setIsCustomerManagerOpen(false)
+        }
       />
 
-      <ProductManagerModal
+      < ProductManagerModal
         isOpen={isProductManagerOpen}
         onClose={() => setIsProductManagerOpen(false)}
       />
 
-      <TemplateManagerModal
+      < TemplateManagerModal
         isOpen={isTemplateManagerOpen}
         onClose={() => setIsTemplateManagerOpen(false)}
       />
 
-      <DatabaseManagerModal
+      < DatabaseManagerModal
         isOpen={isDatabaseManagerOpen}
         onClose={() => setIsDatabaseManagerOpen(false)}
       />
 
-      <BankManagerModal
+      < BankManagerModal
         isOpen={isBankManagerOpen}
         onClose={() => setIsBankManagerOpen(false)}
       />
 
-      <RecycleBinModal
+      < RecycleBinModal
         isOpen={isRecycleBinModalOpen}
         onClose={() => setIsRecycleBinModalOpen(false)}
       />
 
-      <Toaster position="top-right" />
-    </QuoteProvider>
+      < Toaster position="top-right" />
+    </QuoteProvider >
   );
 }
 
 export default App;
+// Force refresh

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { useQuote } from '../context/QuoteContext';
-import { Save, RefreshCw, GripVertical } from 'lucide-react';
+import { Save, RefreshCw, GripVertical, Building } from 'lucide-react';
 import toast from 'react-hot-toast';
+import CompanyInfoForm from './CompanyInfoForm';
 import {
     DndContext,
     closestCenter,
@@ -61,19 +62,31 @@ const Settings = () => {
         viewMode, setViewMode,
         performanceMode, setPerformanceMode,
         compactMode, setCompactMode,
-        appFontSize, setAppFontSize
+        appFontSize, setAppFontSize,
+        pdfConfig, setPdfConfig,
+        appLayout, setAppLayout,
+        appTheme, setAppTheme
     } = useQuote();
     const [activeTab, setActiveTab] = useState('general');
-    // ... (rest of the component)
-
 
     const [settings, setSettings] = useState({
         defaultTaxRate: 20,
         currency: 'TRY',
         defaultNote: '',
-        companyName: '',
-        companyLogo: null
     });
+
+    const [companySettings, setCompanySettings] = useState({
+        name: '',
+        authorized: '',
+        phone: '',
+        email: '',
+        website: '',
+        address: '',
+        logo: null,
+        signature: null,
+        stamp: null
+    });
+
     const [loading, setLoading] = useState(true);
 
     const sensors = useSensors(
@@ -89,8 +102,14 @@ const Settings = () => {
             try {
                 const savedSettings = await db.get('settings', 'global');
                 if (savedSettings) {
-                    setSettings(savedSettings);
+                    setSettings(prev => ({ ...prev, ...savedSettings }));
                 }
+
+                const savedCompanyDefaults = await db.get('company_defaults', 'default');
+                if (savedCompanyDefaults) {
+                    setCompanySettings(savedCompanyDefaults);
+                }
+
                 setLoading(false);
             } catch (error) {
                 console.error("Error loading settings:", error);
@@ -105,10 +124,15 @@ const Settings = () => {
         setSettings(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleCompanyChange = (name, value) => {
+        setCompanySettings(prev => ({ ...prev, [name]: value }));
+    };
+
     const handleSave = async () => {
         if (!db) return;
         try {
             await db.put('settings', { id: 'global', ...settings });
+            await db.put('company_defaults', { id: 'default', ...companySettings });
             toast.success('Ayarlar başarıyla kaydedildi!');
         } catch (error) {
             console.error("Error saving settings:", error);
@@ -145,28 +169,108 @@ const Settings = () => {
             <h1 className="text-2xl font-bold mb-6 dark:text-white">Uygulama Ayarları</h1>
 
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 dark:border-slate-700 mb-6">
+            <div className="flex border-b border-gray-200 dark:border-slate-700 mb-6 overflow-x-auto">
                 <button
-                    className={`px-4 py-2 font-medium transition-colors ${activeTab === 'general' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'general' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                     onClick={() => setActiveTab('general')}
                 >
                     Genel Ayarlar
                 </button>
                 <button
-                    className={`px-4 py-2 font-medium transition-colors ${activeTab === 'pdf' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'company' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    onClick={() => setActiveTab('company')}
+                >
+                    Firma Bilgileri
+                </button>
+                <button
+                    className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'pdf' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                     onClick={() => setActiveTab('pdf')}
                 >
                     PDF Düzeni
                 </button>
+                <button
+                    className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'watermark' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    onClick={() => setActiveTab('watermark')}
+                >
+                    Filigran
+                </button>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-slate-700 space-y-6">
+            <div className="glass-panel p-6 rounded-xl shadow-sm space-y-6">
 
                 {activeTab === 'general' && (
                     <>
                         {/* General Settings */}
                         <div>
                             <h3 className="text-lg font-semibold mb-4 border-b dark:border-slate-700 pb-2 dark:text-white">Görünüm Ayarları</h3>
+
+                            <div className="form-group mb-6">
+                                <label className="form-label mb-2 dark:text-gray-300">Tema Modu</label>
+                                <div className="flex gap-4">
+                                    <label className={`flex items-center gap-2 cursor-pointer p-3 border rounded-lg transition-colors flex-1 ${appTheme === 'light' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800'}`}>
+                                        <input
+                                            type="radio"
+                                            name="appTheme"
+                                            value="light"
+                                            checked={appTheme === 'light'}
+                                            onChange={(e) => setAppTheme(e.target.value)}
+                                            className="form-radio text-blue-600"
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className="font-medium dark:text-gray-200">Aydınlık Mod</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Standart beyaz görünüm</span>
+                                        </div>
+                                    </label>
+                                    <label className={`flex items-center gap-2 cursor-pointer p-3 border rounded-lg transition-colors flex-1 ${appTheme === 'dark' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800'}`}>
+                                        <input
+                                            type="radio"
+                                            name="appTheme"
+                                            value="dark"
+                                            checked={appTheme === 'dark'}
+                                            onChange={(e) => setAppTheme(e.target.value)}
+                                            className="form-radio text-blue-600"
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className="font-medium dark:text-gray-200">Karanlık Mod</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Göz yormayan koyu görünüm</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="form-group mb-6">
+                                <label className="form-label mb-2 dark:text-gray-300">Arayüz Tasarımı</label>
+                                <div className="flex gap-4">
+                                    <label className={`flex items-center gap-2 cursor-pointer p-3 border rounded-lg transition-colors flex-1 ${appLayout === 'modern' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800'}`}>
+                                        <input
+                                            type="radio"
+                                            name="appLayout"
+                                            value="modern"
+                                            checked={appLayout === 'modern'}
+                                            onChange={(e) => setAppLayout(e.target.value)}
+                                            className="form-radio text-blue-600"
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className="font-medium dark:text-gray-200">Modern Dashboard</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Yeni, cam efektli ve panelli görünüm</span>
+                                        </div>
+                                    </label>
+                                    <label className={`flex items-center gap-2 cursor-pointer p-3 border rounded-lg transition-colors flex-1 ${appLayout === 'classic' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'hover:bg-gray-50 dark:hover:bg-slate-700 dark:border-slate-600 dark:bg-slate-800'}`}>
+                                        <input
+                                            type="radio"
+                                            name="appLayout"
+                                            value="classic"
+                                            checked={appLayout === 'classic'}
+                                            onChange={(e) => setAppLayout(e.target.value)}
+                                            className="form-radio text-blue-600"
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className="font-medium dark:text-gray-200">Klasik Görünüm</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Basit, tek sütunlu standart görünüm</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div className="form-group mb-6">
                                 <label className="form-label mb-2 dark:text-gray-300">Cihaz Görünümü</label>
                                 <div className="flex gap-4">
@@ -320,6 +424,28 @@ const Settings = () => {
                     </>
                 )}
 
+                {activeTab === 'company' && (
+                    <div>
+                        <div className="mb-4">
+                            <h3 className="text-lg font-semibold mb-2 border-b pb-2">Varsayılan Firma Bilgileri</h3>
+                            <p className="text-sm text-gray-500">
+                                Buraya gireceğiniz bilgiler, yeni oluşturacağınız tüm tekliflerde otomatik olarak doldurulacaktır.
+                            </p>
+                        </div>
+
+                        <CompanyInfoForm
+                            data={companySettings}
+                            onChange={handleCompanyChange}
+                        />
+
+                        <div className="flex justify-end pt-4 mt-4 border-t border-gray-100 dark:border-slate-700">
+                            <button className="btn btn-primary" onClick={handleSave}>
+                                <Save size={16} /> Ayarları Kaydet
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {activeTab === 'pdf' && (
                     <div>
                         <h3 className="text-lg font-semibold mb-4 border-b pb-2">PDF Bölüm Sıralaması</h3>
@@ -334,10 +460,10 @@ const Settings = () => {
                             onDragEnd={handleDragEnd}
                         >
                             <SortableContext
-                                items={pdfLayout.map(item => item.id)}
+                                items={(pdfLayout || []).map(item => item.id)}
                                 strategy={verticalListSortingStrategy}
                             >
-                                {pdfLayout.map((item) => (
+                                {(pdfLayout || []).map((item) => (
                                     <SortableItem
                                         key={item.id}
                                         id={item.id}
@@ -348,6 +474,110 @@ const Settings = () => {
                                 ))}
                             </SortableContext>
                         </DndContext>
+                    </div>
+                )}
+
+                {activeTab === 'watermark' && (
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4 border-b pb-2 dark:text-white">Filigran Ayarları</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                            PDF çıktılarına eklenecek filigranı buradan özelleştirebilirsiniz.
+                        </p>
+
+                        <div className="space-y-6">
+                            {/* Enable Switch */}
+                            <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700">
+                                <div>
+                                    <h4 className="font-medium dark:text-gray-200">Filigran Göster</h4>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">PDF sayfalarının arka planında filigran görüntülenir.</p>
+                                </div>
+                                <div className="form-check form-switch">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        checked={pdfConfig.showWatermark}
+                                        onChange={(e) => setPdfConfig({ ...pdfConfig, showWatermark: e.target.checked })}
+                                    />
+                                </div>
+                            </div>
+
+                            {pdfConfig.showWatermark && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Text Input */}
+                                    <div className="form-group">
+                                        <label className="form-label dark:text-gray-300">Filigran Metni</label>
+                                        <input
+                                            type="text"
+                                            className="form-control dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            value={pdfConfig.watermarkText}
+                                            onChange={(e) => setPdfConfig({ ...pdfConfig, watermarkText: e.target.value })}
+                                            placeholder="Örn: TASLAK"
+                                        />
+                                    </div>
+
+                                    {/* Color Picker */}
+                                    <div className="form-group">
+                                        <label className="form-label dark:text-gray-300">Renk</label>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="color"
+                                                className="h-10 w-20 p-1 rounded border dark:border-slate-600"
+                                                value={pdfConfig.watermarkColor}
+                                                onChange={(e) => setPdfConfig({ ...pdfConfig, watermarkColor: e.target.value })}
+                                            />
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">{pdfConfig.watermarkColor}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Opacity Slider */}
+                                    <div className="form-group">
+                                        <div className="flex justify-between mb-2">
+                                            <label className="form-label dark:text-gray-300">Opaklık (Saydamlık)</label>
+                                            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">%{Math.round(pdfConfig.watermarkOpacity * 100)}</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0.05"
+                                            max="1"
+                                            step="0.05"
+                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
+                                            value={pdfConfig.watermarkOpacity}
+                                            onChange={(e) => setPdfConfig({ ...pdfConfig, watermarkOpacity: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+
+                                    {/* Rotation Slider */}
+                                    <div className="form-group">
+                                        <div className="flex justify-between mb-2">
+                                            <label className="form-label dark:text-gray-300">Döndürme Açısı</label>
+                                            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{pdfConfig.watermarkRotation}°</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="-90"
+                                            max="90"
+                                            step="5"
+                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
+                                            value={pdfConfig.watermarkRotation}
+                                            onChange={(e) => setPdfConfig({ ...pdfConfig, watermarkRotation: parseInt(e.target.value) })}
+                                        />
+                                    </div>
+
+                                    {/* Font Size Input */}
+                                    <div className="form-group">
+                                        <label className="form-label dark:text-gray-300">Yazı Boyutu (px)</label>
+                                        <input
+                                            type="number"
+                                            className="form-control dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            value={pdfConfig.watermarkFontSize}
+                                            onChange={(e) => setPdfConfig({ ...pdfConfig, watermarkFontSize: parseInt(e.target.value) })}
+                                            min="20"
+                                            max="300"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

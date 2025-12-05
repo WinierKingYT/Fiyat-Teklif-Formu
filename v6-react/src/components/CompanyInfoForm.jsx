@@ -1,9 +1,12 @@
 import React, { useRef } from 'react';
-import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash } from 'lucide-react';
+import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save } from 'lucide-react';
 import SignatureCanvas from './SignatureCanvas';
+import { useIndexedDB } from '../hooks/useIndexedDB';
+import toast from 'react-hot-toast';
 
 const CompanyInfoForm = ({ data, onChange }) => {
     const fileInputRef = useRef(null);
+    const { db } = useIndexedDB();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -28,12 +31,33 @@ const CompanyInfoForm = ({ data, onChange }) => {
         }
     };
 
+    const handleSaveAsDefault = async () => {
+        if (!db) return;
+        try {
+            await db.put('company_defaults', { id: 'default', ...data });
+            toast.success('Firma bilgileri varsayılan olarak kaydedildi.');
+        } catch (error) {
+            console.error('Error saving defaults:', error);
+            toast.error('Varsayılanlar kaydedilemedi.');
+        }
+    };
+
     return (
         <div className="form-section">
-            <h3 className="section-title">
-                <Building size={20} />
-                Firma Bilgileri
-            </h3>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="section-title mb-0">
+                    <Building size={20} />
+                    Firma Bilgileri
+                </h3>
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-900/20"
+                    onClick={handleSaveAsDefault}
+                    title="Bu bilgileri varsayılan olarak kaydet"
+                >
+                    <Save size={14} /> Varsayılan Olarak Kaydet
+                </button>
+            </div>
 
             <div className="form-row">
                 <div className="form-group">

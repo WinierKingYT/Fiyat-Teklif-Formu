@@ -15,21 +15,13 @@ const Layout = ({
     onOpenBankManager,
     onOpenRecycleBin
 }) => {
-    const [theme, setTheme] = useState(localStorage.getItem('appTheme') || 'light');
-    const { viewMode, focusMode, setFocusMode, isLivePreviewMode } = useQuote();
-
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        localStorage.setItem('appTheme', theme);
-    }, [theme]);
+    const {
+        viewMode, focusMode, setFocusMode, isLivePreviewMode,
+        appTheme, setAppTheme
+    } = useQuote();
 
     const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
+        setAppTheme(prev => prev === 'light' ? 'dark' : 'light');
     };
 
     // Standard responsive layout wrapper
@@ -54,7 +46,7 @@ const Layout = ({
             <div className={`app-container ${viewMode === 'mobile' ? 'mobile-view' : ''}`} style={containerStyle}>
                 {!focusMode && (
                     <Header
-                        theme={theme}
+                        theme={appTheme}
                         toggleTheme={toggleTheme}
                         currentView={currentView}
                         onNavigate={onNavigate}

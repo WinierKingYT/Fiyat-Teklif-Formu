@@ -100,6 +100,7 @@ export const QuoteProvider = ({ children }) => {
 
                                 // Save to DB immediately to complete migration
                                 await db.add('settings', {
+                                    id: 'session_tabs',
                                     key: 'session_tabs',
                                     value: parsedTabs
                                 });
@@ -128,6 +129,7 @@ export const QuoteProvider = ({ children }) => {
                     // Check if record exists to get ID
                     const existingRecord = await db.getByIndex('settings', 'key', 'session_tabs');
                     const record = {
+                        id: 'session_tabs',
                         key: 'session_tabs',
                         value: tabs
                     };
@@ -164,7 +166,10 @@ export const QuoteProvider = ({ children }) => {
     const companyData = activeTabData.companyData;
     const items = activeTabData.items;
     const discount = activeTabData.discount;
-    const bankData = activeTabData.bankData;
+    const bankData = activeTabData.bankData || getInitialBankData();
+
+    // Company Defaults State
+    const [companyDefaults, setCompanyDefaults] = useState(null);
 
     // --- Tab Actions ---
     const addTab = () => {
@@ -175,7 +180,7 @@ export const QuoteProvider = ({ children }) => {
             data: {
                 quoteData: getInitialQuoteData(),
                 customerData: getInitialCustomerData(),
-                companyData: getInitialCompanyData(), // Ideally load default company data
+                companyData: companyDefaults || getInitialCompanyData(),
                 items: [],
                 discount: { type: 'percentage', value: 0 },
                 bankData: getInitialBankData()
@@ -405,8 +410,14 @@ export const QuoteProvider = ({ children }) => {
 
     // PDF Layout State (Global)
     const [pdfLayout, setPdfLayout] = useState(() => {
-        const savedLayout = localStorage.getItem('pdfLayout');
-        return savedLayout ? JSON.parse(savedLayout) : [
+        try {
+            const savedLayout = localStorage.getItem('pdfLayout');
+            const parsed = (savedLayout && savedLayout !== 'undefined') ? JSON.parse(savedLayout) : null;
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            console.error('Error parsing pdfLayout:', e);
+        }
+        return [
             { id: 'header', label: 'Logo ve Başlık', enabled: true },
             { id: 'customer', label: 'Müşteri Bilgileri', enabled: true },
             { id: 'items', label: 'Ürün Tablosu', enabled: true },
@@ -422,6 +433,26 @@ export const QuoteProvider = ({ children }) => {
     useEffect(() => {
         localStorage.setItem('viewMode', viewMode);
     }, [viewMode]);
+
+    // App Layout State (modern | classic)
+    const [appLayout, setAppLayout] = useState(() => localStorage.getItem('appLayout') || 'modern');
+
+    useEffect(() => {
+        localStorage.setItem('appLayout', appLayout);
+    }, [appLayout]);
+
+    // App Theme State (light | dark)
+    const [appTheme, setAppTheme] = useState(() => localStorage.getItem('appTheme') || 'light');
+
+    useEffect(() => {
+        localStorage.setItem('appTheme', appTheme);
+        document.documentElement.setAttribute('data-theme', appTheme);
+        if (appTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [appTheme]);
 
     // Font Size State
     const [appFontSize, setAppFontSize] = useState(() => {
@@ -603,6 +634,12 @@ export const QuoteProvider = ({ children }) => {
                             // Update all tabs? Or just active? Let's just update active for now
                             // updateQuoteData('currency', settings.currency);
                         }
+                    }
+
+                    // Load Company Defaults
+                    const defaultsRecord = await db.getByIndex('settings', 'key', 'company_defaults');
+                    if (defaultsRecord && defaultsRecord.value) {
+                        setCompanyDefaults(defaultsRecord.value);
                     }
                 } catch (error) {
                     console.error("Error loading settings:", error);
@@ -839,34 +876,18 @@ export const QuoteProvider = ({ children }) => {
         companyData, updateCompanyData,
         items, setItems,
         discount, setDiscount,
-        bankData, updateBankData, setBankData,
-        fillTestData, // Exposed function
-
-        // Quote Actions
-        saveQuote,
-        loadQuote,
-        currentQuoteId,
-        setCurrentQuoteId,
-
-        // Global State
-        pdfLayout, setPdfLayout,
-        saveQuote,
-        createBackup, restoreBackup,
-        undo, redo,
-        canUndo,
-        canRedo,
-        viewMode, setViewMode,
-        db,
         appFontSize, setAppFontSize,
         performanceMode, setPerformanceMode,
         compactMode, setCompactMode,
         focusMode, setFocusMode,
         isLivePreviewMode, setIsLivePreviewMode,
-        pdfConfig, setPdfConfig
+        pdfConfig, setPdfConfig,
+        appLayout, setAppLayout,
+        appTheme, setAppTheme
     }), [
         tabs, activeTabId, quoteData, customerData, companyData, items, discount, bankData,
         pdfLayout, viewMode, db, appFontSize, performanceMode, compactMode,
-        focusMode, isLivePreviewMode, pdfConfig
+        focusMode, isLivePreviewMode, pdfConfig, appLayout, appTheme
     ]);
 
     return (

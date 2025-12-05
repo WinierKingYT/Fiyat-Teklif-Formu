@@ -214,8 +214,166 @@ const SortableRow = ({ item, index, handleItemChange, removeItem, formatCurrency
     );
 };
 
+// Sortable Row Card Component (For Card View)
+const SortableRowCard = ({ item, index, handleItemChange, removeItem, formatCurrency }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: item.id });
+
+    const fileInputRef = useRef(null);
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        position: 'relative',
+        zIndex: isDragging ? 999 : 'auto',
+    };
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                handleItemChange(index, 'image', reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="glass-card p-4 relative group hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
+            {/* Drag Handle */}
+            <div {...attributes} {...listeners} className="absolute top-2 right-2 p-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <GripVertical size={16} />
+            </div>
+
+            <div className="flex gap-4 mb-4">
+                {/* Image */}
+                <div
+                    className="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden border border-gray-200 dark:border-slate-600 hover:opacity-80 transition-opacity"
+                    onClick={() => fileInputRef.current?.click()}
+                >
+                    {item.image ? (
+                        <img src={item.image} alt="Item" className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="text-center text-gray-400">
+                            <ImageIcon size={20} className="mx-auto mb-1" />
+                            <span className="text-[10px]">Ekle</span>
+                        </div>
+                    )}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                        accept="image/*"
+                        className="hidden"
+                    />
+                </div>
+
+                {/* Main Info */}
+                <div className="flex-1">
+                    <input
+                        type="text"
+                        className="form-control mb-2 font-semibold"
+                        placeholder="Ürün adı"
+                        value={item.name}
+                        onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                    />
+                    <textarea
+                        className="form-control text-xs resize-none"
+                        placeholder="Açıklama"
+                        rows="2"
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                    ></textarea>
+                </div>
+            </div>
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <label className="text-[10px] text-gray-500 uppercase font-bold">Miktar</label>
+                    <div className="flex gap-1">
+                        <input
+                            type="text"
+                            className="form-control text-sm"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                        />
+                        <select
+                            className="form-control form-select text-sm w-20"
+                            value={item.unit}
+                            onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                        >
+                            <option value="Adet">Adet</option>
+                            <option value="Saat">Saat</option>
+                            <option value="Gün">Gün</option>
+                            <option value="Ay">Ay</option>
+                            <option value="Kg">Kg</option>
+                            <option value="Mt">Mt</option>
+                            <option value="M2">M2</option>
+                            <option value="Kutu">Kutu</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label className="text-[10px] text-gray-500 uppercase font-bold">Birim Fiyat</label>
+                    <input
+                        type="text"
+                        className="form-control text-sm"
+                        value={item.price}
+                        onChange={(e) => handleItemChange(index, 'price', e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mb-3">
+                <div>
+                    <label className="text-[10px] text-gray-500 uppercase font-bold">KDV %</label>
+                    <input
+                        type="text"
+                        className="form-control text-sm"
+                        value={item.taxRate}
+                        onChange={(e) => handleItemChange(index, 'taxRate', e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label className="text-[10px] text-gray-500 uppercase font-bold">İskonto %</label>
+                    <input
+                        type="text"
+                        className="form-control text-sm"
+                        value={item.discountRate || 0}
+                        onChange={(e) => handleItemChange(index, 'discountRate', e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label className="text-[10px] text-gray-500 uppercase font-bold text-right block">Toplam</label>
+                    <div className="text-right font-bold text-blue-600 dark:text-blue-400 text-sm pt-2">
+                        {formatCurrency((parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0) * (1 - (parseFloat(item.discountRate) || 0) / 100))}
+                    </div>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                className="btn btn-danger btn-sm w-full flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => removeItem(index)}
+            >
+                <Trash size={14} /> Ürünü Sil
+            </button>
+        </div>
+    );
+};
+
 const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) => {
     const fileInputRef = useRef(null);
+    const [viewMode, setViewMode] = useState('table'); // 'table' | 'card'
 
     // Ensure all items have IDs
     useEffect(() => {
@@ -410,47 +568,116 @@ const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) =>
 
     return (
         <div className="form-section">
+            <div className="flex justify-end mb-4 px-1">
+                <div className="bg-gray-100 dark:bg-slate-700 p-1 rounded-lg inline-flex">
+                    <button
+                        className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                        onClick={() => setViewMode('table')}
+                        title="Tablo Görünümü"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                    </button>
+                    <button
+                        className={`p-1.5 rounded-md transition-all ${viewMode === 'card' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                        onClick={() => setViewMode('card')}
+                        title="Kart Görünümü"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                </div>
+            </div>
+
             <div className="table-responsive">
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <table className="items-table">
-                        <thead>
-                            <tr>
-                                <th style={{ width: '40px' }}></th>
-                                <th style={{ width: '80px' }}>Görsel</th>
-                                <th>Ürün/Hizmet</th>
-                                <th style={{ width: '100px' }}>Miktar</th>
-                                <th style={{ width: '100px' }}>Birim</th>
-                                <th style={{ width: '120px' }}>Birim Fiyat</th>
-                                <th style={{ width: '80px' }}>KDV %</th>
-                                <th style={{ width: '80px' }}>İskonto %</th>
-                                <th style={{ width: '120px' }}>Toplam</th>
-                                <th style={{ width: '40px' }}></th>
-                            </tr>
-                        </thead>
-                        <SortableContext
-                            items={items.map(item => item.id)}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            <tbody>
-                                {items.map((item, index) => (
-                                    <SortableRow
-                                        key={item.id || index}
-                                        item={item}
-                                        index={index}
-                                        handleItemChange={handleItemChange}
-                                        removeItem={removeItem}
-                                        formatCurrency={formatCurrency}
-                                        onKeyDown={handleKeyDown}
-                                    />
-                                ))}
-                            </tbody>
-                        </SortableContext>
-                    </table>
-                </DndContext>
+                {items.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-slate-800/50">
+                        <div className="p-4 bg-blue-100 text-blue-600 rounded-full mb-4 dark:bg-blue-900/30 dark:text-blue-400">
+                            <Package size={32} />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Henüz ürün eklenmedi</h3>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-xs mb-6">
+                            Teklifinize ürün veya hizmet ekleyerek başlayın. Excel'den toplu yükleme yapabilir veya katalogdan seçebilirsiniz.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                className="btn btn-primary shadow-lg shadow-blue-500/30"
+                                onClick={addItem}
+                            >
+                                <Plus size={18} /> İlk Satırı Ekle
+                            </button>
+                            {onAddProduct && (
+                                <button
+                                    type="button"
+                                    className="btn btn-outline bg-white dark:bg-slate-800"
+                                    onClick={onAddProduct}
+                                >
+                                    <Package size={18} /> Katalogdan Seç
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        {viewMode === 'table' ? (
+                            <table className="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '40px' }}></th>
+                                        <th style={{ width: '80px' }}>Görsel</th>
+                                        <th>Ürün/Hizmet</th>
+                                        <th style={{ width: '100px' }}>Miktar</th>
+                                        <th style={{ width: '100px' }}>Birim</th>
+                                        <th style={{ width: '120px' }}>Birim Fiyat</th>
+                                        <th style={{ width: '80px' }}>KDV %</th>
+                                        <th style={{ width: '80px' }}>İskonto %</th>
+                                        <th style={{ width: '120px' }}>Toplam</th>
+                                        <th style={{ width: '40px' }}></th>
+                                    </tr>
+                                </thead>
+                                <SortableContext
+                                    items={items.map(item => item.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
+                                    <tbody>
+                                        {items.map((item, index) => (
+                                            <SortableRow
+                                                key={item.id || index}
+                                                item={item}
+                                                index={index}
+                                                handleItemChange={handleItemChange}
+                                                removeItem={removeItem}
+                                                formatCurrency={formatCurrency}
+                                                onKeyDown={handleKeyDown}
+                                            />
+                                        ))}
+                                    </tbody>
+                                </SortableContext>
+                            </table>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <SortableContext
+                                    items={items.map(item => item.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
+                                    {items.map((item, index) => (
+                                        <SortableRowCard
+                                            key={item.id || index}
+                                            item={item}
+                                            index={index}
+                                            handleItemChange={handleItemChange}
+                                            removeItem={removeItem}
+                                            formatCurrency={formatCurrency}
+                                        />
+                                    ))}
+                                </SortableContext>
+                            </div>
+                        )}
+                    </DndContext>
+                )}
             </div>
 
             <div className="table-actions flex gap-3">
@@ -473,8 +700,8 @@ const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) =>
                     style={{ display: 'none' }}
                     title="Excel Dosyası Seç"
                 />
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
