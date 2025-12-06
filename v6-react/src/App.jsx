@@ -597,6 +597,21 @@ function App() {
   // Split View State
   const [isSplitView, setIsSplitView] = useState(false);
 
+  // Auto-disable split view on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsSplitView(false);
+      }
+    };
+
+    // Check initially
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <QuoteProvider>
 

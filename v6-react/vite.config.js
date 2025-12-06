@@ -53,6 +53,10 @@ export default defineConfig(({ command }) => ({
         short_name: 'TeklifApp',
         description: 'Hızlı ve kolay fiyat teklifi oluşturma uygulaması',
         theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
+        orientation: 'portrait',
         icons: [
           {
             src: 'pwa-192x192.png',

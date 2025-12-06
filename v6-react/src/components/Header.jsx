@@ -165,7 +165,7 @@ const Header = ({
                             </button>
 
                             <button
-                                className={`btn btn-sm ${isSplitView ? 'btn-primary' : 'btn-outline'}`}
+                                className={`btn btn-sm ${isSplitView ? 'btn-primary' : 'btn-outline'} hidden md:inline-flex`}
                                 onClick={() => setIsSplitView(!isSplitView)}
                                 title={isSplitView ? "Tek Sütun Görünümü" : "İkiye Böl"}
                             >

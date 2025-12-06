@@ -373,7 +373,21 @@ const SortableRowCard = ({ item, index, handleItemChange, removeItem, formatCurr
 
 const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) => {
     const fileInputRef = useRef(null);
-    const [viewMode, setViewMode] = useState('table'); // 'table' | 'card'
+    const [viewMode, setViewMode] = useState(window.innerWidth < 768 ? 'card' : 'table');
+
+    // Auto-switch view mode on resize
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 768) {
+                setViewMode('card');
+            } else {
+                setViewMode('table');
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Ensure all items have IDs
     useEffect(() => {
