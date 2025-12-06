@@ -13,7 +13,9 @@ const Layout = ({
     onOpenTemplateManager,
     onOpenDatabaseManager,
     onOpenBankManager,
-    onOpenRecycleBin
+    onOpenRecycleBin,
+    isSplitView,
+    setIsSplitView
 }) => {
     const {
         viewMode, focusMode, setFocusMode, isLivePreviewMode,
@@ -33,7 +35,7 @@ const Layout = ({
 
     // Container with max-width for larger screens, full width for mobile
     const containerStyle = {
-        maxWidth: viewMode === 'mobile' || focusMode ? '100%' : '1400px',
+        maxWidth: viewMode === 'mobile' || focusMode ? '100%' : '1600px',
         margin: '0 auto',
         padding: viewMode === 'mobile' || focusMode ? '0' : '0 1rem',
         minHeight: '100vh',
@@ -56,6 +58,8 @@ const Layout = ({
                         onOpenDatabaseManager={onOpenDatabaseManager}
                         onOpenBankManager={onOpenBankManager}
                         onOpenRecycleBin={onOpenRecycleBin}
+                        isSplitView={isSplitView}
+                        setIsSplitView={setIsSplitView}
                     />
                 )}
 

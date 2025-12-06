@@ -20,8 +20,30 @@ const ModernTheme = ({
     totalTax,
     total,
     currentLocale,
-    hasLineItemDiscounts
+    hasLineItemDiscounts,
+    onEdit
 }) => {
+    // Helper for editable fields
+    const renderEditable = (value, label, onSave, type = 'text', options = [], className = '') => {
+        if (!onEdit) return <span className={className}>{value}</span>;
+
+        return (
+            <div
+                className={`editable-field group relative cursor-pointer hover:bg-blue-50 hover:ring-1 hover:ring-blue-300 rounded px-1 -mx-1 transition-all ${className}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(label, value, onSave, type, options);
+                }}
+                title="Düzenlemek için tıklayın"
+            >
+                {value || <span className="text-gray-300 italic">Düzenle</span>}
+                <span className="absolute -top-3 -right-3 hidden group-hover:flex h-5 w-5 bg-blue-500 text-white rounded-full items-center justify-center shadow-sm">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </span>
+            </div>
+        );
+    };
+
     const modernStyles = React.useMemo(() => `
         .modern-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};

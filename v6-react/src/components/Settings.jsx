@@ -70,6 +70,11 @@ const Settings = () => {
     const [activeTab, setActiveTab] = useState('general');
 
     const [settings, setSettings] = useState({
+        defaultTitle: '',
+        defaultDescription: '',
+        defaultValidity: 7,
+        defaultDeliveryTerms: '',
+        defaultWarrantyTerms: '',
         defaultTaxRate: 20,
         currency: 'TRY',
         defaultNote: '',
@@ -180,7 +185,7 @@ const Settings = () => {
                     className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'company' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                     onClick={() => setActiveTab('company')}
                 >
-                    Firma Bilgileri
+                    Varsayılan Bilgiler
                 </button>
                 <button
                     className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'pdf' ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
@@ -369,50 +374,6 @@ const Settings = () => {
                                 </div>
                             </div>
 
-                            <h3 className="text-lg font-semibold mb-4 border-b pb-2">Genel Varsayılanlar</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="form-group">
-                                    <label className="form-label">Varsayılan KDV Oranı (%)</label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        name="defaultTaxRate"
-                                        value={settings.defaultTaxRate}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Para Birimi</label>
-                                    <select
-                                        className="form-control form-select"
-                                        name="currency"
-                                        value={settings.currency}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="TRY">Türk Lirası (₺)</option>
-                                        <option value="USD">Amerikan Doları ($)</option>
-                                        <option value="EUR">Euro (€)</option>
-                                        <option value="GBP">Sterlin (£)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Default Notes */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4 border-b pb-2">Teklif Notları</h3>
-                            <div className="form-group">
-                                <label className="form-label">Varsayılan Teklif Notu / Şartlar</label>
-                                <textarea
-                                    className="form-control"
-                                    rows="4"
-                                    name="defaultNote"
-                                    value={settings.defaultNote}
-                                    onChange={handleChange}
-                                    placeholder="Örn: Ödeme peşindir. Teslim süresi 3 gündür."
-                                ></textarea>
-                                <p className="text-xs text-muted mt-1">Bu not her yeni teklifte otomatik olarak eklenecektir.</p>
-                            </div>
                         </div>
 
                         {/* Actions */}
@@ -426,6 +387,80 @@ const Settings = () => {
 
                 {activeTab === 'company' && (
                     <div>
+                        <div className="mb-6">
+                            <h3 className="text-lg font-semibold mb-4 border-b pb-2">Teklif Varsayılanları</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="form-group">
+                                    <label className="form-label mb-1 dark:text-gray-300">Varsayılan Teklif Başlığı</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="defaultTitle"
+                                        value={settings.defaultTitle || ''}
+                                        onChange={handleChange}
+                                        placeholder="Örn: Hizmet Teklifi"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label mb-1 dark:text-gray-300">Varsayılan Geçerlilik (Gün)</label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        name="defaultValidity"
+                                        value={settings.defaultValidity}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group mt-4">
+                                <label className="form-label mb-1 dark:text-gray-300">Varsayılan Teklif Açıklaması</label>
+                                <textarea
+                                    className="form-control"
+                                    rows="2"
+                                    name="defaultDescription"
+                                    value={settings.defaultDescription || ''}
+                                    onChange={handleChange}
+                                    placeholder="Örn: Aşağıdaki hizmetlerin dökümüdür..."
+                                ></textarea>
+                            </div>
+
+                            <div className="form-group mt-4">
+                                <label className="form-label">Varsayılan Teslimat Koşulları</label>
+                                <textarea
+                                    className="form-control"
+                                    rows="2"
+                                    name="defaultDeliveryTerms"
+                                    value={settings.defaultDeliveryTerms || ''}
+                                    onChange={handleChange}
+                                    placeholder="Örn: Sipariş onayından sonra 3 iş günü içinde..."
+                                ></textarea>
+                            </div>
+
+                            <div className="form-group mt-4">
+                                <label className="form-label">Varsayılan Garanti Koşulları</label>
+                                <textarea
+                                    className="form-control"
+                                    rows="2"
+                                    name="defaultWarrantyTerms"
+                                    value={settings.defaultWarrantyTerms || ''}
+                                    onChange={handleChange}
+                                    placeholder="Örn: 2 yıl parça ve işçilik garantilidir..."
+                                ></textarea>
+                            </div>
+
+                            <div className="form-group mt-4">
+                                <label className="form-label">Varsayılan Ek Notlar / Şartlar</label>
+                                <textarea
+                                    className="form-control"
+                                    rows="3"
+                                    name="defaultNote"
+                                    value={settings.defaultNote}
+                                    onChange={handleChange}
+                                    placeholder="Diğer özel şartlar ve notlar..."
+                                ></textarea>
+                            </div>
+                        </div>
+
                         <div className="mb-4">
                             <h3 className="text-lg font-semibold mb-2 border-b pb-2">Varsayılan Firma Bilgileri</h3>
                             <p className="text-sm text-gray-500">
@@ -582,7 +617,7 @@ const Settings = () => {
                 )}
 
             </div>
-        </div>
+        </div >
     );
 };
 

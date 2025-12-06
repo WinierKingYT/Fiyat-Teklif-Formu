@@ -105,7 +105,7 @@ const SortableRow = ({ item, index, handleItemChange, removeItem, formatCurrency
                 <textarea
                     className="form-control text-xs"
                     placeholder="Açıklama"
-                    rows="1"
+                    rows="2"
                     value={item.description}
                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                     onKeyDown={(e) => onKeyDown(e, index, 'description')}
@@ -571,18 +571,18 @@ const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) =>
             <div className="flex justify-end mb-4 px-1">
                 <div className="bg-gray-100 dark:bg-slate-700 p-1 rounded-lg inline-flex">
                     <button
-                        className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                        className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-2 text-sm font-medium ${viewMode === 'table' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                         onClick={() => setViewMode('table')}
-                        title="Tablo Görünümü"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                        <span>Liste</span>
                     </button>
                     <button
-                        className={`p-1.5 rounded-md transition-all ${viewMode === 'card' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+                        className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-2 text-sm font-medium ${viewMode === 'card' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
                         onClick={() => setViewMode('card')}
-                        title="Kart Görünümü"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        <span>Galeri</span>
                     </button>
                 </div>
             </div>
@@ -628,7 +628,7 @@ const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) =>
                                     <tr>
                                         <th style={{ width: '40px' }}></th>
                                         <th style={{ width: '80px' }}>Görsel</th>
-                                        <th>Ürün/Hizmet</th>
+                                        <th style={{ minWidth: '250px' }}>Ürün/Hizmet</th>
                                         <th style={{ width: '100px' }}>Miktar</th>
                                         <th style={{ width: '100px' }}>Birim</th>
                                         <th style={{ width: '120px' }}>Birim Fiyat</th>

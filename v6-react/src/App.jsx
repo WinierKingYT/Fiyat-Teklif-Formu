@@ -5,7 +5,6 @@ import CustomerInfoForm from './components/CustomerInfoForm';
 import CompanyInfoForm from './components/CompanyInfoForm';
 import ItemsTable from './components/ItemsTable';
 import SummarySection from './components/SummarySection';
-import QuickActions from './components/QuickActions';
 import StatusBar from './components/StatusBar';
 import CustomerSelectModal from './components/CustomerSelectModal';
 import ProductSelectModal from './components/ProductSelectModal';
@@ -13,20 +12,20 @@ import SavedQuotesModal from './components/SavedQuotesModal';
 import AnalyticsModal from './components/AnalyticsModal';
 
 import Dashboard from './components/Dashboard';
-import DashboardHero from './components/DashboardHero';
 import Settings from './components/Settings';
 import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import BankManagerModal from './components/BankManagerModal';
 import DatabaseManagerModal from './components/DatabaseManagerModal';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
-import { Save, FileText, PlusCircle } from 'lucide-react';
+import { Save, FileText, PlusCircle, CheckCircle2, ChevronDown, ChevronUp, Columns, LayoutTemplate } from 'lucide-react';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { Toaster, toast } from 'react-hot-toast';
 
 import CustomerManagerModal from './components/CustomerManagerModal';
 import ProductManagerModal from './components/ProductManagerModal';
 import TemplateManagerModal from './components/TemplateManagerModal';
+import PdfPreviewPanel from './components/PdfPreviewPanel';
 
 import RecycleBinModal from './components/RecycleBinModal';
 
@@ -39,7 +38,9 @@ const QuoteBuilder = ({
   onOpenBankManager,
   onOpenRecycleBin,
   isMobileMenuOpen,
-  onToggleMobileMenu
+  onToggleMobileMenu,
+  isSplitView,
+  setIsSplitView
 }) => {
   const {
     quoteData, updateQuoteData,
@@ -64,6 +65,44 @@ const QuoteBuilder = ({
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+  // isSplitView passed as prop
+
+  // Resizable Sidebar State
+  const [sidebarWidth, setSidebarWidth] = useState(450);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = React.useCallback((mouseDownEvent) => {
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = React.useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = React.useCallback(
+    (mouseMoveEvent) => {
+      if (isResizing) {
+        // Left-Sidebar Logic: Width = Mouse X
+        let newWidth = mouseMoveEvent.clientX - 16;
+
+        // Constrain width
+        if (newWidth < 280) newWidth = 280;
+        if (newWidth > 800) newWidth = 800;
+
+        setSidebarWidth(newWidth);
+      }
+    },
+    [isResizing]
+  );
+
+  useEffect(() => {
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [resize, stopResizing]);
 
   // Collapsible Sections State
   const [sections, setSections] = useState({
@@ -96,29 +135,33 @@ const QuoteBuilder = ({
     if (window.confirm('Mevcut teklif temizlenecek. Emin misiniz?')) {
       setCurrentQuoteId(null); // Reset current quote ID
 
-      // Reset Quote Data
-      updateQuoteData('title', '');
-      updateQuoteData('number', '');
-      updateQuoteData('date', new Date().toISOString().split('T')[0]);
-      updateQuoteData('validUntilDays', '10');
-      updateQuoteData('description', '');
-      updateQuoteData('terms', '');
-      updateQuoteData('deliveryTerms', '');
-      updateQuoteData('warrantyTerms', '');
-      updateQuoteData('notes', '');
-
-      // Reset Currency from Settings
-      if (db) {
-        try {
-          const settings = await db.get('settings', 'global');
-          updateQuoteData('currency', settings?.currency || 'TRY');
-        } catch (error) {
-          console.error('Error loading default currency:', error);
-          updateQuoteData('currency', 'TRY');
+      // Reset Quote Data with Defaults
+      try {
+        let settings = { currency: 'TRY' };
+        if (db) {
+          settings = await db.get('settings', 'global') || settings;
         }
-      } else {
+
+        updateQuoteData('title', settings.defaultTitle || '');
+        updateQuoteData('number', '');
+        updateQuoteData('date', new Date().toISOString().split('T')[0]);
+        updateQuoteData('validUntilDays', settings.defaultValidity || '10');
+        updateQuoteData('description', settings.defaultDescription || '');
+        updateQuoteData('terms', settings.defaultTerms || '');
+        updateQuoteData('deliveryTerms', settings.defaultDeliveryTerms || '');
+        updateQuoteData('warrantyTerms', settings.defaultWarrantyTerms || '');
+        updateQuoteData('notes', settings.defaultNote || '');
+        updateQuoteData('currency', settings.currency || 'TRY');
+
+      } catch (error) {
+        console.error('Error loading defaults:', error);
+        // Fallback defaults
+        updateQuoteData('title', '');
+        updateQuoteData('validUntilDays', '10');
         updateQuoteData('currency', 'TRY');
       }
+
+      // Reset Currency logic merged above
 
       // Reset Customer Data
       updateCustomerData('name', '');
@@ -218,17 +261,19 @@ const QuoteBuilder = ({
   // Helper component for collapsible section headers
   const SectionHeader = ({ title, isOpen, onToggle, icon: Icon }) => (
     <div
-      className="collapsible-header p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-t-lg"
+      className="collapsible-header p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-t-lg cursor-pointer"
       onClick={onToggle}
     >
-      <div className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
-        {Icon && <Icon size={18} className="text-blue-500" />}
-        {title}
-      </div>
-      <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {Icon && <Icon size={18} className="text-blue-500" />}
+          <div className="font-semibold text-gray-700 dark:text-gray-200">{title}</div>
+        </div>
+        <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
       </div>
     </div>
   );
@@ -237,60 +282,24 @@ const QuoteBuilder = ({
     <div className="fade-in-up">
       {!focusMode && appLayout === 'modern' && (
         <>
-          {/* Modern Sticky Header */}
-          <div className="sticky-actions glass-panel rounded-xl shadow-sm mb-6">
-            {/* Quick Actions Replaced Title */}
-            <div className="flex-1 overflow-x-auto">
-              <QuickActions
-                onOpenHistory={() => setIsHistoryModalOpen(true)}
-                onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
-                onOpenCustomerManager={() => setIsCustomerManagerOpen(true)}
-                onOpenProductManager={() => setIsProductManagerOpen(true)}
-                onOpenTemplateManager={() => setIsTemplateManagerOpen(true)}
-                onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
-                onOpenBankManager={() => setIsBankManagerOpen(true)}
-                onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
-                onFillTestData={fillTestData}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                className="btn btn-outline btn-sm glass-card hover:bg-white/50"
-                onClick={handleNewQuote}
-                title="Yeni Teklif (Ctrl+N)"
-              >
-                <PlusCircle size={16} /> <span className="hidden sm:inline">Yeni</span>
-              </button>
-              <button
-                className="btn btn-outline btn-sm glass-card hover:bg-white/50"
-                onClick={() => setIsHistoryModalOpen(true)}
-              >
-                <FileText size={16} /> <span className="hidden sm:inline">Geçmiş</span>
-              </button>
-              <button
-                className="btn btn-primary btn-sm shadow-lg shadow-blue-500/30"
-                onClick={saveQuote}
-                title="Kaydet (Ctrl+S)"
-              >
-                <Save size={16} /> <span className="hidden sm:inline">Kaydet</span>
-              </button>
-            </div>
-          </div>
+          {/* Sticky Header Removed - Moved to App Drawer */}
         </>
       )}
 
       {appLayout === 'modern' ? (
         <>
-          <DashboardHero
-            quoteData={quoteData}
-            items={items}
-            totalAmount={items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString('tr-TR', { style: 'currency', currency: quoteData.currency })}
-            onToggleMobileMenu={onToggleMobileMenu}
-          />
-          <div className="dashboard-grid">
-            {/* LEFT COLUMN - SIDEBAR (Sticky) */}
-            <div className={`dashboard-sidebar space-y-4 ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+          {/* Dashboard Hero Removed */}
+          <div
+            className="dashboard-grid"
+            style={{
+              gridTemplateColumns: isSplitView ? '1fr 1fr' : `${sidebarWidth}px 16px minmax(800px, 1fr)`, /* Split vs Sidebar */
+              gap: isSplitView ? '24px' : '0'
+            }}
+          >
+            {/* LEFT COLUMN - SIDEBAR / EDITOR */}
+            <div
+              className={`dashboard-sidebar space-y-4 ${isMobileMenuOpen ? 'mobile-open' : ''}`}
+            >
 
               {/* Customer Info Card */}
               <div className="glass-card bg-white/80 dark:bg-slate-800/80">
@@ -350,53 +359,122 @@ const QuoteBuilder = ({
                 </div>
               </div>
 
+              {/* In Split View, Move Products and Summary Here */}
+              {isSplitView && (
+                <>
+                  {/* Items Table in Split View */}
+                  <div className="glass-card bg-white/90 dark:bg-slate-800/90 p-1 shadow-lg border-t-4 border-blue-500">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-900 dark:text-blue-300">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        </span>
+                        Ürün ve Hizmetler
+                      </h3>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setIsProductModalOpen(true)}
+                      >
+                        <PlusCircle size={16} /> Ürün Ekle
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <ItemsTable
+                        items={items}
+                        onItemsChange={setItems}
+                        onAddProduct={() => setIsProductModalOpen(true)}
+                        currency={quoteData.currency}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Summary Section in Split View */}
+                  <div className="glass-card bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 p-6">
+                    <SummarySection
+                      items={items}
+                      discount={discount}
+                      onDiscountChange={setDiscount}
+                      currency={quoteData.currency}
+                    />
+                  </div>
+
+                  {/* Terms in Split View */}
+                  <div className="glass-card bg-white/80 dark:bg-slate-800/80 p-6">
+                    <h4 className="text-md font-semibold mb-4 text-gray-700 dark:text-gray-200 border-b pb-2">Notlar ve Şartlar</h4>
+                    <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+                  </div>
+                </>
+              )}
+
             </div>
 
+            {/* RESIZER HANDLE (Only in Sidebar Mode) */}
+            {!isSplitView && (
+              <div
+                className={`resizer ${isResizing ? 'active' : ''}`}
+                onMouseDown={startResizing}
+              />
+            )}
+
             {/* RIGHT COLUMN - MAIN CONTENT */}
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-x-auto p-1">
 
-              {/* Items Table - The Star of the Show */}
-              <div className="glass-card bg-white/90 dark:bg-slate-800/90 p-1 shadow-lg border-t-4 border-blue-500">
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-900 dark:text-blue-300">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-                    </span>
-                    Ürün ve Hizmetler
-                  </h3>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => setIsProductModalOpen(true)}
-                  >
-                    <PlusCircle size={16} /> Ürün Ekle
-                  </button>
-                </div>
-                <div className="p-4">
-                  <ItemsTable
-                    items={items}
-                    onItemsChange={setItems}
-                    onAddProduct={() => setIsProductModalOpen(true)}
-                    currency={quoteData.currency}
-                  />
-                </div>
+              {/* RIGHT COLUMN - MAIN CONTENT or PREVIEW */}
+              <div className={`space-y-6 ${isSplitView ? 'h-[calc(100vh-140px)]' : 'overflow-x-auto p-1'}`}>
+
+                {isSplitView ? (
+                  /* SPLIT VIEW: Layout Preview */
+                  <div className="h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-slate-900">
+                    <PdfPreviewPanel />
+                  </div>
+                ) : (
+                  /* NORMAL VIEW: Items & Summary */
+                  <>
+                    {/* Items Table - The Star of the Show */}
+                    <div className="glass-card bg-white/90 dark:bg-slate-800/90 p-1 shadow-lg border-t-4 border-blue-500">
+                      <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                          <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-900 dark:text-blue-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                          </span>
+                          Ürün ve Hizmetler
+                        </h3>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setIsProductModalOpen(true)}
+                        >
+                          <PlusCircle size={16} /> Ürün Ekle
+                        </button>
+                      </div>
+                      <div className="p-4">
+                        <ItemsTable
+                          items={items}
+                          onItemsChange={setItems}
+                          onAddProduct={() => setIsProductModalOpen(true)}
+                          currency={quoteData.currency}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Summary Section */}
+                    <div className="glass-card bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 p-6">
+                      <SummarySection
+                        items={items}
+                        discount={discount}
+                        onDiscountChange={setDiscount}
+                        currency={quoteData.currency}
+                      />
+                    </div>
+
+                    {/* Terms and Notes */}
+                    <div className="glass-card bg-white/80 dark:bg-slate-800/80 p-6">
+                      <h4 className="text-md font-semibold mb-4 text-gray-700 dark:text-gray-200 border-b pb-2">Notlar ve Şartlar</h4>
+                      <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+                    </div>
+                  </>
+                )}
+
               </div>
-
-              {/* Summary Section */}
-              <div className="glass-card bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 p-6">
-                <SummarySection
-                  items={items}
-                  discount={discount}
-                  onDiscountChange={setDiscount}
-                  currency={quoteData.currency}
-                />
-              </div>
-
-              {/* Terms and Notes */}
-              <div className="glass-card bg-white/80 dark:bg-slate-800/80 p-6">
-                <h4 className="text-md font-semibold mb-4 text-gray-700 dark:text-gray-200 border-b pb-2">Notlar ve Şartlar</h4>
-                <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
-              </div>
-
             </div>
           </div>
         </>
@@ -516,6 +594,8 @@ function App() {
   const [isRecycleBinModalOpen, setIsRecycleBinModalOpen] = useState(false);
   // Mobile Menu State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Split View State
+  const [isSplitView, setIsSplitView] = useState(false);
 
   return (
     <QuoteProvider>
@@ -530,6 +610,8 @@ function App() {
         onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
         onOpenBankManager={() => setIsBankManagerOpen(true)}
         onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
+        isSplitView={isSplitView}
+        setIsSplitView={setIsSplitView}
       >
         {/* Mobile Menu Backdrop */}
         {isMobileMenuOpen && (
@@ -549,6 +631,8 @@ function App() {
             onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
             isMobileMenuOpen={isMobileMenuOpen}
             onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            isSplitView={isSplitView}
+            setIsSplitView={setIsSplitView}
           />
         )}
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
@@ -587,7 +671,41 @@ function App() {
         onClose={() => setIsRecycleBinModalOpen(false)}
       />
 
-      < Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          className: '',
+          style: {
+            background: 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            color: '#334155',
+            padding: '16px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            borderRadius: '12px',
+            fontSize: '0.95rem',
+            fontWeight: '500',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: 'white',
+            },
+            style: {
+              borderLeft: '4px solid #10b981',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: 'white',
+            },
+            style: {
+              borderLeft: '4px solid #ef4444',
+            },
+          },
+        }}
+      />
     </QuoteProvider >
   );
 }

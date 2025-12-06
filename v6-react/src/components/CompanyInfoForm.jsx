@@ -53,8 +53,7 @@ const CompanyInfoForm = ({ data, onChange }) => {
             </div>
 
             <div className="form-row">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="companyName">Firma Adı</label>
+                <div className="form-group floating-label-group">
                     <input
                         type="text"
                         className="form-control"
@@ -62,12 +61,12 @@ const CompanyInfoForm = ({ data, onChange }) => {
                         name="name"
                         value={data.name || ''}
                         onChange={handleChange}
-                        placeholder="Firma adını girin"
+                        placeholder=" "
                         autoComplete="organization"
                     />
+                    <label className="form-label" htmlFor="companyName">Firma Adı</label>
                 </div>
-                <div className="form-group">
-                    <label className="form-label" htmlFor="companyAuthorized">Yetkili Satıcı</label>
+                <div className="form-group floating-label-group">
                     <input
                         type="text"
                         className="form-control"
@@ -75,18 +74,15 @@ const CompanyInfoForm = ({ data, onChange }) => {
                         name="authorized"
                         value={data.authorized || ''}
                         onChange={handleChange}
-                        placeholder="Yetkili satıcı adını girin"
+                        placeholder=" "
                         autoComplete="name"
                     />
+                    <label className="form-label" htmlFor="companyAuthorized">Yetkili Satıcı</label>
                 </div>
             </div>
 
             <div className="form-row">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="companyPhone">
-                        <Phone size={16} />
-                        Telefon
-                    </label>
+                <div className="form-group floating-label-group">
                     <input
                         type="tel"
                         className="form-control"
@@ -94,15 +90,16 @@ const CompanyInfoForm = ({ data, onChange }) => {
                         name="phone"
                         value={data.phone || ''}
                         onChange={handleChange}
-                        placeholder="Telefon numarasını girin"
+                        placeholder=" "
                         autoComplete="tel"
                     />
-                </div>
-                <div className="form-group">
-                    <label className="form-label" htmlFor="companyEmail">
-                        <Mail size={16} />
-                        E-posta
+                    <label className="form-label" htmlFor="companyPhone">
+                        <span className="flex items-center gap-1">
+                            <Phone size={14} /> Telefon
+                        </span>
                     </label>
+                </div>
+                <div className="form-group floating-label-group">
                     <input
                         type="email"
                         className="form-control"
@@ -110,18 +107,19 @@ const CompanyInfoForm = ({ data, onChange }) => {
                         name="email"
                         value={data.email || ''}
                         onChange={handleChange}
-                        placeholder="E-posta adresini girin"
+                        placeholder=" "
                         autoComplete="email"
                     />
+                    <label className="form-label" htmlFor="companyEmail">
+                        <span className="flex items-center gap-1">
+                            <Mail size={14} /> E-posta
+                        </span>
+                    </label>
                 </div>
             </div>
 
             <div className="form-row">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="companyWebsite">
-                        <Globe size={16} />
-                        Web Sitesi
-                    </label>
+                <div className="form-group floating-label-group">
                     <input
                         type="url"
                         className="form-control"
@@ -129,27 +127,33 @@ const CompanyInfoForm = ({ data, onChange }) => {
                         name="website"
                         value={data.website || ''}
                         onChange={handleChange}
-                        placeholder="Web sitesi adresini girin"
+                        placeholder=" "
                         autoComplete="url"
                     />
+                    <label className="form-label" htmlFor="companyWebsite">
+                        <span className="flex items-center gap-1">
+                            <Globe size={14} /> Web Sitesi
+                        </span>
+                    </label>
                 </div>
             </div>
 
-            <div className="form-group">
-                <label className="form-label" htmlFor="companyAddress">
-                    <MapPin size={16} />
-                    Adres
-                </label>
+            <div className="form-group floating-label-group">
                 <textarea
                     className="form-control"
                     id="companyAddress"
                     name="address"
                     value={data.address || ''}
                     onChange={handleChange}
-                    placeholder="Adres bilgisini girin"
+                    placeholder=" "
                     rows="2"
                     autoComplete="street-address"
                 ></textarea>
+                <label className="form-label" htmlFor="companyAddress">
+                    <span className="flex items-center gap-1">
+                        <MapPin size={14} /> Adres
+                    </span>
+                </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

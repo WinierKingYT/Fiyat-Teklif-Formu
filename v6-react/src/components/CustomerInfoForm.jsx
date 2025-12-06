@@ -25,8 +25,7 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
             </div>
 
             <div className="form-row">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="customerName">Müşteri Adı</label>
+                <div className="form-group floating-label-group">
                     <input
                         type="text"
                         className="form-control"
@@ -34,12 +33,12 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                         name="name"
                         value={data.name || ''}
                         onChange={handleChange}
-                        placeholder="Müşteri adını girin"
+                        placeholder=" "
                         autoComplete="name"
                     />
+                    <label className="form-label" htmlFor="customerName">Müşteri Adı</label>
                 </div>
-                <div className="form-group">
-                    <label className="form-label" htmlFor="customerCompany">Firma</label>
+                <div className="form-group floating-label-group">
                     <input
                         type="text"
                         className="form-control"
@@ -47,18 +46,15 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                         name="company"
                         value={data.company || ''}
                         onChange={handleChange}
-                        placeholder="Firma adını girin"
+                        placeholder=" "
                         autoComplete="organization"
                     />
+                    <label className="form-label" htmlFor="customerCompany">Firma</label>
                 </div>
             </div>
 
             <div className="form-row">
-                <div className="form-group">
-                    <label className="form-label" htmlFor="customerEmail">
-                        <Mail size={16} />
-                        E-posta
-                    </label>
+                <div className="form-group floating-label-group">
                     <input
                         type="email"
                         className="form-control"
@@ -66,15 +62,16 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                         name="email"
                         value={data.email || ''}
                         onChange={handleChange}
-                        placeholder="E-posta adresini girin"
+                        placeholder=" "
                         autoComplete="email"
                     />
-                </div>
-                <div className="form-group">
-                    <label className="form-label" htmlFor="customerPhone">
-                        <Phone size={16} />
-                        Telefon
+                    <label className="form-label" htmlFor="customerEmail">
+                        <span className="flex items-center gap-1">
+                            <Mail size={14} /> E-posta
+                        </span>
                     </label>
+                </div>
+                <div className="form-group floating-label-group">
                     <input
                         type="tel"
                         className="form-control"
@@ -82,27 +79,33 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                         name="phone"
                         value={data.phone || ''}
                         onChange={handleChange}
-                        placeholder="Telefon numarasını girin"
+                        placeholder=" "
                         autoComplete="tel"
                     />
+                    <label className="form-label" htmlFor="customerPhone">
+                        <span className="flex items-center gap-1">
+                            <Phone size={14} /> Telefon
+                        </span>
+                    </label>
                 </div>
             </div>
 
-            <div className="form-group">
-                <label className="form-label" htmlFor="customerAddress">
-                    <MapPin size={16} />
-                    Adres
-                </label>
+            <div className="form-group floating-label-group">
                 <textarea
                     className="form-control"
                     id="customerAddress"
                     name="address"
                     value={data.address || ''}
                     onChange={handleChange}
-                    placeholder="Adres bilgisini girin"
+                    placeholder=" "
                     rows="2"
                     autoComplete="street-address"
                 ></textarea>
+                <label className="form-label" htmlFor="customerAddress">
+                    <span className="flex items-center gap-1">
+                        <MapPin size={14} /> Adres
+                    </span>
+                </label>
             </div>
         </div>
     );

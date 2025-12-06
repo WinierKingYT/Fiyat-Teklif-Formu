@@ -25,7 +25,8 @@ const PrintableQuote = ({
     discount: _discount,
     config: _config,
     layout,
-    signature
+    signature,
+    onEdit
 }) => {
     const quoteData = React.useMemo(() => _quoteData || {}, [_quoteData]);
     const customerData = React.useMemo(() => _customerData || {}, [_customerData]);
@@ -250,7 +251,8 @@ const PrintableQuote = ({
         totalTax,
         total,
         currentLocale,
-        hasLineItemDiscounts
+        hasLineItemDiscounts,
+        onEdit // Pass the handler to all themes
     };
 
     if (theme === 'modern') {

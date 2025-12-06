@@ -1,9 +1,10 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
-import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, QrCode, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, PenTool, Layers } from 'lucide-react';
+import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, QrCode, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, PenTool, Layers, Edit2 } from 'lucide-react';
 import { calculateQuoteTotals } from '../utils/calculations';
 import { generatePDF } from '../utils/pdfGenerator';
 import { exportQuoteToExcel } from '../utils/excelExporter';
 import PrintableQuote from './PrintableQuoteV2';
+import PopupEditor from './PopupEditor';
 import { useQuote } from '../context/QuoteContext';
 import toast from 'react-hot-toast';
 
@@ -17,13 +18,37 @@ const PdfPreviewPanel = () => {
         discount,
         pdfLayout,
         pdfConfig,
-        setPdfConfig
+        setPdfConfig,
+        updateQuoteData,
+        updateCustomerData,
+        updateCompanyData
     } = useQuote();
 
     const [activeTab, setActiveTab] = useState('sections');
     const [savedTemplates, setSavedTemplates] = useState([]);
     const [templateName, setTemplateName] = useState('');
     const [signature, setSignature] = useState(null);
+
+    // Popup Editor State
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [editConfig, setEditConfig] = useState({
+        title: '',
+        initialValue: '',
+        onSave: () => { },
+        type: 'text',
+        options: []
+    });
+
+    const openEditor = (title, initialValue, onSave, type = 'text', options = []) => {
+        setEditConfig({
+            title,
+            initialValue,
+            onSave,
+            type,
+            options
+        });
+        setIsEditorOpen(true);
+    };
 
     // Load templates from localStorage on mount
     useEffect(() => {
@@ -1211,6 +1236,7 @@ const PdfPreviewPanel = () => {
                                 config={pdfConfig}
                                 layout={pdfLayout}
                                 signature={signature}
+                                onEdit={openEditor} // Pass the edit handler
                             />
                         </div>
                     </div>
@@ -1234,7 +1260,17 @@ const PdfPreviewPanel = () => {
                     signature={signature}
                 />
             </div>
-        </div >
+            {/* Popup Editor (Global) */}
+            <PopupEditor
+                isOpen={isEditorOpen}
+                onClose={() => setIsEditorOpen(false)}
+                title={editConfig.title}
+                initialValue={editConfig.initialValue}
+                onSave={editConfig.onSave}
+                type={editConfig.type}
+                options={editConfig.options}
+            />
+        </div>
     );
 };
 
