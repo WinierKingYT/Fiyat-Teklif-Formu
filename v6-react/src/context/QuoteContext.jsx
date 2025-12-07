@@ -428,10 +428,29 @@ export const QuoteProvider = ({ children }) => {
     });
 
     // UI State
-    const [viewMode, setViewMode] = useState(() => localStorage.getItem('viewMode') || 'desktop');
+    const [viewMode, setViewMode] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768 ? 'mobile' : (localStorage.getItem('viewMode') || 'desktop');
+        }
+        return 'desktop';
+    });
 
     useEffect(() => {
+        const handleResize = () => {
+            // Only switch if we cross the boundary
+            if (window.innerWidth < 768 && viewMode !== 'mobile') {
+                setViewMode('mobile');
+            } else if (window.innerWidth >= 768 && viewMode === 'mobile') {
+                setViewMode('desktop');
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        // Initial check
+        handleResize();
+
         localStorage.setItem('viewMode', viewMode);
+        return () => window.removeEventListener('resize', handleResize);
     }, [viewMode]);
 
     // App Layout State (modern | classic)

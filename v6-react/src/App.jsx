@@ -58,7 +58,8 @@ const QuoteBuilder = ({
     loadQuote,
     appLayout,
     fillTestData,
-    companyDefaults
+    companyDefaults,
+    viewMode
   } = useQuote();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -292,13 +293,18 @@ const QuoteBuilder = ({
           <div
             className="dashboard-grid"
             style={{
-              gridTemplateColumns: isSplitView ? '1fr 1fr' : `${sidebarWidth}px 16px minmax(800px, 1fr)`, /* Split vs Sidebar */
-              gap: isSplitView ? '24px' : '0'
+              gridTemplateColumns: viewMode === 'mobile'
+                ? '1fr'
+                : (isSplitView ? '1fr 1fr' : `${sidebarWidth}px 16px minmax(800px, 1fr)`),
+              gap: isSplitView || viewMode === 'mobile' ? '24px' : '0',
+              display: viewMode === 'mobile' ? 'flex' : 'grid',
+              flexDirection: 'column'
             }}
           >
             {/* LEFT COLUMN - SIDEBAR / EDITOR */}
             <div
               className={`dashboard-sidebar space-y-4 ${isMobileMenuOpen ? 'mobile-open' : ''}`}
+              style={{ width: viewMode === 'mobile' ? '100%' : 'auto' }}
             >
 
               {/* Customer Info Card */}
@@ -409,7 +415,7 @@ const QuoteBuilder = ({
             </div>
 
             {/* RESIZER HANDLE (Only in Sidebar Mode) */}
-            {!isSplitView && (
+            {!isSplitView && viewMode !== 'mobile' && (
               <div
                 className={`resizer ${isResizing ? 'active' : ''}`}
                 onMouseDown={startResizing}
