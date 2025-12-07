@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { Plus, Trash, GripVertical, Image as ImageIcon, Package, Upload } from 'lucide-react';
 import {
     DndContext,
@@ -21,8 +21,8 @@ import Logger from '../utils/logger';
 
 import { evaluateMathExpression } from '../utils/smartCalc';
 
-// Sortable Row Component
-const SortableRow = ({ item, index, handleItemChange, removeItem, formatCurrency, onKeyDown }) => {
+// Memoized Sortable Row Component for better performance
+const SortableRow = memo(({ item, index, handleItemChange, removeItem, formatCurrency, onKeyDown }) => {
     const {
         attributes,
         listeners,
@@ -212,10 +212,13 @@ const SortableRow = ({ item, index, handleItemChange, removeItem, formatCurrency
             </td>
         </tr>
     );
-};
+});
 
-// Sortable Row Card Component (For Card View)
-const SortableRowCard = ({ item, index, handleItemChange, removeItem, formatCurrency }) => {
+// Display name for debugging
+SortableRow.displayName = 'SortableRow';
+
+// Memoized Sortable Row Card Component (For Card View)
+const SortableRowCard = memo(({ item, index, handleItemChange, removeItem, formatCurrency }) => {
     const {
         attributes,
         listeners,
@@ -369,7 +372,10 @@ const SortableRowCard = ({ item, index, handleItemChange, removeItem, formatCurr
             </button>
         </div>
     );
-};
+});
+
+// Display name for debugging
+SortableRowCard.displayName = 'SortableRowCard';
 
 const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) => {
     const fileInputRef = useRef(null);
@@ -462,9 +468,11 @@ const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) =>
         onItemsChange(newItems);
     };
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency }).format(amount);
-    };
+    const formatCurrency = useMemo(() => {
+        return (amount) => {
+            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency }).format(amount);
+        };
+    }, [currency]);
 
     const handleExcelUpload = (e) => {
         const file = e.target.files[0];

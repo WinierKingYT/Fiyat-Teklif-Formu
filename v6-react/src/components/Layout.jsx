@@ -19,7 +19,7 @@ const Layout = ({
 }) => {
     const {
         viewMode, focusMode, setFocusMode, isLivePreviewMode,
-        appTheme, setAppTheme
+        appTheme, setAppTheme, appLayout
     } = useQuote();
 
     const toggleTheme = () => {
@@ -34,18 +34,25 @@ const Layout = ({
     };
 
     // Container with max-width for larger screens, full width for mobile
+    // IMPORTANT: Only apply mobile width constraint for MODERN layout
     const containerStyle = {
-        maxWidth: viewMode === 'mobile' || focusMode ? '100%' : '1600px',
+        maxWidth: (viewMode === 'mobile' && appLayout === 'modern') ? '480px' : (focusMode ? '100%' : '1600px'),
         margin: '0 auto',
         padding: viewMode === 'mobile' || focusMode ? '0' : '0 1rem',
         minHeight: '100vh',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        boxShadow: (viewMode === 'mobile' && appLayout === 'modern') ? '0 0 30px rgba(0,0,0,0.1)' : 'none',
+        transition: 'all 0.3s ease-in-out'
     };
 
     return (
         <div className="layout-wrapper" style={wrapperStyle}>
-            <div className={`app-container ${viewMode === 'mobile' ? 'mobile-view' : ''}`} style={containerStyle}>
+            <div
+                className={`app-container ${viewMode === 'mobile' ? 'mobile-view' : ''}`}
+                style={containerStyle}
+                data-layout={appLayout}
+            >
                 {!focusMode && (
                     <Header
                         theme={appTheme}

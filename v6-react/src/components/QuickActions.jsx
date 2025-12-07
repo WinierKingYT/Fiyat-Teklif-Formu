@@ -27,16 +27,16 @@ const QuickActions = ({
     ];
 
     return (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
             {/* Toggle Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${isOpen
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-300 font-medium text-sm ${isOpen
                     ? 'bg-slate-800 text-white shadow-lg shadow-slate-300 dark:shadow-none'
                     : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-sm dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'
                     }`}
             >
-                {isOpen ? <X size={20} /> : <LayoutGrid size={20} />}
+                {isOpen ? <X size={18} /> : <LayoutGrid size={18} />}
                 <span>{isOpen ? 'Kapat' : 'Araçlar'}</span>
             </button>
 

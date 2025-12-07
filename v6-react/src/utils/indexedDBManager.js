@@ -4,13 +4,14 @@ import Logger from './logger';
 class IndexedDBManager {
     constructor() {
         this.dbName = 'TeklifMasterDB';
-        this.version = this.calculateVersion('2.3.0');
+        this.version = this.calculateVersion('2.3.1'); // Bumped version for new store
         this.db = null;
         this.isInitialized = false;
         this.initializationPromise = null;
         this.isConnectionOpen = false;
         this.writeCache = null;
     }
+
 
     calculateVersion(appVersion) {
         const parts = appVersion.split('.').map(Number);
@@ -76,8 +77,10 @@ class IndexedDBManager {
             { version: 3, migrate: (db) => this.addFormStateStore(db) },
             { version: 4, migrate: (db) => this.addSettingsStore(db) },
             { version: 5, migrate: (db) => this.addBankInfoStore(db) },
-            { version: 20300, migrate: (db) => this.addRecycleBinStore(db) }
+            { version: 20300, migrate: (db) => this.addRecycleBinStore(db) },
+            { version: 20301, migrate: (db) => this.addCompanyDefaultsStore(db) }
         ];
+
 
         migrations
             .filter(migration => migration.version > oldVersion)
@@ -151,6 +154,13 @@ class IndexedDBManager {
             store.createIndex('deletedAt', 'deletedAt', { unique: false });
             store.createIndex('name', 'name', { unique: false });
             Logger.log('RecycleBin store oluşturuldu');
+        }
+    }
+
+    addCompanyDefaultsStore(db) {
+        if (!db.objectStoreNames.contains('company_defaults')) {
+            const store = db.createObjectStore('company_defaults', { keyPath: 'id' });
+            Logger.log('CompanyDefaults store oluşturuldu');
         }
     }
 

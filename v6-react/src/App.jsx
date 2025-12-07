@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Layout from './components/Layout';
 import QuoteInfoForm from './components/QuoteInfoForm';
 import CustomerInfoForm from './components/CustomerInfoForm';
@@ -15,19 +15,31 @@ import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
-import BankManagerModal from './components/BankManagerModal';
-import DatabaseManagerModal from './components/DatabaseManagerModal';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { Save, FileText, PlusCircle, CheckCircle2, ChevronDown, ChevronUp, Columns, LayoutTemplate } from 'lucide-react';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { Toaster, toast } from 'react-hot-toast';
 
-import CustomerManagerModal from './components/CustomerManagerModal';
-import ProductManagerModal from './components/ProductManagerModal';
-import TemplateManagerModal from './components/TemplateManagerModal';
 import PdfPreviewPanel from './components/PdfPreviewPanel';
+import QuickActions from './components/QuickActions';
 
-import RecycleBinModal from './components/RecycleBinModal';
+// Code Splitting: Lazy load heavy modals for better initial load performance
+const CustomerManagerModal = lazy(() => import('./components/CustomerManagerModal'));
+const ProductManagerModal = lazy(() => import('./components/ProductManagerModal'));
+const TemplateManagerModal = lazy(() => import('./components/TemplateManagerModal'));
+const BankManagerModal = lazy(() => import('./components/BankManagerModal'));
+const DatabaseManagerModal = lazy(() => import('./components/DatabaseManagerModal'));
+const RecycleBinModal = lazy(() => import('./components/RecycleBinModal'));
+
+// Loading fallback component
+const ModalLoadingFallback = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="glass-card p-6 rounded-lg flex flex-col items-center gap-3">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p className="text-sm text-gray-600 dark:text-gray-300">Yükleniyor...</p>
+    </div>
+  </div>
+);
 
 const QuoteBuilder = ({
   onNavigate,
@@ -487,14 +499,6 @@ const QuoteBuilder = ({
       ) : (
         /* CLASSIC LAYOUT (Single Column) */
         <div className="space-y-6 max-w-5xl mx-auto">
-          {/* Classic Quick Actions */}
-          <QuickActions
-            onSave={saveQuote}
-            onNew={handleNewQuote}
-            onHistory={() => setIsHistoryModalOpen(true)}
-            onPreview={() => setIsLivePreviewMode(true)}
-          />
-
           {/* Info Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="card p-6 bg-white dark:bg-slate-800 shadow-sm rounded-lg border border-gray-200 dark:border-slate-700">
@@ -661,36 +665,48 @@ function App() {
       </Layout >
 
       {/* Global Modals - Rendered outside Layout to avoid stacking context issues */}
-      < CustomerManagerModal
-        isOpen={isCustomerManagerOpen}
-        onClose={() => setIsCustomerManagerOpen(false)
-        }
-      />
+      {/* Wrapped in Suspense for lazy loading */}
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <CustomerManagerModal
+          isOpen={isCustomerManagerOpen}
+          onClose={() => setIsCustomerManagerOpen(false)}
+        />
+      </Suspense>
 
-      < ProductManagerModal
-        isOpen={isProductManagerOpen}
-        onClose={() => setIsProductManagerOpen(false)}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <ProductManagerModal
+          isOpen={isProductManagerOpen}
+          onClose={() => setIsProductManagerOpen(false)}
+        />
+      </Suspense>
 
-      < TemplateManagerModal
-        isOpen={isTemplateManagerOpen}
-        onClose={() => setIsTemplateManagerOpen(false)}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <TemplateManagerModal
+          isOpen={isTemplateManagerOpen}
+          onClose={() => setIsTemplateManagerOpen(false)}
+        />
+      </Suspense>
 
-      < DatabaseManagerModal
-        isOpen={isDatabaseManagerOpen}
-        onClose={() => setIsDatabaseManagerOpen(false)}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <DatabaseManagerModal
+          isOpen={isDatabaseManagerOpen}
+          onClose={() => setIsDatabaseManagerOpen(false)}
+        />
+      </Suspense>
 
-      < BankManagerModal
-        isOpen={isBankManagerOpen}
-        onClose={() => setIsBankManagerOpen(false)}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <BankManagerModal
+          isOpen={isBankManagerOpen}
+          onClose={() => setIsBankManagerOpen(false)}
+        />
+      </Suspense>
 
-      < RecycleBinModal
-        isOpen={isRecycleBinModalOpen}
-        onClose={() => setIsRecycleBinModalOpen(false)}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <RecycleBinModal
+          isOpen={isRecycleBinModalOpen}
+          onClose={() => setIsRecycleBinModalOpen(false)}
+        />
+      </Suspense>
 
       <Toaster
         position="top-right"

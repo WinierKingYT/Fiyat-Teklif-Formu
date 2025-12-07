@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { FileText, Moon, Sun, LayoutDashboard, Settings, FileDown, Save, Upload, Download, Smartphone, Monitor, Maximize, Columns, Undo, Redo, PlusCircle, Users, Package, LayoutTemplate, Database, Landmark, Trash2, History } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { generatePDF } from '../utils/pdfGenerator';
+import AutoSaveIndicator from './AutoSaveIndicator';
+import QuickActions from './QuickActions';
 
 const Header = ({
     theme,
@@ -34,7 +36,8 @@ const Header = ({
         undo,
         redo,
         canUndo,
-        canRedo
+        canRedo,
+        appLayout
     } = useQuote();
     const fileInputRef = useRef(null);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -81,28 +84,50 @@ const Header = ({
         { icon: Database, label: 'Test Verisi', count: null, onClick: fillTestData, className: 'text-orange-600 bg-orange-50 hover:bg-orange-100' },
     ];
 
+    // Debug: Check appLayout value
+    console.log('Header appLayout:', appLayout);
+
     return (
         <>
-            <header className="app-header relative z-30">
-                <div className="header-content">
+            <header
+                className="app-header relative z-30"
+                style={appLayout === 'classic' ? { minHeight: 'auto' } : {}}
+            >
+                <div
+                    className="header-content"
+                    style={appLayout === 'classic' ? {
+                        padding: '0.25rem 0.5rem',
+                        gap: '0.25rem',
+                        minHeight: 'auto'
+                    } : {}}
+                >
                     <button
-                        className="mr-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        className="mr-2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                         onClick={() => setIsMenuOpen(true)}
                         title="Uygulama Menüsü"
                     >
-                        <LayoutDashboard size={24} className="text-slate-600 dark:text-slate-300" />
+                        <LayoutDashboard size={20} className="text-slate-600 dark:text-slate-300" />
                     </button>
 
-                    <a href="#" className="logo" onClick={(e) => { e.preventDefault(); onNavigate('builder'); }}>
-                        <div className="p-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mr-2">
-                            <FileText size={24} />
+                    <a href="#" className="logo flex items-center" onClick={(e) => { e.preventDefault(); onNavigate('builder'); }}>
+                        <div className="p-0.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mr-1.5">
+                            <FileText size={18} />
                         </div>
-                        <span className="text-xl font-extrabold tracking-tight text-gradient-premium">TeklifMaster Pro</span>
-                        <span className="version-badge">v2.3 (React)</span>
+                        <span className="text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-gradient-premium">
+                            <span className="hidden sm:inline">TeklifMaster Pro</span>
+                            <span className="sm:hidden">Teklif</span>
+                        </span>
+                        <span className="version-badge text-[8px] sm:text-[9px]">v2.3</span>
                     </a>
 
-                    <div className="header-actions">
-                        <div className="action-group">
+                    <div
+                        className="header-actions"
+                        style={appLayout === 'classic' ? { gap: '0.25rem' } : {}}
+                    >
+                        <div
+                            className="action-group"
+                            style={appLayout === 'classic' ? { padding: '0.25rem', gap: '0.25rem' } : {}}
+                        >
                             {deferredPrompt && (
                                 <button className="btn btn-sm btn-primary" onClick={handleInstallClick} title="Uygulamayı Yükle">
                                     <Download size={16} />
@@ -127,6 +152,11 @@ const Header = ({
                                 >
                                     <Redo size={16} />
                                 </button>
+                            </div>
+
+                            {/* Auto-save Indicator */}
+                            <div className="hidden lg:block">
+                                <AutoSaveIndicator />
                             </div>
 
                             <button className="btn btn-sm btn-outline hidden md:inline-flex" onClick={createBackup} title="Yedek Al">
@@ -203,13 +233,30 @@ const Header = ({
                             </button>
 
                             <button
-                                className={`btn ${isLivePreviewMode ? 'btn-primary' : 'btn-outline'} px-6 py-2 text-base font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5`}
+                                className={`btn ${isLivePreviewMode ? 'btn-primary' : 'btn-outline'} text-sm md:text-base font-bold shadow-md hover:shadow-lg transition-all`}
                                 onClick={() => setIsLivePreviewMode(!isLivePreviewMode)}
                                 title="PDF Önizle ve Oluştur"
                             >
-                                <FileDown size={20} className="mr-2" />
-                                <span className="hidden lg:inline">PDF DÜZENLE</span>
+                                <FileDown size={18} className="md:mr-2" />
+                                <span className="hidden md:inline">PDF</span>
                             </button>
+
+                            {/* QuickActions removed from classic layout to reduce header height */}
+                            {/* {appLayout === 'classic' && (
+                                <>
+                                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                                    <QuickActions
+                                        onOpenHistory={() => document.dispatchEvent(new CustomEvent('open-history-modal'))}
+                                        onOpenCustomerManager={onOpenCustomerManager}
+                                        onOpenProductManager={onOpenProductManager}
+                                        onOpenTemplateManager={onOpenTemplateManager}
+                                        onOpenDatabaseManager={onOpenDatabaseManager}
+                                        onOpenBankManager={onOpenBankManager}
+                                        onOpenRecycleBin={onOpenRecycleBin}
+                                        onFillTestData={fillTestData}
+                                    />
+                                </>
+                            )} */}
                         </div>
                     </div>
                 </div>

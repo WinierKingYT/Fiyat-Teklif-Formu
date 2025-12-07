@@ -1,9 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     const [mounted, setMounted] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
+
+    // Swipe to dismiss state (mobile)
+    const [touchStart, setTouchStart] = useState(0);
+    const [touchEnd, setTouchEnd] = useState(0);
+    const modalRef = useRef(null);
 
     useEffect(() => {
         setMounted(true);
@@ -11,8 +18,15 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     }, []);
 
     useEffect(() => {
+        if (isOpen) {
+            setIsAnimating(true);
+            setIsClosing(false);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
         const handleEscape = (e) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') handleClose();
         };
 
         if (isOpen) {
@@ -26,6 +40,33 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         };
     }, [isOpen, onClose]);
 
+    const handleClose = () => {
+        setIsClosing(true);
+        // Wait for animation to complete
+        setTimeout(() => {
+            onClose();
+            setIsAnimating(false);
+        }, 300);
+    };
+
+    // Swipe to dismiss handlers (mobile)
+    const handleTouchStart = (e) => {
+        setTouchStart(e.touches[0].clientY);
+    };
+
+    const handleTouchMove = (e) => {
+        setTouchEnd(e.touches[0].clientY);
+    };
+
+    const handleTouchEnd = () => {
+        if (touchStart - touchEnd > 100) {
+            // Swiped Down
+            handleClose();
+        }
+        setTouchStart(0);
+        setTouchEnd(0);
+    };
+
     if (!isOpen || !mounted) return null;
 
     const sizeClasses = {
@@ -37,44 +78,40 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         full: 'max-w-full m-4'
     };
 
-    // Portal ile document.body'ye render et
     return createPortal(
         <div
-            className="fixed inset-0 flex items-center justify-center p-4 z-[9999] transition-all duration-300"
+            className={`modal-overlay ${isAnimating ? 'entering' : ''} ${isClosing ? 'exiting' : ''}`}
         >
-            {/* Backdrop with blur */}
+            {/* Enhanced Glassmorphism Backdrop */}
             <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={onClose}
-            ></div>
+                className="glass-modal-backdrop"
+                onClick={handleClose}
+            />
 
             {/* Modal Content */}
             <div
-                className={`
-                    relative 
-                    bg-white dark:bg-slate-900 
-                    text-slate-900 dark:text-slate-100 
-                    rounded-2xl shadow-2xl 
-                    w-full ${sizeClasses[size]} 
-                    max-h-[90vh] 
-                    flex flex-col 
-                    transform transition-all 
-                    border border-slate-200 dark:border-slate-700
-                `}
+                ref={modalRef}
+                className={`modal-content ${sizeClasses[size]} ${isAnimating ? 'entering' : ''} ${isClosing ? 'exiting' : ''}`}
                 role="dialog"
                 aria-modal="true"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
             >
-                <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
+                {/* Sticky Header */}
+                <div className="modal-header">
                     <h3 className="text-xl font-bold tracking-tight">{title}</h3>
                     <button
-                        onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                        onClick={handleClose}
+                        className="modal-close-btn"
+                        aria-label="Close modal"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                {/* Body */}
+                <div className="modal-body">
                     {children}
                 </div>
             </div>

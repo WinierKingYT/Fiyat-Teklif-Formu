@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import Logger from '../utils/logger';
 import toast from 'react-hot-toast';
+import cleanupService from '../utils/cleanupService';
+import performanceMonitor from '../utils/performanceMonitor';
 
 const QuoteContext = createContext();
 
@@ -249,7 +251,7 @@ export const QuoteProvider = ({ children }) => {
         }));
     }, [activeTabId]);
 
-    const updateCustomerData = (field, value) => {
+    const updateCustomerData = useCallback((field, value) => {
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
                 const newData = { ...tab.data.customerData, [field]: value };
@@ -265,9 +267,9 @@ export const QuoteProvider = ({ children }) => {
             }
             return tab;
         }));
-    };
+    }, [activeTabId]);
 
-    const updateCompanyData = (field, value) => {
+    const updateCompanyData = useCallback((field, value) => {
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
                 return {
@@ -277,9 +279,9 @@ export const QuoteProvider = ({ children }) => {
             }
             return tab;
         }));
-    };
+    }, [activeTabId]);
 
-    const setItems = (newItems) => {
+    const setItems = useCallback((newItems) => {
         // Handle both function update and direct value
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
@@ -291,9 +293,9 @@ export const QuoteProvider = ({ children }) => {
             }
             return tab;
         }));
-    };
+    }, [activeTabId]);
 
-    const setDiscount = (newDiscount) => {
+    const setDiscount = useCallback((newDiscount) => {
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
                 return {
@@ -303,9 +305,9 @@ export const QuoteProvider = ({ children }) => {
             }
             return tab;
         }));
-    };
+    }, [activeTabId]);
 
-    const updateBankData = (field, value) => {
+    const updateBankData = useCallback((field, value) => {
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
                 return {
@@ -315,7 +317,7 @@ export const QuoteProvider = ({ children }) => {
             }
             return tab;
         }));
-    };
+    }, [activeTabId]);
 
     const setBankData = (newData) => {
         setTabs(prev => prev.map(tab => {
@@ -676,6 +678,50 @@ export const QuoteProvider = ({ children }) => {
         }
     }, [isReady, db]);
 
+    // Initialize cleanup service and perform startup cleanup
+    useEffect(() => {
+        if (isReady && db) {
+            cleanupService.setDatabase(db);
+            cleanupService.performStartupCleanup().catch(err => {
+                console.error('Startup cleanup failed:', err);
+            });
+        }
+    }, [isReady, db]);
+
+    // Performance monitoring warning
+    useEffect(() => {
+        if (!isReady || !db) return;
+
+        const checkPerformance = async () => {
+            try {
+                const metrics = await performanceMonitor.getPerformanceMetrics(db, tabs);
+                const recommendations = performanceMonitor.getRecommendations(metrics);
+
+                if (recommendations.needsCleanup) {
+                    const highWarnings = recommendations.warnings.filter(w => w.severity === 'high');
+                    if (highWarnings.length > 0) {
+                        toast.warning(
+                            'Performans uyarısı: ' + highWarnings[0].message + '. Ayarlar > Performans & Bakım\'dan temizlik yapabilirsiniz.',
+                            { duration: 5000 }
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Performance check failed:', error);
+            }
+        };
+
+        // Check performance every 5 minutes
+        const interval = setInterval(checkPerformance, 5 * 60 * 1000);
+        // Initial check after 1 minute
+        const timeout = setTimeout(checkPerformance, 60 * 1000);
+
+        return () => {
+            clearInterval(interval);
+            clearTimeout(timeout);
+        };
+    }, [isReady, db, tabs]);
+
     const saveCompanyDefaults = async (data) => {
         if (!isReady || !db) return;
         try {
@@ -695,11 +741,17 @@ export const QuoteProvider = ({ children }) => {
     // Current Quote ID for updates
     const [currentQuoteId, setCurrentQuoteId] = useState(null);
 
+    // Save Status Tracking for Auto-save Indicator
+    const [saveStatus, setSaveStatus] = useState({ status: 'idle', lastSaved: null });
+
     const saveQuote = async () => {
         if (!isReady) {
             alert('Veritabanı hazır değil!');
             return;
         }
+
+        // Set saving status
+        setSaveStatus({ status: 'saving', lastSaved: null });
 
         const quote = {
             id: currentQuoteId || Date.now(),
@@ -732,9 +784,25 @@ export const QuoteProvider = ({ children }) => {
                 toast.success('Teklif başarıyla kaydedildi!');
             }
             Logger.log('Quote saved successfully', quote);
+
+            // Set saved status
+            setSaveStatus({ status: 'saved', lastSaved: Date.now() });
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                setSaveStatus(prev => prev.status === 'saved' ? { status: 'idle', lastSaved: prev.lastSaved } : prev);
+            }, 3000);
         } catch (error) {
             Logger.error('Error saving quote', error);
             toast.error('Teklif kaydedilirken bir hata oluştu.');
+
+            // Set error status
+            setSaveStatus({ status: 'error', lastSaved: null });
+
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                setSaveStatus({ status: 'idle', lastSaved: null });
+            }, 5000);
         }
     };
 
@@ -943,11 +1011,17 @@ export const QuoteProvider = ({ children }) => {
         db,
         setCurrentQuoteId,
         loadQuote,
-        bankData, updateBankData
+        bankData, updateBankData,
+        saveStatus,  // Add saveStatus for AutoSaveIndicator
+
+        // Performance & Cleanup
+        cleanupService,
+        performanceMonitor,
+        setTabs  // For tab history trimming
     }), [
         tabs, activeTabId, quoteData, customerData, companyData, items, discount, bankData,
         pdfLayout, viewMode, db, appFontSize, performanceMode, compactMode,
-        focusMode, isLivePreviewMode, pdfConfig, appLayout, appTheme, appColor
+        focusMode, isLivePreviewMode, pdfConfig, appLayout, appTheme, appColor, saveStatus
     ]);
 
     return (
