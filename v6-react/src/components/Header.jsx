@@ -3,7 +3,7 @@ import { FileText, Moon, Sun, LayoutDashboard, Settings, FileDown, Save, Upload,
 import { useQuote } from '../context/QuoteContext';
 import { generatePDF } from '../utils/pdfGenerator';
 import AutoSaveIndicator from './AutoSaveIndicator';
-import QuickActions from './QuickActions';
+// import QuickActions from './QuickActions'; // Removed from classic layout
 
 const Header = ({
     theme,
@@ -83,9 +83,6 @@ const Header = ({
         { icon: Trash2, label: 'Geri Dönüşüm', count: null, onClick: onOpenRecycleBin },
         { icon: Database, label: 'Test Verisi', count: null, onClick: fillTestData, className: 'text-orange-600 bg-orange-50 hover:bg-orange-100' },
     ];
-
-    // Debug: Check appLayout value
-    console.log('Header appLayout:', appLayout);
 
     return (
         <>

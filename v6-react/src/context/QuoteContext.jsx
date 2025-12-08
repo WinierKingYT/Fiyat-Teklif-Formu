@@ -437,23 +437,34 @@ export const QuoteProvider = ({ children }) => {
         return 'desktop';
     });
 
+    // Track if user manually changed viewMode
+    const [isManualViewMode, setIsManualViewMode] = useState(false);
+
+    // Wrapper function for manual viewMode changes
+    const handleSetViewMode = (newMode) => {
+        setViewMode(newMode);
+        setIsManualViewMode(true); // Mark as manually set
+    };
+
     useEffect(() => {
-        const handleResize = () => {
-            // Only switch if we cross the boundary
-            if (window.innerWidth < 768 && viewMode !== 'mobile') {
-                setViewMode('mobile');
-            } else if (window.innerWidth >= 768 && viewMode === 'mobile') {
-                setViewMode('desktop');
-            }
-        };
+        // Only auto-adjust on initial load if not manually set
+        if (!isManualViewMode) {
+            const handleResize = () => {
+                // Only switch if we cross the boundary and user hasn't manually set it
+                if (window.innerWidth < 768 && viewMode !== 'mobile') {
+                    setViewMode('mobile');
+                } else if (window.innerWidth >= 768 && viewMode === 'mobile') {
+                    setViewMode('desktop');
+                }
+            };
 
-        window.addEventListener('resize', handleResize);
-        // Initial check
-        handleResize();
+            window.addEventListener('resize', handleResize);
+            return () => window.removeEventListener('resize', handleResize);
+        }
 
+        // Save to localStorage
         localStorage.setItem('viewMode', viewMode);
-        return () => window.removeEventListener('resize', handleResize);
-    }, [viewMode]);
+    }, [viewMode, isManualViewMode]);
 
     // App Layout State (modern | classic)
     const [appLayout, setAppLayout] = useState(() => localStorage.getItem('appLayout') || 'modern');
@@ -997,7 +1008,7 @@ export const QuoteProvider = ({ children }) => {
         appLayout, setAppLayout,
         appTheme, setAppTheme,
         appColor, setAppColor,
-        viewMode, setViewMode,
+        viewMode, setViewMode: handleSetViewMode, // Use wrapper for manual changes
         companyDefaults,
         saveCompanyDefaults,
         fillTestData,

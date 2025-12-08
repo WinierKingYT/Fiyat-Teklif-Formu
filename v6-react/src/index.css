@@ -650,40 +650,158 @@ p {
 
 /* Mobile Header Optimizations */
 @media (max-width: 768px) {
+
+  /* ULTRA-AGGRESSIVE mobile compact layout */
+  :root {
+    --space-1: 0.15rem !important;
+    --space-2: 0.25rem !important;
+    --space-3: 0.35rem !important;
+    --space-4: 0.4rem !important;
+    --font-size-xs: 0.6rem !important;
+    --font-size-sm: 0.7rem !important;
+    --font-size-base: 0.8rem !important;
+  }
+
   .header-content {
-    padding: var(--space-2) var(--space-3);
-    gap: var(--space-2);
+    padding: 0.25rem 0.4rem !important;
+    gap: 0.25rem !important;
     flex-wrap: nowrap;
   }
 
   .logo {
-    font-size: var(--font-size-base);
-    gap: var(--space-2);
+    font-size: 0.7rem !important;
+    gap: 0.2rem !important;
   }
 
-  .logo i {
-    font-size: var(--font-size-lg);
+  .logo i,
+  .logo svg {
+    width: 14px !important;
+    height: 14px !important;
   }
 
   .version-badge {
-    padding: var(--space-1) var(--space-2);
-    font-size: 0.6rem;
+    padding: 0.1rem 0.25rem !important;
+    font-size: 0.45rem !important;
   }
 
   .header-actions {
-    gap: var(--space-1);
-    flex: 1;
-    justify-content: flex-end;
+    gap: 0.2rem !important;
   }
 
-  .action-group {
-    padding: var(--space-1);
-    gap: var(--space-1);
+  .header-actions .btn {
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.65rem !important;
+    min-height: 28px !important;
+    min-width: 28px !important;
+  }
+
+  .btn {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    min-height: 32px !important;
+    min-width: 32px !important;
   }
 
   .btn-sm {
-    padding: var(--space-2) var(--space-2);
-    min-width: 40px;
+    padding: 0.25rem 0.4rem !important;
+    min-height: 28px !important;
+    min-width: 28px !important;
+  }
+
+  .action-group {
+    padding: 0.25rem !important;
+    gap: 0.25rem !important;
+  }
+
+  /* Form optimizations */
+  .form-control,
+  .form-select {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.8rem !important;
+    min-height: 32px !important;
+  }
+
+  /* Card optimizations */
+  .card {
+    margin-bottom: 0.4rem !important;
+  }
+
+  .card-header,
+  .card-body {
+    padding: 0.4rem !important;
+  }
+
+  .card-title {
+    font-size: 0.85rem !important;
+  }
+
+  /* Modal optimizations */
+  .modal-content {
+    margin: 0.4rem !important;
+    padding: 0.4rem !important;
+  }
+
+  .modal-header {
+    padding: 0.4rem !important;
+  }
+
+  .modal-body {
+    padding: 0.4rem !important;
+  }
+
+  /* Section spacing */
+  .section-header {
+    margin-bottom: 0.4rem !important;
+    padding-bottom: 0.3rem !important;
+  }
+
+  .form-group {
+    margin-bottom: 0.4rem !important;
+  }
+
+  /* Grid spacing */
+  .grid-2,
+  .grid-3,
+  .grid-auto {
+    gap: 0.4rem !important;
+  }
+
+  /* Mobile button optimizations - icon only */
+  .header-actions .btn span:not(.sr-only) {
+    display: none !important;
+  }
+
+  .header-actions .btn {
+    padding: 0.3rem !important;
+    min-width: 28px !important;
+    justify-content: center !important;
+  }
+
+  /* Keep icons visible */
+  .header-actions .btn svg {
+    margin: 0 !important;
+  }
+
+  /* Make undo/redo buttons smaller */
+  .header-actions button[title*="Geri"],
+  .header-actions button[title*="Yinele"] {
+    padding: 0.25rem !important;
+    min-width: 24px !important;
+  }
+
+  /* ViewMode toggle button - make it prominent */
+  .theme-toggle {
+    background: var(--primary) !important;
+    color: white !important;
+    padding: 0.4rem !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    border-radius: 0.5rem !important;
+  }
+
+  .theme-toggle svg {
+    width: 18px !important;
+    height: 18px !important;
   }
 }
 
