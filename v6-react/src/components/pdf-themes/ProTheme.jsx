@@ -130,13 +130,19 @@ const ProTheme = ({
         }
 
         .pro-theme-container .quote-meta {
-            font-size: ${config.labelFontSize || '0.85em'};
+            font-size: ${config.quoteMetaLabelFontSize || '0.85em'};
             color: ${config.labelColor || '#64748b'};
             font-family: ${config.labelFontFamily || 'inherit'};
         }
 
         .pro-theme-container .quote-meta div {
             margin-bottom: 0.25em;
+            font-weight: ${config.quoteMetaValueFontWeight || 'normal'};
+            font-size: ${config.quoteMetaValueFontSize || 'inherit'};
+        }
+
+        .pro-theme-container .quote-meta div strong {
+             font-weight: ${config.quoteMetaLabelFontWeight || 'bold'};
         }
 
         .pro-theme-container .quote-number {

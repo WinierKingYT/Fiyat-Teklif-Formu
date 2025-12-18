@@ -42,16 +42,16 @@ const MinimalTheme = ({
         }
 
         .minimal-label {
-            font-size: ${config.labelFontSize || '0.65rem'} !important;
-            font-weight: ${config.labelFontWeight || 'normal'} !important;
+            font-size: ${config.customerLabelFontSize || '0.65rem'} !important;
+            font-weight: ${config.customerLabelFontWeight || 'normal'} !important;
             color: ${config.labelColor || '#6b7280'};
             margin-bottom: 0.1rem;
             font-family: ${config.labelFontFamily || 'inherit'};
         }
 
         .minimal-value {
-            font-size: ${config.bodyFontSize || '0.85rem'} !important;
-            font-weight: ${config.bodyFontWeight || '500'} !important;
+            font-size: ${config.customerValueFontSize || '0.85rem'} !important;
+            font-weight: ${config.customerValueFontWeight || '500'} !important;
             color: ${config.bodyColor || '#111'};
             font-family: ${config.bodyFontFamily || 'inherit'};
         }
@@ -66,7 +66,7 @@ const MinimalTheme = ({
             text-align: left;
             padding: ${config.tableHeaderPadding || '0.5rem 0'};
             border-bottom: 2px solid ${config.tableHeaderBorderColor || '#000'};
-            font-size: ${config.tableHeaderFontSize || '0.7rem'};
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.7rem')};
             text-transform: ${config.tableHeaderTransform || 'uppercase'};
             letter-spacing: 0.05em;
             font-weight: ${config.tableHeaderFontWeight || '600'};
@@ -185,14 +185,14 @@ const MinimalTheme = ({
                                 {config.showLogo && companyData.logo ? (
                                     <img src={companyData.logo} alt="Logo" style={{ height: '35px', objectFit: 'contain', marginBottom: '0.5rem', alignSelf: 'flex-start' }} />
                                 ) : (
-                                    <div style={{ fontSize: '1.25rem', fontWeight: '700', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>{companyData.name}</div>
+                                    <div style={{ fontSize: config.headerTitleFontSize || '1.25rem', fontWeight: config.headerTitleFontWeight || '700', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>{companyData.name}</div>
                                 )}
-                                <div style={{ fontSize: '0.8rem', color: '#4b5563' }}>{companyData.address}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#4b5563' }}>{companyData.phone} &bull; {companyData.email}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#4b5563' }}>{companyData.website}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>{companyData.address}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>{companyData.phone} &bull; {companyData.email}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>{companyData.website}</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '1.5rem', fontWeight: '300', lineHeight: '1', marginBottom: '0.25rem' }}>{t.quote}</div>
+                                <div style={{ fontSize: config.titleFontSize || '1.5rem', fontWeight: config.titleFontWeight || '300', lineHeight: '1', marginBottom: '0.25rem' }}>{config.title}</div>
                                 <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>#{quoteData.number}</div>
                                 <div style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem' }}>
@@ -201,8 +201,8 @@ const MinimalTheme = ({
                                             <div className="minimal-value">{formatDate(quoteData.date, currentLocale)}</div>
                                         </div>
                                         <div>
-                                            <div className="minimal-label">{t.validUntil}</div>
-                                            <div className="minimal-value">{formatDate(quoteData.validUntil, currentLocale)}</div>
+                                            <div className="minimal-label" style={{ fontSize: config.quoteMetaLabelFontSize || '0.65rem', fontWeight: config.quoteMetaLabelFontWeight || 'normal' }}>{t.validUntil}</div>
+                                            <div className="minimal-value" style={{ fontSize: config.quoteMetaValueFontSize || '0.85rem', fontWeight: config.quoteMetaValueFontWeight || '500' }}>{formatDate(quoteData.validUntil, currentLocale)}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -219,7 +219,7 @@ const MinimalTheme = ({
                     {pageIndex === 0 && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
                             <div>
-                                <div className="minimal-header">{t.customer}</div>
+                                <div className="minimal-header" style={{ fontSize: config.customerTitleFontSize, fontWeight: config.customerTitleFontWeight }}>{t.customer}</div>
                                 <div style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.2rem' }}>{customerData.company}</div>
                                 <div style={{ fontSize: '0.85rem', color: '#374151' }}>{customerData.name}</div>
                                 <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.2rem' }}>
@@ -250,9 +250,9 @@ const MinimalTheme = ({
                             {config.showSummary && (
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem', borderTop: '1px solid #000', paddingTop: '1rem', pageBreakInside: 'avoid' }}>
                                     <div style={{ width: '220px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
-                                            <span style={{ color: '#6b7280' }}>{t.subtotal}</span>
-                                            <span style={{ fontFamily: 'monospace' }}>{formatCurrency(subtotal)}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: config.summaryLabelFontSize || '0.85rem' }}>
+                                            <span style={{ color: '#6b7280', fontWeight: config.summaryLabelFontWeight || 'normal' }}>{t.subtotal}</span>
+                                            <span style={{ fontFamily: 'monospace', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem', color: '#ef4444' }}>
@@ -316,7 +316,7 @@ const MinimalTheme = ({
                             )}
 
                             {/* Footer - Only Last Page */}
-                            <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #f3f4f6', textAlign: 'center', fontSize: '0.75rem', color: '#6b7280' }}>
+                            <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #f3f4f6', textAlign: 'center', fontSize: config.footerFontSize || '0.75rem', fontWeight: config.footerFontWeight || 'normal', color: '#6b7280' }}>
                                 <div style={{ marginBottom: '0.2rem' }}>{companyData.address}</div>
                                 <div style={{ marginBottom: '0.4rem' }}>
                                     {companyData.phone} | {companyData.email} | {companyData.website}

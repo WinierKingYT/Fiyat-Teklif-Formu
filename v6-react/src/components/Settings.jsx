@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { useQuote } from '../context/QuoteContext';
-import { Save, RefreshCw, GripVertical, Building } from 'lucide-react';
+import { Save, RefreshCw, GripVertical, Building, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CompanyInfoForm from './CompanyInfoForm';
 import PerformanceMaintenanceTab from './PerformanceMaintenanceTab';
@@ -66,7 +66,8 @@ const Settings = () => {
         appFontSize, setAppFontSize,
         pdfConfig, setPdfConfig,
         appLayout, setAppLayout,
-        appTheme, setAppTheme
+        appTheme, setAppTheme,
+        appColor, setAppColor
     } = useQuote();
     const [activeTab, setActiveTab] = useState('general');
 
@@ -80,6 +81,15 @@ const Settings = () => {
         currency: 'TRY',
         defaultNote: '',
     });
+
+    const appColors = [
+        { id: 'blue', name: 'Okyanus Mavisi', color: '#2563eb' },
+        { id: 'emerald', name: 'Zümrüt Yeşili', color: '#10b981' },
+        { id: 'violet', name: 'Asil Mor', color: '#8b5cf6' },
+        { id: 'amber', name: 'Gün Batımı', color: '#f59e0b' },
+        { id: 'rose', name: 'Gül Kurusu', color: '#f43f5e' },
+        { id: 'slate', name: 'Kurumsal Gri', color: '#475569' },
+    ];
 
     const [companySettings, setCompanySettings] = useState({
         name: '',
@@ -249,6 +259,28 @@ const Settings = () => {
                                     </label>
                                 </div>
                             </div>
+
+                            <div className="form-group mb-6">
+                                <label className="form-label mb-2 dark:text-gray-300">Uygulama Rengi</label>
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {appColors.map((color) => (
+                                        <button
+                                            key={color.id}
+                                            onClick={() => setAppColor(color.id)}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${appColor === color.id ? 'border-blue-500 bg-blue-50 dark:bg-slate-800 dark:border-blue-400 ring-1 ring-blue-500' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700'}`}
+                                        >
+                                            <div
+                                                className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
+                                                style={{ backgroundColor: color.color }}
+                                            >
+                                                {appColor === color.id && <Check size={16} className="text-white" />}
+                                            </div>
+                                            <span className="text-sm font-medium dark:text-slate-200">{color.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div className="form-group mb-6">
                                 <label className="form-label mb-2 dark:text-gray-300">Arayüz Tasarımı</label>
                                 <div className="flex gap-4">

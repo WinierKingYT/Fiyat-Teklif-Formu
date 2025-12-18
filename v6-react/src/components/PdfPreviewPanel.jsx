@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
-import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, QrCode, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, PenTool, Layers, Edit2 } from 'lucide-react';
+import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, QrCode, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, PenTool, Layers, Edit2, Zap, ZapOff, RefreshCcw, Power, PowerOff } from 'lucide-react';
 import { calculateQuoteTotals } from '../utils/calculations';
 import { generatePDF } from '../utils/pdfGenerator';
 import { exportQuoteToExcel } from '../utils/excelExporter';
@@ -7,6 +7,7 @@ import PrintableQuote from './PrintableQuoteV2';
 import PopupEditor from './PopupEditor';
 import { useQuote } from '../context/QuoteContext';
 import toast from 'react-hot-toast';
+import useDebounce from '../hooks/useDebounce';
 
 const PdfPreviewPanel = () => {
     const {
@@ -28,6 +29,29 @@ const PdfPreviewPanel = () => {
     const [savedTemplates, setSavedTemplates] = useState([]);
     const [templateName, setTemplateName] = useState('');
     const [signature, setSignature] = useState(null);
+    const [performanceMode, setPerformanceMode] = useState(false);
+    const [manualRefreshMode, setManualRefreshMode] = useState(false);
+    const [renderedConfig, setRenderedConfig] = useState(pdfConfig);
+
+
+    // Debounce the config for preview rendering (used when Manual Mode is OFF)
+    // In Performance Mode, use longer debounce (1500ms), otherwise 300ms
+    const debouncedPdfConfig = useDebounce(pdfConfig, performanceMode ? 1500 : 300);
+
+    // Effect to handle config updates based on mode
+    useEffect(() => {
+        if (!manualRefreshMode) {
+            setRenderedConfig(debouncedPdfConfig);
+        }
+    }, [debouncedPdfConfig, manualRefreshMode]);
+
+    const handleManualRefresh = () => {
+        setRenderedConfig(pdfConfig);
+        toast.success('Önizleme güncellendi');
+    };
+
+    // Check if there are pending changes in Manual Mode
+    const hasPendingChanges = manualRefreshMode && JSON.stringify(renderedConfig) !== JSON.stringify(pdfConfig);
 
     // Popup Editor State
     const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -1033,6 +1057,31 @@ const PdfPreviewPanel = () => {
                                     </label>
                                 </div>
 
+                                {/* Performance Mode */}
+                                <div className="space-y-3">
+                                    <h4 className="font-semibold text-xs text-slate-900 dark:text-slate-100 border-b pb-1 dark:border-slate-800 flex items-center gap-2">
+                                        <Zap size={14} className={performanceMode ? "text-orange-500" : ""} />
+                                        Performans Ayarları
+                                    </h4>
+                                    <label className="flex items-center justify-between p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer text-xs">
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                                                {performanceMode ? <Zap size={12} className="text-orange-500" /> : <ZapOff size={12} />}
+                                                Performans Modu
+                                            </span>
+                                            <span className="text-[10px] text-slate-500">
+                                                Önizlemeyi gecikmeli yenileyerek performansı artırır.
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={performanceMode}
+                                            onChange={(e) => setPerformanceMode(e.target.checked)}
+                                            className="rounded border-slate-300 text-orange-600 focus:ring-orange-500 w-4 h-4"
+                                        />
+                                    </label>
+                                </div>
+
                                 {/* QR Code */}
                                 <div>
                                     <label className="flex items-center justify-between mb-2 text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -1218,9 +1267,22 @@ const PdfPreviewPanel = () => {
 
                 {/* Right: Preview (Zoomable) */}
                 <div className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-hidden flex flex-col relative">
-                    <div className="absolute top-4 right-4 z-10 bg-white/80 dark:bg-slate-800/80 backdrop-blur p-1 rounded-lg shadow border border-slate-200 dark:border-slate-700 text-xs text-slate-500 font-medium">
+                    <div className={`absolute top-4 right-4 z-10 p-1 rounded-lg shadow border border-slate-200 dark:border-slate-700 text-xs text-slate-500 font-medium ${performanceMode ? 'bg-white dark:bg-slate-800' : 'bg-white/80 dark:bg-slate-800/80 backdrop-blur'}`}>
                         A4 Önizleme
                     </div>
+
+                    {/* Manual Refresh Button Overlay */}
+                    {manualRefreshMode && hasPendingChanges && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+                            <button
+                                onClick={handleManualRefresh}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all animate-bounce"
+                            >
+                                <RefreshCcw size={16} />
+                                <span>Önizlemeyi Yenile</span>
+                            </button>
+                        </div>
+                    )}
 
                     <div className="flex-1 overflow-auto custom-scrollbar p-8 flex justify-center items-start">
                         <div className="origin-top transform scale-[0.6] lg:scale-[0.7] xl:scale-[0.8] shadow-2xl transition-all duration-300 bg-white">
@@ -1233,10 +1295,10 @@ const PdfPreviewPanel = () => {
                                 companyData={companyData}
                                 bankData={bankData}
                                 discount={discount}
-                                config={pdfConfig}
                                 layout={pdfLayout}
                                 signature={signature}
                                 onEdit={openEditor} // Pass the edit handler
+                                config={renderedConfig} // Use debounced/manual config for preview
                             />
                         </div>
                     </div>
@@ -1255,7 +1317,7 @@ const PdfPreviewPanel = () => {
                     companyData={companyData}
                     bankData={bankData}
                     discount={discount}
-                    config={pdfConfig}
+                    config={renderedConfig}
                     layout={pdfLayout}
                     signature={signature}
                 />
@@ -1270,7 +1332,7 @@ const PdfPreviewPanel = () => {
                 type={editConfig.type}
                 options={editConfig.options}
             />
-        </div>
+        </div >
     );
 };
 

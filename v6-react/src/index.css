@@ -74,39 +74,125 @@
   --curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   /* Light Theme Vars (default) */
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
+  --bg-primary: #f1f5f9;
+  /* Slate 100 - Darker than before (#f8fafc) */
+  --bg-secondary: #f8fafc;
+  /* Slate 50 */
   --bg-card: #ffffff;
-  --bg-hover: #f1f5f9;
-  --text-primary: #1e293b;
-  --text-secondary: #475569;
+  --bg-hover: #e2e8f0;
+  /* Slate 200 */
+  --text-primary: #0f172a;
+  /* Slate 900 - Higher contrast */
+  --text-secondary: #334155;
+  /* Slate 700 */
   --text-muted: #64748b;
-  --border-color: #e2e8f0;
+  --border-color: #cbd5e1;
+  /* Slate 300 - More visible borders */
 }
 
-/* ==================== DARK THEME ==================== */
+/* ==================== DARK THEME (YouTube Style) ==================== */
 [data-theme="dark"] {
-  --bg-primary: #020617;
-  /* Slate 950 - Deeper black/blue */
-  --bg-secondary: #0f172a;
-  /* Slate 900 */
-  --bg-card: #1e293b;
-  /* Slate 800 - Lighter card background for contrast */
-  --bg-hover: #334155;
-  /* Slate 700 */
-  --text-primary: #f8fafc;
-  /* Slate 50 */
-  --text-secondary: #cbd5e1;
-  /* Slate 300 - Brighter secondary text */
-  --text-muted: #94a3b8;
-  /* Slate 400 */
-  --border-color: #334155;
-  /* Slate 700 - Lighter border for visibility */
+  --bg-primary: #0f0f0f;
+  /* YouTube Main Background */
+  --bg-secondary: #0f0f0f;
+  /* Secondary Background */
+  --bg-card: #1e1e1e;
+  /* YouTube/Material Surface - Card Background */
+  --bg-hover: #3f3f3f;
+  /* Hover State */
+  --text-primary: #f1f1f1;
+  /* High Contrast Text */
+  --text-secondary: #aaaaaa;
+  /* Muted Text */
+  --text-muted: #717171;
+  /* Deep Muted */
+  --border-color: #303030;
+  /* Subtle Border */
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 
   /* Dark Mode Specific Overrides */
   --primary-light: #e2e8f0;
+}
+
+/* ==================== COLOR PALETTES (Universal) ==================== */
+
+/* Blue (Default) */
+[data-color="blue"] {
+  --primary: #2563eb;
+  /* Blue 600 */
+  --primary-dark: #1d4ed8;
+  /* Blue 700 */
+  --primary-light: #3b82f6;
+  /* Blue 500 */
+  --primary-lighter: #60a5fa;
+  /* Blue 400 */
+}
+
+/* Emerald (Green) */
+[data-color="emerald"] {
+  --primary: #059669;
+  /* Emerald 600 */
+  --primary-dark: #047857;
+  /* Emerald 700 */
+  --primary-light: #10b981;
+  /* Emerald 500 */
+  --primary-lighter: #34d399;
+  /* Emerald 400 */
+}
+
+/* Violet (Purple) */
+[data-color="violet"] {
+  --primary: #7c3aed;
+  /* Violet 600 */
+  --primary-dark: #6d28d9;
+  /* Violet 700 */
+  --primary-light: #8b5cf6;
+  /* Violet 500 */
+  --primary-lighter: #a78bfa;
+  /* Violet 400 */
+}
+
+/* Amber (Orange/Gold) */
+[data-color="amber"] {
+  --primary: #d97706;
+  /* Amber 600 */
+  --primary-dark: #b45309;
+  /* Amber 700 */
+  --primary-light: #f59e0b;
+  /* Amber 500 */
+  --primary-lighter: #fbbf24;
+  /* Amber 400 */
+}
+
+/* Rose (Pink/Red) */
+[data-color="rose"] {
+  --primary: #e11d48;
+  /* Rose 600 */
+  --primary-dark: #be123c;
+  /* Rose 700 */
+  --primary-light: #f43f5e;
+  /* Rose 500 */
+  --primary-lighter: #fb7185;
+  /* Rose 400 */
+}
+
+/* Slate (Monochrome) */
+[data-color="slate"] {
+  --primary: #475569;
+  /* Slate 600 */
+  --primary-dark: #334155;
+  /* Slate 700 */
+  --primary-light: #64748b;
+  /* Slate 500 */
+  --primary-lighter: #94a3b8;
+  /* Slate 400 */
+}
+
+[data-color="slate"][data-theme="dark"] {
+  --primary: #94a3b8;
+  /* Lighter in dark mode for visibility */
+  --primary-light: #cbd5e1;
 }
 
 /* Utility Classes */

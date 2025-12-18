@@ -71,20 +71,25 @@ const CorporateTheme = ({
         }
 
         .corporate-title {
-            font-size: ${config.headerTitleFontSize || '1.4rem'} !important;
-            font-weight: ${config.headerTitleFontWeight || '800'} !important;
+            font-size: ${config.titleFontSize || '1.4rem'} !important;
+            font-weight: ${config.titleFontWeight || '800'} !important;
             color: ${color};
             text-transform: uppercase;
             letter-spacing: -0.02em;
             margin-bottom: 0.1rem;
+            font-family: ${config.titleFontFamily || 'inherit'};
         }
 
         .corporate-meta {
             display: flex;
             flex-direction: column;
             gap: 0.1rem;
-            font-size: 0.75em;
+            font-size: ${config.quoteMetaLabelFontSize || '0.75em'};
             color: #4b5563;
+        }
+
+        .corporate-meta strong {
+            font-weight: ${config.quoteMetaLabelFontWeight || 'bold'};
         }
 
         .corporate-grid {
@@ -113,14 +118,16 @@ const CorporateTheme = ({
 
         .corporate-info-label {
             width: 90px;
-            font-weight: 600;
+            font-weight: ${config.customerLabelFontWeight || '600'};
+            font-size: ${config.customerLabelFontSize || 'inherit'};
             color: #6b7280;
             flex-shrink: 0;
         }
 
         .corporate-info-value {
             color: #111827;
-            font-weight: 500;
+            font-weight: ${config.customerValueFontWeight || '500'};
+            font-size: ${config.customerValueFontSize || 'inherit'};
         }
 
         .corporate-table {
@@ -134,8 +141,8 @@ const CorporateTheme = ({
             color: white;
             padding: 0.25rem 0.4rem;
             text-align: left;
-            font-weight: 600;
-            font-size: 0.7em;
+            font-weight: ${config.tableHeaderFontWeight || '600'};
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.7em')};
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
@@ -143,7 +150,8 @@ const CorporateTheme = ({
         .corporate-table td {
             padding: 0.25rem 0.4rem;
             border-bottom: 1px solid #e5e7eb;
-            font-size: 0.75em;
+            font-size: ${config.tableBodyFontSize || '0.75em'};
+            font-weight: ${config.tableBodyFontWeight || 'normal'};
             color: #374151;
             vertical-align: middle;
         }
@@ -197,7 +205,8 @@ const CorporateTheme = ({
             justify-content: space-between;
             padding: 0.5rem 0;
             border-bottom: 1px dashed #e5e7eb;
-            font-size: 0.95em;
+            font-size: ${config.summaryLabelFontSize || '0.95em'};
+            font-weight: ${config.summaryLabelFontWeight || 'normal'};
         }
 
         .corporate-total-row:last-child {
@@ -210,7 +219,7 @@ const CorporateTheme = ({
             padding-top: 1rem;
             border-top: 2px solid ${color};
             font-weight: 800;
-            font-size: 1.2em;
+            font-size: ${config.summaryTotalFontSize || '1.2em'};
             color: ${color};
             display: flex;
             justify-content: space-between;
@@ -350,8 +359,8 @@ const CorporateTheme = ({
                                         <img src={companyData.logo} alt="Logo" />
                                     </div>
                                 )}
-                                <div style={{ fontSize: '1.2em', fontWeight: '700', color: '#111827' }}>{companyData.name}</div>
-                                <div style={{ fontSize: '0.9em', color: '#6b7280' }}>{companyData.website}</div>
+                                <div style={{ fontSize: config.headerTitleFontSize || '1.2em', fontWeight: config.headerTitleFontWeight || '700', color: '#111827' }}>{companyData.name}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '0.9em', color: '#6b7280' }}>{companyData.website}</div>
                             </div>
                             <div className="corporate-title-box">
                                 <div className="corporate-title">{config.title}</div>
@@ -453,7 +462,7 @@ const CorporateTheme = ({
                                     <div className="corporate-totals-box">
                                         <div className="corporate-total-row">
                                             <span>{t.subtotal}</span>
-                                            <span>{formatCurrency(subtotal)}</span>
+                                            <span style={{ fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="corporate-total-row" style={{ color: '#ef4444' }}>
@@ -500,7 +509,7 @@ const CorporateTheme = ({
                             )}
 
                             {/* Footer - Only Last Page */}
-                            <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: '0.85em', color: '#4b5563' }}>
+                            <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: config.footerFontSize || '0.85em', fontWeight: config.footerFontWeight || 'normal', color: '#4b5563' }}>
                                 <div style={{ marginBottom: '0.25rem' }}>{companyData.address}</div>
                                 <div style={{ marginBottom: '0.5rem' }}>
                                     {companyData.phone} | {companyData.email} | {companyData.website}

@@ -43,7 +43,7 @@ const ClassicTheme = ({
             background: ${config.tableHeaderBg || '#e0e0e0'};
             text-align: center;
             font-weight: ${config.tableHeaderFontWeight || 'bold'};
-            font-size: ${config.tableHeaderFontSize || '10pt'};
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '10pt')};
             color: ${config.tableHeaderColor || '#000'};
             text-transform: ${config.tableHeaderTransform || 'none'};
         }
@@ -65,7 +65,7 @@ const ClassicTheme = ({
         .classic-theme-container .footer {
             font-size: ${config.footerFontSize || '8pt'} !important;
             font-weight: ${config.footerFontWeight || 'normal'} !important;
-            color: ${config.footerColor || '#000'};
+            color: ${config.footerColor || '#444'};
         }
     `, [config]);
 
@@ -172,10 +172,10 @@ const ClassicTheme = ({
 
                             {/* Company Info */}
                             <div style={{ borderRight: '1px solid #000', padding: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                                <div style={{ fontSize: '14pt', fontWeight: 'bold', textTransform: 'uppercase' }}>{companyData.name}</div>
-                                <div style={{ fontSize: '9pt', marginTop: '4px' }}>{companyData.address}</div>
-                                <div style={{ fontSize: '9pt' }}>{companyData.phone} | {companyData.email}</div>
-                                <div style={{ fontSize: '9pt' }}>{companyData.website}</div>
+                                <div style={{ fontSize: config.headerTitleFontSize || '14pt', fontWeight: config.headerTitleFontWeight || 'bold', textTransform: 'uppercase' }}>{companyData.name}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '9pt', marginTop: '4px' }}>{companyData.address}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '9pt' }}>{companyData.phone} | {companyData.email}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '9pt' }}>{companyData.website}</div>
                             </div>
 
                             {/* Document Info */}
@@ -187,16 +187,16 @@ const ClassicTheme = ({
                                     #{quoteData.number}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: '100%' }}>
-                                    <div style={{ borderRight: '1px solid #000', padding: '2px', fontSize: '7.5pt', textAlign: 'center', background: '#f9f9f9' }}>
+                                    <div style={{ borderRight: '1px solid #000', padding: '2px', fontSize: config.quoteMetaLabelFontSize || '7.5pt', fontWeight: config.quoteMetaLabelFontWeight || 'normal', textAlign: 'center', background: '#f9f9f9' }}>
                                         {t.date}
                                     </div>
-                                    <div style={{ padding: '2px', fontSize: '7.5pt', textAlign: 'center', background: '#f9f9f9' }}>
+                                    <div style={{ padding: '2px', fontSize: config.quoteMetaLabelFontSize || '7.5pt', fontWeight: config.quoteMetaLabelFontWeight || 'normal', textAlign: 'center', background: '#f9f9f9' }}>
                                         {t.validUntil}
                                     </div>
-                                    <div style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', padding: '2px', textAlign: 'center', fontSize: '8.5pt' }}>
+                                    <div style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', padding: '2px', textAlign: 'center', fontSize: config.quoteMetaValueFontSize || '8.5pt', fontWeight: config.quoteMetaValueFontWeight || 'normal' }}>
                                         {formatDate(quoteData.date, currentLocale)}
                                     </div>
-                                    <div style={{ borderTop: '1px solid #000', padding: '2px', textAlign: 'center', fontSize: '8.5pt' }}>
+                                    <div style={{ borderTop: '1px solid #000', padding: '2px', textAlign: 'center', fontSize: config.quoteMetaValueFontSize || '8.5pt', fontWeight: config.quoteMetaValueFontWeight || 'normal' }}>
                                         {formatDate(quoteData.validUntil, currentLocale)}
                                     </div>
                                 </div>
@@ -220,10 +220,19 @@ const ClassicTheme = ({
                                     {t.customer} / {t.to}
                                 </div>
                                 <div style={{ padding: '8px' }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{customerData.company}</div>
-                                    <div style={{ fontSize: '9pt' }}>{t.authorized}: {customerData.name}</div>
-                                    <div style={{ fontSize: '9pt' }}>{t.phone}: {customerData.phone}</div>
-                                    <div style={{ fontSize: '9pt' }}>{t.email}: {customerData.email}</div>
+                                    <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '10pt' }}>{customerData.company}</div>
+                                    <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
+                                        <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.authorized}: </span>
+                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{customerData.name}</span>
+                                    </div>
+                                    <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
+                                        <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.phone}: </span>
+                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{customerData.phone}</span>
+                                    </div>
+                                    <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
+                                        <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.email}: </span>
+                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{customerData.email}</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -233,7 +242,7 @@ const ClassicTheme = ({
                                     {t.details}
                                 </div>
                                 <div style={{ padding: '8px' }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: '10pt' }}>{config.title}</div>
+                                    <div style={{ fontWeight: config.titleFontWeight || 'bold', fontSize: config.titleFontSize || '10pt', fontFamily: config.titleFontFamily || 'inherit' }}>{config.title}</div>
                                     {config.showNotes && quoteData.notes && (
                                         <div style={{ marginTop: '4px', fontSize: '8.5pt', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
                                             {quoteData.notes}
@@ -285,24 +294,24 @@ const ClassicTheme = ({
                                         <table className="classic-table" style={{ marginTop: 0 }}>
                                             <tbody>
                                                 <tr>
-                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#f9f9f9', width: '40%' }}>{t.subtotal}:</td>
-                                                    <td style={{ textAlign: 'right' }}>{formatCurrency(subtotal)}</td>
+                                                    <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9', width: '40%' }}>{t.subtotal}:</td>
+                                                    <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(subtotal)}</td>
                                                 </tr>
                                                 {discountAmount > 0 && (
                                                     <tr>
-                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#f9f9f9' }}>{t.discount}:</td>
-                                                        <td style={{ textAlign: 'right', color: 'red' }}>-{formatCurrency(discountAmount)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.discount}:</td>
+                                                        <td style={{ textAlign: 'right', color: 'red', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>-{formatCurrency(discountAmount)}</td>
                                                     </tr>
                                                 )}
                                                 {config.showTableTax && (
                                                     <tr>
-                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#f9f9f9' }}>{t.tax}:</td>
-                                                        <td style={{ textAlign: 'right' }}>{formatCurrency(totalTax)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.tax}:</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(totalTax)}</td>
                                                     </tr>
                                                 )}
                                                 <tr>
-                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: '11pt' }}>{t.generalTotal}:</td>
-                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: '11pt' }}>{formatCurrency(total)}</td>
+                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt' }}>{t.generalTotal}:</td>
+                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt' }}>{formatCurrency(total)}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -348,7 +357,7 @@ const ClassicTheme = ({
                             )}
 
                             {/* Footer - Only Last Page */}
-                            <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ccc', textAlign: 'center', fontSize: '8.5pt', color: '#444' }}>
+                            <div className="footer" style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ccc', textAlign: 'center', color: config.footerColor || '#444' }}>
                                 <div style={{ marginBottom: '3px' }}>{companyData.address}</div>
                                 <div style={{ marginBottom: '5px' }}>
                                     {companyData.phone} | {companyData.email} | {companyData.website}

@@ -121,46 +121,42 @@ const ModernTheme = ({
         }
         
         .modern-theme-container .company-name {
-            font-size: 1.4em;
-            font-weight: 800;
-            color: ${color};
-            margin-bottom: 0.25em;
-            font-family: ${config.titleFontFamily || 'inherit'};
-            line-height: 1.2;
             word-wrap: break-word; /* Ensure long names wrap */
+            font-size: ${config.headerTitleFontSize || '1.4em'};
+            font-weight: ${config.headerTitleFontWeight || '800'};
         }
         
         .modern-theme-container .company-address {
-            font-size: 0.8em;
+            font-size: ${config.headerInfoFontSize || '0.8em'};
             color: #4b5563;
             line-height: 1.3;
         }
 
         .modern-theme-container .quote-title {
-            font-size: 1.4em;
-            font-weight: 800;
-            color: ${color};
-            margin-bottom: 0.5em;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            font-size: ${config.titleFontSize || '1.4em'};
+            font-weight: ${config.titleFontWeight || '800'};
+            font-family: ${config.titleFontFamily || 'inherit'};
         }
         
         .modern-theme-container .quote-meta-grid {
             display: grid;
             grid-template-columns: auto auto;
             gap: 0.5em 1em;
-            font-size: 0.8em;
+            font-size: ${config.quoteMetaLabelFontSize || '0.8em'};
             color: #4b5563;
         }
 
         .modern-theme-container .quote-meta-label {
             color: #6b7280;
-            font-weight: 500;
+            font-weight: ${config.quoteMetaLabelFontWeight || '500'};
         }
 
         .modern-theme-container .quote-meta-value {
-            font-weight: 600;
+            font-weight: ${config.quoteMetaValueFontWeight || '600'};
             color: #000;
+            font-size: ${config.quoteMetaValueFontSize || 'inherit'};
         }
         
         /* CUSTOMER SECTION */
@@ -181,14 +177,9 @@ const ModernTheme = ({
         }
         
         .modern-theme-container .section-title {
-            font-size: 0.9em;
-            font-weight: 700;
-            color: ${color};
-            margin-bottom: 1em;
-            display: flex;
-            align-items: center;
-            gap: 0.5em;
             text-transform: uppercase;
+            font-size: ${config.customerTitleFontSize || '0.9em'};
+            font-weight: ${config.customerTitleFontWeight || '700'};
         }
 
         /* Force light theme for PDF container - Stronger Selector */
@@ -259,12 +250,14 @@ const ModernTheme = ({
         
         .modern-theme-container .info-label {
             color: #64748b;
-            font-weight: 500;
+            font-weight: ${config.customerLabelFontWeight || '500'};
+            font-size: ${config.customerLabelFontSize || 'inherit'};
         }
         
         .modern-theme-container .info-value {
             color: #1e293b;
-            font-weight: 500;
+            font-weight: ${config.customerValueFontWeight || '500'};
+            font-size: ${config.customerValueFontSize || 'inherit'};
         }
         
         /* TABLE */
@@ -276,12 +269,11 @@ const ModernTheme = ({
         }
         
         .modern-theme-container .pdf-items-table th {
-            background: transparent;
             padding: 0.75em 0.5em;
             text-align: left;
-            font-weight: 700;
+            font-weight: ${config.tableHeaderFontWeight || '700'};
             color: #94a3b8; /* Lighter gray for headers */
-            font-size: 1.15em !important;
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '1.15em')} !important;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             border-bottom: 1px solid #e2e8f0;
@@ -291,6 +283,8 @@ const ModernTheme = ({
             padding: 1em 0.5em;
             border-bottom: 1px solid #f1f5f9;
             vertical-align: middle;
+            font-size: ${config.tableBodyFontSize || 'inherit'};
+            font-weight: ${config.tableBodyFontWeight || 'normal'};
         }
 
         .modern-theme-container .item-image {
@@ -353,10 +347,9 @@ const ModernTheme = ({
         }
 
         .modern-theme-container .summary-row {
-            display: flex;
-            justify-content: space-between;
             padding: 0.5em 0;
-            font-size: 0.85em;
+            font-size: ${config.summaryLabelFontSize || '0.85em'};
+            font-weight: ${config.summaryLabelFontWeight || 'normal'};
             color: #475569;
         }
 
@@ -368,10 +361,8 @@ const ModernTheme = ({
             margin-top: 1em;
             padding-top: 1em;
             border-top: 1px solid #e2e8f0;
-            font-weight: 800;
-            font-size: 1.1em;
-            color: ${color};
             align-items: center;
+            font-size: ${config.summaryTotalFontSize || '1.1em'};
         }
 
         .modern-theme-container .bank-list {
@@ -446,17 +437,17 @@ const ModernTheme = ({
             margin-top: auto;
         }
 
-        .modern-theme-container .footer-company {
-            font-weight: 700;
-            color: ${color};
             margin-bottom: 0.5em;
+            font-size: ${config.footerFontSize ? `calc(${config.footerFontSize} * 1.2)` : '0.9rem'};
+            font-weight: ${config.footerFontWeight || '700'};
         }
 
         .modern-theme-container .footer-info {
             display: flex;
             justify-content: center;
             gap: 1.5rem;
-            font-size: 0.75rem;
+            font-size: ${config.footerFontSize || '0.75rem'};
+            font-weight: ${config.footerFontWeight || 'normal'};
             color: #64748b;
         }
 
@@ -584,7 +575,7 @@ const ModernTheme = ({
                                 )}
                                 <div className="company-info">
                                     <div className="company-name">{companyData.name}</div>
-                                    <div className="company-details">
+                                    <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>
                                         <div className="header-info-grid">
                                             <div className="header-info-line">
                                                 <span>{companyData.address}</span>
@@ -595,14 +586,14 @@ const ModernTheme = ({
                             </div>
                             <div className="header-right">
                                 <div className="quote-title">{config.title}</div>
-                                <div className="quote-meta" style={{ fontSize: '0.8rem', color: '#4b5563', marginTop: '0.5rem' }}>
+                                <div className="quote-meta" style={{ fontSize: config.quoteMetaLabelFontSize || '0.8rem', color: '#4b5563', marginTop: '0.5rem' }}>
                                     <div>{t.date}: {formatDate(quoteData.date, currentLocale)} &nbsp; {t.validUntil}: {formatDate(quoteData.validUntil, currentLocale)} &nbsp; <strong>#{quoteData.number}</strong></div>
                                 </div>
                             </div>
                         </div>
                     ) : (
                         <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `1px solid ${color}` }}>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8em', color: '#666' }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.8em', color: '#666' }}>
                                 <span>{companyData.name} - {config.title}</span>
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             </div>
@@ -669,7 +660,7 @@ const ModernTheme = ({
                                         </div>
                                         <div className="summary-row" style={{ color: '#475569' }}>
                                             <span style={{ color: '#475569' }}>{t.subtotal}:</span>
-                                            <span style={{ fontWeight: '600', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
+                                            <span style={{ fontWeight: config.summaryValueFontWeight || '600', fontSize: config.summaryValueFontSize || 'inherit', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="summary-row" style={{ color: '#ef4444' }}>
@@ -687,9 +678,9 @@ const ModernTheme = ({
                                             <span style={{ color: '#475569' }}>{t.total} {t.vat}:</span>
                                             <span style={{ color: '#475569' }}>{formatCurrency(totalTax)}</span>
                                         </div>
-                                        <div className="summary-row grand-total" style={{ borderTop: 'none', marginTop: '0.5rem', paddingTop: '0.5rem', fontSize: '1.2rem', color: '#0f172a' }}>
+                                        <div className="summary-row grand-total" style={{ borderTop: 'none', marginTop: '0.5rem', paddingTop: '0.5rem', color: '#0f172a' }}>
                                             <span style={{ color: '#0f172a' }}>{t.generalTotal}:</span>
-                                            <span style={{ color: '#0f172a' }}>{formatCurrency(total)}</span>
+                                            <span style={{ color: '#0f172a', fontSize: 'inherit' }}>{formatCurrency(total)}</span>
                                         </div>
                                     </div>
                                     <div className="bank-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
