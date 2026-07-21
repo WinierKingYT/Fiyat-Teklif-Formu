@@ -8,8 +8,8 @@ import { useQuote } from '../context/QuoteContext';
 const TemplateManagerModal = ({ isOpen, onClose }) => {
     const { db } = useIndexedDB();
     const {
-        quoteData, customerData, companyData, items, discountRate,
-        updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscountRate
+        quoteData, customerData, companyData, items, discount,
+        updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscount
     } = useQuote();
 
     const [templates, setTemplates] = useState([]);
@@ -26,7 +26,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
 
     const handleSaveTemplate = async () => {
         if (!templateName.trim()) { toast.error('Lütfen şablon adı girin.'); return; }
-        const template = { id: Date.now(), name: templateName, createdAt: new Date().toISOString(), data: { quoteData, customerData, companyData, items, discountRate } };
+        const template = { id: Date.now(), name: templateName, createdAt: new Date().toISOString(), data: { quoteData, customerData, companyData, items, discount } };
         try {
             await db.add('templates', template);
             toast.success('Şablon kaydedildi');
@@ -45,7 +45,8 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
             if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v));
             if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v));
             if (data.items) setItems(data.items);
-            if (data.discountRate) setDiscountRate(data.discountRate);
+            if (data.discount) setDiscount(data.discount);
+            else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate });
             toast.success('Şablon başarıyla yüklendi');
             onClose();
         }
