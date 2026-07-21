@@ -381,10 +381,68 @@ const SortableRowCard = memo(({ item, index, handleItemChange, removeItem, forma
 SortableRowCard.displayName = 'SortableRowCard';
 
 const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) => {
-    const { quoteData } = useQuote();
+    const { quoteData, db } = useQuote();
     const { t } = useTranslation(quoteData?.language);
     const fileInputRef = useRef(null);
+    const searchRef = useRef(null);
     const [viewMode, setViewMode] = useState(window.innerWidth < 768 ? 'card' : 'table');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchIndex, setSearchIndex] = useState(-1);
+
+    // Debounced product search
+    useEffect(() => {
+        if (!db || searchQuery.length < 2) { setSearchResults([]); return; }
+        const timer = setTimeout(async () => {
+            try {
+                const allProducts = await db.getAll('products');
+                const q = searchQuery.toLowerCase();
+                const filtered = allProducts.filter(p =>
+                    (p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q))
+                );
+                setSearchResults(filtered.slice(0, 10));
+                setSearchIndex(-1);
+            } catch (e) { setSearchResults([]); }
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [searchQuery, db]);
+
+    const addProductFromSearch = (product) => {
+        const newItem = {
+            id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: product.name,
+            description: product.description || '',
+            quantity: 1,
+            unit: product.unit || 'Adet',
+            price: product.price || 0,
+            taxRate: product.taxRate || 20,
+            discountRate: 0,
+            total: product.price || 0,
+            image: product.image
+        };
+        onItemsChange([...items, newItem]);
+        setSearchQuery('');
+        setSearchResults([]);
+        searchRef.current?.focus();
+    };
+
+    const handleSearchKeyDown = (e) => {
+        if (!searchResults.length) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSearchIndex(prev => Math.min(prev + 1, searchResults.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSearchIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'Enter' && searchIndex >= 0) {
+            e.preventDefault();
+            addProductFromSearch(searchResults[searchIndex]);
+        } else if (e.key === 'Escape') {
+            setSearchQuery('');
+            setSearchResults([]);
+        }
+    };
 
     // Auto-switch view mode on resize
     useEffect(() => {
@@ -614,6 +672,53 @@ const ItemsTable = ({ items, onItemsChange, currency = 'TRY', onAddProduct }) =>
                         <span>{t('galleryView')}</span>
                     </button>
                 </div>
+            </div>
+
+            {/* Inline product search */}
+            <div className="mb-4 relative" ref={searchRef}>
+                <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => setShowSearch(true)}
+                        onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+                        onKeyDown={handleSearchKeyDown}
+                        placeholder="Ürün ara ve ekle... (en az 2 harf)"
+                        className="form-control pl-9 pr-3 py-2 text-sm"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] p-0.5"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    )}
+                </div>
+                {showSearch && searchResults.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg max-h-60 overflow-y-auto">
+                        {searchResults.map((product, idx) => (
+                            <button
+                                key={product.id || idx}
+                                onMouseDown={() => addProductFromSearch(product)}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--color-bg-hover)] ${idx === searchIndex ? 'bg-[var(--color-bg-muted)]' : ''}`}
+                            >
+                                <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center flex-shrink-0">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--color-primary)]"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-[var(--color-text)] truncate">{product.name}</div>
+                                    {product.description && <div className="text-xs text-[var(--color-text-muted)] truncate">{product.description}</div>}
+                                </div>
+                                <div className="text-sm font-semibold text-[var(--color-text)] flex-shrink-0">
+                                    {new Intl.NumberFormat('tr-TR', { style: 'currency', currency }).format(product.price || 0)}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="table-responsive">

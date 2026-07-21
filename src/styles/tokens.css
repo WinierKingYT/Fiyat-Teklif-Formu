@@ -13,16 +13,16 @@
   --color-text-muted: #9298A3;
   --color-border: #E2E5E9;
   --color-border-light: #F0F1F3;
-  --color-primary: #1E293B;
-  --color-primary-hover: #334155;
-  --color-primary-muted: #EFF1F4;
-  --color-accent: #0F172A;
-  --color-success: #16A34A;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-muted: #DBEAFE;
+  --color-accent: #EA580C;
+  --color-success: #059669;
   --color-warning: #D97706;
   --color-error: #DC2626;
   --color-info: #2563EB;
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   --radius-sm: 4px;
@@ -53,13 +53,13 @@
   --color-text-muted: #6B7078;
   --color-border: #2D3038;
   --color-border-light: #24272E;
-  --color-primary: #E2E5E9;
-  --color-primary-hover: #C8CCD2;
-  --color-primary-muted: #24272E;
-  --color-accent: #EDEEF0;
-  --color-success: #22C55E;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
+  --color-primary: #60A5FA;
+  --color-primary-hover: #93BBFC;
+  --color-primary-muted: #1E3A5F;
+  --color-accent: #FB923C;
+  --color-success: #34D399;
+  --color-warning: #FBBF24;
+  --color-error: #F87171;
   --color-info: #60A5FA;
 
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.2);
