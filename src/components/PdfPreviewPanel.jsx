@@ -175,7 +175,7 @@ const PdfPreviewPanel = () => {
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-lg shadow-md hover:shadow-lg transition-all font-semibold"
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-[var(--radius)] shadow hover:shadow-[var(--shadow-lg)] transition-all font-semibold"
                         title="PDF İndir"
                     >
                         <FileDown size={20} />
@@ -1269,7 +1269,7 @@ const PdfPreviewPanel = () => {
 
                 {/* Right: Preview (Zoomable) */}
                 <div className="flex-1 bg-[var(--color-bg-muted)] overflow-hidden flex flex-col relative">
-                    <div className={`absolute top-4 right-4 z-10 p-1 rounded-lg shadow border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] font-medium ${performanceMode ? 'bg-[var(--color-bg-card)]' : 'bg-[var(--color-bg-card)]/80 backdrop-blur'}`}>
+                    <div className={`absolute top-4 right-4 z-10 p-1 rounded-[var(--radius)] shadow border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] font-medium ${performanceMode ? 'bg-[var(--color-bg-card)]' : 'bg-[var(--color-bg-card)]/80 backdrop-blur'}`}>
                         {t('a4Preview')}
                     </div>
 
@@ -1278,7 +1278,7 @@ const PdfPreviewPanel = () => {
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
                             <button
                                 onClick={handleManualRefresh}
-                                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-full shadow-lg hover:shadow-xl transition-all animate-bounce"
+                                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-full shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-lg)] transition-all animate-bounce"
                             >
                                 <RefreshCcw size={16} />
                                 <span>{t('refreshPreview')}</span>
@@ -1287,7 +1287,7 @@ const PdfPreviewPanel = () => {
                     )}
 
                     <div className="flex-1 overflow-auto custom-scrollbar p-8 flex justify-center items-start">
-                        <div className="origin-top transform scale-[0.6] lg:scale-[0.7] xl:scale-[0.8] shadow-2xl transition-all duration-300 bg-[var(--color-bg-card)]">
+                        <div className="origin-top transform scale-[0.6] lg:scale-[0.7] xl:scale-[0.8] shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)]">
                             <PrintableQuote
                                 theme={pdfConfig.theme}
                                 color={pdfConfig.color}
