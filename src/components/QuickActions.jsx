@@ -35,8 +35,8 @@ const QuickActions = ({
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-300 font-medium text-sm ${isOpen
-                    ? 'bg-slate-800 text-white shadow-lg shadow-slate-300 dark:shadow-none'
-                    : 'bg-white text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border)] shadow-sm'
+                    ? 'bg-[var(--color-text)] text-white shadow-lg shadow-[var(--color-border)]'
+                    : 'bg-[var(--color-bg-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border)] shadow-sm'
                     }`}
             >
                 {isOpen ? <X size={18} /> : <LayoutGrid size={18} />}
