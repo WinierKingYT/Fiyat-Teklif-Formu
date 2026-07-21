@@ -17,7 +17,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
         if (isOpen && isReady) {
             loadProducts();
             loadCategories();
-            setSelectedProducts(new Set()); // Reset selection on open
+            setSelectedProducts(new Set());
         }
     }, [isOpen, isReady]);
 
@@ -36,11 +36,8 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const loadCategories = async () => {
         try {
             const storedCategories = await db.get('settings', 'product_categories');
-            if (storedCategories && storedCategories.value) {
-                setCategories(storedCategories.value);
-            } else {
-                setCategories(['Genel', 'Hizmet', 'Elektronik', 'Giyim']);
-            }
+            if (storedCategories && storedCategories.value) setCategories(storedCategories.value);
+            else setCategories(['Genel', 'Hizmet', 'Elektronik', 'Giyim']);
         } catch (error) {
             console.error('Error loading categories:', error);
         }
@@ -48,11 +45,8 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
 
     const toggleProductSelection = (product) => {
         const newSelected = new Set(selectedProducts);
-        if (newSelected.has(product.id)) {
-            newSelected.delete(product.id);
-        } else {
-            newSelected.add(product.id);
-        }
+        if (newSelected.has(product.id)) newSelected.delete(product.id);
+        else newSelected.add(product.id);
         setSelectedProducts(newSelected);
     };
 
@@ -60,8 +54,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
         if (selectedProducts.size === filteredProducts.length && filteredProducts.length > 0) {
             setSelectedProducts(new Set());
         } else {
-            const newSelected = new Set(filteredProducts.map(p => p.id));
-            setSelectedProducts(newSelected);
+            setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
         }
     };
 
@@ -72,8 +65,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     };
 
     const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.category?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.category?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'Tümü' || p.category === selectedCategory;
         return matchesSearch && matchesCategory;
     });
@@ -81,49 +73,35 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Ürün/Hizmet Seç" size="lg">
             <div className="space-y-4 flex flex-col h-[70vh]">
-                {/* Toolbar */}
                 <div className="flex flex-col gap-3">
                     <div className="flex gap-2">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                            <input
-                                type="text"
-                                className="form-control pl-9"
-                                placeholder="Ürün adı veya kategori ara..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
+                            <input type="text" className="form-control pl-9" placeholder="Ürün adı veya kategori ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-                        <select
-                            className="form-control w-40"
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                        >
+                        <select className="form-control w-40" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                             <option value="Tümü">Tüm Kategoriler</option>
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
+                            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
                     </div>
                 </div>
 
-                {/* Product List */}
-                <div className="border rounded-lg overflow-hidden flex-1 overflow-y-auto custom-scrollbar relative">
+                <div className="border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden flex-1 overflow-y-auto relative">
                     {loading ? (
-                        <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>
+                        <div className="p-8 text-center text-[var(--color-text-muted)]">Yükleniyor...</div>
                     ) : filteredProducts.length === 0 ? (
-                        <div className="p-8 text-center text-muted-foreground">
+                        <div className="p-8 text-center text-[var(--color-text-muted)]">
                             {searchTerm ? 'Sonuç bulunamadı.' : 'Henüz kayıtlı ürün yok.'}
                         </div>
                     ) : (
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-muted text-muted-foreground sticky top-0 z-10 bg-gray-50 dark:bg-slate-800">
+                            <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10">
                                 <tr>
                                     <th className="p-3 w-10">
-                                        <button onClick={toggleAllSelection} className="hover:text-blue-600">
+                                        <button onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]">
                                             {selectedProducts.size === filteredProducts.length && filteredProducts.length > 0 ?
-                                                <CheckSquare size={18} className="text-blue-600" /> :
-                                                <Square size={18} />
+                                                <CheckSquare size={18} className="text-[var(--color-primary)]" /> :
+                                                <Square size={18} className="text-[var(--color-text-muted)]" />
                                             }
                                         </button>
                                     </th>
@@ -132,30 +110,25 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
                                     <th className="p-3 font-medium text-right">Birim Fiyat</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border">
+                            <tbody className="divide-y divide-[var(--color-border)]">
                                 {filteredProducts.map((product) => {
                                     const isSelected = selectedProducts.has(product.id);
                                     return (
-                                        <tr
-                                            key={product.id}
-                                            className={`hover:bg-muted/50 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                                            onClick={() => toggleProductSelection(product)}
-                                        >
-                                            <td className="p-3">
-                                                <div className={isSelected ? 'text-blue-600' : 'text-gray-400'}>
-                                                    {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                                                </div>
+                                        <tr key={product.id} className={`hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer ${isSelected ? 'bg-[var(--color-primary-muted)]' : ''}`} onClick={() => toggleProductSelection(product)}>
+                                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                                {isSelected ?
+                                                    <CheckSquare size={18} className="text-[var(--color-primary)]" /> :
+                                                    <Square size={18} className="text-[var(--color-text-muted)]" />
+                                                }
                                             </td>
-                                            <td className="p-3 font-medium">
+                                            <td className="p-3 font-medium text-[var(--color-text)]">
                                                 <div className="flex items-center gap-2">
-                                                    {product.image && (
-                                                        <img src={product.image} alt="" className="w-8 h-8 rounded object-cover border" />
-                                                    )}
+                                                    {product.image && <img src={product.image} alt="" className="w-8 h-8 rounded-[var(--radius-sm)] object-cover border border-[var(--color-border)]" />}
                                                     {product.name}
                                                 </div>
                                             </td>
-                                            <td className="p-3 text-muted-foreground">{product.category || '-'}</td>
-                                            <td className="p-3 font-mono text-right">
+                                            <td className="p-3 text-[var(--color-text-muted)]">{product.category || '-'}</td>
+                                            <td className="p-3 font-mono text-right text-[var(--color-text)]">
                                                 {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(product.price)}
                                             </td>
                                         </tr>
@@ -166,20 +139,13 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
                     )}
                 </div>
 
-                {/* Footer Actions */}
-                <div className="flex justify-between items-center pt-2 border-t">
-                    <div className="text-sm text-muted-foreground">
+                <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
+                    <div className="text-sm text-[var(--color-text-muted)]">
                         {selectedProducts.size} ürün seçildi
                     </div>
                     <div className="flex gap-2">
-                        <button className="btn btn-outline" onClick={onClose}>
-                            İptal
-                        </button>
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleAddSelected}
-                            disabled={selectedProducts.size === 0}
-                        >
+                        <button className="btn btn-outline" onClick={onClose}>İptal</button>
+                        <button className="btn btn-primary" onClick={handleAddSelected} disabled={selectedProducts.size === 0}>
                             <Plus size={16} /> Seçilenleri Ekle ({selectedProducts.size})
                         </button>
                     </div>

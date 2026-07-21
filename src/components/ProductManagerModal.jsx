@@ -479,13 +479,13 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                                         </div>
                                                     )}
                                                     <div className="absolute top-2 left-2" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }}>
-                                                        <div className={`bg-white/90 rounded p-1 ${selectedProducts.has(product.id) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                                                        <div className={`bg-[var(--color-bg-card)] rounded p-1 ${selectedProducts.has(product.id) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>
                                                             {selectedProducts.has(product.id) ? <CheckSquare size={18} /> : <Square size={18} />}
                                                         </div>
                                                     </div>
                                                     <div className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                         <button
-                                                            className="p-1.5 bg-white/90 text-[var(--color-error)] hover:text-[var(--color-error)] rounded shadow-sm"
+                                                            className="p-1.5 bg-[var(--color-bg-card)] text-[var(--color-error)] hover:text-[var(--color-error)] rounded shadow-sm"
                                                             onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }}
                                                         >
                                                             <Trash2 size={16} />

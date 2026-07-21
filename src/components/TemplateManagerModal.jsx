@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useIndexedDB } from '../hooks/useIndexedDB';
-import { Trash2, Save, FileInput, Check, Download, Upload } from 'lucide-react';
+import { Trash2, Save, FileInput, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuote } from '../context/QuoteContext';
 
@@ -16,9 +16,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     const [templateName, setTemplateName] = useState('');
 
     useEffect(() => {
-        if (isOpen && db) {
-            loadTemplates();
-        }
+        if (isOpen && db) loadTemplates();
     }, [isOpen, db]);
 
     const loadTemplates = async () => {
@@ -27,24 +25,8 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleSaveTemplate = async () => {
-        if (!templateName.trim()) {
-            toast.error('Lütfen şablon adı girin.');
-            return;
-        }
-
-        const template = {
-            id: Date.now(),
-            name: templateName,
-            createdAt: new Date().toISOString(),
-            data: {
-                quoteData,
-                customerData,
-                companyData,
-                items,
-                discountRate
-            }
-        };
-
+        if (!templateName.trim()) { toast.error('Lütfen şablon adı girin.'); return; }
+        const template = { id: Date.now(), name: templateName, createdAt: new Date().toISOString(), data: { quoteData, customerData, companyData, items, discountRate } };
         try {
             await db.add('templates', template);
             toast.success('Şablon kaydedildi');
@@ -59,14 +41,11 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     const handleLoadTemplate = (template) => {
         if (window.confirm(`"${template.name}" şablonunu yüklemek istediğinize emin misiniz? Mevcut veriler silinecektir.`)) {
             const { data } = template;
-
-            // Load all data
             if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v));
             if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v));
             if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v));
             if (data.items) setItems(data.items);
             if (data.discountRate) setDiscountRate(data.discountRate);
-
             toast.success('Şablon başarıyla yüklendi');
             onClose();
         }
@@ -106,20 +85,12 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     const handleImportTemplate = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 const importedTemplate = JSON.parse(e.target.result);
                 if (!importedTemplate.data || !importedTemplate.name) throw new Error('Geçersiz şablon formatı');
-
-                // Generate new ID to avoid conflicts
-                const newTemplate = {
-                    ...importedTemplate,
-                    id: Date.now(),
-                    name: `${importedTemplate.name} (İçe Aktarıldı)`
-                };
-
+                const newTemplate = { ...importedTemplate, id: Date.now(), name: `${importedTemplate.name} (İçe Aktarıldı)` };
                 await db.add('templates', newTemplate);
                 toast.success('Şablon içe aktarıldı');
                 loadTemplates();
@@ -134,85 +105,47 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Şablon Yönetimi" size="lg">
             <div className="space-y-6">
-
-                {/* Save Current as Template */}
-                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <h3 className="font-semibold mb-2 flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                        <Save size={18} /> Mevcut Teklifi Şablon Olarak Kaydet
+                <div className="bg-[var(--color-bg-muted)] p-4 rounded-[var(--radius)] border border-[var(--color-border)]">
+                    <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2 flex items-center gap-2">
+                        <Save size={16} className="text-[var(--color-primary)]" /> Mevcut Teklifi Şablon Olarak Kaydet
                     </h3>
                     <div className="flex gap-2">
-                        <input
-                            type="text"
-                            className="form-control"
-                            id="templateName"
-                            name="templateName"
-                            placeholder="Şablon Adı (Örn: Standart Web Tasarım Teklifi)"
-                            value={templateName}
-                            onChange={(e) => setTemplateName(e.target.value)}
-                            autoComplete="off"
-                        />
-                        <button className="btn btn-primary whitespace-nowrap" onClick={handleSaveTemplate}>
-                            Kaydet
-                        </button>
+                        <input type="text" className="form-control" placeholder="Şablon Adı (Örn: Standart Web Tasarım Teklifi)" value={templateName} onChange={(e) => setTemplateName(e.target.value)} autoComplete="off" />
+                        <button className="btn btn-primary whitespace-nowrap" onClick={handleSaveTemplate}>Kaydet</button>
                     </div>
                 </div>
 
-                {/* Template List */}
                 <div>
                     <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">Kayıtlı Şablonlar</h3>
+                        <h3 className="text-sm font-semibold text-[var(--color-text)]">Kayıtlı Şablonlar</h3>
                         <div className="flex gap-2">
-                            <button
-                                className="btn btn-sm btn-outline"
-                                onClick={() => document.getElementById('importTemplateInput').click()}
-                                title="Şablon İçe Aktar"
-                            >
+                            <button className="btn btn-sm btn-outline" onClick={() => document.getElementById('importTemplateInput').click()} title="Şablon İçe Aktar">
                                 <Upload size={14} /> İçe Aktar
                             </button>
-                            <input
-                                type="file"
-                                id="importTemplateInput"
-                                accept=".json"
-                                style={{ display: 'none' }}
-                                onChange={handleImportTemplate}
-                            />
+                            <input type="file" id="importTemplateInput" accept=".json" style={{ display: 'none' }} onChange={handleImportTemplate} />
                         </div>
                     </div>
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
                         {templates.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-8 text-slate-400 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                            <div className="flex flex-col items-center justify-center py-8 text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] rounded-[var(--radius)]">
                                 <p>Henüz kayıtlı şablon yok.</p>
                             </div>
                         ) : (
                             templates.map(template => (
-                                <div key={template.id} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <div key={template.id} className="flex items-center justify-between p-3 border border-[var(--color-border)] rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] transition-colors">
                                     <div>
-                                        <div className="font-medium text-slate-900 dark:text-slate-100">{template.name}</div>
-                                        <div className="text-xs text-slate-500">
-                                            {new Date(template.createdAt).toLocaleDateString('tr-TR')}
-                                        </div>
+                                        <div className="font-medium text-[var(--color-text)]">{template.name}</div>
+                                        <div className="text-xs text-[var(--color-text-muted)]">{new Date(template.createdAt).toLocaleDateString('tr-TR')}</div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button
-                                            className="btn btn-sm btn-outline text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 border-green-200 dark:border-green-900"
-                                            onClick={() => handleLoadTemplate(template)}
-                                            title="Şablonu Yükle"
-                                        >
-                                            <FileInput size={16} /> Yükle
+                                        <button className="btn btn-sm btn-outline" onClick={() => handleLoadTemplate(template)} title="Şablonu Yükle">
+                                            <FileInput size={14} /> Yükle
                                         </button>
-                                        <button
-                                            className="btn btn-sm btn-outline text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900"
-                                            onClick={() => handleDeleteTemplate(template.id)}
-                                            title="Şablonu Sil"
-                                        >
-                                            <Trash2 size={16} />
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTemplate(template.id)} title="Şablonu Sil">
+                                            <Trash2 size={14} />
                                         </button>
-                                        <button
-                                            className="btn btn-sm btn-outline text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 dark:border-blue-900"
-                                            onClick={() => handleExportTemplate(template)}
-                                            title="Dışa Aktar"
-                                        >
-                                            <Download size={16} />
+                                        <button className="btn btn-sm btn-outline" onClick={() => handleExportTemplate(template)} title="Dışa Aktar">
+                                            <Download size={14} />
                                         </button>
                                     </div>
                                 </div>
@@ -220,7 +153,6 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
                         )}
                     </div>
                 </div>
-
             </div>
         </Modal>
     );
