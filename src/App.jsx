@@ -17,7 +17,7 @@ import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
-import { PlusCircle } from 'lucide-react';
+import { FileText, Landmark } from 'lucide-react';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { useTranslation } from './hooks/useTranslation';
 import { Toaster, toast } from 'react-hot-toast';
@@ -198,17 +198,28 @@ const QuoteBuilder = ({
 
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">{t('quoteDetails')}</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
+                  <FileText size={16} className="text-[var(--color-primary)]" />
+                </div>
+                <span className="card-title">{t('quoteDetails')}</span>
+              </div>
             </div>
             <div className="card-body">
               <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
-              <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
-                <h5 className="text-sm font-medium mb-2 text-[var(--color-text-muted)]">Banka Bilgileri</h5>
-                <BankInfoForm
-                  data={bankData}
-                  onChange={updateBankData}
-                  onOpenManager={onOpenBankManager}
-                />
+              <div className="mt-5 pt-4 border-t border-[var(--color-border)]">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-[var(--color-bg-muted)] flex items-center justify-center">
+                      <Landmark size={13} className="text-[var(--color-text-secondary)]" />
+                    </div>
+                    <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenBankManager}>
+                    <Landmark size={14} /> {t('bankManagement')}
+                  </button>
+                </div>
+                <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
               </div>
             </div>
           </div>
@@ -222,36 +233,21 @@ const QuoteBuilder = ({
         )}
 
         <div className="space-y-6 min-w-0">
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">{t('itemsAndServices')}</h3>
-              <button className="btn btn-primary btn-sm" onClick={() => setIsProductModalOpen(true)}>
-                <PlusCircle size={16} /> {t('addProduct')}
-              </button>
-            </div>
-            <div className="card-body">
-              <ItemsTable
-                items={items}
-                onItemsChange={setItems}
-                onAddProduct={() => setIsProductModalOpen(true)}
-                currency={quoteData.currency}
-              />
-            </div>
-          </div>
+          <ItemsTable
+            items={items}
+            onItemsChange={setItems}
+            onAddProduct={() => setIsProductModalOpen(true)}
+            currency={quoteData.currency}
+          />
 
-          <div className="card p-6">
-            <SummarySection
-              items={items}
-              discount={discount}
-              onDiscountChange={setDiscount}
-              currency={quoteData.currency}
-            />
-          </div>
+          <SummarySection
+            items={items}
+            discount={discount}
+            onDiscountChange={setDiscount}
+            currency={quoteData.currency}
+          />
 
-          <div className="card p-6">
-            <h4 className="text-md font-semibold mb-4 text-[var(--color-text)] border-b pb-2">{t('notesAndTerms')}</h4>
-            <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
-          </div>
+          <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
         </div>
       </div>
 

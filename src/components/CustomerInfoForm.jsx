@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Users, Mail, Phone, MapPin } from 'lucide-react';
+import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 
@@ -10,7 +10,11 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [searchIndex, setSearchIndex] = useState(-1);
+    const [showDetails, setShowDetails] = useState(false);
     const searchRef = useRef(null);
+    const inputRef = useRef(null);
+
+    const isFilled = data?.name && data?.email;
 
     useEffect(() => {
         if (!db || searchQuery.length < 2) { setSearchResults([]); return; }
@@ -37,6 +41,7 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
         setSearchQuery('');
         setSearchResults([]);
         setShowDropdown(false);
+        inputRef.current?.focus();
     };
 
     const handleKeyDown = (e) => {
@@ -56,108 +61,145 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
         onChange(name, value);
     };
 
-    const isFilled = data?.name && data?.email;
-    const [showDetails, setShowDetails] = useState(false);
-
     return (
-        <div className="form-section">
-            <div className="section-header">
-                <h3 className="section-title">
-                    <User size={20} />
-                    {t('customerInfo')}
-                </h3>
-                <div className="flex gap-2">
+        <div className="card">
+            <div className="card-header">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
+                        <User size={16} className="text-[var(--color-primary)]" />
+                    </div>
+                    <span className="card-title">{t('customerInfo')}</span>
+                </div>
+                <div className="flex items-center gap-2">
                     {isFilled && (
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowDetails(!showDetails)}>
-                            {showDetails ? 'Gizle' : 'Detay'}
+                        <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setShowDetails(!showDetails)}
+                        >
+                            {showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                            {showDetails ? t('hide') || 'Gizle' : t('details') || 'Detay'}
                         </button>
                     )}
                     <button type="button" className="btn btn-outline btn-sm" onClick={onSelectCustomer}>
-                        <Users size={16} />
+                        <Users size={15} />
                         {t('selectCustomer')}
                     </button>
                 </div>
             </div>
-
-            <div className="form-row">
-                <div className="form-group floating-label-group relative" ref={searchRef}>
-                    <input
-                        type="text"
-                        className="form-control"
-                        id="customerName"
-                        name="name"
-                        value={data.name || ''}
-                        onChange={handleChange}
-                        onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-                        onKeyDown={handleKeyDown}
-                        placeholder=" "
-                        autoComplete="off"
-                    />
-                    <label className="form-label" htmlFor="customerName">{t('customerName')}</label>
-                    {showDropdown && searchResults.length > 0 && (
-                        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg max-h-48 overflow-y-auto">
-                            {searchResults.map((c, idx) => (
-                                <button
-                                    key={c.id || idx}
-                                    type="button"
-                                    onMouseDown={() => selectCustomer(c)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-bg-hover)] ${idx === searchIndex ? 'bg-[var(--color-bg-muted)]' : ''}`}
-                                >
-                                    <div className="w-7 h-7 rounded-full bg-[var(--color-primary-muted)] flex items-center justify-center flex-shrink-0">
-                                        <User size={13} className="text-[var(--color-primary)]" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-[var(--color-text)] truncate">{c.name}</div>
-                                        {c.company && <div className="text-xs text-[var(--color-text-muted)] truncate">{c.company}</div>}
-                                    </div>
-                                    {c.phone && <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">{c.phone}</span>}
-                                </button>
-                            ))}
+            <div className="card-body space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="relative" ref={searchRef}>
+                        <div className="relative">
+                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                className="form-control pl-9"
+                                id="customerName"
+                                name="name"
+                                value={data.name || ''}
+                                onChange={handleChange}
+                                onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+                                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={t('customerName')}
+                                autoComplete="off"
+                            />
                         </div>
-                    )}
+                        {showDropdown && searchResults.length > 0 && (
+                            <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg overflow-hidden">
+                                {searchResults.map((c, idx) => (
+                                    <button
+                                        key={c.id || idx}
+                                        type="button"
+                                        onMouseDown={() => selectCustomer(c)}
+                                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${
+                                            idx === searchIndex
+                                                ? 'bg-[var(--color-primary-muted)] text-[var(--color-primary)]'
+                                                : 'text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'
+                                        }`}
+                                    >
+                                        <div className="w-7 h-7 rounded-full bg-[var(--color-bg-muted)] flex items-center justify-center flex-shrink-0">
+                                            <User size={13} className="text-[var(--color-text-muted)]" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-medium truncate">{c.name}</div>
+                                            {c.company && <div className="text-xs text-[var(--color-text-muted)] truncate">{c.company}</div>}
+                                        </div>
+                                        {c.phone && <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">{c.phone}</span>}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <input
+                            type="text"
+                            className="form-control"
+                            id="customerCompany"
+                            name="company"
+                            value={data.company || ''}
+                            onChange={handleChange}
+                            placeholder={t('company')}
+                            autoComplete="organization"
+                        />
+                    </div>
                 </div>
-                <div className="form-group floating-label-group">
-                    <input
-                        type="text"
-                        className="form-control"
-                        id="customerCompany"
-                        name="company"
-                        value={data.company || ''}
-                        onChange={handleChange}
-                        placeholder=" "
-                        autoComplete="organization"
-                    />
-                    <label className="form-label" htmlFor="customerCompany">{t('company')}</label>
-                </div>
-            </div>
 
-            {(!isFilled || showDetails) && (
-                <>
-                    <div className="form-row">
-                        <div className="form-group floating-label-group">
-                            <input type="email" className="form-control" id="customerEmail" name="email" value={data.email || ''} onChange={handleChange} placeholder=" " autoComplete="email" />
-                            <label className="form-label" htmlFor="customerEmail"><span className="flex items-center gap-1"><Mail size={14} /> {t('email')}</span></label>
+                {(!isFilled || showDetails) && (
+                    <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="relative">
+                                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+                                <input
+                                    type="email"
+                                    className="form-control pl-9"
+                                    id="customerEmail"
+                                    name="email"
+                                    value={data.email || ''}
+                                    onChange={handleChange}
+                                    placeholder={t('email')}
+                                    autoComplete="email"
+                                />
+                            </div>
+                            <div className="relative">
+                                <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+                                <input
+                                    type="tel"
+                                    className="form-control pl-9"
+                                    id="customerPhone"
+                                    name="phone"
+                                    value={data.phone || ''}
+                                    onChange={handleChange}
+                                    placeholder={t('phone')}
+                                    autoComplete="tel"
+                                />
+                            </div>
                         </div>
-                        <div className="form-group floating-label-group">
-                            <input type="tel" className="form-control" id="customerPhone" name="phone" value={data.phone || ''} onChange={handleChange} placeholder=" " autoComplete="tel" />
-                            <label className="form-label" htmlFor="customerPhone"><span className="flex items-center gap-1"><Phone size={14} /> {t('phone')}</span></label>
+                        <div className="relative">
+                            <MapPin size={15} className="absolute left-3 top-4 text-[var(--color-text-muted)] pointer-events-none" />
+                            <textarea
+                                className="form-control pl-9"
+                                id="customerAddress"
+                                name="address"
+                                value={data.address || ''}
+                                onChange={handleChange}
+                                placeholder={t('address')}
+                                rows="2"
+                                autoComplete="street-address"
+                            />
                         </div>
                     </div>
-                    <div className="form-group floating-label-group">
-                        <textarea className="form-control" id="customerAddress" name="address" value={data.address || ''} onChange={handleChange} placeholder=" " rows="2" autoComplete="street-address"></textarea>
-                        <label className="form-label" htmlFor="customerAddress"><span className="flex items-center gap-1"><MapPin size={14} /> {t('address')}</span></label>
-                    </div>
-                </>
-            )}
+                )}
 
-            {!isFilled && (
-                <div className="px-4 pb-3">
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                        İsim yazmaya başlayın — kayıtlı müşteriler otomatik önerilir.
+                {!isFilled && (
+                    <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1.5 pt-0.5">
+                        <Search size={12} />
+                        İsim yazmaya başlayın — kayıtlı müşteriler otomatik önerilir
                     </p>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };
