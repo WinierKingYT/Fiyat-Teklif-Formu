@@ -1,0 +1,18 @@
+.performance-mode * { transition: none !important; animation: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: none !important; text-shadow: none !important; }
+.performance-mode .text-gradient-premium { background: none !important; -webkit-text-fill-color: initial !important; color: var(--color-text) !important; animation: none !important; }
+.performance-mode .glass-panel,
+.performance-mode .glass-card,
+.performance-mode .glass-card-premium,
+.performance-mode .glass-input,
+.performance-mode .header,
+.performance-mode .app-header { background-color: var(--color-bg-card) !important; box-shadow: none !important; border: 1px solid var(--color-border) !important; content-visibility: auto; contain-intrinsic-size: 100px 500px; }
+.performance-mode .items-table { contain: paint; }
+.performance-mode .btn:hover { transform: none !important; box-shadow: none !important; }
+.performance-mode .glass-modal-backdrop { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: rgba(0,0,0,0.7) !important; }
+.performance-mode .modal-header { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--color-bg-card) !important; }
+.performance-mode .modal-content.entering,
+.performance-mode .modal-content.exiting { animation: none !important; }
+@media (max-width: 767px) {
+  .performance-mode .glass-panel,
+  .performance-mode .glass-card-premium { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--color-bg-card) !important; }
+}

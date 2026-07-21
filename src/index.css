@@ -1,0 +1,16 @@
+/*
+ * TeklifMaster Pro - CSS Architecture
+ * ====================================
+ * tokens.css    → CSS variables, themes, color palettes, spacing, shadows
+ * base.css      → Reset, typography, scrollbars, reduced-motion
+ * components.css → All UI component styles (buttons, cards, forms, modals, tables, etc.)
+ * animations.css → Keyframes and animation utility classes
+ * utilities.css → Display, spacing, text utility classes, responsive helpers
+ * performance.css → Performance mode overrides
+ */
+@import './styles/tokens.css';
+@import './styles/base.css';
+@import './styles/components.css';
+@import './styles/animations.css';
+@import './styles/utilities.css';
+@import './styles/performance.css';
