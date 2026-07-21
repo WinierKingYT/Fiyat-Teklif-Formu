@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   FileText, LayoutDashboard, PlusCircle,
-  Users, Package, LayoutTemplate, Database, Landmark, Trash2,
+  Users, Package, LayoutTemplate, Database, Landmark, Trash2, TrendingUp,
   Settings, X
 } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
@@ -18,12 +18,13 @@ const managerItems = [
   { icon: Database, labelKey: 'database' },
   { icon: Landmark, labelKey: 'bankInfo' },
   { icon: Trash2, labelKey: 'recycleBin' },
+  { icon: TrendingUp, labelKey: 'analytics' },
 ];
 
 const Sidebar = ({
   currentView, onNavigate,
   onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
-  onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin,
+  onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin, onOpenAnalytics,
   onNewQuote,
   isMobileOpen, onMobileClose
 }) => {
@@ -36,7 +37,7 @@ const Sidebar = ({
 
   const handlers = [
     onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
-    onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin
+    onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin, onOpenAnalytics
   ];
 
   const sidebarContent = (

@@ -52,7 +52,7 @@ const TopBar = ({ currentView, onToggleMobile }) => {
 const Layout = ({
   children, currentView, onNavigate,
   onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
-  onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin,
+  onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin, onOpenAnalytics,
 }) => {
   const { viewMode, focusMode, setFocusMode, isLivePreviewMode } = useUI();
   const { addTab } = useQuote();
@@ -74,6 +74,7 @@ const Layout = ({
         onOpenDatabaseManager={onOpenDatabaseManager}
         onOpenBankManager={onOpenBankManager}
         onOpenRecycleBin={onOpenRecycleBin}
+        onOpenAnalytics={onOpenAnalytics}
         onNewQuote={handleNewQuote}
         isMobileOpen={isMobileSidebarOpen}
         onMobileClose={() => setIsMobileSidebarOpen(false)}

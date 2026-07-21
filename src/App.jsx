@@ -46,6 +46,7 @@ const QuoteBuilder = ({
   onOpenDatabaseManager,
   onOpenBankManager,
   onOpenRecycleBin,
+  onOpenAnalytics,
 }) => {
   const {
     quoteData, updateQuoteData,
@@ -69,8 +70,6 @@ const QuoteBuilder = ({
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
-
   const [sidebarWidth, setSidebarWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -267,14 +266,20 @@ const QuoteBuilder = ({
         onLoadQuote={handleLoadQuote}
         onNewQuote={handleNewQuote}
       />
-
-      <AnalyticsModal
-        isOpen={isAnalyticsModalOpen}
-        onClose={() => setIsAnalyticsModalOpen(false)}
-      />
     </div>
   );
 };
+
+function BankManagerModalWithSelect({ isOpen, onClose }) {
+  const { updateBankData } = useQuote();
+  const handleSelect = (bank) => {
+    Object.entries(bank).forEach(([key, value]) => {
+      if (key !== 'id') updateBankData(key, value);
+    });
+    onClose();
+  };
+  return <BankManagerModal isOpen={isOpen} onClose={onClose} onSelect={handleSelect} />;
+}
 
 function App() {
   const [currentView, setCurrentView] = useState('builder');
@@ -285,6 +290,7 @@ function App() {
   const [isDatabaseManagerOpen, setIsDatabaseManagerOpen] = useState(false);
   const [isBankManagerOpen, setIsBankManagerOpen] = useState(false);
   const [isRecycleBinModalOpen, setIsRecycleBinModalOpen] = useState(false);
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
 
   return (
     <QuoteProvider>
@@ -298,6 +304,7 @@ function App() {
           onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
           onOpenBankManager={() => setIsBankManagerOpen(true)}
           onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
+          onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
         >
           {currentView === 'builder' && (
             <QuoteBuilder
@@ -308,6 +315,7 @@ function App() {
               onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
               onOpenBankManager={() => setIsBankManagerOpen(true)}
               onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
+              onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
             />
           )}
           {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
@@ -343,7 +351,7 @@ function App() {
         </Suspense>
 
         <Suspense fallback={<ModalLoadingFallback />}>
-          <BankManagerModal
+          <BankManagerModalWithSelect
             isOpen={isBankManagerOpen}
             onClose={() => setIsBankManagerOpen(false)}
           />
@@ -355,6 +363,11 @@ function App() {
             onClose={() => setIsRecycleBinModalOpen(false)}
           />
         </Suspense>
+
+        <AnalyticsModal
+          isOpen={isAnalyticsModalOpen}
+          onClose={() => setIsAnalyticsModalOpen(false)}
+        />
 
         <Toaster
           position="top-right"

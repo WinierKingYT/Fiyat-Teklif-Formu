@@ -22,6 +22,7 @@ const uiTranslations = {
     bankInfo: 'Banka Bilgileri',
     myQuotes: 'Tekliflerim',
     recycleBin: 'Geri Dönüşüm',
+    analytics: 'Analitik',
     testData: 'Test Verisi',
     customerInfo: 'Müşteri Bilgileri',
     companyInfo: 'Firma Bilgileri',
@@ -200,6 +201,7 @@ const uiTranslations = {
     bankInfo: 'Bank Details',
     myQuotes: 'My Quotes',
     recycleBin: 'Recycle Bin',
+    analytics: 'Analytics',
     testData: 'Test Data',
     customerInfo: 'Customer Info',
     companyInfo: 'Company Info',
@@ -377,6 +379,7 @@ const uiTranslations = {
     bankInfo: 'Bankdaten',
     myQuotes: 'Meine Angebote',
     recycleBin: 'Papierkorb',
+    analytics: 'Analytik',
     testData: 'Testdaten',
     customerInfo: 'Kundeninfo',
     companyInfo: 'Firmeninfo',
@@ -536,10 +539,6 @@ const uiTranslations = {
   }
 };
 
-export const allTranslations = {
-  ...uiTranslations,
-};
-
 export function useTranslation(language = 'tr') {
   const lang = language || 'tr';
   const validLang = ['tr', 'en', 'de'].includes(lang) ? lang : 'tr';
@@ -557,9 +556,4 @@ export function useTranslation(language = 'tr') {
 
     return { t, lang: validLang };
   }, [validLang]);
-}
-
-export function getTranslations(language) {
-  const validLang = ['tr', 'en', 'de'].includes(language) ? language : 'tr';
-  return { ui: uiTranslations[validLang], pdf: pdfTranslations[validLang] };
 }
