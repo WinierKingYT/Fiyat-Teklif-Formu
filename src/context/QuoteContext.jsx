@@ -121,7 +121,7 @@ export const QuoteProvider = ({ children }) => {
 
                                 // Clear from localStorage to free up space
                                 localStorage.removeItem('quoteTabs');
-                                console.log("Migrated tabs from localStorage to IndexedDB");
+                                Logger.log("Migrated tabs from localStorage to IndexedDB");
                             } catch (e) {
                                 console.error("Failed to migrate tabs from localStorage", e);
                             }
@@ -942,7 +942,7 @@ export const QuoteProvider = ({ children }) => {
             discount: { type: 'percentage', value: 10 }
         };
 
-        console.log('Filling test data for tab:', activeTab.id);
+        Logger.log('Filling test data for tab:', activeTab.id);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTab.id) {
                 return {

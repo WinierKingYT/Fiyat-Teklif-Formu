@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import Logger from './utils/logger'
 import { registerSW } from 'virtual:pwa-register'
 
 // Register Service Worker
@@ -13,7 +14,7 @@ const updateSW = registerSW({
     }
   },
   onOfflineReady() {
-    console.log('Uygulama çevrimdışı çalışmaya hazır.');
+    Logger.log('Uygulama çevrimdışı çalışmaya hazır.');
   },
 });
 

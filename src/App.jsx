@@ -22,8 +22,6 @@ import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { useTranslation } from './hooks/useTranslation';
 import { Toaster, toast } from 'react-hot-toast';
 
-import PdfPreviewPanel from './components/PdfPreviewPanel';
-
 const CustomerManagerModal = lazy(() => import('./components/CustomerManagerModal'));
 const ProductManagerModal = lazy(() => import('./components/ProductManagerModal'));
 const TemplateManagerModal = lazy(() => import('./components/TemplateManagerModal'));
