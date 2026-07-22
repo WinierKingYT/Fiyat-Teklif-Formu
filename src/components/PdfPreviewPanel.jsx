@@ -1,9 +1,9 @@
 import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, QrCode, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, PenTool, Layers, Edit2, Zap, ZapOff, RefreshCcw, Power, PowerOff } from 'lucide-react';
+import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, QrCode, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, FileText, PenTool, Layers, Edit2, Zap, ZapOff, RefreshCcw, Power, PowerOff } from 'lucide-react';
 import { calculateQuoteTotals } from '../utils/calculations';
 import { generatePDF } from '../utils/pdfGenerator';
-import { exportQuoteToExcel } from '../utils/excelExporter';
+import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter';
 import PrintableQuote from './PrintableQuoteV2';
 import PopupEditor from './PopupEditor';
 import { useQuote } from '../context/QuoteContext';
@@ -50,7 +50,7 @@ const PdfPreviewPanel = () => {
 
     const handleManualRefresh = () => {
         setRenderedConfig(pdfConfig);
-        toast.success('Önizleme güncellendi');
+        toast.success('ï¿½nizleme gï¿½ncellendi');
     };
 
     // Check if there are pending changes in Manual Mode
@@ -100,19 +100,19 @@ const PdfPreviewPanel = () => {
         setSavedTemplates(updatedTemplates);
         localStorage.setItem('pdfTemplates', JSON.stringify(updatedTemplates));
         setTemplateName('');
-        toast.success('Þablon kaydedildi');
+        toast.success('ï¿½ablon kaydedildi');
     }, [templateName, pdfConfig, savedTemplates]);
 
     const loadTemplate = useCallback((template) => {
         setPdfConfig(template.config);
-        toast.success('Þablon yüklendi');
+        toast.success('ï¿½ablon yï¿½klendi');
     }, [setPdfConfig]);
 
     const deleteTemplate = useCallback((id) => {
         const updatedTemplates = savedTemplates.filter(t => t.id !== id);
         setSavedTemplates(updatedTemplates);
         localStorage.setItem('pdfTemplates', JSON.stringify(updatedTemplates));
-        toast.success('Þablon silindi');
+        toast.success('ï¿½ablon silindi');
     }, [savedTemplates]);
 
     const handleConfigChange = useCallback((key, value) => {
@@ -124,11 +124,10 @@ const PdfPreviewPanel = () => {
         generatePDF('printable-quote-container-panel', filename, { theme: pdfConfig.theme, color: pdfConfig.color });
     };
 
-    const handleExcelExport = () => {
-        try {
-            const calc = calculateQuoteTotals(items, discount);
-
-            const fullQuoteData = {
+    const buildExportData = () => {
+        const calc = calculateQuoteTotals(items, discount);
+        return {
+            fullQuoteData: {
                 ...quoteData,
                 customer: customerData,
                 company: companyData,
@@ -136,13 +135,30 @@ const PdfPreviewPanel = () => {
                 subTotal: calc.subtotal,
                 taxAmount: calc.taxTotal,
                 grandTotal: calc.grandTotal,
+                globalDiscountAmount: calc.globalDiscountAmount,
                 discount: discount
-            };
+            },
+            calculatedItems: calc.items
+        };
+    };
 
-            exportQuoteToExcel(fullQuoteData, calc.items);
-            toast.success('Excel dosyasý indirildi');
+    const handleExcelExport = () => {
+        try {
+            const { fullQuoteData, calculatedItems } = buildExportData();
+            exportQuoteToExcel(fullQuoteData, calculatedItems);
+            toast.success('Excel dosyasï¿½ indirildi');
         } catch (error) {
-            toast.error('Excel oluþturulurken hata oluþtu');
+            toast.error('Excel oluï¿½turulurken hata oluï¿½tu');
+        }
+    };
+
+    const handleCsvExport = () => {
+        try {
+            const { fullQuoteData, calculatedItems } = buildExportData();
+            exportQuoteToCSV(fullQuoteData, calculatedItems);
+            toast.success('CSV dosyasï¿½ indirildi');
+        } catch (error) {
+            toast.error('CSV oluï¿½turulurken hata oluï¿½tu');
         }
     };
 
@@ -175,9 +191,16 @@ const PdfPreviewPanel = () => {
                         <FileSpreadsheet size={20} />
                     </button>
                     <button
+                        onClick={handleCsvExport}
+                        className="p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
+                        title={t('downloadCSV')}
+                    >
+                        <FileText size={20} />
+                    </button>
+                    <button
                         onClick={handleDownload}
                         className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-[var(--radius)] shadow hover:shadow-[var(--shadow-lg)] transition-all font-semibold"
-                        title="PDF Ýndir"
+                        title="PDF ï¿½ndir"
                     >
                         <FileDown size={20} />
                         <span>{t('downloadPdf')}</span>
@@ -244,7 +267,7 @@ const PdfPreviewPanel = () => {
 
                                 {/* Theme Selection */}
                                 <div className="space-y-2 mb-4">
-                                    <label className="text-xs font-medium text-[var(--color-text)]">Tasarým</label>
+                                    <label className="text-xs font-medium text-[var(--color-text)]">Tasarï¿½m</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
                                             { id: 'modern', name: 'Modern' },
@@ -285,9 +308,9 @@ const PdfPreviewPanel = () => {
                             <div className="space-y-4">
                                 {/* Font Families */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Yazý Tipleri</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Yazï¿½ Tipleri</h4>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Genel Yazý Tipi</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Genel Yazï¿½ Tipi</label>
                                         <select
                                             value={pdfConfig.globalFontFamily || 'Inter'}
                                             onChange={(e) => handleConfigChange('globalFontFamily', e.target.value)}
@@ -295,7 +318,7 @@ const PdfPreviewPanel = () => {
                                         >
                                             <option value="'Inter', sans-serif">Modern (Inter)</option>
                                             <option value="'Roboto', sans-serif">Standart (Roboto)</option>
-                                            <option value="'Open Sans', sans-serif">Okunaklý (Open Sans)</option>
+                                            <option value="'Open Sans', sans-serif">Okunaklï¿½ (Open Sans)</option>
                                             <option value="'Lato', sans-serif">Dengeli (Lato)</option>
                                             <option value="'Montserrat', sans-serif">Geometrik (Montserrat)</option>
                                             <option value="'Playfair Display', serif">Zarif (Playfair)</option>
@@ -303,45 +326,45 @@ const PdfPreviewPanel = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Baþlýk Yazý Tipi</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Baï¿½lï¿½k Yazï¿½ Tipi</label>
                                         <select
                                             value={pdfConfig.titleFontFamily || ''}
                                             onChange={(e) => handleConfigChange('titleFontFamily', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="">Genel ile Ayný</option>
+                                            <option value="">Genel ile Aynï¿½</option>
                                             <option value="'Inter', sans-serif">Modern (Inter)</option>
                                             <option value="'Montserrat', sans-serif">Geometrik (Montserrat)</option>
                                             <option value="'Playfair Display', serif">Zarif (Playfair)</option>
-                                            <option value="'Oswald', sans-serif">Güçlü (Oswald)</option>
+                                            <option value="'Oswald', sans-serif">Gï¿½ï¿½lï¿½ (Oswald)</option>
                                             <option value="'Roboto Slab', serif">Robotik (Roboto Slab)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Etiket Yazý Tipi (Temel)</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Etiket Yazï¿½ Tipi (Temel)</label>
                                         <select
                                             value={pdfConfig.labelFontFamily || ''}
                                             onChange={(e) => handleConfigChange('labelFontFamily', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="">Genel ile Ayný</option>
+                                            <option value="">Genel ile Aynï¿½</option>
                                             <option value="'Inter', sans-serif">Modern (Inter)</option>
                                             <option value="'Roboto', sans-serif">Standart (Roboto)</option>
-                                            <option value="'Open Sans', sans-serif">Okunaklý (Open Sans)</option>
+                                            <option value="'Open Sans', sans-serif">Okunaklï¿½ (Open Sans)</option>
                                             <option value="'Lato', sans-serif">Dengeli (Lato)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Ýçerik Yazý Tipi (Girdiðiniz)</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">ï¿½ï¿½erik Yazï¿½ Tipi (Girdiï¿½iniz)</label>
                                         <select
                                             value={pdfConfig.bodyFontFamily || ''}
                                             onChange={(e) => handleConfigChange('bodyFontFamily', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="">Genel ile Ayný</option>
+                                            <option value="">Genel ile Aynï¿½</option>
                                             <option value="'Inter', sans-serif">Modern (Inter)</option>
                                             <option value="'Roboto', sans-serif">Standart (Roboto)</option>
-                                            <option value="'Open Sans', sans-serif">Okunaklý (Open Sans)</option>
+                                            <option value="'Open Sans', sans-serif">Okunaklï¿½ (Open Sans)</option>
                                             <option value="'Merriweather', serif">Klasik (Merriweather)</option>
                                             <option value="'Courier New', monospace">Daktilo (Courier)</option>
                                         </select>
@@ -355,23 +378,23 @@ const PdfPreviewPanel = () => {
                             <div className="space-y-6">
                                 {/* Header Section */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Üst Bilgi (Header)</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">ï¿½st Bilgi (Header)</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baþlýk Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baï¿½lï¿½k Boyutu</label>
                                             <select
                                                 value={pdfConfig.headerTitleFontSize || '1rem'}
                                                 onChange={(e) => handleConfigChange('headerTitleFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.8rem">Küçük</option>
+                                                <option value="0.8rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="1rem">Normal</option>
-                                                <option value="1.2rem">Büyük</option>
-                                                <option value="1.5rem">Çok Büyük</option>
+                                                <option value="1.2rem">Bï¿½yï¿½k</option>
+                                                <option value="1.5rem">ï¿½ok Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baþlýk Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baï¿½lï¿½k Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.headerTitleFontWeight || '700'}
                                                 onChange={(e) => handleConfigChange('headerTitleFontWeight', e.target.value)}
@@ -379,20 +402,20 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="400">Normal</option>
                                                 <option value="600">Orta</option>
-                                                <option value="700">Kalýn</option>
-                                                <option value="800">Çok Kalýn</option>
+                                                <option value="700">Kalï¿½n</option>
+                                                <option value="800">ï¿½ok Kalï¿½n</option>
                                             </select>
                                         </div>
                                         <div className="col-span-2">
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Bilgi Yazý Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Bilgi Yazï¿½ Boyutu</label>
                                             <select
                                                 value={pdfConfig.headerInfoFontSize || '0.7rem'}
                                                 onChange={(e) => handleConfigChange('headerInfoFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.6rem">Küçük</option>
+                                                <option value="0.6rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
+                                                <option value="0.8rem">Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                     </div>
@@ -400,23 +423,23 @@ const PdfPreviewPanel = () => {
 
                                 {/* Customer/Seller Section */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Müþteri & Satýcý</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Mï¿½ï¿½teri & Satï¿½cï¿½</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baþlýk Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baï¿½lï¿½k Boyutu</label>
                                             <select
                                                 value={pdfConfig.customerTitleFontSize || '0.8rem'}
                                                 onChange={(e) => handleConfigChange('customerTitleFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.7rem">Küçük</option>
+                                                <option value="0.7rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.8rem">Normal</option>
-                                                <option value="0.9rem">Büyük</option>
-                                                <option value="1rem">Çok Büyük</option>
+                                                <option value="0.9rem">Bï¿½yï¿½k</option>
+                                                <option value="1rem">ï¿½ok Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baþlýk Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baï¿½lï¿½k Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.customerTitleFontWeight || '600'}
                                                 onChange={(e) => handleConfigChange('customerTitleFontWeight', e.target.value)}
@@ -424,24 +447,24 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="400">Normal</option>
                                                 <option value="600">Orta</option>
-                                                <option value="700">Kalýn</option>
+                                                <option value="700">Kalï¿½n</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Boyutu (Örn: Firma:)</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Boyutu (ï¿½rn: Firma:)</label>
                                             <select
                                                 value={pdfConfig.customerLabelFontSize || 'inherit'}
                                                 onChange={(e) => handleConfigChange('customerLabelFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
                                                 <option value="inherit">Otomatik</option>
-                                                <option value="0.6rem">Küçük</option>
+                                                <option value="0.6rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
+                                                <option value="0.8rem">Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.customerLabelFontWeight || '500'}
                                                 onChange={(e) => handleConfigChange('customerLabelFontWeight', e.target.value)}
@@ -449,25 +472,25 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="400">Normal</option>
                                                 <option value="500">Orta</option>
-                                                <option value="600">Kalýn</option>
-                                                <option value="700">Çok Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
+                                                <option value="700">ï¿½ok Kalï¿½n</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deðer Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deï¿½er Boyutu</label>
                                             <select
                                                 value={pdfConfig.customerValueFontSize || 'inherit'}
                                                 onChange={(e) => handleConfigChange('customerValueFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
                                                 <option value="inherit">Otomatik</option>
-                                                <option value="0.6rem">Küçük</option>
+                                                <option value="0.6rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
+                                                <option value="0.8rem">Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deðer Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deï¿½er Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.customerValueFontWeight || 'normal'}
                                                 onChange={(e) => handleConfigChange('customerValueFontWeight', e.target.value)}
@@ -475,7 +498,7 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="normal">Normal</option>
                                                 <option value="500">Orta</option>
-                                                <option value="600">Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
                                             </select>
                                         </div>
                                     </div>
@@ -483,7 +506,7 @@ const PdfPreviewPanel = () => {
 
                                 {/* Quote Meta Section */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Teklif Bilgileri (Sað Üst)</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Teklif Bilgileri (Saï¿½ ï¿½st)</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Boyutu</label>
@@ -492,13 +515,13 @@ const PdfPreviewPanel = () => {
                                                 onChange={(e) => handleConfigChange('quoteMetaLabelFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.6rem">Küçük</option>
+                                                <option value="0.6rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
+                                                <option value="0.8rem">Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.quoteMetaLabelFontWeight || 'normal'}
                                                 onChange={(e) => handleConfigChange('quoteMetaLabelFontWeight', e.target.value)}
@@ -506,11 +529,11 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="normal">Normal</option>
                                                 <option value="500">Orta</option>
-                                                <option value="600">Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deðer Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deï¿½er Boyutu</label>
                                             <select
                                                 value={pdfConfig.quoteMetaValueFontSize || 'inherit'}
                                                 onChange={(e) => handleConfigChange('quoteMetaValueFontSize', e.target.value)}
@@ -518,12 +541,12 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="inherit">Otomatik</option>
                                                 <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                                <option value="0.9rem">Çok Büyük</option>
+                                                <option value="0.8rem">Bï¿½yï¿½k</option>
+                                                <option value="0.9rem">ï¿½ok Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deðer Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deï¿½er Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.quoteMetaValueFontWeight || '600'}
                                                 onChange={(e) => handleConfigChange('quoteMetaValueFontWeight', e.target.value)}
@@ -531,7 +554,7 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="400">Normal</option>
                                                 <option value="600">Orta</option>
-                                                <option value="700">Kalýn</option>
+                                                <option value="700">Kalï¿½n</option>
                                             </select>
                                         </div>
                                     </div>
@@ -539,10 +562,10 @@ const PdfPreviewPanel = () => {
 
                                 {/* Products Table */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Ürünler Tablosu</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">ï¿½rï¿½nler Tablosu</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baþlýk Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baï¿½lï¿½k Boyutu</label>
                                             <input
                                                 type="range"
                                                 min="10"
@@ -555,32 +578,32 @@ const PdfPreviewPanel = () => {
                                             <div className="text-[10px] text-right text-[var(--color-text-muted)]">{parseInt(pdfConfig.tableHeaderFontSize) || 14}px</div>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baþlýk Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Baï¿½lï¿½k Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.tableHeaderFontWeight || '600'}
                                                 onChange={(e) => handleConfigChange('tableHeaderFontWeight', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
                                                 <option value="normal">Normal</option>
-                                                <option value="600">Kalýn</option>
-                                                <option value="700">Çok Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
+                                                <option value="700">ï¿½ok Kalï¿½n</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Ýçerik Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">ï¿½ï¿½erik Boyutu</label>
                                             <select
                                                 value={pdfConfig.tableBodyFontSize || '0.7rem'}
                                                 onChange={(e) => handleConfigChange('tableBodyFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.6rem">Küçük</option>
+                                                <option value="0.6rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                                <option value="0.9rem">Çok Büyük</option>
+                                                <option value="0.8rem">Bï¿½yï¿½k</option>
+                                                <option value="0.9rem">ï¿½ok Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Ýçerik Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">ï¿½ï¿½erik Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.tableBodyFontWeight || 'normal'}
                                                 onChange={(e) => handleConfigChange('tableBodyFontWeight', e.target.value)}
@@ -588,7 +611,7 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="normal">Normal</option>
                                                 <option value="500">Orta</option>
-                                                <option value="600">Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
                                             </select>
                                         </div>
                                     </div>
@@ -596,7 +619,7 @@ const PdfPreviewPanel = () => {
 
                                 {/* Summary Section */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Özet Alaný</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">ï¿½zet Alanï¿½</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Boyutu</label>
@@ -605,13 +628,13 @@ const PdfPreviewPanel = () => {
                                                 onChange={(e) => handleConfigChange('summaryLabelFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.65rem">Küçük</option>
+                                                <option value="0.65rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.75rem">Normal</option>
-                                                <option value="0.85rem">Büyük</option>
+                                                <option value="0.85rem">Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.summaryLabelFontWeight || 'normal'}
                                                 onChange={(e) => handleConfigChange('summaryLabelFontWeight', e.target.value)}
@@ -619,11 +642,11 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="normal">Normal</option>
                                                 <option value="500">Orta</option>
-                                                <option value="600">Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deðer Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deï¿½er Boyutu</label>
                                             <select
                                                 value={pdfConfig.summaryValueFontSize || 'inherit'}
                                                 onChange={(e) => handleConfigChange('summaryValueFontSize', e.target.value)}
@@ -631,11 +654,11 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="inherit">Otomatik</option>
                                                 <option value="0.75rem">Normal</option>
-                                                <option value="0.85rem">Büyük</option>
+                                                <option value="0.85rem">Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deðer Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deï¿½er Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.summaryValueFontWeight || '500'}
                                                 onChange={(e) => handleConfigChange('summaryValueFontWeight', e.target.value)}
@@ -643,7 +666,7 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="400">Normal</option>
                                                 <option value="500">Orta</option>
-                                                <option value="600">Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
                                             </select>
                                         </div>
                                         <div className="col-span-2">
@@ -653,10 +676,10 @@ const PdfPreviewPanel = () => {
                                                 onChange={(e) => handleConfigChange('summaryTotalFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.8rem">Küçük</option>
+                                                <option value="0.8rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.9rem">Normal</option>
-                                                <option value="1rem">Büyük</option>
-                                                <option value="1.2rem">Çok Büyük</option>
+                                                <option value="1rem">Bï¿½yï¿½k</option>
+                                                <option value="1.2rem">ï¿½ok Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                     </div>
@@ -667,19 +690,19 @@ const PdfPreviewPanel = () => {
                                     <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Alt Bilgi (Footer)</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Yazý Boyutu</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Yazï¿½ Boyutu</label>
                                             <select
                                                 value={pdfConfig.footerFontSize || '0.7rem'}
                                                 onChange={(e) => handleConfigChange('footerFontSize', e.target.value)}
                                                 className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
                                             >
-                                                <option value="0.6rem">Küçük</option>
+                                                <option value="0.6rem">Kï¿½ï¿½ï¿½k</option>
                                                 <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
+                                                <option value="0.8rem">Bï¿½yï¿½k</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Yazý Kalýnlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Yazï¿½ Kalï¿½nlï¿½ï¿½ï¿½</label>
                                             <select
                                                 value={pdfConfig.footerFontWeight || 'normal'}
                                                 onChange={(e) => handleConfigChange('footerFontWeight', e.target.value)}
@@ -687,7 +710,7 @@ const PdfPreviewPanel = () => {
                                             >
                                                 <option value="normal">Normal</option>
                                                 <option value="500">Orta</option>
-                                                <option value="600">Kalýn</option>
+                                                <option value="600">Kalï¿½n</option>
                                             </select>
                                         </div>
                                     </div>
@@ -700,14 +723,14 @@ const PdfPreviewPanel = () => {
                             <div className="space-y-4">
                                 {/* Spacing */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Boþluklar</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Boï¿½luklar</h4>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Sayfa Kenar Boþluðu</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Sayfa Kenar Boï¿½luï¿½u</label>
                                         <div className="grid grid-cols-3 gap-2">
                                             {[
                                                 { val: 'compact', label: 'Dar' },
                                                 { val: 'normal', label: 'Normal' },
-                                                { val: 'wide', label: 'Geniþ' }
+                                                { val: 'wide', label: 'Geniï¿½' }
                                             ].map(opt => (
                                                 <button
                                                     key={opt.val}
@@ -721,7 +744,7 @@ const PdfPreviewPanel = () => {
                                     </div>
                                     <div>
                                         <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                            <span>Bölüm Aralýðý</span>
+                                            <span>Bï¿½lï¿½m Aralï¿½ï¿½ï¿½</span>
                                             <span className="text-[var(--color-text-muted)]">{pdfConfig.sectionSpacing || '1rem'}</span>
                                         </label>
                                         <select
@@ -729,20 +752,20 @@ const PdfPreviewPanel = () => {
                                             onChange={(e) => handleConfigChange('sectionSpacing', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="0.5rem">Sýkýþýk (0.5rem)</option>
+                                            <option value="0.5rem">Sï¿½kï¿½ï¿½ï¿½k (0.5rem)</option>
                                             <option value="1rem">Normal (1rem)</option>
-                                            <option value="1.5rem">Geniþ (1.5rem)</option>
-                                            <option value="2rem">Çok Geniþ (2rem)</option>
+                                            <option value="1.5rem">Geniï¿½ (1.5rem)</option>
+                                            <option value="2rem">ï¿½ok Geniï¿½ (2rem)</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 {/* Shapes */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Þekiller</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">ï¿½ekiller</h4>
                                     <div>
                                         <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                            <span>Köþe Yuvarlaklýðý</span>
+                                            <span>Kï¿½ï¿½e Yuvarlaklï¿½ï¿½ï¿½</span>
                                             <span className="text-[var(--color-text-muted)]">{pdfConfig.borderRadius || 6}px</span>
                                         </label>
                                         <input
@@ -775,12 +798,12 @@ const PdfPreviewPanel = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kenarlýk Stili</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kenarlï¿½k Stili</label>
                                         <div className="grid grid-cols-3 gap-2">
                                             {[
-                                                { val: 'solid', label: 'Düz' },
+                                                { val: 'solid', label: 'Dï¿½z' },
                                                 { val: 'dashed', label: 'Kesik' },
-                                                { val: 'dotted', label: 'Noktalý' }
+                                                { val: 'dotted', label: 'Noktalï¿½' }
                                             ].map(opt => (
                                                 <button
                                                     key={opt.val}
@@ -795,9 +818,9 @@ const PdfPreviewPanel = () => {
 
                                     {/* Density */}
                                     <div className="space-y-3">
-                                        <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Yoðunluk</h4>
+                                        <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Yoï¿½unluk</h4>
                                         <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">Kompakt Mod (Sýkýþýk)</span>
+                                            <span className="text-[var(--color-text)]">Kompakt Mod (Sï¿½kï¿½ï¿½ï¿½k)</span>
                                             <input
                                                 type="checkbox"
                                                 checked={pdfConfig.tableDensity === 'compact'}
@@ -816,10 +839,10 @@ const PdfPreviewPanel = () => {
                                 {[
                                     { key: 'showLogo', label: 'Firma Logosu' },
                                     { key: 'showBankInfo', label: 'Banka Bilgileri' },
-                                    { key: 'showSignatures', label: 'Ýmza ve Kaþe Alaný' },
-                                    { key: 'showTerms', label: 'Koþullar' },
+                                    { key: 'showSignatures', label: 'ï¿½mza ve Kaï¿½e Alanï¿½' },
+                                    { key: 'showTerms', label: 'Koï¿½ullar' },
                                     { key: 'showNotes', label: 'Notlar' },
-                                    { key: 'showSummary', label: 'Fiyat Özeti' }
+                                    { key: 'showSummary', label: 'Fiyat ï¿½zeti' }
                                 ].map((item) => (
                                     <label key={item.key} className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
                                         <span className="text-[var(--color-text)]">{item.label}</span>
@@ -834,14 +857,14 @@ const PdfPreviewPanel = () => {
 
                                 <div className="pt-3 border-t border-[var(--color-border)] mt-3">
                                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">
-                                        Belge Baþlýðý
+                                        Belge Baï¿½lï¿½ï¿½ï¿½
                                     </label>
                                     <input
                                         type="text"
                                         value={pdfConfig.title}
                                         onChange={(e) => handleConfigChange('title', e.target.value)}
                                         className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        placeholder="Örn: FÝYAT TEKLÝFÝ"
+                                        placeholder="ï¿½rn: Fï¿½YAT TEKLï¿½Fï¿½"
                                     />
                                 </div>
                             </div>
@@ -857,7 +880,7 @@ const PdfPreviewPanel = () => {
                                     {/* Header Colors */}
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Baþlýk Arkaplaný</label>
+                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Baï¿½lï¿½k Arkaplanï¿½</label>
                                             <div className="flex gap-2 items-center">
                                                 <input
                                                     type="color"
@@ -868,7 +891,7 @@ const PdfPreviewPanel = () => {
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Baþlýk Yazýsý</label>
+                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Baï¿½lï¿½k Yazï¿½sï¿½</label>
                                             <div className="flex gap-2 items-center">
                                                 <input
                                                     type="color"
@@ -882,7 +905,7 @@ const PdfPreviewPanel = () => {
 
                                     {/* Border Color */}
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kenarlýk Rengi</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kenarlï¿½k Rengi</label>
                                         <div className="flex gap-2 items-center">
                                             <input
                                                 type="color"
@@ -896,7 +919,7 @@ const PdfPreviewPanel = () => {
                                     {/* Toggles */}
                                     <div className="space-y-2 pt-2">
                                         <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">Þeritli Satýrlar</span>
+                                            <span className="text-[var(--color-text)]">ï¿½eritli Satï¿½rlar</span>
                                             <input
                                                 type="checkbox"
                                                 checked={pdfConfig.tableStriped}
@@ -905,7 +928,7 @@ const PdfPreviewPanel = () => {
                                             />
                                         </label>
                                         <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">Dikey Çizgiler</span>
+                                            <span className="text-[var(--color-text)]">Dikey ï¿½izgiler</span>
                                             <input
                                                 type="checkbox"
                                                 checked={pdfConfig.tableShowVerticalLines}
@@ -918,12 +941,12 @@ const PdfPreviewPanel = () => {
 
                                 {/* Column Visibility */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Sütunlar</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Sï¿½tunlar</h4>
                                     <div className="space-y-1">
                                         {[
-                                            { key: 'showTableImages', label: 'Ürün Görselleri' },
-                                            { key: 'showTableUnit', label: 'Birim Sütunu' },
-                                            { key: 'showTableTax', label: 'KDV Sütunu' }
+                                            { key: 'showTableImages', label: 'ï¿½rï¿½n Gï¿½rselleri' },
+                                            { key: 'showTableUnit', label: 'Birim Sï¿½tunu' },
+                                            { key: 'showTableTax', label: 'KDV Sï¿½tunu' }
                                         ].map((item) => (
                                             <label key={item.key} className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
                                                 <span className="text-[var(--color-text)]">{item.label}</span>
@@ -941,7 +964,7 @@ const PdfPreviewPanel = () => {
                                 {/* Row Height */}
                                 <div>
                                     <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                        <span>Satýr Yüksekliði</span>
+                                        <span>Satï¿½r Yï¿½ksekliï¿½i</span>
                                         <span className="text-[var(--color-text-muted)]">{pdfConfig.tableRowHeight}px</span>
                                     </label>
                                     <input
@@ -962,79 +985,79 @@ const PdfPreviewPanel = () => {
                         {activeTab === 'texts' && (
                             <div className="space-y-4">
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Tablo Baþlýklarý</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Tablo Baï¿½lï¿½klarï¿½</h4>
                                     <div className="space-y-2">
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Ürün Baþlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">ï¿½rï¿½n Baï¿½lï¿½ï¿½ï¿½</label>
                                             <input
                                                 type="text"
                                                 value={pdfConfig.textItem || ''}
                                                 onChange={(e) => handleConfigChange('textItem', e.target.value)}
-                                                placeholder="Varsayýlan: Ürün/Hizmet"
+                                                placeholder="Varsayï¿½lan: ï¿½rï¿½n/Hizmet"
                                                 className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Açýklama Baþlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Aï¿½ï¿½klama Baï¿½lï¿½ï¿½ï¿½</label>
                                             <input
                                                 type="text"
                                                 value={pdfConfig.textDescription || ''}
                                                 onChange={(e) => handleConfigChange('textDescription', e.target.value)}
-                                                placeholder="Varsayýlan: Açýklama"
+                                                placeholder="Varsayï¿½lan: Aï¿½ï¿½klama"
                                                 className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                             />
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Birim Baþlýðý</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Birim Baï¿½lï¿½ï¿½ï¿½</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textUnit || ''}
                                                     onChange={(e) => handleConfigChange('textUnit', e.target.value)}
-                                                    placeholder="Varsayýlan: Birim"
+                                                    placeholder="Varsayï¿½lan: Birim"
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Miktar Baþlýðý</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Miktar Baï¿½lï¿½ï¿½ï¿½</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textQuantity || ''}
                                                     onChange={(e) => handleConfigChange('textQuantity', e.target.value)}
-                                                    placeholder="Varsayýlan: Miktar"
+                                                    placeholder="Varsayï¿½lan: Miktar"
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Fiyat Baþlýðý</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Fiyat Baï¿½lï¿½ï¿½ï¿½</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textUnitPrice || ''}
                                                     onChange={(e) => handleConfigChange('textUnitPrice', e.target.value)}
-                                                    placeholder="Varsayýlan: Birim Fiyat"
+                                                    placeholder="Varsayï¿½lan: Birim Fiyat"
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">KDV Baþlýðý</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">KDV Baï¿½lï¿½ï¿½ï¿½</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textVat || ''}
                                                     onChange={(e) => handleConfigChange('textVat', e.target.value)}
-                                                    placeholder="Varsayýlan: KDV"
+                                                    placeholder="Varsayï¿½lan: KDV"
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Toplam Baþlýðý</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Toplam Baï¿½lï¿½ï¿½ï¿½</label>
                                             <input
                                                 type="text"
                                                 value={pdfConfig.textTotal || ''}
                                                 onChange={(e) => handleConfigChange('textTotal', e.target.value)}
-                                                placeholder="Varsayýlan: Toplam"
+                                                placeholder="Varsayï¿½lan: Toplam"
                                                 className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                             />
                                         </div>
@@ -1048,9 +1071,9 @@ const PdfPreviewPanel = () => {
                             <div className="space-y-4">
                                 {/* Visual Effects */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Görsel Efektler</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Gï¿½rsel Efektler</h4>
                                     <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                        <span className="text-[var(--color-text)]">Gölgelendirme</span>
+                                        <span className="text-[var(--color-text)]">Gï¿½lgelendirme</span>
                                         <input
                                             type="checkbox"
                                             checked={pdfConfig.enableShadows}
@@ -1064,7 +1087,7 @@ const PdfPreviewPanel = () => {
                                 <div className="space-y-3">
                                     <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1 flex items-center gap-2">
                                         <Zap size={14} className={performanceMode ? "text-[var(--color-warning)]" : ""} />
-                                        Performans Ayarlarý
+                                        Performans Ayarlarï¿½
                                     </h4>
                                     <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
                                         <div className="flex flex-col">
@@ -1073,7 +1096,7 @@ const PdfPreviewPanel = () => {
                                                 {t('performanceMode')}
                                             </span>
                                             <span className="text-[10px] text-[var(--color-text-muted)]">
-                                                Önizlemeyi gecikmeli yenileyerek performansý artýrýr.
+                                                ï¿½nizlemeyi gecikmeli yenileyerek performansï¿½ artï¿½rï¿½r.
                                             </span>
                                         </div>
                                         <input
@@ -1102,7 +1125,7 @@ const PdfPreviewPanel = () => {
                                             value={pdfConfig.qrCodeUrl}
                                             onChange={(e) => handleConfigChange('qrCodeUrl', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                            placeholder="URL (Boþsa site adresi)"
+                                            placeholder="URL (Boï¿½sa site adresi)"
                                         />
                                     )}
                                 </div>
@@ -1159,7 +1182,7 @@ const PdfPreviewPanel = () => {
 
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Opaklýk ({pdfConfig.watermarkOpacity || 0.1})</label>
+                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Opaklï¿½k ({pdfConfig.watermarkOpacity || 0.1})</label>
                                                     <input
                                                         type="range"
                                                         min="0.05"
@@ -1171,7 +1194,7 @@ const PdfPreviewPanel = () => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Döndürme ({pdfConfig.watermarkRotation || -45}°)</label>
+                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Dï¿½ndï¿½rme ({pdfConfig.watermarkRotation || -45}ï¿½)</label>
                                                     <input
                                                         type="range"
                                                         min="-90"
@@ -1197,7 +1220,7 @@ const PdfPreviewPanel = () => {
                                         value={pdfConfig.customFooter}
                                         onChange={(e) => handleConfigChange('customFooter', e.target.value)}
                                         className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        placeholder="Özel alt bilgi metni"
+                                        placeholder="ï¿½zel alt bilgi metni"
                                     />
                                 </div>
                             </div>
@@ -1206,7 +1229,7 @@ const PdfPreviewPanel = () => {
                         {/* SIGNATURE TAB */}
                         {activeTab === 'signature' && (
                             <div className="space-y-4">
-                                <h4 className="font-semibold text-xs text-[var(--color-text)]">Dijital Ýmza</h4>
+                                <h4 className="font-semibold text-xs text-[var(--color-text)]">Dijital ï¿½mza</h4>
 
                                 {signature ? (
                                     <div className="space-y-2">
@@ -1217,7 +1240,7 @@ const PdfPreviewPanel = () => {
                                             onClick={() => setSignature(null)}
                                             className="w-full py-2 text-xs text-[var(--color-error)] hover:text-[var(--color-error)] font-medium border border-[var(--color-border)] hover:border-[var(--color-error)] rounded bg-[var(--color-error)]/10 hover:bg-[var(--color-error)]/10 transition-colors"
                                         >
-                                            Ýmzayý Kaldýr
+                                            ï¿½mzayï¿½ Kaldï¿½r
                                         </button>
                                     </div>
                                 ) : (
@@ -1261,7 +1284,7 @@ const PdfPreviewPanel = () => {
                                     </div>
                                 )}
                                 <p className="text-[10px] text-[var(--color-text-muted)]">
-                                    Yüklenen imza PDF'e eklenecektir. Arkaplaný þeffaf PNG önerilir.
+                                    Yï¿½klenen imza PDF'e eklenecektir. Arkaplanï¿½ ï¿½effaf PNG ï¿½nerilir.
                                 </p>
                             </div>
                         )}
