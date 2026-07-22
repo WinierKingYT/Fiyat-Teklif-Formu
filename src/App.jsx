@@ -12,7 +12,6 @@ import ProductSelectModal from './components/ProductSelectModal';
 import SavedQuotesModal from './components/SavedQuotesModal';
 import AnalyticsModal from './components/AnalyticsModal';
 
-import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import HistoryList from './components/HistoryList';
 import TermsAndNotes from './components/TermsAndNotes';
@@ -349,7 +348,6 @@ function App() {
               onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
             />
           )}
-          {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
           {currentView === 'history' && <HistoryList onNavigate={setCurrentView} />}
           {currentView === 'settings' && <Settings />}
         </Layout>

@@ -61,7 +61,6 @@ vi.mock('../components/DatabaseManagerModal', () => ({ default: () => <div data-
 vi.mock('../components/BankManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('../components/RecycleBinModal', () => ({ default: () => <div data-testid="modal" /> }));
 
-vi.mock('../components/Dashboard', () => ({ default: () => <div data-testid="dashboard" /> }));
 vi.mock('../components/Settings', () => ({ default: () => <div data-testid="settings" /> }));
 
 // Utils

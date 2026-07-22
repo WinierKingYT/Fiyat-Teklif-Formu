@@ -118,7 +118,7 @@ const HistoryList = ({ onNavigate }) => {
             {/* Header */}
             <div className="flex items-center gap-3 p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-card)]">
                 <button
-                    onClick={() => onNavigate('dashboard')}
+                    onClick={() => onNavigate('builder')}
                     className="p-2 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
                     title="Geri Dön"
                 >
