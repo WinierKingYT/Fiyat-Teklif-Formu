@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import Logger from '../utils/logger';
 import toast from 'react-hot-toast';
@@ -461,8 +462,8 @@ export const QuoteProvider = ({ children }) => {
     });
 
     // History State (Per Tab)
-    const historyTimeoutRef = React.useRef(null);
-    const isNavigatingHistory = React.useRef(false);
+    const historyTimeoutRef = useRef(null);
+    const isNavigatingHistory = useRef(false);
 
     const undo = useCallback(() => {
         setTabs(prev => prev.map(tab => {
@@ -964,7 +965,7 @@ export const QuoteProvider = ({ children }) => {
         ));
     }, [activeTabId]);
 
-    const value = React.useMemo(() => ({
+    const value = useMemo(() => ({
         tabs, activeTabId, addTab, closeTab, switchTab, updateTabTitle,
         quoteData, updateQuoteData,
         customerData, updateCustomerData,

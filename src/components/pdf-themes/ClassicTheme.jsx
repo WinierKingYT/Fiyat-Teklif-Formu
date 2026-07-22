@@ -20,7 +20,7 @@ const ClassicTheme = ({
     currentLocale,
     hasLineItemDiscounts
 }) => {
-    const classicStyles = React.useMemo(() => `
+    const classicStyles = useMemo(() => `
         .classic-theme-container {
             font-family: ${config.globalFontFamily || "'Times New Roman', Times, serif"};
             line-height: ${config.bodyLineHeight || '1.15'};
@@ -70,7 +70,7 @@ const ClassicTheme = ({
     `, [config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = React.useMemo(() => {
+    const itemChunks = useMemo(() => {
         const chunks = [];
         if (items.length === 0) {
             chunks.push([]);

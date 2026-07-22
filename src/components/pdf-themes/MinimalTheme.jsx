@@ -20,7 +20,7 @@ const MinimalTheme = ({
     currentLocale,
     hasLineItemDiscounts
 }) => {
-    const minimalStyles = React.useMemo(() => `
+    const minimalStyles = useMemo(() => `
         .minimal-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif"};
             color: ${config.globalFontColor || '#000'} !important;
@@ -90,7 +90,7 @@ const MinimalTheme = ({
     `, [config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = React.useMemo(() => {
+    const itemChunks = useMemo(() => {
         const chunks = [];
         if (items.length === 0) {
             chunks.push([]);

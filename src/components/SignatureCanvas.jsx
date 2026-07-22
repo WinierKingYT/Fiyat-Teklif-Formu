@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Eraser, Check, Upload, X } from 'lucide-react';
 
 const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {

@@ -33,7 +33,7 @@ const ProTheme = ({
         return '0.75em';
     };
 
-    const proStyles = React.useMemo(() => `
+    const proStyles = useMemo(() => `
         .pro-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
             line-height: ${config.bodyLineHeight || '1.4'};
@@ -401,7 +401,7 @@ const ProTheme = ({
     `, [color, config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = React.useMemo(() => {
+    const itemChunks = useMemo(() => {
         const chunks = [];
         if (items.length === 0) {
             chunks.push([]);

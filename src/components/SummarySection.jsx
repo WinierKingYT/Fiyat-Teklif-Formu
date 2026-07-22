@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React from 'react';
+import { useMemo } from 'react';
 import { Calculator, Percent, Receipt } from 'lucide-react';
 import { calculateQuoteTotals } from '../utils/calculations';
 

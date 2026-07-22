@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
+import React from 'react';
+import { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { Plus, Trash, GripVertical, Image as ImageIcon, Package, Upload, Search, X, Table, Grid3X3 } from 'lucide-react';
 import {
     DndContext,

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';

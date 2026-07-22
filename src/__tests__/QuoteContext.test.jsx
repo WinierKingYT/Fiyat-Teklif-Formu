@@ -1,6 +1,6 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act, renderHook } from '@testing-library/react';
-import React from 'react';
 import { QuoteProvider, useQuote } from '../context/QuoteContext';
 import { getLocalDateString } from '../utils/dateUtils';
 

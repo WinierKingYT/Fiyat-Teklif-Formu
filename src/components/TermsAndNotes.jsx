@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useState } from 'react';
 import { ScrollText, FileText, Truck, Shield, StickyNote, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';

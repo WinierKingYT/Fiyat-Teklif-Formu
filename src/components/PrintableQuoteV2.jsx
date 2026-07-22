@@ -28,12 +28,12 @@ const PrintableQuote = ({
     signature,
     onEdit
 }) => {
-    const quoteData = React.useMemo(() => _quoteData || {}, [_quoteData]);
-    const customerData = React.useMemo(() => _customerData || {}, [_customerData]);
-    const companyData = React.useMemo(() => _companyData || {}, [_companyData]);
-    const bankData = React.useMemo(() => _bankData || {}, [_bankData]);
-    const items = React.useMemo(() => _items || [], [_items]);
-    const discount = React.useMemo(() => _discount || {}, [_discount]);
+    const quoteData = useMemo(() => _quoteData || {}, [_quoteData]);
+    const customerData = useMemo(() => _customerData || {}, [_customerData]);
+    const companyData = useMemo(() => _companyData || {}, [_companyData]);
+    const bankData = useMemo(() => _bankData || {}, [_bankData]);
+    const items = useMemo(() => _items || [], [_items]);
+    const discount = useMemo(() => _discount || {}, [_discount]);
 
     const language = quoteData.language || 'tr';
     const t = translations[language] || translations['tr'];
@@ -44,13 +44,13 @@ const PrintableQuote = ({
         'de': 'de-DE'
     };
     const currentLocale = localeMap[language] || 'tr-TR';
-    const formatCurrency = React.useCallback((amount) => {
+    const formatCurrency = useCallback((amount) => {
         const currency = quoteData.currency || 'TRY';
         return new Intl.NumberFormat(currentLocale, { style: 'currency', currency: currency }).format(amount);
     }, [quoteData.currency, currentLocale]);
 
     // Calculate totals
-    const calc = React.useMemo(() => {
+    const calc = useMemo(() => {
         return calculateQuoteTotals(items, discount, { currency: quoteData.currency || 'TRY' });
     }, [items, discount, quoteData.currency]);
     const subtotal = calc.subtotal;
@@ -59,7 +59,7 @@ const PrintableQuote = ({
     const total = calc.grandTotal;
 
     // Default configuration
-    const config = React.useMemo(() => ({
+    const config = useMemo(() => ({
         // Standard Options
         showLogo: true,
         showBankInfo: true,
@@ -226,13 +226,13 @@ const PrintableQuote = ({
         { id: 'footer', enabled: true, order: 6 }
     ];
 
-    const activeLayout = React.useMemo(() => {
+    const activeLayout = useMemo(() => {
         return [...(layout || defaultLayout)].sort((a, b) => a.order - b.order);
     }, [layout]);
 
 
 
-    const hasLineItemDiscounts = React.useMemo(() => {
+    const hasLineItemDiscounts = useMemo(() => {
         return items.some(item => item.discountRate > 0);
     }, [items]);
 

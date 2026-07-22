@@ -1,4 +1,5 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React from 'react';
+import { useState, useEffect, Suspense, lazy, useCallback, useMemo } from 'react';
 import Layout from './components/Layout';
 import QuoteInfoForm from './components/QuoteInfoForm';
 import CustomerInfoForm from './components/CustomerInfoForm';
@@ -73,15 +74,15 @@ const QuoteBuilder = ({
   const [sidebarWidth, setSidebarWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
 
-  const startResizing = React.useCallback(() => {
+  const startResizing = useCallback(() => {
     setIsResizing(true);
   }, []);
 
-  const stopResizing = React.useCallback(() => {
+  const stopResizing = useCallback(() => {
     setIsResizing(false);
   }, []);
 
-  const resize = React.useCallback(
+  const resize = useCallback(
     (mouseMoveEvent) => {
       if (isResizing) {
         let newWidth = mouseMoveEvent.clientX - 16;
@@ -102,7 +103,7 @@ const QuoteBuilder = ({
     };
   }, [resize, stopResizing]);
 
-  const totalAmount = React.useMemo(() => {
+  const totalAmount = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: quoteData?.currency || 'TRY' }).format(subtotal);
   }, [items, quoteData?.currency]);

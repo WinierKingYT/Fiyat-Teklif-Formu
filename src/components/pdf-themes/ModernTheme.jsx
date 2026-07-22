@@ -44,7 +44,7 @@ const ModernTheme = ({
         );
     };
 
-    const modernStyles = React.useMemo(() => `
+    const modernStyles = useMemo(() => `
         .modern-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
             line-height: ${config.bodyLineHeight || '1.4'};
@@ -470,7 +470,7 @@ const ModernTheme = ({
     `, [color, config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = React.useMemo(() => {
+    const itemChunks = useMemo(() => {
         const chunks = [];
         if (items.length === 0) {
             chunks.push([]);

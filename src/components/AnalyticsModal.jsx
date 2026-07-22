@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { TrendingUp, DollarSign, FileText, Users } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';

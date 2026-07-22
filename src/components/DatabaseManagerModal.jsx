@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Database, Download, Upload, Trash, RefreshCw, AlertTriangle } from 'lucide-react';

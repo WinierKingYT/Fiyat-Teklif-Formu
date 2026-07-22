@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Save } from 'lucide-react';
 
 const PopupEditor = ({ isOpen, onClose, onSave, initialValue, title, type = 'text', options = [] }) => {

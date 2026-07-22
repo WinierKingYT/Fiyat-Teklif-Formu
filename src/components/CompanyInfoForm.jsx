@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
+import { useState, useRef } from 'react';
 import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import SignatureCanvas from './SignatureCanvas';
 import { useQuote } from '../context/QuoteContext';

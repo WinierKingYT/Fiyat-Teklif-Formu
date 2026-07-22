@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { Search, Package, Plus, Filter, CheckSquare, Square } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';

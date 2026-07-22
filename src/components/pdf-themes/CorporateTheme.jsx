@@ -32,7 +32,7 @@ const CorporateTheme = ({
         return '0.85em';
     };
 
-    const corporateStyles = React.useMemo(() => `
+    const corporateStyles = useMemo(() => `
         .corporate-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', 'Roboto', sans-serif"};
             line-height: ${config.bodyLineHeight || '1.5'};
@@ -256,7 +256,7 @@ const CorporateTheme = ({
     `, [color, config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = React.useMemo(() => {
+    const itemChunks = useMemo(() => {
         const chunks = [];
         if (items.length === 0) {
             chunks.push([]);
