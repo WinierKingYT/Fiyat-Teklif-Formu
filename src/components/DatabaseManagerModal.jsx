@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Database, Download, Upload, Trash, RefreshCw, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -25,6 +26,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
         templates: 0,
         banks: 0
     });
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [importFile, setImportFile] = useState(null);
     const [importMode, setImportMode] = useState('replace');
     const [showExportWarning, setShowExportWarning] = useState(false);
@@ -76,21 +78,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
             .map(([store, count]) => `${store}: ${count} kayıt`)
             .join(', ');
 
-        if (!window.confirm(`Bu işlem tüm verileri kalıcı olarak silecek: ${summary}. Devam etmek istediğinize emin misiniz?`)) {
-            return;
-        }
-
-        try {
-            await Promise.all(
-                ALL_STORES.map(store => db.clear(store).catch(() => {}))
-            );
-            toast.success('Tüm veriler temizlendi');
-            setClearConfirmText('');
-            loadStats();
-        } catch (error) {
-            console.error('Error clearing data:', error);
-            toast.error('Veriler temizlenirken hata oluştu');
-        }
+        setConfirmDialog({ isOpen: true, title: 'Tüm Verileri Sil', message: `Bu işlem tüm verileri kalıcı olarak silecek: ${summary}. Devam etmek istediğinize emin misiniz?`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => db.clear(store).catch(() => {}))); toast.success('Tüm veriler temizlendi'); setClearConfirmText(''); loadStats(); } catch (error) { console.error('Error clearing data:', error); toast.error('Veriler temizlenirken hata oluştu'); } }, variant: 'danger' });
     };
 
     const handleExport = async () => {
@@ -341,6 +329,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                     </div>
                 </div>
             </div>
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal>
     );
 };

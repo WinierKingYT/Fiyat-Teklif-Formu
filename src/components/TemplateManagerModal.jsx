@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Trash2, Save, FileInput, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -15,6 +16,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
 
     const [templates, setTemplates] = useState([]);
     const [templateName, setTemplateName] = useState('');
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
     useEffect(() => {
         if (isOpen && db) loadTemplates();
@@ -40,30 +42,11 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleLoadTemplate = (template) => {
-        if (window.confirm(`"${template.name}" şablonunu yüklemek istediğinize emin misiniz? Mevcut veriler silinecektir.`)) {
-            const { data } = template;
-            if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v));
-            if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v));
-            if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v));
-            if (data.items) setItems(data.items);
-            if (data.discount) setDiscount(data.discount);
-            else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate });
-            toast.success('Şablon başarıyla yüklendi');
-            onClose();
-        }
+        setConfirmDialog({ isOpen: true, title: 'Şablon Yükle', message: `"${template.name}" şablonunu yüklemek istediğinize emin misiniz? Mevcut veriler silinecektir.`, onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const { data } = template; if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v)); if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v)); if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v)); if (data.items) setItems(data.items); if (data.discount) setDiscount(data.discount); else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate }); toast.success('Şablon başarıyla yüklendi'); onClose(); }, variant: 'warning' });
     };
 
     const handleDeleteTemplate = async (id) => {
-        if (window.confirm('Bu şablonu silmek istediğinize emin misiniz?')) {
-            try {
-                await db.delete('templates', id);
-                toast.success('Şablon silindi');
-                loadTemplates();
-            } catch (error) {
-                console.error(error);
-                toast.error('Silinirken hata oluştu');
-            }
-        }
+        setConfirmDialog({ isOpen: true, title: 'Şablonu Sil', message: 'Bu şablonu silmek istediğinize emin misiniz?', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('templates', id); toast.success('Şablon silindi'); loadTemplates(); } catch (error) { console.error(error); toast.error('Silinirken hata oluştu'); } }, variant: 'danger' });
     };
 
     const handleExportTemplate = (template) => {
@@ -156,6 +139,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
                     </div>
                 </div>
             </div>
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal>
     );
 };

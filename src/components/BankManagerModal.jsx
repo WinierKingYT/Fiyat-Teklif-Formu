@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Plus, Trash, Edit, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -9,6 +10,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
     const { db } = useIndexedDB();
     const [banks, setBanks] = useState([]);
     const [editingBank, setEditingBank] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [formData, setFormData] = useState({
         bankName: '',
         branch: '',
@@ -69,16 +71,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bu bankayı silmek istediğinizden emin misiniz?')) {
-            try {
-                await db.delete('bankInfo', id);
-                toast.success('Banka silindi');
-                loadBanks();
-            } catch (error) {
-                console.error('Error deleting bank:', error);
-                toast.error('Banka silinirken hata oluştu');
-            }
-        }
+        setConfirmDialog({ isOpen: true, title: 'Bankayı Sil', message: 'Bu bankayı silmek istediğinizden emin misiniz?', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('bankInfo', id); toast.success('Banka silindi'); loadBanks(); } catch (error) { console.error('Error deleting bank:', error); toast.error('Banka silinirken hata oluştu'); } }, variant: 'danger' });
     };
 
     const handleSelect = (bank) => {
@@ -234,6 +227,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                     </form>
                 </div>
             </div>
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal>
     );
 };

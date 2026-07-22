@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ConfirmDialog from './ConfirmDialog';
 import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { useQuote } from '../context/QuoteContext';
@@ -14,6 +15,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
     const [quotes, setQuotes] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
     useEffect(() => {
         if (isOpen && isReady) loadQuotes();
@@ -34,25 +36,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
 
     const handleDelete = async (id, e) => {
         if (e) e.stopPropagation();
-        const quoteToDelete = quotes.find(q => q.id === id);
-        if (window.confirm('Bu teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)')) {
-            try {
-                if (quoteToDelete) {
-                    await db.add('recycle_bin', {
-                        originalStore: 'quotes', originalId: id,
-                        deletedAt: new Date().toISOString(), deletedBy: 'user',
-                        data: quoteToDelete
-                    });
-                }
-                await db.delete('quotes', id);
-                toast.success('Teklif geri dönüşüm kutusuna taşındı');
-                loadQuotes();
-                if (currentQuoteId === id) setCurrentQuoteId(null);
-            } catch (error) {
-                Logger.error('Error deleting quote:', error);
-                toast.error('Silme işlemi başarısız');
-            }
-        }
+        setConfirmDialog({ isOpen: true, title: 'Teklifi Sil', message: 'Bu teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const quoteToDelete = quotes.find(q => q.id === id); try { if (quoteToDelete) { await db.add('recycle_bin', { originalStore: 'quotes', originalId: id, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await db.delete('quotes', id); toast.success('Teklif geri dönüşüm kutusuna taşındı'); loadQuotes(); if (currentQuoteId === id) setCurrentQuoteId(null); } catch (error) { Logger.error('Error deleting quote:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
     };
 
     const handleSaveCurrent = async () => {
@@ -66,7 +50,8 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
         if (!currentQuoteId) return;
         const currentQuote = quotes.find(q => q.id === currentQuoteId);
         if (currentQuote && (currentQuote.status === 'sent' || currentQuote.status === 'accepted')) {
-            if (!window.confirm('Bu teklif müşteriye gönderilmiş veya kabul edilmiş. Yine de silmek istiyor musunuz?')) return;
+            setConfirmDialog({ isOpen: true, title: 'Gönderilmiş Teklifi Sil', message: 'Bu teklif müşteriye gönderilmiş veya kabul edilmiş. Yine de silmek istiyor musunuz?', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); handleDelete(currentQuoteId); onClose(); onNewQuote(); }, variant: 'danger' });
+            return;
         }
         handleDelete(currentQuoteId);
         onClose();
@@ -166,6 +151,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
                     )}
                 </div>
             </div>
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal>
     );
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Trash2, Edit, Plus, Search, Image as ImageIcon, Grid, List, Filter, CheckSquare, Square, Download, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,6 +20,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     // Edit/Add State
     const [isEditing, setIsEditing] = useState(false);
     const [currentProduct, setCurrentProduct] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [showCategoryManager, setShowCategoryManager] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -76,16 +78,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleDeleteCategory = async (categoryToDelete) => {
-        if (window.confirm(`${categoryToDelete} kategorisini silmek istediğinize emin misiniz?`)) {
-            const updatedCategories = categories.filter(c => c !== categoryToDelete);
-            setCategories(updatedCategories);
-            await db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories });
-
-            // Reset products with this category to 'Genel'
-            // Note: This would require updating all products, which might be expensive. 
-            // For now, we just delete the category from the list.
-            toast.success('Kategori silindi');
-        }
+        setConfirmDialog({ isOpen: true, title: 'Kategoriyi Sil', message: `${categoryToDelete} kategorisini silmek istediğinize emin misiniz?`, onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const updatedCategories = categories.filter(c => c !== categoryToDelete); setCategories(updatedCategories); db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories }); toast.success('Kategori silindi'); }, variant: 'danger' });
     };
 
     const handleInputChange = (e) => {
@@ -122,12 +115,15 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
             );
 
             if (isDuplicate) {
-                if (!window.confirm('Bu isimde bir ürün zaten kayıtlı. Yine de kaydetmek istiyor musunuz?')) {
-                    return;
-                }
+                setConfirmDialog({ isOpen: true, title: 'Mükerrer Ürün', message: 'Bu isimde bir ürün zaten kayıtlı. Yine de kaydetmek istiyor musunuz?', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performSave(); }, variant: 'warning' });
+                return;
             }
         }
 
+        performSave();
+    };
+
+    const performSave = async () => {
         const productData = {
             ...formData,
             price: parseFloat(formData.price),
@@ -165,56 +161,36 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bu ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)')) {
-            try {
-                const productToDelete = products.find(p => p.id === id);
-                if (productToDelete) {
-                    await db.add('recycle_bin', {
-                        ...productToDelete,
-                        originalStore: 'products',
-                        deletedAt: new Date().toISOString(),
-                        originalId: id
-                    });
-                    await db.delete('products', id);
-                    toast.success('Ürün geri dönüşüm kutusuna taşındı');
-                    loadProducts();
-                    // Remove from selection if selected
-                    if (selectedProducts.has(id)) {
-                        const newSelected = new Set(selectedProducts);
-                        newSelected.delete(id);
-                        setSelectedProducts(newSelected);
-                    }
+        setConfirmDialog({ isOpen: true, title: 'Ürünü Sil', message: 'Bu ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performDelete(id); }, variant: 'danger' });
+    };
+
+    const performDelete = async (id) => {
+        try {
+            const productToDelete = products.find(p => p.id === id);
+            if (productToDelete) {
+                await db.add('recycle_bin', {
+                    ...productToDelete,
+                    originalStore: 'products',
+                    deletedAt: new Date().toISOString(),
+                    originalId: id
+                });
+                await db.delete('products', id);
+                toast.success('Ürün geri dönüşüm kutusuna taşındı');
+                loadProducts();
+                if (selectedProducts.has(id)) {
+                    const newSelected = new Set(selectedProducts);
+                    newSelected.delete(id);
+                    setSelectedProducts(newSelected);
                 }
-            } catch (error) {
-                console.error(error);
-                toast.error('Silinirken hata oluştu');
             }
+        } catch (error) {
+            console.error(error);
+            toast.error('Silinirken hata oluştu');
         }
     };
 
     const handleBulkDelete = async () => {
-        if (window.confirm(`${selectedProducts.size} adet ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`)) {
-            try {
-                for (const id of selectedProducts) {
-                    const productToDelete = products.find(p => p.id === id);
-                    if (productToDelete) {
-                        await db.add('recycle_bin', {
-                            ...productToDelete,
-                            originalStore: 'products',
-                            deletedAt: new Date().toISOString(),
-                            originalId: id
-                        });
-                        await db.delete('products', id);
-                    }
-                }
-                toast.success('Seçili ürünler geri dönüşüm kutusuna taşındı');
-                setSelectedProducts(new Set());
-                loadProducts();
-            } catch (error) {
-                console.error(error);
-                toast.error('Toplu silme işlemi başarısız oldu');
-            }
-        }
+        setConfirmDialog({ isOpen: true, title: 'Toplu Sil', message: `${selectedProducts.size} adet ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const id of selectedProducts) { const productToDelete = products.find(p => p.id === id); if (productToDelete) { await db.add('recycle_bin', { ...productToDelete, originalStore: 'products', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('products', id); } } toast.success('Seçili ürünler geri dönüşüm kutusuna taşındı'); setSelectedProducts(new Set()); loadProducts(); } catch (error) { console.error(error); toast.error('Toplu silme işlemi başarısız oldu'); } }, variant: 'danger' });
     };
 
     const toggleProductSelection = (id) => {
@@ -677,6 +653,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                     </form>
                 </div >
             </div >
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal >
     );
 };

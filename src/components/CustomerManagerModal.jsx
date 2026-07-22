@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Trash2, Edit, Plus, Search, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,6 +13,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [currentCustomer, setCurrentCustomer] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
     // Form State
     const [formData, setFormData] = useState({
@@ -56,12 +58,15 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
             );
 
             if (isDuplicate) {
-                if (!window.confirm('Bu isimde veya e-postada bir müşteri zaten kayıtlı. Yine de kaydetmek istiyor musunuz?')) {
-                    return;
-                }
+                setConfirmDialog({ isOpen: true, title: 'Mükerrer Müşteri', message: 'Bu isimde veya e-postada bir müşteri zaten kayıtlı. Yine de kaydetmek istiyor musunuz?', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performSave(); }, variant: 'warning' });
+                return;
             }
         }
 
+        performSave();
+    };
+
+    const performSave = async () => {
         try {
             if (isEditing && currentCustomer) {
                 await db.put('customers', { ...formData, id: currentCustomer.id });
@@ -93,25 +98,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bu müşteriyi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)')) {
-            try {
-                const customerToDelete = customers.find(c => c.id === id);
-                if (customerToDelete) {
-                    await db.add('recycle_bin', {
-                        ...customerToDelete,
-                        originalStore: 'customers',
-                        deletedAt: new Date().toISOString(),
-                        originalId: id
-                    });
-                    await db.delete('customers', id);
-                    toast.success('Müşteri geri dönüşüm kutusuna taşındı');
-                    loadCustomers();
-                }
-            } catch (error) {
-                console.error(error);
-                toast.error('Silinirken hata oluştu');
-            }
-        }
+        setConfirmDialog({ isOpen: true, title: 'Müşteriyi Sil', message: 'Bu müşteriyi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { const customerToDelete = customers.find(c => c.id === id); if (customerToDelete) { await db.add('recycle_bin', { ...customerToDelete, originalStore: 'customers', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('customers', id); toast.success('Müşteri geri dönüşüm kutusuna taşındı'); loadCustomers(); } } catch (error) { console.error(error); toast.error('Silinirken hata oluştu'); } }, variant: 'danger' });
     };
 
     const resetForm = () => {
@@ -304,6 +291,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                     </form>
                 </div>
             </div>
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal>
     );
 };

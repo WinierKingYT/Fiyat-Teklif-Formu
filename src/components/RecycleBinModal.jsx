@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
+import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Trash2, RefreshCw, Search, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,6 +11,7 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
     const [deletedItems, setDeletedItems] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('all');
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
     useEffect(() => {
         if (isOpen && db) loadDeletedItems();
@@ -40,29 +42,11 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
     };
 
     const handlePermanentDelete = async (id) => {
-        if (window.confirm('Bu öğeyi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-            try {
-                await db.delete('recycle_bin', id);
-                toast.success('Öğe kalıcı olarak silindi');
-                loadDeletedItems();
-            } catch (error) {
-                console.error('Delete error:', error);
-                toast.error('Silme işlemi başarısız');
-            }
-        }
+        setConfirmDialog({ isOpen: true, title: 'Kalıcı Sil', message: 'Bu öğeyi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('recycle_bin', id); toast.success('Öğe kalıcı olarak silindi'); loadDeletedItems(); } catch (error) { console.error('Delete error:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
     };
 
     const handleEmptyBin = async () => {
-        if (window.confirm('Geri dönüşüm kutusunu boşaltmak istediğinize emin misiniz? Tüm öğeler kalıcı olarak silinecek.')) {
-            try {
-                await db.clear('recycle_bin');
-                toast.success('Geri dönüşüm kutusu boşaltıldı');
-                loadDeletedItems();
-            } catch (error) {
-                console.error('Empty bin error:', error);
-                toast.error('İşlem başarısız');
-            }
-        }
+        setConfirmDialog({ isOpen: true, title: 'Çöp Kutusunu Boşalt', message: 'Geri dönüşüm kutusunu boşaltmak istediğinize emin misiniz? Tüm öğeler kalıcı olarak silinecek.', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.clear('recycle_bin'); toast.success('Geri dönüşüm kutusu boşaltıldı'); loadDeletedItems(); } catch (error) { console.error('Empty bin error:', error); toast.error('İşlem başarısız'); } }, variant: 'danger' });
     };
 
     const filteredItems = deletedItems.filter(item => {
@@ -136,6 +120,7 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
                     )}
                 </div>
             </div>
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal>
     );
 };
