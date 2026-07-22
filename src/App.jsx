@@ -19,7 +19,7 @@ import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
-import { FileText, Landmark } from 'lucide-react';
+import { FileText, Landmark, Undo2, Redo2, FlaskConical } from 'lucide-react';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { useTranslation } from './hooks/useTranslation';
 import { Toaster, toast } from 'react-hot-toast';
@@ -58,7 +58,7 @@ const QuoteBuilder = ({
     discount, setDiscount,
     bankData, updateBankData,
     saveQuote,
-    undo, redo,
+    undo, redo, canUndo, canRedo,
     currentQuoteId,
     loadQuote,
     fillTestData,
@@ -165,6 +165,35 @@ const QuoteBuilder = ({
         items={items}
         totalAmount={totalAmount}
       />
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 py-2 px-1 mb-1">
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Geri Al (Ctrl+Z)"
+        >
+          <Undo2 size={18} />
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          title="İleri Al (Ctrl+Y)"
+        >
+          <Redo2 size={18} />
+        </button>
+        <div className="w-px h-5 bg-[var(--color-border)] mx-1" />
+        <button
+          onClick={fillTestData}
+          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-warning)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
+          title="Test Verileriyle Doldur"
+        >
+          <FlaskConical size={18} />
+        </button>
+      </div>
+
       <div
         className="builder-grid"
         style={{
