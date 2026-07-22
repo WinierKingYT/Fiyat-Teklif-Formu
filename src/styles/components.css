@@ -217,4 +217,23 @@ input[type="color"] { height: 2.5rem; padding: 0.25rem; border-radius: var(--rad
 .search-container .form-control { padding-left: 2.25rem; }
 .search-container svg { position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); pointer-events: none; }
 
+/* ===== PRINT ===== */
+@media print {
+  @page { margin: 15mm; size: A4; }
+  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sidebar, .top-bar, .status-bar, .focus-mode-bar, .builder-resizer,
+  .modal-overlay, .modal-content, .ConfirmDialog,
+  nav, .btn, button, .tabular-navigation, .search-section,
+  .empty-state, .toast, [role="dialog"], [data-sonner-toaster] { display: none !important; }
+  .app-shell { display: block !important; height: auto !important; overflow: visible !important; }
+  .main-area { display: block !important; overflow: visible !important; }
+  .content-area { padding: 0 !important; overflow: visible !important; }
+  .live-preview-container { height: auto !important; }
+  .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  .card-header { background: #f8f8f8 !important; }
+  table { break-inside: auto; }
+  tr { break-inside: avoid; }
+  input, textarea, select { border: none !important; background: transparent !important; padding: 0 !important; }
+}
+
 
