@@ -14,6 +14,7 @@ import AnalyticsModal from './components/AnalyticsModal';
 
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
+import HistoryList from './components/HistoryList';
 import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
@@ -320,6 +321,7 @@ function App() {
             />
           )}
           {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
+          {currentView === 'history' && <HistoryList onNavigate={setCurrentView} />}
           {currentView === 'settings' && <Settings />}
         </Layout>
 

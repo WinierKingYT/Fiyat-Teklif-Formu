@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  FileText, LayoutDashboard, PlusCircle,
+  FileText, LayoutDashboard, PlusCircle, List,
   Users, Package, LayoutTemplate, Database, Landmark, Trash2, TrendingUp,
   Settings, X
 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { useTranslation } from '../hooks/useTranslation';
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, labelKey: 'dashboard' },
   { id: 'builder', icon: PlusCircle, labelKey: 'newQuote' },
+  { id: 'history', icon: List, labelKey: 'myQuotes' },
 ];
 
 const managerItems = [
