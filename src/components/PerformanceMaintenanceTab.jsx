@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useQuote } from '../context/QuoteContext';
-import { Activity, Trash2, Database, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Activity, Trash2, Database, RefreshCw, AlertTriangle, CheckCircle, Download, Upload } from 'lucide-react';
 import CleanupConfirmModal from './CleanupConfirmModal';
 import toast from 'react-hot-toast';
 
@@ -9,7 +9,8 @@ import toast from 'react-hot-toast';
  * Performance & Maintenance Tab Component for Settings
  */
 const PerformanceMaintenanceTab = () => {
-    const { db, tabs, setTabs, cleanupService, performanceMonitor } = useQuote();
+    const { db, tabs, setTabs, cleanupService, performanceMonitor, createBackup, restoreBackup } = useQuote();
+    const fileInputRef = React.useRef(null);
 
     const [metrics, setMetrics] = useState(null);
     const [cleanupStats, setCleanupStats] = useState(null);
@@ -184,6 +185,55 @@ const PerformanceMaintenanceTab = () => {
                     Yenile
                 </button>
             </div>
+
+            {/* Backup & Restore */}
+            <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Database size={18} className="text-[var(--color-info)]" />
+                    Yedekleme & Geri Yükleme
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button
+                        onClick={createBackup}
+                        className="p-4 border rounded-lg text-left hover:bg-[var(--color-bg-hover)] border-[var(--color-border)] transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Download size={20} className="text-[var(--color-success)]" />
+                            <div>
+                                <div className="font-medium">Yedek Oluştur</div>
+                                <div className="text-xs text-[var(--color-text-muted)]">Tüm verileri JSON dosyası olarak dışa aktar</div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-4 border rounded-lg text-left hover:bg-[var(--color-bg-hover)] border-[var(--color-border)] transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Upload size={20} className="text-[var(--color-warning)]" />
+                            <div>
+                                <div className="font-medium">Yedek Yükle</div>
+                                <div className="text-xs text-[var(--color-text-muted)]">JSON yedek dosyasını içe aktar</div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                            restoreBackup(e.target.files[0]);
+                            e.target.value = '';
+                        }
+                    }}
+                />
+            </div>
+
+            <div className="border-t border-[var(--color-border)] my-6" />
 
             {/* Recommendations Alerts */}
             {recommendations && recommendations.warnings.length > 0 && (
