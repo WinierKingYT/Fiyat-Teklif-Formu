@@ -188,6 +188,10 @@ export const QuoteProvider = ({ children }) => {
 
     // --- Tab Actions ---
     const addTab = () => {
+        const currentTab = tabs.find(t => t.id === activeTabId);
+        if (currentTab?.data?.items?.length > 0) {
+            if (!window.confirm('Mevcut teklifte kaydedilmemiş değişiklikler olabilir. Yeni sekme açmak istiyor musunuz?')) return;
+        }
         const newTabId = `tab-${Date.now()}`;
         const newTab = {
             id: newTabId,
@@ -212,6 +216,11 @@ export const QuoteProvider = ({ children }) => {
         if (tabs.length === 1) {
             toast.error("Son sekmeyi kapatamazsınız.");
             return;
+        }
+
+        const tabToClose = tabs.find(t => t.id === tabId);
+        if (tabToClose?.data?.items?.length > 0) {
+            if (!window.confirm('Bu sekmede kaydedilmemiş değişiklikler olabilir. Kapatmak istiyor musunuz?')) return;
         }
 
         const newTabs = tabs.filter(t => t.id !== tabId);
@@ -943,6 +952,7 @@ export const QuoteProvider = ({ children }) => {
             discount: { type: 'percentage', value: 10 }
         };
 
+        if (!window.confirm('Test verileri mevcut verilerin üzerine yazılacak. Devam etmek istiyor musunuz?')) return;
         Logger.log('Filling test data for tab:', activeTab.id);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTab.id) {
