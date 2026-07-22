@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { translations } from '../utils/translations';
 import { calculateQuoteTotals } from '../utils/calculations';
 import ModernTheme from './pdf-themes/ModernTheme';
