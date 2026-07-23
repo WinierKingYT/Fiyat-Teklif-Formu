@@ -613,22 +613,21 @@ const ItemsTable = ({
     }
     onItemsChange(newItems);
   };
-  const addItem = () =>
-    onItemsChange([
-      ...items,
-      {
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: "",
-        description: "",
-        quantity: 1,
-        unit: "Adet",
-        price: 0,
-        taxRate: 20,
-        discountRate: 0,
-        total: 0,
-        image: null,
-      },
-    ]);
+  const addItem = (prepend = false) => {
+    const newItem = {
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: "",
+      description: "",
+      quantity: 1,
+      unit: "Adet",
+      price: 0,
+      taxRate: 20,
+      discountRate: 0,
+      total: 0,
+      image: null,
+    };
+    onItemsChange(prepend ? [newItem, ...items] : [...items, newItem]);
+  };
   const removeItem = (index) =>
     onItemsChange(items.filter((_, i) => i !== index));
   const formatCurrency = useMemo(
@@ -847,39 +846,37 @@ const ItemsTable = ({
           </div>
         )}
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-[var(--color-border)] rounded-[var(--radius-lg)] bg-[var(--color-bg-muted)]/30">
-            {" "}
-            <div className="w-14 h-14 rounded-full bg-[var(--color-primary-muted)] flex items-center justify-center mb-4">
-              {" "}
-              <Package size={28} className="text-[var(--color-primary)]" />{" "}
-            </div>{" "}
-            <h3 className="text-base font-bold text-[var(--color-text)] mb-1.5">
+          <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed border-[var(--color-border)] rounded-[var(--radius-lg)] bg-[var(--color-bg-muted)]/30">
+            <div className="w-12 h-12 rounded-full bg-[var(--color-primary-muted)] flex items-center justify-center mb-3">
+              <Package size={24} className="text-[var(--color-primary)]" />
+            </div>
+            <h3 className="text-sm font-bold text-[var(--color-text)] mb-1">
               {t("noItemsAdded")}
-            </h3>{" "}
-            <p className="text-sm text-[var(--color-text-muted)] max-w-xs mb-6">
+            </h3>
+            <p className="text-xs text-[var(--color-text-muted)] max-w-[260px] mb-4">
               {t("noItemsHint")}
-            </p>{" "}
-            <div className="flex gap-3">
-              {" "}
+            </p>
+            <div className="flex gap-2">
               <button
                 type="button"
-                className="btn btn-primary"
-                onClick={addItem}
+                className="btn btn-primary btn-sm"
+                onClick={() => addItem()}
               >
-                {" "}
-                <Plus size={16} /> {t("addFirstRow")}{" "}
-              </button>{" "}
+                <Plus size={14} /> {t("addFirstRow")}
+              </button>
               {onAddProduct && (
                 <button
                   type="button"
-                  className="btn btn-outline"
+                  className="btn btn-outline btn-sm"
                   onClick={onAddProduct}
                 >
-                  {" "}
-                  <Package size={16} /> {t("selectFromCatalog")}{" "}
+                  <Package size={14} /> {t("selectFromCatalog")}
                 </button>
-              )}{" "}
-            </div>{" "}
+              )}
+            </div>
+            <div className="mt-4 text-[10px] text-[var(--color-text-muted)]">
+              veya üstteki arama çubuğuna yazmaya başlayın
+            </div>
           </div>
         ) : (
           <DndContext
@@ -979,36 +976,32 @@ const ItemsTable = ({
           </DndContext>
         )}{" "}
         {items.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[var(--color-border)]">
-            {" "}
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[var(--color-border)]">
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              onClick={addItem}
+              onClick={() => { addItem(true); }}
+              title="En üste ekle (Shift+Enter)"
             >
-              {" "}
-              <Plus size={14} /> {t("addRow")}{" "}
-            </button>{" "}
+              <Plus size={14} /> {t("addRow")}
+            </button>
             <div className="flex gap-2 ml-auto">
-              {" "}
               {onAddProduct && (
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"
                   onClick={onAddProduct}
                 >
-                  {" "}
-                  <Package size={14} /> {t("selectFromCatalog")}{" "}
+                  <Package size={14} /> {t("selectFromCatalog")}
                 </button>
-              )}{" "}
+              )}
               <button
                 type="button"
                 className="btn btn-outline btn-sm"
                 onClick={() => fileInputRef.current?.click()}
               >
-                {" "}
-                <Upload size={14} /> Excel{" "}
-              </button>{" "}
+                <Upload size={14} /> Excel
+              </button>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -1016,8 +1009,8 @@ const ItemsTable = ({
                 accept=".xlsx, .xls"
                 style={{ display: "none" }}
                 title={t("selectExcelFile")}
-              />{" "}
-            </div>{" "}
+              />
+            </div>
           </div>
         )}{" "}
       </div>{" "}

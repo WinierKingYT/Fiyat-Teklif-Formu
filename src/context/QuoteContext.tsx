@@ -652,6 +652,44 @@ export const QuoteProvider = ({ children }) => {
         }
     }, [isReady, db]);
 
+    // Auto-save with debounce: saves to IndexedDB 3s after last change
+    const autoSaveTimerRef = useRef(null);
+    useEffect(() => {
+        if (!isReady || !db || !tabs.find(t => t.id === activeTabId)?.savedQuoteId) return;
+
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+            const activeTab = tabs.find(t => t.id === activeTabId);
+            if (!activeTab) return;
+            const quoteId = activeTab.savedQuoteId;
+            if (!quoteId) return;
+
+            const quote = {
+                id: quoteId,
+                quoteNumber: quoteData.number,
+                customerName: customerData.name,
+                customerCompany: customerData.company,
+                status: 'draft',
+                currency: quoteData.currency,
+                subtotalMinor: 0,
+                taxTotalMinor: 0,
+                grandTotalMinor: 0,
+                quoteData,
+                customerData,
+                companyData,
+                items,
+                discount,
+                bankData,
+                updatedAt: getLocalDateTimeString(),
+            };
+            db.put('quotes', quote).catch(e => console.error('Auto-save error:', e));
+        }, 3000);
+
+        return () => {
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        };
+    }, [isReady, db, quoteData, customerData, companyData, items, discount, bankData, tabs, activeTabId]);
+
     // Performance monitoring warning
     useEffect(() => {
         if (!isReady || !db) return;

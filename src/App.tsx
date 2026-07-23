@@ -18,7 +18,7 @@ import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
-import { FileText, Landmark, Undo2, Redo2, FlaskConical, ChevronDown } from 'lucide-react';
+import { FileText, Landmark, Undo2, Redo2, FlaskConical, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { useTranslation } from './hooks/useTranslation';
 import { Toaster, toast } from 'react-hot-toast';
@@ -149,14 +149,14 @@ const QuoteBuilder = ({
       />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 py-2 px-1 mb-1">
+      <div className="flex items-center gap-1.5 py-1.5 px-1 mb-2">
         <button
           onClick={undo}
           disabled={!canUndo}
           className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title="Geri Al (Ctrl+Z)"
         >
-          <Undo2 size={18} />
+          <Undo2 size={16} />
         </button>
         <button
           onClick={redo}
@@ -164,15 +164,33 @@ const QuoteBuilder = ({
           className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title="İleri Al (Ctrl+Y)"
         >
-          <Redo2 size={18} />
+          <Redo2 size={16} />
         </button>
-        <div className="w-px h-5 bg-[var(--color-border)] mx-1" />
+        <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
         <button
           onClick={fillTestData}
           className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-warning)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
           title="Test Verileriyle Doldur"
         >
-          <FlaskConical size={18} />
+          <FlaskConical size={16} />
+        </button>
+        <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+        <button
+          onClick={() => {
+            const allCollapsed = collapsedSections.customer && collapsedSections.company && collapsedSections.quote;
+            const newState = !allCollapsed;
+            ['customer', 'company', 'quote'].forEach(key => {
+              setCollapsedSections(prev => {
+                const next = { ...prev, [key]: newState };
+                localStorage.setItem('collapsedSections', JSON.stringify(next));
+                return next;
+              });
+            });
+          }}
+          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
+          title={collapsedSections.customer && collapsedSections.company && collapsedSections.quote ? 'Tümünü Genişlet' : 'Tümünü Daralt'}
+        >
+          {collapsedSections.customer && collapsedSections.company && collapsedSections.quote ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
         </button>
       </div>
 
@@ -183,10 +201,17 @@ const QuoteBuilder = ({
             onClick={() => toggleSection('customer')}
             className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
           >
-            <h3 className="card-title">{t('customerInfo')}</h3>
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="card-title shrink-0">{t('customerInfo')}</h3>
+              {collapsedSections.customer && (
+                <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-[180px]">
+                  {customerData.name || customerData.company || '—'}
+                </span>
+              )}
+            </div>
             <ChevronDown
               size={16}
-              className="text-[var(--color-text-muted)] transition-transform duration-200"
+              className="text-[var(--color-text-muted)] shrink-0 transition-transform duration-200"
               style={{ transform: collapsedSections.customer ? 'rotate(-90deg)' : 'rotate(0deg)' }}
             />
           </button>
@@ -209,10 +234,17 @@ const QuoteBuilder = ({
             onClick={() => toggleSection('company')}
             className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
           >
-            <h3 className="card-title">{t('companyInfo')}</h3>
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="card-title shrink-0">{t('companyInfo')}</h3>
+              {collapsedSections.company && (
+                <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-[180px]">
+                  {companyData.name || companyData.authorized || '—'}
+                </span>
+              )}
+            </div>
             <ChevronDown
               size={16}
-              className="text-[var(--color-text-muted)] transition-transform duration-200"
+              className="text-[var(--color-text-muted)] shrink-0 transition-transform duration-200"
               style={{ transform: collapsedSections.company ? 'rotate(-90deg)' : 'rotate(0deg)' }}
             />
           </button>
@@ -231,15 +263,20 @@ const QuoteBuilder = ({
             onClick={() => toggleSection('quote')}
             className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-                <FileText size={16} className="text-[var(--color-primary)]" />
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center shrink-0">
+                <FileText size={14} className="text-[var(--color-primary)]" />
               </div>
-              <span className="card-title">{t('quoteDetails')}</span>
+              <span className="card-title shrink-0">{t('quoteDetails')}</span>
+              {collapsedSections.quote && (
+                <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-[160px]">
+                  {quoteData.number || quoteData.title || '—'}
+                </span>
+              )}
             </div>
             <ChevronDown
               size={16}
-              className="text-[var(--color-text-muted)] transition-transform duration-200"
+              className="text-[var(--color-text-muted)] shrink-0 transition-transform duration-200"
               style={{ transform: collapsedSections.quote ? 'rotate(-90deg)' : 'rotate(0deg)' }}
             />
           </button>
