@@ -18,7 +18,7 @@ import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
-import { FileText, Landmark, Undo2, Redo2, FlaskConical } from 'lucide-react';
+import { FileText, Landmark, Undo2, Redo2, FlaskConical, ChevronDown } from 'lucide-react';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { useTranslation } from './hooks/useTranslation';
 import { Toaster, toast } from 'react-hot-toast';
@@ -71,6 +71,20 @@ const QuoteBuilder = ({
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  const defaultCollapsed = { customer: true, company: true, quote: true };
+  const [collapsedSections, setCollapsedSections] = useState(() => {
+    try {
+      return { ...defaultCollapsed, ...JSON.parse(localStorage.getItem('collapsedSections') || '{}') };
+    } catch { return defaultCollapsed; }
+  });
+  const toggleSection = (key) => {
+    setCollapsedSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('collapsedSections', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const totalAmount = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
@@ -163,60 +177,99 @@ const QuoteBuilder = ({
       </div>
 
       {/* Top row: Customer Info + Company Info + Quote Details side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         <div className="card">
-          <div className="card-header">
+          <button
+            onClick={() => toggleSection('customer')}
+            className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
+          >
             <h3 className="card-title">{t('customerInfo')}</h3>
-          </div>
-          <div className="card-body">
-            <CustomerInfoForm
-              data={customerData}
-              onChange={updateCustomerData}
-              onSelectCustomer={() => setIsCustomerModalOpen(true)}
+            <ChevronDown
+              size={16}
+              className="text-[var(--color-text-muted)] transition-transform duration-200"
+              style={{ transform: collapsedSections.customer ? 'rotate(-90deg)' : 'rotate(0deg)' }}
             />
+          </button>
+          <div
+            className="overflow-hidden transition-all duration-200"
+            style={{ maxHeight: collapsedSections.customer ? '0px' : '500px' }}
+          >
+            <div className="card-body">
+              <CustomerInfoForm
+                data={customerData}
+                onChange={updateCustomerData}
+                onSelectCustomer={() => setIsCustomerModalOpen(true)}
+              />
+            </div>
           </div>
         </div>
 
         <div className="card">
-          <div className="card-header">
+          <button
+            onClick={() => toggleSection('company')}
+            className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
+          >
             <h3 className="card-title">{t('companyInfo')}</h3>
-          </div>
-          <div className="card-body">
-            <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
+            <ChevronDown
+              size={16}
+              className="text-[var(--color-text-muted)] transition-transform duration-200"
+              style={{ transform: collapsedSections.company ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+            />
+          </button>
+          <div
+            className="overflow-hidden transition-all duration-200"
+            style={{ maxHeight: collapsedSections.company ? '0px' : '500px' }}
+          >
+            <div className="card-body">
+              <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
+            </div>
           </div>
         </div>
 
         <div className="card">
-          <div className="card-header">
+          <button
+            onClick={() => toggleSection('quote')}
+            className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
+          >
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
                 <FileText size={16} className="text-[var(--color-primary)]" />
               </div>
               <span className="card-title">{t('quoteDetails')}</span>
             </div>
-          </div>
-          <div className="card-body">
-            <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
-            <div className="mt-5 pt-4 border-t border-[var(--color-border)]">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-[var(--color-bg-muted)] flex items-center justify-center">
-                    <Landmark size={13} className="text-[var(--color-text-secondary)]" />
+            <ChevronDown
+              size={16}
+              className="text-[var(--color-text-muted)] transition-transform duration-200"
+              style={{ transform: collapsedSections.quote ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+            />
+          </button>
+          <div
+            className="overflow-hidden transition-all duration-200"
+            style={{ maxHeight: collapsedSections.quote ? '0px' : '2000px' }}
+          >
+            <div className="card-body">
+              <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
+              <div className="mt-5 pt-4 border-t border-[var(--color-border)]">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-[var(--color-bg-muted)] flex items-center justify-center">
+                      <Landmark size={13} className="text-[var(--color-text-secondary)]" />
+                    </div>
+                    <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
                   </div>
-                  <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenBankManager}>
+                    <Landmark size={14} /> {t('bankManagement')}
+                  </button>
                 </div>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenBankManager}>
-                  <Landmark size={14} /> {t('bankManagement')}
-                </button>
+                <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
               </div>
-              <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom: Items Table (left, sticky) + Summary + Terms & Notes (right) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2 md:sticky md:top-0 md:self-start">
           <ItemsTable
             items={items}

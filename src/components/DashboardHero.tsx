@@ -23,44 +23,36 @@ const DashboardHero = ({ quoteData, items, totalAmount }) => {
     const itemCount = items.length;
 
     return (
-        <div className="mb-6" data-testid="dashboard-hero">
+        <div className="mb-3" data-testid="dashboard-hero">
             <div className="card relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-accent)]"></div>
-                <div className="card-body">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                        <div className="md:col-span-2">
+                <div className="card-body !py-3 !px-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
                             <div>
-                                <h1 className="text-2xl font-bold text-[var(--color-text)] mb-1">
+                                <h1 className="text-lg font-bold text-[var(--color-text)] leading-tight">
                                     {quoteData.title || 'Yeni Teklif'}
                                 </h1>
-                                <p className="text-sm text-[var(--color-text-muted)]">
+                                <p className="text-xs text-[var(--color-text-muted)]">
                                     {today}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="rounded-[var(--radius)] bg-[var(--color-bg-muted)] p-3 border border-[var(--color-border)]">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-                                        <Package size={13} className="text-[var(--color-primary)]" />
-                                    </div>
-                                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Kalem</span>
-                                </div>
-                                <div className="text-xl font-bold text-[var(--color-text)] ml-9">
+                        <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 rounded-[var(--radius)] bg-[var(--color-bg-muted)] px-3 py-1.5 border border-[var(--color-border)]">
+                                <Package size={14} className="text-[var(--color-primary)]" />
+                                <span className="text-xs text-[var(--color-text-muted)] font-medium">Kalem</span>
+                                <span className="text-sm font-bold text-[var(--color-text)]">
                                     <CountUp end={itemCount} duration={800} />
-                                </div>
+                                </span>
                             </div>
-                            <div className="rounded-[var(--radius)] bg-[var(--color-bg-muted)] p-3 border border-[var(--color-border)]">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-                                        <TrendingUp size={13} className="text-[var(--color-primary)]" />
-                                    </div>
-                                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Toplam</span>
-                                </div>
-                                <div className="text-xl font-bold text-[var(--color-text)] truncate ml-9" title={totalAmount}>
+                            <div className="flex items-center gap-2 rounded-[var(--radius)] bg-[var(--color-bg-muted)] px-3 py-1.5 border border-[var(--color-border)]">
+                                <TrendingUp size={14} className="text-[var(--color-primary)]" />
+                                <span className="text-xs text-[var(--color-text-muted)] font-medium">Toplam</span>
+                                <span className="text-sm font-bold text-[var(--color-text)] truncate max-w-[150px]" title={totalAmount}>
                                     {totalAmount}
-                                </div>
+                                </span>
                             </div>
                         </div>
                     </div>
