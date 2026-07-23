@@ -130,7 +130,7 @@ const ClassicTheme = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview" style={{
                     position: 'relative',
-                    minHeight: '290mm',
+                    minHeight: containerStyles.pageMinHeight || '290mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',

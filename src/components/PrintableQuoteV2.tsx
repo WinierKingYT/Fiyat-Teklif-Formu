@@ -196,10 +196,11 @@ const PrintableQuote = ({
     const getContainerStyles = () => {
         const isLandscape = config.pageOrientation === 'landscape';
         const pageWidth = isLandscape ? '297mm' : '210mm';
-        const pageMinHeight = isLandscape ? '210mm' : '297mm';
+        const pageMinHeight = isLandscape ? '200mm' : '290mm';
         const baseStyles = {
             minHeight: 'auto',
             maxWidth: pageWidth,
+            pageMinHeight,
             fontFamily: config.fontFamily === 'Playfair Display' ? "'Playfair Display', serif" :
                 config.fontFamily === 'Roboto' ? "'Roboto', sans-serif" :
                     config.fontFamily === 'Open Sans' ? "'Open Sans', sans-serif" :

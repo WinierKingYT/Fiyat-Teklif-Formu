@@ -322,7 +322,7 @@ const CorporateTheme = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview" style={{
                     position: 'relative',
-                    minHeight: '290mm', // A4 height
+                    minHeight: containerStyles.pageMinHeight || '290mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
