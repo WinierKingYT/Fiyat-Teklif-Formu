@@ -8,6 +8,7 @@ import performanceMonitor from '../utils/performanceMonitor';
 import { sanitizeInput, sanitizeObject } from '../utils/sanitize';
 import { getLocalDateString, getLocalDateTimeString } from '../utils/dateUtils';
 import { calculateQuoteTotals } from '../utils/calculations';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const safeJsonParse = (value, fallback) => {
     try {
@@ -94,6 +95,25 @@ export const QuoteProvider = ({ children }) => {
     const [activeTabId, setActiveTabId] = useState(() => {
         return localStorage.getItem('activeTabId') || 'default-tab';
     });
+
+    // Confirm dialog state for replacing window.confirm()
+    const [confirmState, setConfirmState] = useState({ isOpen: false, title: '', message: '', resolve: null, variant: 'info' });
+
+    const showConfirm = useCallback((title, message, variant = 'info') => {
+        return new Promise((resolve) => {
+            setConfirmState({ isOpen: true, title, message, resolve, variant });
+        });
+    }, []);
+
+    const handleConfirmResolve = useCallback(() => {
+        confirmState.resolve?.(true);
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+    }, [confirmState.resolve]);
+
+    const handleConfirmReject = useCallback(() => {
+        confirmState.resolve?.(false);
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+    }, [confirmState.resolve]);
 
     // Load tabs from IndexedDB on startup (with migration from localStorage)
     useEffect(() => {
@@ -187,10 +207,11 @@ export const QuoteProvider = ({ children }) => {
     const [companyDefaults, setCompanyDefaults] = useState(null);
 
     // --- Tab Actions ---
-    const addTab = () => {
+    const addTab = async () => {
         const currentTab = tabs.find(t => t.id === activeTabId);
         if (currentTab?.data?.items?.length > 0) {
-            if (!window.confirm('Mevcut teklifte kaydedilmemiş değişiklikler olabilir. Yeni sekme açmak istiyor musunuz?')) return;
+            const confirmed = await showConfirm('Yeni Sekme', 'Mevcut teklifte kaydedilmemiş değişiklikler olabilir. Yeni sekme açmak istiyor musunuz?', 'warning');
+            if (!confirmed) return;
         }
         const newTabId = `tab-${Date.now()}`;
         const newTab = {
@@ -212,7 +233,7 @@ export const QuoteProvider = ({ children }) => {
         setActiveTabId(newTabId);
     };
 
-    const closeTab = (tabId) => {
+    const closeTab = async (tabId) => {
         if (tabs.length === 1) {
             toast.error("Son sekmeyi kapatamazsınız.");
             return;
@@ -220,7 +241,8 @@ export const QuoteProvider = ({ children }) => {
 
         const tabToClose = tabs.find(t => t.id === tabId);
         if (tabToClose?.data?.items?.length > 0) {
-            if (!window.confirm('Bu sekmede kaydedilmemiş değişiklikler olabilir. Kapatmak istiyor musunuz?')) return;
+            const confirmed = await showConfirm('Sekmeyi Kapat', 'Bu sekmede kaydedilmemiş değişiklikler olabilir. Kapatmak istiyor musunuz?', 'warning');
+            if (!confirmed) return;
         }
 
         const newTabs = tabs.filter(t => t.id !== tabId);
@@ -885,7 +907,7 @@ export const QuoteProvider = ({ children }) => {
         reader.readAsText(file);
     };
 
-    const fillTestData = () => {
+    const fillTestData = async () => {
         const testData = {
             quoteData: {
                 ...getInitialQuoteData(),
@@ -951,7 +973,8 @@ export const QuoteProvider = ({ children }) => {
             discount: { type: 'percentage', value: 10 }
         };
 
-        if (!window.confirm('Test verileri mevcut verilerin üzerine yazılacak. Devam etmek istiyor musunuz?')) return;
+        const confirmed = await showConfirm('Test Verileri', 'Test verileri mevcut verilerin üzerine yazılacak. Devam etmek istiyor musunuz?', 'warning');
+        if (!confirmed) return;
         Logger.log('Filling test data for tab:', activeTab.id);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTab.id) {
@@ -991,7 +1014,8 @@ export const QuoteProvider = ({ children }) => {
         db, currentQuoteId, setCurrentQuoteId,
         saveStatus,
         cleanupService, performanceMonitor,
-        setTabs
+        setTabs,
+        showConfirm
     }), [
         tabs, activeTabId, quoteData, customerData, companyData, items, discount, bankData,
         pdfConfig, pdfLayout, db, saveStatus, currentQuoteId
@@ -1000,6 +1024,16 @@ export const QuoteProvider = ({ children }) => {
     return (
         <QuoteContext.Provider value={value}>
             {children}
+            <ConfirmDialog
+                isOpen={confirmState.isOpen}
+                title={confirmState.title}
+                message={confirmState.message}
+                variant={confirmState.variant as any}
+                confirmText="Evet"
+                cancelText="İptal"
+                onConfirm={handleConfirmResolve}
+                onCancel={handleConfirmReject}
+            />
         </QuoteContext.Provider>
     );
 };

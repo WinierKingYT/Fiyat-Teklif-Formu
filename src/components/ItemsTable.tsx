@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useState, useEffect, useRef, memo, useMemo } from "react";
 import {
   Plus,
@@ -174,7 +174,7 @@ const SortableRow = memo(
             {" "}
             <option value="Adet">{t("unitPiece")}</option>{" "}
             <option value="Saat">{t("unitHour")}</option>{" "}
-            <option value="G+-n">{t("unitDay")}</option>{" "}
+            <option value="GÃ¼n">{t("unitDay")}</option>{" "}
             <option value="Ay">{t("unitMonth")}</option>{" "}
             <option value="Kg">{t("unitKg")}</option>{" "}
             <option value="Mt">{t("unitMeter")}</option>{" "}
@@ -363,7 +363,7 @@ const SortableRowCard = memo(
                 {" "}
                 <option value="Adet">{t("unitPiece")}</option>{" "}
                 <option value="Saat">{t("unitHour")}</option>{" "}
-                <option value="G+-n">{t("unitDay")}</option>{" "}
+                <option value="GÃ¼n">{t("unitDay")}</option>{" "}
                 <option value="Ay">{t("unitMonth")}</option>{" "}
                 <option value="Kg">{t("unitKg")}</option>{" "}
                 <option value="Mt">{t("unitMeter")}</option>{" "}
@@ -731,7 +731,7 @@ const ItemsTable = ({
               onFocus={() => setShowSearch(true)}
               onBlur={() => setTimeout(() => setShowSearch(false), 200)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="+�r+-n ara ve ekle... (en az 2 harf)"
+              placeholder="Ürün ara ve ekle... (en az 2 harf)"
               className="form-control pl-9 pr-8 py-2 text-sm"
             />{" "}
             {searchQuery && (
@@ -858,7 +858,7 @@ const ItemsTable = ({
                         KDV
                       </th>{" "}
                       <th className="w-16 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide text-center">
-                        �-sk.
+                        İsk.
                       </th>{" "}
                       <th className="w-28 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide text-right">
                         {t("total")}
@@ -960,3 +960,8 @@ const ItemsTable = ({
   );
 };
 export default ItemsTable;
+
+
+
+
+

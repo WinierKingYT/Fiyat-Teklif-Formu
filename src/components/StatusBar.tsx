@@ -22,7 +22,7 @@ const StatusBar = () => {
           <span className="status-item">{itemCount} kalem</span>
         )}
         {saveStatus?.status && (
-          <span className={`status-item status-${saveStatus.status}`}>
+          <span className={`status-item status-${saveStatus.status}`} aria-live="polite" aria-atomic="true">
             <span className="status-dot" />
             {saveStatus.status === 'saving' ? 'Kaydediliyor...'
               : saveStatus.status === 'saved' ? 'Kaydedildi'

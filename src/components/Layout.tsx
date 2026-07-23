@@ -18,7 +18,7 @@ const TopBar = ({ currentView, onToggleMobile }) => {
   return (
     <div className="top-bar">
       <div className="top-bar-left">
-        <button onClick={onToggleMobile} className="top-bar-mobile-toggle">
+        <button onClick={onToggleMobile} className="top-bar-mobile-toggle" aria-label="Menüyü Aç/Kapat">
           <Menu size={18} />
         </button>
         {currentView === 'builder' && <TabBar />}
@@ -29,12 +29,14 @@ const TopBar = ({ currentView, onToggleMobile }) => {
         <button
           onClick={() => setViewMode(prev => prev === 'mobile' ? 'desktop' : 'mobile')}
           className="top-bar-btn" title={viewMode === 'mobile' ? 'Masaüstü Görünümü' : 'Mobil Görünüm'}
+          aria-label={viewMode === 'mobile' ? 'Masaüstü Görünümü' : 'Mobil Görünüm'}
         >
           {viewMode === 'mobile' ? <Monitor size={15} /> : <Smartphone size={15} />}
         </button>
         <button
           onClick={() => setAppTheme(prev => prev === 'light' ? 'dark' : 'light')}
           className="top-bar-btn" title={appTheme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
+          aria-label={appTheme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
         >
           {appTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
@@ -42,6 +44,7 @@ const TopBar = ({ currentView, onToggleMobile }) => {
           onClick={() => setIsLivePreviewMode(!isLivePreviewMode)}
           className={`top-bar-btn ${isLivePreviewMode ? 'top-bar-btn-active' : ''}`}
           title={t('pdfButton')}
+          aria-label={t('pdfButton') || 'PDF Önizleme'}
         >
           <Download size={15} />
         </button>

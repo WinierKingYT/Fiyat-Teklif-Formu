@@ -1,22 +1,53 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FileText, Hash, Calendar, Clock, AlignLeft, DollarSign, Globe } from 'lucide-react';
+import FieldError from './FieldError';
 
 const QuoteInfoForm = ({ data, onChange }) => {
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const validateField = (name, value) => {
+        if (name === 'title' && !value) return 'Teklif başlığı zorunludur';
+        if (name === 'number' && !value) return 'Teklif numarası zorunludur';
+        return '';
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         onChange(name, value);
+        if (touched[name]) {
+            setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+        }
     };
+
+    const handleBlur = (name, value) => {
+        setTouched(prev => ({ ...prev, [name]: true }));
+        setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+    };
+
+    const getFieldProps = (name, value, placeholder, extra = {}) => ({
+        name,
+        value: value || '',
+        onChange: handleChange,
+        onBlur: () => handleBlur(name, value || ''),
+        placeholder,
+        className: `form-control${errors[name] && touched[name] ? ' field-error' : ''}`,
+        'aria-invalid': touched[name] && !!errors[name],
+        ...extra,
+    });
 
     return (
         <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="relative">
                     <Hash size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-                    <input type="text" className="form-control pl-9" id="quoteTitle" name="title" value={data.title || ''} onChange={handleChange} placeholder="Teklif Başlığı" autoComplete="off" />
+                    <input type="text" id="quoteTitle" {...getFieldProps('title', data.title, 'Teklif Başlığı', { autoComplete: 'off' })} />
+                    <FieldError message={errors.title} show={touched.title && !!errors.title} />
                 </div>
                 <div className="relative">
                     <Hash size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-                    <input type="text" className="form-control pl-9" id="quoteNumber" name="number" value={data.number || ''} onChange={handleChange} placeholder="Teklif No (opsiyonel)" autoComplete="off" />
+                    <input type="text" id="quoteNumber" {...getFieldProps('number', data.number, 'Teklif No (opsiyonel)', { autoComplete: 'off' })} />
+                    <FieldError message={errors.number} show={touched.number && !!errors.number} />
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">

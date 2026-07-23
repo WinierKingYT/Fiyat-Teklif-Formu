@@ -5,19 +5,48 @@ import SignatureCanvas from './SignatureCanvas';
 import { useQuote } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
+import FieldError from './FieldError';
 
 const CompanyInfoForm = ({ data, onChange }) => {
     const fileInputRef = useRef(null);
     const { saveCompanyDefaults, quoteData } = useQuote();
     const { t } = useTranslation(quoteData?.language);
     const [showDetails, setShowDetails] = useState(false);
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     const isFilled = data?.name && (data?.phone || data?.email);
+
+    const validateField = (name, value) => {
+        if (name === 'name' && !value) return 'Firma adı zorunludur';
+        if (name === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Geçerli bir e-posta girin';
+        if (name === 'website' && value && !/^https?:\/\/.+/.test(value)) return 'Geçerli bir URL girin (http://...)';
+        return '';
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         onChange(name, value);
+        if (touched[name]) {
+            setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+        }
     };
+
+    const handleBlur = (name, value) => {
+        setTouched(prev => ({ ...prev, [name]: true }));
+        setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+    };
+
+    const getFieldProps = (name, value, placeholder, extra = {}) => ({
+        name,
+        value: value || '',
+        onChange: handleChange,
+        onBlur: () => handleBlur(name, value || ''),
+        placeholder,
+        className: `form-control${errors[name] && touched[name] ? ' field-error' : ''}`,
+        'aria-invalid': touched[name] && !!errors[name],
+        ...extra,
+    });
 
     const handleLogoUpload = (e) => {
         const file = e.target.files[0];
@@ -74,7 +103,10 @@ const CompanyInfoForm = ({ data, onChange }) => {
             </div>
             <div className="card-body space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input type="text" className="form-control" id="companyName" name="name" value={data.name || ''} onChange={handleChange} placeholder={t('companyName')} autoComplete="organization" />
+                    <div>
+                        <input type="text" id="companyName" {...getFieldProps('name', data.name, t('companyName'), { autoComplete: 'organization' })} />
+                        <FieldError message={errors.name} show={touched.name && !!errors.name} />
+                    </div>
                     <input type="text" className="form-control" id="companyAuthorized" name="authorized" value={data.authorized || ''} onChange={handleChange} placeholder={t('authorizedDealer')} autoComplete="name" />
                 </div>
 
@@ -83,16 +115,19 @@ const CompanyInfoForm = ({ data, onChange }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="relative">
                                 <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-                                <input type="tel" className="form-control pl-9" id="companyPhone" name="phone" value={data.phone || ''} onChange={handleChange} placeholder={t('phone')} autoComplete="tel" />
+                                <input type="tel" id="companyPhone" {...getFieldProps('phone', data.phone, t('phone'), { autoComplete: 'tel' })} />
+                                <FieldError message={errors.phone} show={touched.phone && !!errors.phone} />
                             </div>
                             <div className="relative">
                                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-                                <input type="email" className="form-control pl-9" id="companyEmail" name="email" value={data.email || ''} onChange={handleChange} placeholder={t('email')} autoComplete="email" />
+                                <input type="email" id="companyEmail" {...getFieldProps('email', data.email, t('email'), { autoComplete: 'email' })} />
+                                <FieldError message={errors.email} show={touched.email && !!errors.email} />
                             </div>
                         </div>
                         <div className="relative">
                             <Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-                            <input type="url" className="form-control pl-9" id="companyWebsite" name="website" value={data.website || ''} onChange={handleChange} placeholder={t('website')} autoComplete="url" />
+                            <input type="url" id="companyWebsite" {...getFieldProps('website', data.website, t('website'), { autoComplete: 'url' })} />
+                            <FieldError message={errors.website} show={touched.website && !!errors.website} />
                         </div>
                         <div className="relative">
                             <MapPin size={15} className="absolute left-3 top-3.5 text-[var(--color-text-muted)] pointer-events-none" />

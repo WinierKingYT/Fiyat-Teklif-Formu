@@ -4,6 +4,8 @@ import Modal from './Modal';
 import { Search, Package, Plus, Filter, CheckSquare, Square } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import Logger from '../utils/logger';
+import Skeleton from './Skeleton';
+import EmptyState from './EmptyState';
 
 const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const { db, isReady } = useIndexedDB();
@@ -71,6 +73,8 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
         return matchesSearch && matchesCategory;
     });
 
+    const hasFilter = searchTerm || selectedCategory !== 'Tümü';
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Ürün/Hizmet Seç" size="lg">
             <div className="space-y-4 flex flex-col h-[70vh]">
@@ -89,11 +93,15 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
 
                 <div className="border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden flex-1 overflow-y-auto relative">
                     {loading ? (
-                        <div className="p-8 text-center text-[var(--color-text-muted)]">Yükleniyor...</div>
-                    ) : filteredProducts.length === 0 ? (
-                        <div className="p-8 text-center text-[var(--color-text-muted)]">
-                            {searchTerm ? 'Sonuç bulunamadı.' : 'Henüz kayıtlı ürün yok.'}
+                        <div className="p-4 space-y-3">
+                            <Skeleton variant="row" count={5} />
                         </div>
+                    ) : filteredProducts.length === 0 ? (
+                        <EmptyState
+                            icon={<Package size={32} />}
+                            title={hasFilter ? 'Sonuç bulunamadı' : 'Henüz kayıtlı ürün yok'}
+                            text={hasFilter ? 'Farklı bir arama terimi veya kategori deneyin.' : 'Ürün yöneticisinden ürün ekleyebilirsiniz.'}
+                        />
                     ) : (
                         <table className="w-full text-sm text-left">
                             <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10">

@@ -1,9 +1,11 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { Search, User, Plus } from 'lucide-react';
+import { Search, User, Plus, Users } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import Logger from '../utils/logger';
+import Skeleton from './Skeleton';
+import EmptyState from './EmptyState';
 
 const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
     const { db, isReady } = useIndexedDB();
@@ -47,11 +49,15 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
 
                 <div className="border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
                     {loading ? (
-                        <div className="p-8 text-center text-[var(--color-text-muted)]">Yükleniyor...</div>
-                    ) : filteredCustomers.length === 0 ? (
-                        <div className="p-8 text-center text-[var(--color-text-muted)]">
-                            {searchTerm ? 'Sonuç bulunamadı.' : 'Henüz kayıtlı müşteri yok.'}
+                        <div className="p-4 space-y-3">
+                            <Skeleton variant="row" count={4} />
                         </div>
+                    ) : filteredCustomers.length === 0 ? (
+                        <EmptyState
+                            icon={<Users size={32} />}
+                            title={searchTerm ? 'Sonuç bulunamadı' : 'Henüz kayıtlı müşteri yok'}
+                            text={searchTerm ? 'Farklı bir arama terimi deneyin.' : 'Yeni müşteri ekleyerek başlayın.'}
+                        />
                     ) : (
                         <table className="w-full text-sm text-left">
                             <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">

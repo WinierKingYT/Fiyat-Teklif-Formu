@@ -1,8 +1,9 @@
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
+import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
+import FieldError from './FieldError';
 
 const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
     const { quoteData, db } = useQuote();
@@ -12,6 +13,8 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [searchIndex, setSearchIndex] = useState(-1);
     const [showDetails, setShowDetails] = useState(false);
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const searchRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -42,6 +45,8 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
         setSearchQuery('');
         setSearchResults([]);
         setShowDropdown(false);
+        setTouched({});
+        setErrors({});
         inputRef.current?.focus();
     };
 
@@ -53,6 +58,12 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
         else if (e.key === 'Escape') { setShowDropdown(false); }
     };
 
+    const validateField = (name, value) => {
+        if (name === 'name' && !value) return 'Müşteri adı zorunludur';
+        if (name === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Geçerli bir e-posta girin';
+        return '';
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         if (name === 'name') {
@@ -60,7 +71,27 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
             setShowDropdown(true);
         }
         onChange(name, value);
+        if (touched[name]) {
+            setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+        }
     };
+
+    const handleBlur = (name, value) => {
+        setTouched(prev => ({ ...prev, [name]: true }));
+        setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+    };
+
+    const getFieldProps = (name, value, placeholder, extra = {}) => ({
+        name,
+        value: value || '',
+        onChange: handleChange,
+        onBlur: () => handleBlur(name, value || ''),
+        placeholder,
+        className: `form-control${errors[name] && touched[name] ? ' field-error' : ''}`,
+        'aria-invalid': touched[name] && !!errors[name],
+        'aria-describedby': errors[name] ? `field-${name}-error` : undefined,
+        ...extra,
+    });
 
     return (
         <div className="card">
@@ -96,18 +127,13 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                             <input
                                 ref={inputRef}
                                 type="text"
-                                className="form-control pl-9"
                                 id="customerName"
-                                name="name"
-                                value={data.name || ''}
-                                onChange={handleChange}
+                                {...getFieldProps('name', data.name, t('customerName'), { autoComplete: 'off' })}
                                 onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
-                                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                                 onKeyDown={handleKeyDown}
-                                placeholder={t('customerName')}
-                                autoComplete="off"
                             />
                         </div>
+                        <FieldError message={errors.name} show={touched.name && !!errors.name} />
                         {showDropdown && searchResults.length > 0 && (
                             <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg overflow-hidden">
                                 {searchResults.map((c, idx) => (
@@ -137,14 +163,10 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                     <div>
                         <input
                             type="text"
-                            className="form-control"
                             id="customerCompany"
-                            name="company"
-                            value={data.company || ''}
-                            onChange={handleChange}
-                            placeholder={t('company')}
-                            autoComplete="organization"
+                            {...getFieldProps('company', data.company, t('company'), { autoComplete: 'organization' })}
                         />
+                        <FieldError message={errors.company} show={touched.company && !!errors.company} />
                     </div>
                 </div>
 
@@ -155,41 +177,30 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                                 <input
                                     type="email"
-                                    className="form-control pl-9"
                                     id="customerEmail"
-                                    name="email"
-                                    value={data.email || ''}
-                                    onChange={handleChange}
-                                    placeholder={t('email')}
-                                    autoComplete="email"
+                                    {...getFieldProps('email', data.email, t('email'), { autoComplete: 'email' })}
                                 />
+                                <FieldError message={errors.email} show={touched.email && !!errors.email} />
                             </div>
                             <div className="relative">
                                 <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                                 <input
                                     type="tel"
-                                    className="form-control pl-9"
                                     id="customerPhone"
-                                    name="phone"
-                                    value={data.phone || ''}
-                                    onChange={handleChange}
-                                    placeholder={t('phone')}
-                                    autoComplete="tel"
+                                    {...getFieldProps('phone', data.phone, t('phone'), { autoComplete: 'tel' })}
                                 />
+                                <FieldError message={errors.phone} show={touched.phone && !!errors.phone} />
                             </div>
                         </div>
                         <div className="relative">
                             <MapPin size={15} className="absolute left-3 top-4 text-[var(--color-text-muted)] pointer-events-none" />
                             <textarea
-                                className="form-control pl-9"
                                 id="customerAddress"
-                                name="address"
-                                value={data.address || ''}
-                                onChange={handleChange}
-                                placeholder={t('address')}
+                                {...getFieldProps('address', data.address, t('address'))}
                                 rows={2}
                                 autoComplete="street-address"
                             />
+                            <FieldError message={errors.address} show={touched.address && !!errors.address} />
                         </div>
                     </div>
                 )}
