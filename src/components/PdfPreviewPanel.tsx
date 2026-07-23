@@ -40,6 +40,8 @@ const PdfPreviewPanel = React.memo(() => {
     const [pageSize, setPageSize] = useState('a4');
     const [quality, setQuality] = useState('high');
     const [showControls, setShowControls] = useState(window.innerWidth > 900);
+    const [zoomLevel, setZoomLevel] = useState(0.7);
+    const [isGenerating, setIsGenerating] = useState(false);
 
 
     // Debounce the config for preview rendering (used when Manual Mode is OFF)
@@ -124,16 +126,21 @@ const PdfPreviewPanel = React.memo(() => {
         setPdfConfig(prev => ({ ...prev, [key]: value }));
     }, [setPdfConfig]);
 
-    const handleDownload = () => {
-        const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
-        generatePDF('printable-quote-container-panel', filename, {
-            theme: pdfConfig.theme,
-            color: pdfConfig.color,
-            pageSize,
-            quality,
-            orientation: pdfConfig.pageOrientation || 'portrait',
-            margin: pdfConfig.margins === 'compact' ? 5 : pdfConfig.margins === 'wide' ? 15 : 10
-        });
+    const handleDownload = async () => {
+        setIsGenerating(true);
+        try {
+            const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
+            await generatePDF('printable-quote-container-panel', filename, {
+                theme: pdfConfig.theme,
+                color: pdfConfig.color,
+                pageSize,
+                quality,
+                orientation: pdfConfig.pageOrientation || 'portrait',
+                margin: pdfConfig.margins === 'compact' ? 5 : pdfConfig.margins === 'wide' ? 15 : 10
+            });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handlePrint = () => {
@@ -253,11 +260,16 @@ const PdfPreviewPanel = React.memo(() => {
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-[var(--radius)] shadow hover:shadow-[var(--shadow-lg)] transition-all font-semibold"
+                        disabled={isGenerating}
+                        className={`flex items-center gap-2 px-4 py-2 text-white rounded-[var(--radius)] shadow hover:shadow-[var(--shadow-lg)] transition-all font-semibold ${isGenerating ? 'bg-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-info)] hover:opacity-90'}`}
                         title="PDF İndir"
                     >
-                        <FileDown size={18} />
-                        <span>{t('downloadPdf')}</span>
+                        {isGenerating ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        ) : (
+                            <FileDown size={18} />
+                        )}
+                        <span>{isGenerating ? 'Oluşturuluyor...' : t('downloadPdf')}</span>
                     </button>
                     <button
                         onClick={() => setShowControls(!showControls)}
@@ -1419,7 +1431,7 @@ const PdfPreviewPanel = React.memo(() => {
                     )}
 
                     <div className="flex-1 overflow-auto custom-scrollbar p-8 flex justify-center items-start">
-                        <div className="origin-top transform scale-[0.6] lg:scale-[0.7] xl:scale-[0.8] shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)]">
+                        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)]" style={{ transform: `scale(${zoomLevel})` }}>
                 <PrintableQuote
                     id="printable-quote-container-panel"
                     theme={pdfConfig.theme}
@@ -1436,6 +1448,28 @@ const PdfPreviewPanel = React.memo(() => {
                     config={renderedConfig}
                 />
                         </div>
+                    </div>
+                    {/* Zoom Slider */}
+                    <div className="flex items-center gap-3 px-4 py-2 border-t border-[var(--color-border)] bg-[var(--color-bg-muted)]">
+                        <button onClick={() => setZoomLevel(z => Math.max(0.3, z - 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label="Uzaklaştır">−</button>
+                        <input
+                            type="range"
+                            min="0.3"
+                            max="2"
+                            step="0.05"
+                            value={zoomLevel}
+                            onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
+                            className="flex-1 h-1 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
+                            aria-label="Yakınlaştırma"
+                        />
+                        <button onClick={() => setZoomLevel(z => Math.min(2, z + 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label="Yaklaştır">+</button>
+                        <span className="text-xs text-[var(--color-text-muted)] w-10 text-right tabular-nums">{Math.round(zoomLevel * 100)}%</span>
+                        {isGenerating && (
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--color-info)] ml-2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-2 border-[var(--color-border)] border-t-[var(--color-info)]"></div>
+                                PDF oluşturuluyor...
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
