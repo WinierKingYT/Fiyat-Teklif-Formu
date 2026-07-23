@@ -43,47 +43,39 @@ export const generatePDF = async (elementId, filename = 'teklif.pdf', options: a
     : baseSize;
   const qual = QUALITY_MAP[quality] || QUALITY_MAP.high;
 
-  try {
-    const { default: html2pdf } = await import('html2pdf.js');
+    try {
+        const { default: html2pdf } = await import('html2pdf.js');
 
-    const opt = {
-      margin: margin,
-      filename: filename,
-      image: { type: 'png' as any },
-      html2canvas: {
-        scale: qual.scale,
-        useCORS: true,
-        logging: false,
-        letterRendering: qual.letterRendering,
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: [size.width, size.height],
-        orientation: isLandscape ? 'landscape' : 'portrait',
-        filters: ['ASCIIHexEncode'],
-        compress: true,
-      },
-      pagebreak: { mode: ['css'] },
-    } as any;
+        const opt = {
+            margin: margin,
+            filename: filename,
+            image: { type: 'png' as any },
+            html2canvas: {
+                scale: qual.scale,
+                useCORS: true,
+                logging: false,
+                letterRendering: qual.letterRendering,
+            },
+            jsPDF: {
+                unit: 'mm',
+                format: [size.width, size.height],
+                orientation: isLandscape ? 'landscape' : 'portrait',
+                filters: ['ASCIIHexEncode'],
+                compress: true,
+                properties: {
+                    title: docTitle,
+                    author: author,
+                    subject: subject,
+                    keywords: keywords,
+                    creator: 'TeklifApp v6',
+                },
+            },
+            pagebreak: { mode: ['css'] },
+        } as any;
 
-    const worker = html2pdf().set(opt);
-
-    if (typeof worker.outputPdf === 'function') {
-      const pdf = await worker.from(element).outputPdf('arraybuffer');
-      const doc = await import('jspdf').then(m => (m.default as any).doc);
-      if (doc) {
-        doc.setProperties({
-          title: docTitle,
-          author: author,
-          subject: subject,
-          keywords: keywords,
-          creator: 'TeklifApp v6',
-        });
-      }
-    }
-
-    await worker.from(element).save();
-    Logger.log('PDF generated successfully:', { pageSize, quality, size });
+        const worker = html2pdf().set(opt);
+        await worker.from(element).save();
+        Logger.log('PDF generated successfully:', { pageSize, quality, size });
   } catch (error) {
     Logger.error('PDF generation error:', error);
     toast.error('PDF oluşturulurken bir hata oluştu.');
@@ -91,12 +83,44 @@ export const generatePDF = async (elementId, filename = 'teklif.pdf', options: a
 };
 
 export const printQuote = (elementId, options: any = {}) => {
-  const element = document.getElementById(elementId);
-  if (!element) {
-    Logger.error('Print failed: Element not found');
-    return;
-  }
-  window.print();
+    const element = document.getElementById(elementId);
+    if (!element) {
+        Logger.error('Print failed: Element not found');
+        return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        Logger.error('Print failed: Could not open print window');
+        window.print();
+        return;
+    }
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(s => s.outerHTML)
+        .join('\n');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Yazdır - Fiyat Teklifi</title>
+            ${styles}
+            <style>
+                body { margin: 0; padding: 10mm; }
+                @page { margin: 0; }
+                @media print {
+                    body { margin: 0; padding: 0; }
+                    .no-print { display: none !important; }
+                }
+            </style>
+        </head>
+        <body>
+            ${element.innerHTML}
+            <script>
+                window.onload = function() { window.print(); window.close(); };
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 };
 
 export const PAGE_SIZE_OPTIONS = Object.keys(PAGE_SIZES).map(key => ({

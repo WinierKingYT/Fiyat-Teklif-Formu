@@ -65,43 +65,12 @@ const QuoteBuilder = ({
     resetQuote
   } = useQuote();
 
-  const { viewMode, setIsLivePreviewMode } = useUI();
+  const { setIsLivePreviewMode } = useUI();
   const { t } = useTranslation(quoteData?.language);
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(400);
-  const [isResizing, setIsResizing] = useState(false);
-
-  const startResizing = useCallback(() => {
-    setIsResizing(true);
-  }, []);
-
-  const stopResizing = useCallback(() => {
-    setIsResizing(false);
-  }, []);
-
-  const resize = useCallback(
-    (mouseMoveEvent) => {
-      if (isResizing) {
-        let newWidth = mouseMoveEvent.clientX - 16;
-        if (newWidth < 280) newWidth = 280;
-        if (newWidth > 800) newWidth = 800;
-        setSidebarWidth(newWidth);
-      }
-    },
-    [isResizing]
-  );
-
-  useEffect(() => {
-    window.addEventListener("mousemove", resize);
-    window.addEventListener("mouseup", stopResizing);
-    return () => {
-      window.removeEventListener("mousemove", resize);
-      window.removeEventListener("mouseup", stopResizing);
-    };
-  }, [resize, stopResizing]);
 
   const totalAmount = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
@@ -193,87 +162,77 @@ const QuoteBuilder = ({
         </button>
       </div>
 
-      <div
-        className="builder-grid"
-        style={{
-          gridTemplateColumns: viewMode === 'mobile' ? '1fr' : `${sidebarWidth}px 16px 1fr`,
-          gap: '24px',
-        }}
-      >
-        <div className="space-y-4">
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">{t('customerInfo')}</h3>
-            </div>
-            <div className="card-body">
-              <CustomerInfoForm
-                data={customerData}
-                onChange={updateCustomerData}
-                onSelectCustomer={() => setIsCustomerModalOpen(true)}
-              />
-            </div>
+      {/* Top row: Customer Info + Company Info + Quote Details side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">{t('customerInfo')}</h3>
           </div>
-
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">{t('companyInfo')}</h3>
-            </div>
-            <div className="card-body">
-              <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-                  <FileText size={16} className="text-[var(--color-primary)]" />
-                </div>
-                <span className="card-title">{t('quoteDetails')}</span>
-              </div>
-            </div>
-            <div className="card-body">
-              <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
-              <div className="mt-5 pt-4 border-t border-[var(--color-border)]">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-[var(--color-bg-muted)] flex items-center justify-center">
-                      <Landmark size={13} className="text-[var(--color-text-secondary)]" />
-                    </div>
-                    <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
-                  </div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenBankManager}>
-                    <Landmark size={14} /> {t('bankManagement')}
-                  </button>
-                </div>
-                <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
-              </div>
-            </div>
+          <div className="card-body">
+            <CustomerInfoForm
+              data={customerData}
+              onChange={updateCustomerData}
+              onSelectCustomer={() => setIsCustomerModalOpen(true)}
+            />
           </div>
         </div>
 
-        {viewMode !== 'mobile' && (
-          <div
-            className={`builder-resizer ${isResizing ? 'active' : ''}`}
-            onMouseDown={startResizing}
-          />
-        )}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">{t('companyInfo')}</h3>
+          </div>
+          <div className="card-body">
+            <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
+          </div>
+        </div>
 
-        <div className="space-y-6 min-w-0">
+        <div className="card">
+          <div className="card-header">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
+                <FileText size={16} className="text-[var(--color-primary)]" />
+              </div>
+              <span className="card-title">{t('quoteDetails')}</span>
+            </div>
+          </div>
+          <div className="card-body">
+            <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
+            <div className="mt-5 pt-4 border-t border-[var(--color-border)]">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-[var(--color-bg-muted)] flex items-center justify-center">
+                    <Landmark size={13} className="text-[var(--color-text-secondary)]" />
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
+                </div>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenBankManager}>
+                  <Landmark size={14} /> {t('bankManagement')}
+                </button>
+              </div>
+              <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom: Items Table (left, sticky) + Summary + Terms & Notes (right) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 md:sticky md:top-0 md:self-start">
           <ItemsTable
             items={items}
             onItemsChange={setItems}
             onAddProduct={() => setIsProductModalOpen(true)}
             currency={quoteData.currency}
           />
+        </div>
 
+        <div className="space-y-4">
           <SummarySection
             items={items}
             discount={discount}
             onDiscountChange={setDiscount}
             currency={quoteData.currency}
           />
-
           <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
         </div>
       </div>
