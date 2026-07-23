@@ -1,11 +1,14 @@
 import React from 'react';
-import { Save, Download } from 'lucide-react';
+import { Save, Download, Plus, FileSpreadsheet } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { useUI } from '../context/UIContext';
 import { useTranslation } from '../hooks/useTranslation';
+import toast from 'react-hot-toast';
+import { exportQuoteToExcel } from '../utils/excelExporter';
+import { calculateQuoteTotals } from '../utils/calculations';
 
 const StatusBar = () => {
-  const { items, quoteData, saveStatus, saveQuote } = useQuote();
+  const { items, quoteData, companyData, customerData, discount, saveStatus, saveQuote, setItems } = useQuote();
   const { isLivePreviewMode, setIsLivePreviewMode } = useUI();
   const { t } = useTranslation();
 
@@ -14,6 +17,43 @@ const StatusBar = () => {
   const total = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: quoteData?.currency || 'TRY' }).format(subtotal);
 
   const isSaving = saveStatus?.status === 'saving';
+
+  const handleAddItem = () => {
+    const newItem = {
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: '',
+      description: '',
+      quantity: 1,
+      unit: 'Adet',
+      price: 0,
+      taxRate: 20,
+      discountRate: 0,
+      total: 0,
+      image: null,
+    };
+    setItems([...items, newItem]);
+  };
+
+  const handleExcelExport = async () => {
+    try {
+      const calc = calculateQuoteTotals(items || [], discount || {}, { currency: quoteData?.currency || 'TRY' });
+      const fullQuoteData = {
+        quoteData: quoteData || {},
+        customerData: customerData || {},
+        companyData: companyData || {},
+        items: calc.items,
+        subTotal: calc.subtotal,
+        taxAmount: calc.taxTotal,
+        grandTotal: calc.grandTotal,
+        globalDiscountAmount: calc.globalDiscountAmount,
+        discount: discount
+      };
+      await exportQuoteToExcel(fullQuoteData, calc.items);
+      toast.success('Excel dosyası indirildi');
+    } catch (error) {
+      toast.error('Excel oluşturulurken hata oluştu');
+    }
+  };
 
   return (
     <div className="status-bar">
@@ -32,24 +72,32 @@ const StatusBar = () => {
       </div>
       <div className="status-bar-center">
         {itemCount > 0 && (
-          <span className="status-total">{total}</span>
+          <span className="status-total desktop-only">{total}</span>
         )}
       </div>
       <div className="status-bar-right">
+        <div className="status-bar-mobile-actions mobile-only">
+          <button onClick={handleAddItem} className="status-action-btn status-pdf-btn" title="Kalem Ekle">
+            <Plus size={14} />
+          </button>
+          <button onClick={handleExcelExport} className="status-action-btn status-pdf-btn" title="Excel">
+            <FileSpreadsheet size={14} />
+          </button>
+        </div>
         <button
           onClick={saveQuote}
           disabled={isSaving}
           className="status-action-btn status-save-btn"
         >
           <Save size={14} />
-          <span>{t('saveQuote')}</span>
+          <span className="desktop-only">{t('saveQuote')}</span>
         </button>
         <button
           onClick={() => setIsLivePreviewMode(!isLivePreviewMode)}
           className={`status-action-btn ${isLivePreviewMode ? 'status-pdf-btn-active' : 'status-pdf-btn'}`}
         >
           <Download size={14} />
-          <span>{t('pdfButton')}</span>
+          <span className="desktop-only">{t('pdfButton')}</span>
         </button>
       </div>
     </div>
