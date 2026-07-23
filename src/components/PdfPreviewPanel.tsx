@@ -126,7 +126,14 @@ const PdfPreviewPanel = React.memo(() => {
 
     const handleDownload = () => {
         const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
-        generatePDF('printable-quote-container-panel', filename, { theme: pdfConfig.theme, color: pdfConfig.color, pageSize, quality });
+        generatePDF('printable-quote-container-panel', filename, {
+            theme: pdfConfig.theme,
+            color: pdfConfig.color,
+            pageSize,
+            quality,
+            orientation: pdfConfig.pageOrientation || 'portrait',
+            margin: pdfConfig.margins === 'compact' ? 5 : pdfConfig.margins === 'wide' ? 15 : 10
+        });
     };
 
     const handlePrint = () => {
@@ -138,7 +145,10 @@ const PdfPreviewPanel = React.memo(() => {
             const element = document.getElementById('printable-quote-container-panel');
             if (!element) { toast.error('PDF alanı bulunamadı'); return; }
             const { default: html2pdf } = await import('html2pdf.js');
-            const pdfBlob = await html2pdf().set({ margin: 0, image: { type: 'png' }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).outputPdf('blob');
+            const isLandscape = pdfConfig.pageOrientation === 'landscape';
+            const shareFormat = pageSize === 'a4' && !isLandscape ? 'a4' : isLandscape ? 'a4' : pageSize;
+            const shareOrientation = isLandscape ? 'landscape' : 'portrait';
+            const pdfBlob = await html2pdf().set({ margin: 0, image: { type: 'png' }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: shareFormat, orientation: shareOrientation } }).from(element).outputPdf('blob');
             const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
             await shareQuote(pdfBlob, filename);
             toast.success('Paylaşım başarılı');
@@ -366,6 +376,25 @@ const PdfPreviewPanel = React.memo(() => {
                                             ))}
                                         </select>
                                     </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Yön</label>
+                                        <div className="grid grid-cols-2 gap-1">
+                                            <button
+                                                onClick={() => handleConfigChange('pageOrientation', 'portrait')}
+                                                className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.pageOrientation === 'portrait' ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
+                                            >
+                                                Dikey
+                                            </button>
+                                            <button
+                                                onClick={() => handleConfigChange('pageOrientation', 'landscape')}
+                                                className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.pageOrientation === 'landscape' ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
+                                            >
+                                                Yatay
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kalite</label>
                                         <select

@@ -414,6 +414,7 @@ export const QuoteProvider = ({ children }) => {
             borderRadius: 6,
             tableHeaderBg: '#f1f5f9',
             margins: 'normal',
+            pageOrientation: 'portrait',
             showTableImages: true,
             showTableUnit: true,
             showTableTax: true,

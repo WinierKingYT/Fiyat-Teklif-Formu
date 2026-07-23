@@ -21,6 +21,8 @@ export const generatePDF = async (elementId, filename = 'teklif.pdf', options: a
     color = '#000000',
     pageSize = 'a4',
     quality = 'high',
+    orientation = 'portrait',
+    margin = 0,
     title: docTitle = 'Fiyat Teklifi',
     author = 'TeklifApp',
     subject = 'Fiyat Teklifi Belgesi',
@@ -34,14 +36,18 @@ export const generatePDF = async (elementId, filename = 'teklif.pdf', options: a
     return;
   }
 
-  const size = PAGE_SIZES[pageSize] || PAGE_SIZES.a4;
+  const baseSize = PAGE_SIZES[pageSize] || PAGE_SIZES.a4;
+  const isLandscape = orientation === 'landscape';
+  const size = isLandscape
+    ? { width: baseSize.height, height: baseSize.width }
+    : baseSize;
   const qual = QUALITY_MAP[quality] || QUALITY_MAP.high;
 
   try {
     const { default: html2pdf } = await import('html2pdf.js');
 
     const opt = {
-      margin: 0,
+      margin: margin,
       filename: filename,
       image: { type: 'png' as any },
       html2canvas: {
@@ -53,7 +59,7 @@ export const generatePDF = async (elementId, filename = 'teklif.pdf', options: a
       jsPDF: {
         unit: 'mm',
         format: [size.width, size.height],
-        orientation: size.height > size.width ? 'portrait' : 'landscape',
+        orientation: isLandscape ? 'landscape' : 'portrait',
         filters: ['ASCIIHexEncode'],
         compress: true,
       },
