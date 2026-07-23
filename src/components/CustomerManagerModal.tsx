@@ -1,6 +1,7 @@
 import React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from './Modal';
+import Pagination from './Pagination';
 import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import useDebounce from '../hooks/useDebounce';
@@ -16,6 +17,8 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentCustomer, setCurrentCustomer] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 20;
 
     // Form State
     const [formData, setFormData] = useState({
@@ -119,6 +122,21 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
         [customers, debouncedSearch]
     );
 
+    const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+    const paginatedCustomers = useMemo(() =>
+        filteredCustomers.slice(0, page * PAGE_SIZE),
+        [filteredCustomers, page]
+    );
+
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+    }, []);
+
+    // Reset page on search
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
+
     const handleCancelEdit = () => {
         resetForm();
     };
@@ -216,7 +234,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                                 <p>Müşteri bulunamadı.</p>
                             </div>
                         ) : (
-                            filteredCustomers.map(customer => (
+                            paginatedCustomers.map(customer => (
                                 <div
                                     key={customer.id}
                                     className={`p-3 border rounded-lg flex justify-between items-center group transition-colors cursor-pointer ${currentCustomer?.id === customer.id
@@ -241,6 +259,15 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                             ))
                         )}
                     </div>
+                    {filteredCustomers.length > PAGE_SIZE && (
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            totalItems={filteredCustomers.length}
+                            pageSize={PAGE_SIZE}
+                            onPageChange={handlePageChange}
+                        />
+                    )}
                 </div>
 
                 {/* Right: Form */}

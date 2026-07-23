@@ -1,4 +1,4 @@
-import React from 'react'; import { useState, useEffect, useMemo } from 'react'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
 
 const HistoryList = ({ onNavigate }) => {
     const { db, isReady } = useIndexedDB();
@@ -10,6 +10,8 @@ const HistoryList = ({ onNavigate }) => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [selectAll, setSelectAll] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 20;
 
     useEffect(() => {
         if (isReady) loadQuotes();
@@ -102,6 +104,21 @@ const HistoryList = ({ onNavigate }) => {
         }),
         [quotes, debouncedSearch]
     );
+
+    const totalPages = Math.max(1, Math.ceil(filteredQuotes.length / PAGE_SIZE));
+    const paginatedQuotes = useMemo(() =>
+        filteredQuotes.slice(0, page * PAGE_SIZE),
+        [filteredQuotes, page]
+    );
+
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+    }, []);
+
+    // Reset page on search
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
 
     const formatCurrency = (amount, currency = 'TRY') => {
         const locale = currency === 'TRY' ? 'tr-TR' : 'en-US';
@@ -212,7 +229,7 @@ const HistoryList = ({ onNavigate }) => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
-                                {filteredQuotes.map((quote) => {
+                                {paginatedQuotes.map((quote) => {
                                     const quoteCurrency = quote.quoteData?.currency || 'TRY';
                                     const calc = calculateQuoteTotals(quote.items || [], quote.discount || {}, { currency: quoteCurrency });
                                     const isSelected = selectedIds.has(quote.id);
@@ -258,6 +275,15 @@ const HistoryList = ({ onNavigate }) => {
                             </tbody>
                         </table>
                     </div>
+                )}
+                {filteredQuotes.length > PAGE_SIZE && (
+                    <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        totalItems={filteredQuotes.length}
+                        pageSize={PAGE_SIZE}
+                        onPageChange={handlePageChange}
+                    />
                 )}
             </div>
 

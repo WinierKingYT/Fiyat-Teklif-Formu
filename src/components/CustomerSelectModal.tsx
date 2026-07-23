@@ -1,6 +1,7 @@
 import React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from './Modal';
+import Pagination from './Pagination';
 import { Search, User, Plus, Users } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import useDebounce from '../hooks/useDebounce';
@@ -13,6 +14,8 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
     const [customers, setCustomers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 20;
 
     useEffect(() => {
         if (isOpen && isReady) loadCustomers();
@@ -38,6 +41,21 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
         ),
         [customers, debouncedSearch]
     );
+
+    const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+    const paginatedCustomers = useMemo(() =>
+        filteredCustomers.slice(0, page * PAGE_SIZE),
+        [filteredCustomers, page]
+    );
+
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+    }, []);
+
+    // Reset page when search changes
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Müşteri Seç" size="lg">
@@ -74,7 +92,7 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
-                                {filteredCustomers.map((customer) => (
+                                {paginatedCustomers.map((customer) => (
                                     <tr key={customer.id} className="hover:bg-[var(--color-bg-hover)] transition-colors">
                                         <td className="p-3 font-medium text-[var(--color-text)]">{customer.name}</td>
                                         <td className="p-3 text-[var(--color-text)]">{customer.company}</td>
@@ -88,6 +106,15 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
                                 ))}
                             </tbody>
                         </table>
+                    )}
+                    {!loading && filteredCustomers.length > PAGE_SIZE && (
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            totalItems={filteredCustomers.length}
+                            pageSize={PAGE_SIZE}
+                            onPageChange={handlePageChange}
+                        />
                     )}
                 </div>
             </div>

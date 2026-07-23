@@ -1,6 +1,7 @@
 import React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from './Modal';
+import Pagination from './Pagination';
 import { Search, Package, Plus, Filter, CheckSquare, Square } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import useDebounce from '../hooks/useDebounce';
@@ -16,6 +17,8 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
     const [loading, setLoading] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState(new Set());
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 20;
 
     useEffect(() => {
         if (isOpen && isReady) {
@@ -79,6 +82,21 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
         [products, debouncedSearch, selectedCategory]
     );
 
+    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+    const paginatedProducts = useMemo(() =>
+        filteredProducts.slice(0, page * PAGE_SIZE),
+        [filteredProducts, page]
+    );
+
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+    }, []);
+
+    // Reset page when search/filter changes
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, selectedCategory]);
+
     const hasFilter = searchTerm || selectedCategory !== 'Tümü';
 
     return (
@@ -126,7 +144,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
-                                {filteredProducts.map((product) => {
+                                {paginatedProducts.map((product) => {
                                     const isSelected = selectedProducts.has(product.id);
                                     return (
                                         <tr key={product.id} className={`hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer ${isSelected ? 'bg-[var(--color-primary-muted)]' : ''}`} onClick={() => toggleProductSelection(product)}>
@@ -151,6 +169,15 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
                                 })}
                             </tbody>
                         </table>
+                    )}
+                    {!loading && filteredProducts.length > PAGE_SIZE && (
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            totalItems={filteredProducts.length}
+                            pageSize={PAGE_SIZE}
+                            onPageChange={handlePageChange}
+                        />
                     )}
                 </div>
 

@@ -1,6 +1,7 @@
 import React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Modal from './Modal';
+import Pagination from './Pagination';
 import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import useDebounce from '../hooks/useDebounce';
@@ -22,6 +23,8 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentProduct, setCurrentProduct] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 20;
     const [showCategoryManager, setShowCategoryManager] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -238,6 +241,21 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         [products, debouncedSearch, selectedCategory]
     );
 
+    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+    const paginatedProducts = useMemo(() =>
+        filteredProducts.slice(0, page * PAGE_SIZE),
+        [filteredProducts, page]
+    );
+
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+    }, []);
+
+    // Reset page on search/filter change
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, selectedCategory]);
+
     const handleCancelEdit = () => {
         resetForm();
     };
@@ -405,7 +423,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                             <span className="w-24 text-right">Fiyat</span>
                                             <span className="w-8"></span>
                                         </div>
-                                        {filteredProducts.map(product => (
+                                        {paginatedProducts.map(product => (
                                             <div
                                                 key={product.id}
                                                 className={`p-3 border rounded-lg flex justify-between items-center group transition-colors cursor-pointer ${currentProduct?.id === product.id
@@ -444,7 +462,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {filteredProducts.map(product => (
+                                        {paginatedProducts.map(product => (
                                             <div
                                                 key={product.id}
                                                 className={`border rounded-lg overflow-hidden group transition-all cursor-pointer flex flex-col ${currentProduct?.id === product.id
@@ -487,6 +505,15 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                             </>
                         )}
                     </div>
+                    {filteredProducts.length > PAGE_SIZE && (
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            totalItems={filteredProducts.length}
+                            pageSize={PAGE_SIZE}
+                            onPageChange={handlePageChange}
+                        />
+                    )}
                 </div >
 
                 {/* Right: Form */}

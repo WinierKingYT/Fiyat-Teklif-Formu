@@ -1,4 +1,4 @@
-import React from 'react'; import { useState, useEffect, useMemo } from 'react'; import Modal from './Modal'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Modal from './Modal'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
 
 const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
     const { db, isReady } = useIndexedDB();
@@ -7,6 +7,8 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 20;
 
     useEffect(() => {
         if (isOpen && isReady) loadQuotes();
@@ -60,6 +62,21 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
         }),
         [quotes, debouncedSearch]
     );
+
+    const totalPages = Math.max(1, Math.ceil(filteredQuotes.length / PAGE_SIZE));
+    const paginatedQuotes = useMemo(() =>
+        filteredQuotes.slice(0, page * PAGE_SIZE),
+        [filteredQuotes, page]
+    );
+
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+    }, []);
+
+    // Reset page on search
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
 
     const formatCurrency = (amount, currency = 'TRY') => {
         const locale = currency === 'TRY' ? 'tr-TR' : 'en-US';
@@ -117,7 +134,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--color-border)]">
-                                    {filteredQuotes.map((quote) => {
+                                    {paginatedQuotes.map((quote) => {
                                         const quoteCurrency = quote.quoteData?.currency || 'TRY';
                                         const calc = calculateQuoteTotals(quote.items || [], quote.discount || {}, { currency: quoteCurrency });
                                         return (
@@ -150,6 +167,15 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
                                 </tbody>
                             </table>
                         </div>
+                    )}
+                    {filteredQuotes.length > PAGE_SIZE && (
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            totalItems={filteredQuotes.length}
+                            pageSize={PAGE_SIZE}
+                            onPageChange={handlePageChange}
+                        />
                     )}
                 </div>
             </div>
