@@ -734,7 +734,7 @@ export const QuoteProvider = ({ children }) => {
 
     const saveQuote = async (isFinal = false) => {
         if (!isReady) {
-            alert('Veritabanı hazır değil!');
+            toast.error('Veritabanı hazır değil!');
             return;
         }
 

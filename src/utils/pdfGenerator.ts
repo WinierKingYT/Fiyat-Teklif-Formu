@@ -1,4 +1,5 @@
 import Logger from './logger';
+import toast from 'react-hot-toast';
 
 const PAGE_SIZES = {
   'a4': { width: 210, height: 297 },
@@ -29,7 +30,7 @@ export const generatePDF = async (elementId, filename = 'teklif.pdf', options: a
   const element = document.getElementById(elementId);
   if (!element) {
     Logger.error('PDF generation failed: Element not found');
-    alert('PDF oluşturulacak alan bulunamadı!');
+    toast.error('PDF oluşturulacak alan bulunamadı!');
     return;
   }
 
@@ -79,7 +80,7 @@ export const generatePDF = async (elementId, filename = 'teklif.pdf', options: a
     Logger.log('PDF generated successfully:', { pageSize, quality, size });
   } catch (error) {
     Logger.error('PDF generation error:', error);
-    alert('PDF oluşturulurken bir hata oluştu.');
+    toast.error('PDF oluşturulurken bir hata oluştu.');
   }
 };
 

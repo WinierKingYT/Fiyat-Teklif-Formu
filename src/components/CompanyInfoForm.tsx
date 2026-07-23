@@ -2,6 +2,7 @@ import React from 'react';
 import { useState, useRef } from 'react';
 import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import SignatureCanvas from './SignatureCanvas';
+import ConfirmDialog from './ConfirmDialog';
 import { useQuote } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ const CompanyInfoForm = ({ data, onChange }) => {
     const [showDetails, setShowDetails] = useState(false);
     const [touched, setTouched] = useState<Record<string, boolean>>({});
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [confirmClear, setConfirmClear] = useState<{ field: string; isOpen: boolean }>({ field: '', isOpen: false });
 
     const isFilled = data?.name && (data?.phone || data?.email);
 
@@ -58,8 +60,18 @@ const CompanyInfoForm = ({ data, onChange }) => {
     };
 
     const clearLogo = () => {
-        onChange('logo', null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        setConfirmClear({ field: 'logo', isOpen: true });
+    };
+
+    const clearStamp = () => {
+        setConfirmClear({ field: 'stamp', isOpen: true });
+    };
+
+    const handleConfirmClear = () => {
+        const field = confirmClear.field;
+        onChange(field, null);
+        if (field === 'logo' && fileInputRef.current) fileInputRef.current.value = '';
+        setConfirmClear({ field: '', isOpen: false });
     };
 
     const handleSaveAsDefault = () => {
@@ -81,7 +93,7 @@ const CompanyInfoForm = ({ data, onChange }) => {
     };
 
     return (
-        <div className="card">
+        <><div className="card">
             <div className="card-header">
                 <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
@@ -200,7 +212,7 @@ const CompanyInfoForm = ({ data, onChange }) => {
                                     </div>
                                     <div className="flex gap-2 justify-center mt-2">
                                         <button type="button" className="btn btn-outline btn-sm" onClick={() => document.getElementById('stampUpload').click()}><Upload size={13} /> {t('select')}</button>
-                                        {data.stamp && <button type="button" className="btn btn-danger btn-sm" onClick={() => onChange('stamp', null)}><Trash size={13} /> {t('delete')}</button>}
+                                        {data.stamp && <button type="button" className="btn btn-danger btn-sm" onClick={clearStamp}><Trash size={13} /> {t('delete')}</button>}
                                     </div>
                                 </div>
                                 <input type="file" id="stampUpload" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => onChange('stamp', e.target.result); reader.readAsDataURL(file); } }} />
@@ -210,6 +222,14 @@ const CompanyInfoForm = ({ data, onChange }) => {
                 )}
             </div>
         </div>
+        <ConfirmDialog
+            isOpen={confirmClear.isOpen}
+            title={t('delete')}
+            message={`${confirmClear.field === 'logo' ? t('logo') : t('stamp')} silinecek. Emin misiniz?`}
+            variant="danger"
+            onConfirm={handleConfirmClear}
+            onCancel={() => setConfirmClear({ field: '', isOpen: false })}
+        /></>
     );
 };
 

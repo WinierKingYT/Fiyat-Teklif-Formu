@@ -35,6 +35,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { sanitizeInput } from "../utils/sanitize";
 import { evaluateMathExpression } from "../utils/smartCalc";
 import * as XLSX from "xlsx";
+import toast from "react-hot-toast";
 const SortableRow = memo(
   ({
     item,
@@ -669,13 +670,13 @@ const ItemsTable = ({
         if (newItems.length > 0) {
           onItemsChange([...items, ...newItems]);
           Logger.log(`${newItems.length} items imported from Excel.`);
-          alert(`${newItems.length} ${t("itemsAddedSuccessfully")}`);
+          toast.success(`${newItems.length} ${t("itemsAddedSuccessfully")}`);
         } else {
-          alert(t("noValidExcelData"));
+          toast.error(t("noValidExcelData"));
         }
       } catch (error) {
         Logger.error("Excel import error:", error);
-        alert(t("excelReadError"));
+        toast.error(t("excelReadError"));
       }
     };
     reader.readAsArrayBuffer(file);
