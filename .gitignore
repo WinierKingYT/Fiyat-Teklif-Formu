@@ -121,3 +121,9 @@ dev-dist/
 
 # Local MCP config with secrets
 .mcp/config.json
+
+# OpenCode config
+.opencode/
+
+# Bundle analysis
+stats.html
