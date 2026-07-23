@@ -144,6 +144,16 @@
 .card-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border); }
 .card-title { font-size: 0.875rem; font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-sans); letter-spacing: -0.01em; }
 .card-body { padding: 1.25rem; }
+
+/* ===== MOBILE BOTTOM SHEET MODAL ===== */
+.modal-bottom-sheet { align-items: flex-end !important; padding: 0 !important; }
+.modal-bottom-sheet > div { max-width: 100% !important; max-height: 90vh !important; border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important; margin-top: auto; }
+.modal-drag-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--color-border); margin: 0.5rem auto; flex-shrink: 0; }
+@media (max-width: 767px) {
+  .modal-fullscreen-mobile { align-items: flex-end !important; padding: 0 !important; }
+  .modal-fullscreen-mobile > div { max-width: 100% !important; max-height: 92vh !important; border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important; margin-top: auto; width: 100%; }
+  .modal-fullscreen-mobile .modal-drag-handle { display: block; }
+}
 .section-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; }
 .section-title { font-size: 0.875rem; font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 0.5rem; letter-spacing: -0.01em; }
 .section-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }

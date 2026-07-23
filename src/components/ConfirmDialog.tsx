@@ -10,6 +10,8 @@ const variantConfig = {
 
 const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const isMobile = () => window.innerWidth < 768;
+
 const ConfirmDialog = ({
     isOpen,
     onConfirm,
@@ -24,6 +26,10 @@ const ConfirmDialog = ({
     const [closing, setClosing] = useState(false);
     const dialogRef = useRef(null);
     const prevFocusRef = useRef(null);
+    const [mobile, setMobile] = useState(false);
+    const touchStartY = useRef(0);
+    const touchDeltaY = useRef(0);
+    const isDragging = useRef(false);
 
     const handleCancel = useCallback(() => {
         setClosing(true);
@@ -47,6 +53,7 @@ const ConfirmDialog = ({
         if (isOpen) {
             setVisible(true);
             setClosing(false);
+            setMobile(window.innerWidth < 768);
             prevFocusRef.current = document.activeElement;
         } else if (visible) {
             handleCancel();
@@ -93,18 +100,55 @@ const ConfirmDialog = ({
         }
     }, [visible]);
 
+    const handleTouchStart = (e) => {
+        touchStartY.current = e.touches[0].clientY;
+        touchDeltaY.current = 0;
+        isDragging.current = true;
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging.current) return;
+        touchDeltaY.current = e.touches[0].clientY - touchStartY.current;
+        if (touchDeltaY.current > 0 && dialogRef.current) {
+            const translate = Math.min(touchDeltaY.current, 200);
+            dialogRef.current.style.transform = `translateY(${translate}px)`;
+            dialogRef.current.style.transition = 'none';
+        }
+    };
+
+    const handleTouchEnd = () => {
+        isDragging.current = false;
+        if (touchDeltaY.current > 100) {
+            handleCancel();
+        } else if (dialogRef.current) {
+            dialogRef.current.style.transform = '';
+            dialogRef.current.style.transition = '';
+        }
+    };
+
     if (!visible) return null;
 
     const config = variantConfig[variant] || variantConfig.danger;
     const Icon = config.icon;
 
+    const overlayClass = `fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm ${closing ? 'animate-fadeOut' : 'animate-fadeIn'} ${mobile ? 'modal-bottom-sheet' : ''}`;
+    const contentClass = `bg-[var(--color-bg-card)] shadow-lg w-full ${closing ? (mobile ? 'animate-slideDown' : 'animate-scaleOut') : ''}`;
+
     return createPortal(
         <div
-            className={`fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm ${closing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+            className={overlayClass}
             onClick={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
+            onTouchStart={mobile ? handleTouchStart : undefined}
+            onTouchMove={mobile ? handleTouchMove : undefined}
+            onTouchEnd={mobile ? handleTouchEnd : undefined}
         >
-            <div ref={dialogRef} className={`bg-[var(--color-bg-card)] rounded-[var(--radius-lg)] shadow-lg max-w-md w-full ${closing ? 'animate-scaleOut' : 'animate-scaleIn'}`}>
-                <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)]">
+            <div ref={dialogRef} className={contentClass} style={{
+                maxWidth: mobile ? '100%' : '500px',
+                borderRadius: mobile ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
+                transition: 'transform 0.3s ease-out',
+            }}>
+                {mobile && <div className="modal-drag-handle" />}
+                <div className={`flex items-center justify-between p-5 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : ''}`}>
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-[var(--radius)] bg-[var(--color-bg-muted)]" style={{ color: config.iconColor }}>
                             <Icon size={22} />

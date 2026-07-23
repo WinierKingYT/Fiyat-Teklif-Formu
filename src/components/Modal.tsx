@@ -14,11 +14,17 @@ const sizeMap = {
 
 const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const isMobile = () => window.innerWidth < 768;
+
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     const [visible, setVisible] = useState(false);
     const [closing, setClosing] = useState(false);
     const modalRef = useRef(null);
     const prevFocusRef = useRef(null);
+    const touchStartY = useRef(0);
+    const touchDeltaY = useRef(0);
+    const isDragging = useRef(false);
+    const [mobile, setMobile] = useState(false);
 
     const handleClose = useCallback(() => {
         setClosing(true);
@@ -33,6 +39,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         if (isOpen) {
             setVisible(true);
             setClosing(false);
+            setMobile(window.innerWidth < 768);
             prevFocusRef.current = document.activeElement;
         } else if (visible) {
             handleClose();
@@ -89,22 +96,59 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         }
     }, [visible]);
 
+    const handleTouchStart = (e) => {
+        touchStartY.current = e.touches[0].clientY;
+        touchDeltaY.current = 0;
+        isDragging.current = true;
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isDragging.current) return;
+        touchDeltaY.current = e.touches[0].clientY - touchStartY.current;
+        if (touchDeltaY.current > 0 && modalRef.current) {
+            const translate = Math.min(touchDeltaY.current, 200);
+            modalRef.current.style.transform = `translateY(${translate}px)`;
+            modalRef.current.style.transition = 'none';
+        }
+    };
+
+    const handleTouchEnd = () => {
+        isDragging.current = false;
+        if (touchDeltaY.current > 100) {
+            handleClose();
+        } else if (modalRef.current) {
+            modalRef.current.style.transform = '';
+            modalRef.current.style.transition = '';
+        }
+    };
+
     if (!visible) return null;
+
+    const overlayClass = `fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm ${closing ? 'animate-fadeOut' : 'animate-fadeIn'} ${mobile ? 'modal-bottom-sheet' : ''}`;
 
     return createPortal(
         <div
-            className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm ${closing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+            className={overlayClass}
             onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+            onTouchStart={mobile ? handleTouchStart : undefined}
+            onTouchMove={mobile ? handleTouchMove : undefined}
+            onTouchEnd={mobile ? handleTouchEnd : undefined}
         >
             <div
                 ref={modalRef}
-                className={`bg-[var(--color-bg-card)] rounded-[var(--radius-lg)] w-full max-h-[85vh] overflow-hidden shadow-lg flex flex-col ${closing ? 'animate-scaleOut' : 'animate-scaleIn'}`}
-                style={{ maxWidth: sizeMap[size] || '500px' }}
+                className={`bg-[var(--color-bg-card)] w-full max-h-[85vh] overflow-hidden shadow-lg flex flex-col ${closing ? (mobile ? 'animate-slideDown' : 'animate-scaleOut') : ''}`}
+                style={{
+                    maxWidth: mobile ? '100%' : (sizeMap[size] || '500px'),
+                    borderRadius: mobile ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
+                    transform: mobile ? 'none' : undefined,
+                    transition: mobile ? 'transform 0.3s ease-out' : undefined,
+                }}
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
             >
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
+                {mobile && <div className="modal-drag-handle" />}
+                <div className={`flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : ''}`}>
                     <h2 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
                         {title}
                     </h2>

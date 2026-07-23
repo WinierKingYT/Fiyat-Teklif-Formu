@@ -25,3 +25,12 @@ p { color: var(--color-text-secondary); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+* { -webkit-tap-highlight-color: transparent; }
+input, textarea, select, button { touch-action: manipulation; }
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .sidebar-mobile-drawer { padding-bottom: env(safe-area-inset-bottom); }
+  .status-bar { padding-bottom: env(safe-area-inset-bottom); }
+}
