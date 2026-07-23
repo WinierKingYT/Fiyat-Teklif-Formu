@@ -12,6 +12,11 @@ import {
   Table,
   Grid3X3,
   AlertCircle,
+  Copy,
+  CheckSquare,
+  Square,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   DndContext,
@@ -42,12 +47,16 @@ const SortableRow = memo(
     index,
     handleItemChange,
     removeItem,
+    duplicateItem,
     formatCurrency,
     onKeyDown,
     t,
     getFieldClass,
     handleRowBlur,
     rowErrors,
+    selected,
+    toggleSelectItem,
+    onContextMenu,
   }: any) => {
     const {
       attributes,
@@ -84,20 +93,29 @@ const SortableRow = memo(
         ref={setNodeRef}
         style={style as React.CSSProperties}
         className="group hover:bg-[var(--color-bg-muted)]/40"
+        onContextMenu={onContextMenu}
       >
         {" "}
+        <td className="w-6 px-1">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
+            className={`p-0.5 rounded transition-colors ${selected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] opacity-0 group-hover:opacity-60'}`}
+          >
+            {selected ? <CheckSquare size={13} /> : <Square size={13} />}
+          </button>
+        </td>
         <td
           {...attributes}
           {...listeners}
-          className={`cursor-grab active:cursor-grabbing w-10 ${rowErrors && Object.keys(rowErrors).length > 0 ? 'relative' : ''}`}
+          className={`cursor-grab active:cursor-grabbing w-8 ${rowErrors && Object.keys(rowErrors).length > 0 ? 'relative' : ''}`}
         >
-          {" "}
           <GripVertical
-            size={15}
+            size={13}
             className="text-[var(--color-text-muted)] opacity-40 group-hover:opacity-70 transition-opacity"
-          />{" "}
+          />
           {rowErrors && Object.keys(rowErrors).length > 0 && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-error)] text-white text-[9px] font-bold flex items-center justify-center" title={`${Object.keys(rowErrors).length} hata`}>
+            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[var(--color-error)] text-white text-[8px] font-bold flex items-center justify-center" title={`${Object.keys(rowErrors).length} hata`}>
               {Object.keys(rowErrors).length}
             </div>
           )}
@@ -250,16 +268,24 @@ const SortableRow = memo(
               (1 - (parseFloat(item.discountRate) || 0) / 100),
           )}{" "}
         </td>{" "}
-        <td className="w-10">
-          {" "}
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => removeItem(index)}
-          >
-            {" "}
-            <Trash size={14} />{" "}
-          </button>{" "}
+        <td className="w-16">
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => duplicateItem(index)}
+              title="Çoğalt"
+            >
+              <Copy size={13} />
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm p-1 text-[var(--color-text-muted)] hover:text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => removeItem(index)}
+            >
+              <Trash size={13} />
+            </button>
+          </div>
         </td>{" "}
       </tr>
     );
@@ -267,7 +293,7 @@ const SortableRow = memo(
 );
 SortableRow.displayName = "SortableRow";
 const SortableRowCard = memo(
-  ({ item, index, handleItemChange, removeItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors }: any) => {
+  ({ item, index, handleItemChange, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem }: any) => {
     const {
       attributes,
       listeners,
@@ -454,19 +480,68 @@ const SortableRowCard = memo(
             </div>{" "}
           </div>{" "}
         </div>{" "}
-        <button
-          type="button"
-          className="btn btn-danger btn-sm w-full flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => removeItem(index)}
-        >
-          {" "}
-          <Trash size={13} /> {t("deleteProduct")}{" "}
-        </button>{" "}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
+            className={`p-1.5 rounded-lg transition-colors ${selected ? 'text-[var(--color-primary)] bg-[var(--color-primary-muted)]' : 'text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100'}`}
+            title={selected ? 'Seçimi kaldır' : 'Seç'}
+          >
+            {selected ? <CheckSquare size={14} /> : <Square size={14} />}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => duplicateItem(index)}
+            title="Çoğalt"
+          >
+            <Copy size={14} />
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger btn-sm flex-1 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => removeItem(index)}
+          >
+            <Trash size={13} /> {t("deleteProduct")}
+          </button>
+        </div>
       </div>
     );
   },
 );
 SortableRowCard.displayName = "SortableRowCard";
+const ContextMenu = ({ x, y, items: menuItems, onClose }) => {
+  const ref = useRef(null);
+  React.useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+  if (!x && !y) return null;
+  return (
+    <div
+      ref={ref}
+      className="fixed z-[9999] bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-xl py-1 min-w-[160px]"
+      style={{ left: x, top: y }}
+    >
+      {menuItems.map((item, i) => (
+        item.separator ? (
+          <div key={i} className="h-px bg-[var(--color-border)] my-1" />
+        ) : (
+          <button
+            key={i}
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-left text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"
+            onClick={() => { item.onClick(); onClose(); }}
+          >
+            {item.icon && <span className="text-[var(--color-text-muted)]">{item.icon}</span>}
+            {item.label}
+          </button>
+        )
+      ))}
+    </div>
+  );
+};
+
 const ItemsTable = ({
   items,
   onItemsChange,
@@ -549,6 +624,7 @@ const ItemsTable = ({
       image: product.image,
     };
     onItemsChange([...items, newItem]);
+    addToRecentProducts(product);
     setSearchQuery("");
     setSearchResults([]);
     searchRef.current?.focus();
@@ -628,8 +704,49 @@ const ItemsTable = ({
     };
     onItemsChange(prepend ? [newItem, ...items] : [...items, newItem]);
   };
+  const duplicateItem = (index) => {
+    const original = items[index];
+    const copy = {
+      ...original,
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: (original.name || '') + ' (kopya)',
+    };
+    onItemsChange([...items.slice(0, index + 1), copy, ...items.slice(index + 1)]);
+  };
+
   const removeItem = (index) =>
     onItemsChange(items.filter((_, i) => i !== index));
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; index: number } | null>(null);
+  const moveItem = (from: number, to: number) => {
+    if (to < 0 || to >= items.length) return;
+    const copy = [...items];
+    const [removed] = copy.splice(from, 1);
+    copy.splice(to, 0, removed);
+    onItemsChange(copy);
+  };
+
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const toggleSelectItem = (index) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index); else next.add(index);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedItems.size === items.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(items.map((_, i) => i)));
+    }
+  };
+  const deleteSelected = () => {
+    if (selectedItems.size === 0) return;
+    onItemsChange(items.filter((_, i) => !selectedItems.has(i)));
+    setSelectedItems(new Set());
+  };
+
   const formatCurrency = useMemo(
     () => (amount) =>
       new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(
@@ -681,6 +798,21 @@ const ItemsTable = ({
     reader.readAsArrayBuffer(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+  const [recentProducts, setRecentProducts] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('recentProducts');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const addToRecentProducts = (product: any) => {
+    setRecentProducts(prev => {
+      const filtered = prev.filter(p => p.id !== product.id);
+      const updated = [product, ...filtered].slice(0, 5);
+      localStorage.setItem('recentProducts', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const handleKeyDown = (e, index, field) => {
     if (e.key === "Enter") {
       e.target.blur();
@@ -799,43 +931,70 @@ const ItemsTable = ({
               </button>
             )}{" "}
           </div>{" "}
-          {showSearch && searchResults.length > 0 && (
+          {showSearch && (
             <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg max-h-60 overflow-y-auto">
               {" "}
-              {searchResults.map((product, idx) => (
-                <button
-                  key={product.id || idx}
-                  onMouseDown={() => addProductFromSearch(product)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${idx === searchIndex ? "bg-[var(--color-primary-muted)] text-[var(--color-primary)]" : "text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"}`}
-                >
-                  {" "}
-                  <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center flex-shrink-0">
-                    {" "}
-                    <Package
-                      size={14}
-                      className="text-[var(--color-primary)]"
-                    />{" "}
-                  </div>{" "}
-                  <div className="flex-1 min-w-0">
-                    {" "}
-                    <div className="font-medium truncate">
-                      {product.name}
-                    </div>{" "}
-                    {product.description && (
-                      <div className="text-xs text-[var(--color-text-muted)] truncate">
-                        {product.description}
+              {searchResults.length > 0 ? (
+                <>
+                  {searchResults.map((product, idx) => (
+                    <button
+                      key={product.id || idx}
+                      onMouseDown={() => addProductFromSearch(product)}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${idx === searchIndex ? "bg-[var(--color-primary-muted)] text-[var(--color-primary)]" : "text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"}`}
+                    >
+                      {" "}
+                      <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center flex-shrink-0">
+                        {" "}
+                        <Package
+                          size={14}
+                          className="text-[var(--color-primary)]"
+                        />{" "}
+                      </div>{" "}
+                      <div className="flex-1 min-w-0">
+                        {" "}
+                        <div className="font-medium truncate">
+                          {product.name}
+                        </div>{" "}
+                        {product.description && (
+                          <div className="text-xs text-[var(--color-text-muted)] truncate">
+                            {product.description}
+                          </div>
+                        )}{" "}
+                      </div>{" "}
+                      <div className="text-sm font-semibold text-[var(--color-text)] flex-shrink-0">
+                        {" "}
+                        {new Intl.NumberFormat("tr-TR", {
+                          style: "currency",
+                          currency,
+                        }).format(product.price || 0)}{" "}
+                      </div>{" "}
+                    </button>
+                  ))}
+                </>
+              ) : searchQuery.length < 2 && recentProducts.length > 0 ? (
+                <>
+                  <div className="px-3.5 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)]">
+                    Son Kullanılanlar
+                  </div>
+                  {recentProducts.map((product, idx) => (
+                    <button
+                      key={product.id || idx}
+                      onMouseDown={() => addProductFromSearch(product)}
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center flex-shrink-0">
+                        <Package size={14} className="text-[var(--color-text-muted)]" />
                       </div>
-                    )}{" "}
-                  </div>{" "}
-                  <div className="text-sm font-semibold text-[var(--color-text)] flex-shrink-0">
-                    {" "}
-                    {new Intl.NumberFormat("tr-TR", {
-                      style: "currency",
-                      currency,
-                    }).format(product.price || 0)}{" "}
-                  </div>{" "}
-                </button>
-              ))}{" "}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{product.name}</div>
+                      </div>
+                      <div className="text-sm font-semibold text-[var(--color-text)] flex-shrink-0">
+                        {new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(product.price || 0)}
+                      </div>
+                    </button>
+                  ))}
+                </>
+              ) : null}
             </div>
           )}{" "}
         </div>{" "}
@@ -843,6 +1002,29 @@ const ItemsTable = ({
           <div className="flex items-center gap-2 px-3 py-2 mb-3 bg-[var(--color-error)]/10 border border-[var(--color-error)]/20 rounded-[var(--radius)] text-xs text-[var(--color-error)]">
             <AlertCircle size={14} />
             <span>Bazı satırlarda hatalı alanlar var. Lütfen kırmızı işaretli alanları düzeltin.</span>
+          </div>
+        )}
+        {selectedItems.size > 0 && (
+          <div className="flex items-center gap-3 px-3 py-2 mb-3 bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/20 rounded-[var(--radius)]">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            >
+              {selectedItems.size === items.length ? <CheckSquare size={13} /> : <Square size={13} />}
+              <span>{selectedItems.size}/{items.length} seçili</span>
+            </button>
+            <div className="w-px h-4 bg-[var(--color-border)]" />
+            <button
+              type="button"
+              onClick={() => {
+                const confirmed = window.confirm(`${selectedItems.size} adet kalemi silmek istediğinize emin misiniz?`);
+                if (confirmed) deleteSelected();
+              }}
+              className="flex items-center gap-1.5 text-xs text-[var(--color-error)] hover:text-[var(--color-error)] font-medium transition-colors"
+            >
+              <Trash size={13} /> Seçili Kalemleri Sil
+            </button>
           </div>
         )}
         {items.length === 0 ? (
@@ -893,9 +1075,17 @@ const ItemsTable = ({
                   <thead>
                     {" "}
                     <tr>
-                      {" "}
-                      <th className="w-10"></th>{" "}
-                      <th className="w-16 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
+                      <th className="w-6 px-1">
+                        <button
+                          type="button"
+                          onClick={toggleSelectAll}
+                          className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+                        >
+                          {selectedItems.size === items.length ? <CheckSquare size={12} /> : <Square size={12} />}
+                        </button>
+                      </th>
+                      <th className="w-8"></th>{" "}
+                      <th className="w-14 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
                         {t("image")}
                       </th>{" "}
                       <th className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide min-w-[200px]">
@@ -936,12 +1126,19 @@ const ItemsTable = ({
                           index={index}
                           handleItemChange={handleItemChange}
                           removeItem={removeItem}
+                          duplicateItem={duplicateItem}
                           formatCurrency={formatCurrency}
                           onKeyDown={handleKeyDown}
                           t={t}
                           getFieldClass={getFieldClass}
                           handleRowBlur={handleRowBlur}
                           rowErrors={getRowErrors(item)}
+                          selected={selectedItems.has(index)}
+                          toggleSelectItem={toggleSelectItem}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setContextMenu({ x: e.clientX, y: e.clientY, index });
+                          }}
                         />
                       ))}{" "}
                     </tbody>{" "}
@@ -963,11 +1160,14 @@ const ItemsTable = ({
                       index={index}
                       handleItemChange={handleItemChange}
                       removeItem={removeItem}
+                      duplicateItem={duplicateItem}
                       formatCurrency={formatCurrency}
                       t={t}
                       getFieldClass={getFieldClass}
                       handleRowBlur={handleRowBlur}
                       rowErrors={getRowErrors(item)}
+                      selected={selectedItems.has(index)}
+                      toggleSelectItem={toggleSelectItem}
                     />
                   ))}{" "}
                 </SortableContext>{" "}
@@ -1014,6 +1214,20 @@ const ItemsTable = ({
           </div>
         )}{" "}
       </div>{" "}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            { icon: <Copy size={13} />, label: 'Çoğalt', onClick: () => duplicateItem(contextMenu.index) },
+            { icon: <ArrowUp size={13} />, label: 'Yukarı Taşı', onClick: () => moveItem(contextMenu.index, contextMenu.index - 1) },
+            { icon: <ArrowDown size={13} />, label: 'Aşağı Taşı', onClick: () => moveItem(contextMenu.index, contextMenu.index + 1) },
+            { separator: true },
+            { icon: <Trash size={13} />, label: 'Sil', onClick: () => removeItem(contextMenu.index) },
+          ]}
+        />
+      )}
     </div>
   );
 };

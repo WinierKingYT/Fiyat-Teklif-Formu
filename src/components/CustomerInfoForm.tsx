@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, Plus } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import FieldError from './FieldError';
@@ -35,6 +35,25 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
         }, 200);
         return () => clearTimeout(timer);
     }, [searchQuery, db]);
+
+    const createAndSelectCustomer = async () => {
+        if (!db || !searchQuery.trim()) return;
+        const newCustomer = {
+            id: `cust-${Date.now()}`,
+            name: searchQuery.trim(),
+            company: data.company || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            address: data.address || '',
+            createdAt: new Date().toISOString(),
+        };
+        try {
+            await db.add('customers', newCustomer);
+            selectCustomer(newCustomer);
+        } catch (e) {
+            console.error('Müşteri oluşturulamadı:', e);
+        }
+    };
 
     const selectCustomer = (customer) => {
         onChange('name', customer.name || '');
@@ -134,29 +153,49 @@ const CustomerInfoForm = ({ data, onChange, onSelectCustomer }) => {
                             />
                         </div>
                         <FieldError message={errors.name} show={touched.name && !!errors.name} />
-                        {showDropdown && searchResults.length > 0 && (
+                        {showDropdown && (
                             <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg overflow-hidden">
-                                {searchResults.map((c, idx) => (
+                                {searchResults.length > 0 ? (
+                                    searchResults.map((c, idx) => (
+                                        <button
+                                            key={c.id || idx}
+                                            type="button"
+                                            onMouseDown={() => selectCustomer(c)}
+                                            className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${
+                                                idx === searchIndex
+                                                    ? 'bg-[var(--color-primary-muted)] text-[var(--color-primary)]'
+                                                    : 'text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'
+                                            }`}
+                                        >
+                                            <div className="w-7 h-7 rounded-full bg-[var(--color-bg-muted)] flex items-center justify-center flex-shrink-0">
+                                                <User size={13} className="text-[var(--color-text-muted)]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-medium truncate">{c.name}</div>
+                                                {c.company && <div className="text-xs text-[var(--color-text-muted)] truncate">{c.company}</div>}
+                                            </div>
+                                            {c.phone && <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">{c.phone}</span>}
+                                        </button>
+                                    ))
+                                ) : searchQuery.length >= 2 ? (
                                     <button
-                                        key={c.id || idx}
                                         type="button"
-                                        onMouseDown={() => selectCustomer(c)}
-                                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${
-                                            idx === searchIndex
-                                                ? 'bg-[var(--color-primary-muted)] text-[var(--color-primary)]'
-                                                : 'text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'
-                                        }`}
+                                        className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                                        onMouseDown={createAndSelectCustomer}
                                     >
-                                        <div className="w-7 h-7 rounded-full bg-[var(--color-bg-muted)] flex items-center justify-center flex-shrink-0">
-                                            <User size={13} className="text-[var(--color-text-muted)]" />
+                                        <div className="w-7 h-7 rounded-full bg-[var(--color-primary-muted)] flex items-center justify-center flex-shrink-0">
+                                            <Plus size={13} className="text-[var(--color-primary)]" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="font-medium truncate">{c.name}</div>
-                                            {c.company && <div className="text-xs text-[var(--color-text-muted)] truncate">{c.company}</div>}
+                                            <div className="font-medium text-[var(--color-primary)]">
+                                                "{searchQuery}" müşterisini oluştur
+                                            </div>
+                                            <div className="text-xs text-[var(--color-text-muted)]">
+                                                Yeni müşteri kaydı oluşturulacak
+                                            </div>
                                         </div>
-                                        {c.phone && <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">{c.phone}</span>}
                                     </button>
-                                ))}
+                                ) : null}
                             </div>
                         )}
                     </div>

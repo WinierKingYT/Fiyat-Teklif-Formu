@@ -1,12 +1,11 @@
 import React from 'react';
-import { useState, useEffect, Suspense, lazy, useCallback, useMemo } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import Layout from './components/Layout';
 import QuoteInfoForm from './components/QuoteInfoForm';
 import CustomerInfoForm from './components/CustomerInfoForm';
 import CompanyInfoForm from './components/CompanyInfoForm';
 import ItemsTable from './components/ItemsTable';
 import SummarySection from './components/SummarySection';
-import DashboardHero from './components/DashboardHero';
 import CustomerSelectModal from './components/CustomerSelectModal';
 import ProductSelectModal from './components/ProductSelectModal';
 import SavedQuotesModal from './components/SavedQuotesModal';
@@ -18,7 +17,11 @@ import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
-import { FileText, Landmark, Undo2, Redo2, FlaskConical, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
+import {
+  FileText, Landmark, Undo2, Redo2, FlaskConical, ChevronDown,
+  ChevronUp, Save, Plus, Building2, MoreHorizontal, LogOut,
+  StickyNote,
+} from 'lucide-react';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { useTranslation } from './hooks/useTranslation';
 import { Toaster, toast } from 'react-hot-toast';
@@ -72,24 +75,10 @@ const QuoteBuilder = ({
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-  const defaultCollapsed = { customer: true, company: true, quote: true };
-  const [collapsedSections, setCollapsedSections] = useState(() => {
-    try {
-      return { ...defaultCollapsed, ...JSON.parse(localStorage.getItem('collapsedSections') || '{}') };
-    } catch { return defaultCollapsed; }
+  const [rightCollapsed, setRightCollapsed] = useState<Record<string, boolean>>({
+    company: true, bank: true, terms: true, quoteDetails: true,
   });
-  const toggleSection = (key) => {
-    setCollapsedSections(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      localStorage.setItem('collapsedSections', JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const totalAmount = useMemo(() => {
-    const subtotal = items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: quoteData?.currency || 'TRY' }).format(subtotal);
-  }, [items, quoteData?.currency]);
+  const toggleRight = (key: string) => setRightCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     const handleOpenHistory = () => setIsHistoryModalOpen(true);
@@ -140,85 +129,72 @@ const QuoteBuilder = ({
     loadQuote(quote);
   };
 
+  const today = new Date().toLocaleDateString('tr-TR', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+  const itemCount = items.length;
+
   return (
     <div className="fade-in-up">
-      <DashboardHero
-        quoteData={quoteData}
-        items={items}
-        totalAmount={totalAmount}
-      />
-
-      {/* Toolbar */}
-      <div className="flex items-center gap-1.5 py-1.5 px-1 mb-2">
-        <button
-          onClick={undo}
-          disabled={!canUndo}
-          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Geri Al (Ctrl+Z)"
-        >
-          <Undo2 size={16} />
-        </button>
-        <button
-          onClick={redo}
-          disabled={!canRedo}
-          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          title="İleri Al (Ctrl+Y)"
-        >
-          <Redo2 size={16} />
-        </button>
-        <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-        <button
-          onClick={fillTestData}
-          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-warning)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-          title="Test Verileriyle Doldur"
-        >
-          <FlaskConical size={16} />
-        </button>
-        <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-        <button
-          onClick={() => {
-            const allCollapsed = collapsedSections.customer && collapsedSections.company && collapsedSections.quote;
-            const newState = !allCollapsed;
-            ['customer', 'company', 'quote'].forEach(key => {
-              setCollapsedSections(prev => {
-                const next = { ...prev, [key]: newState };
-                localStorage.setItem('collapsedSections', JSON.stringify(next));
-                return next;
-              });
-            });
-          }}
-          className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-          title={collapsedSections.customer && collapsedSections.company && collapsedSections.quote ? 'Tümünü Genişlet' : 'Tümünü Daralt'}
-        >
-          {collapsedSections.customer && collapsedSections.company && collapsedSections.quote ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
-        </button>
+      {/* ─── HEADER BAR ─── */}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <input
+            type="text"
+            value={quoteData.title || ''}
+            onChange={(e) => updateQuoteData('title', e.target.value)}
+            placeholder="Teklif Başlığı"
+            className="text-lg font-bold bg-transparent border-0 outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/30 min-w-[160px] p-0"
+          />
+          <span className="text-[11px] text-[var(--color-text-muted)] hidden sm:inline whitespace-nowrap">{today}</span>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <select
+            value={quoteData.currency || 'TRY'}
+            onChange={(e) => updateQuoteData('currency', e.target.value)}
+            className="text-xs font-semibold bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded-[var(--radius)] px-2 py-1.5 text-[var(--color-text)] outline-none cursor-pointer"
+          >
+            <option value="TRY">₺ TRY</option>
+            <option value="USD">$ USD</option>
+            <option value="EUR">€ EUR</option>
+            <option value="GBP">£ GBP</option>
+          </select>
+          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
+          <button onClick={undo} disabled={!canUndo} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Geri Al (Ctrl+Z)"><Undo2 size={15} /></button>
+          <button onClick={redo} disabled={!canRedo} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="İleri Al (Ctrl+Y)"><Redo2 size={15} /></button>
+          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
+          <button onClick={saveQuote} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors" title="Kaydet (Ctrl+S)"><Save size={15} /></button>
+          <button onClick={handlePdfShortcut} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors" title="PDF Önizleme (Ctrl+P)"><FileText size={15} /></button>
+          <button onClick={handleNewQuote} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors" title="Yeni Teklif (Ctrl+N)"><Plus size={15} /></button>
+          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
+          <div className="relative group">
+            <button className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"><MoreHorizontal size={15} /></button>
+            <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-lg py-1 min-w-[160px] z-50 hidden group-hover:block">
+              <button onClick={fillTestData} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><FlaskConical size={13} /> Test Verisi Doldur</button>
+              <button onClick={async () => { await resetQuote(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><LogOut size={13} /> Sıfırla</button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Top row: Customer Info + Company Info + Quote Details side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-        <div className="card">
-          <button
-            onClick={() => toggleSection('customer')}
-            className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className="card-title shrink-0">{t('customerInfo')}</h3>
-              {collapsedSections.customer && (
-                <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-[180px]">
-                  {customerData.name || customerData.company || '—'}
-                </span>
-              )}
+      {/* ─── MAIN GRID: Left 2/3 + Right 1/3 ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+        {/* ── LEFT COLUMN ── */}
+        <div className="lg:col-span-2 space-y-3">
+          {/* Müşteri Bilgisi (always visible, compact) */}
+          <div className="card">
+            <div className="card-header">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
+                  <Building2 size={14} className="text-[var(--color-primary)]" />
+                </div>
+                <span className="card-title text-sm">{t('customerInfo')}</span>
+                {customerData.name && (
+                  <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-[200px]">{customerData.name}{customerData.company ? ` — ${customerData.company}` : ''}</span>
+                )}
+              </div>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setIsCustomerModalOpen(true)}>
+                <Building2 size={13} /> Seç
+              </button>
             </div>
-            <ChevronDown
-              size={16}
-              className="text-[var(--color-text-muted)] shrink-0 transition-transform duration-200"
-              style={{ transform: collapsedSections.customer ? 'rotate(-90deg)' : 'rotate(0deg)' }}
-            />
-          </button>
-          <div
-            className="overflow-hidden transition-all duration-200"
-            style={{ maxHeight: collapsedSections.customer ? '0px' : '500px' }}
-          >
             <div className="card-body">
               <CustomerInfoForm
                 data={customerData}
@@ -227,87 +203,8 @@ const QuoteBuilder = ({
               />
             </div>
           </div>
-        </div>
 
-        <div className="card">
-          <button
-            onClick={() => toggleSection('company')}
-            className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className="card-title shrink-0">{t('companyInfo')}</h3>
-              {collapsedSections.company && (
-                <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-[180px]">
-                  {companyData.name || companyData.authorized || '—'}
-                </span>
-              )}
-            </div>
-            <ChevronDown
-              size={16}
-              className="text-[var(--color-text-muted)] shrink-0 transition-transform duration-200"
-              style={{ transform: collapsedSections.company ? 'rotate(-90deg)' : 'rotate(0deg)' }}
-            />
-          </button>
-          <div
-            className="overflow-hidden transition-all duration-200"
-            style={{ maxHeight: collapsedSections.company ? '0px' : '500px' }}
-          >
-            <div className="card-body">
-              <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <button
-            onClick={() => toggleSection('quote')}
-            className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center shrink-0">
-                <FileText size={14} className="text-[var(--color-primary)]" />
-              </div>
-              <span className="card-title shrink-0">{t('quoteDetails')}</span>
-              {collapsedSections.quote && (
-                <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-[160px]">
-                  {quoteData.number || quoteData.title || '—'}
-                </span>
-              )}
-            </div>
-            <ChevronDown
-              size={16}
-              className="text-[var(--color-text-muted)] shrink-0 transition-transform duration-200"
-              style={{ transform: collapsedSections.quote ? 'rotate(-90deg)' : 'rotate(0deg)' }}
-            />
-          </button>
-          <div
-            className="overflow-hidden transition-all duration-200"
-            style={{ maxHeight: collapsedSections.quote ? '0px' : '2000px' }}
-          >
-            <div className="card-body">
-              <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
-              <div className="mt-5 pt-4 border-t border-[var(--color-border)]">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-[var(--color-bg-muted)] flex items-center justify-center">
-                      <Landmark size={13} className="text-[var(--color-text-secondary)]" />
-                    </div>
-                    <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
-                  </div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenBankManager}>
-                    <Landmark size={14} /> {t('bankManagement')}
-                  </button>
-                </div>
-                <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom: Items Table (left, sticky) + Summary + Terms & Notes (right) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-2 md:sticky md:top-0 md:self-start">
+          {/* Kalemler */}
           <ItemsTable
             items={items}
             onItemsChange={setItems}
@@ -316,14 +213,84 @@ const QuoteBuilder = ({
           />
         </div>
 
-        <div className="space-y-4">
+        {/* ── RIGHT COLUMN (sticky) ── */}
+        <div className="lg:sticky lg:top-3 space-y-3">
+          {/* Özet (always visible) */}
           <SummarySection
             items={items}
             discount={discount}
             onDiscountChange={setDiscount}
             currency={quoteData.currency}
           />
-          <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+
+          {/* Firma Bilgisi (collapsible) */}
+          <div className="card">
+            <button onClick={() => toggleRight('company')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
+                  <Building2 size={13} className="text-[var(--color-text-secondary)]" />
+                </div>
+                <span className="text-sm font-semibold text-[var(--color-text)]">{t('companyInfo')}</span>
+              </div>
+              {rightCollapsed.company ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
+            </button>
+            {!rightCollapsed.company && (
+              <div className="card-body"><CompanyInfoForm data={companyData} onChange={updateCompanyData} /></div>
+            )}
+          </div>
+
+          {/* Banka Bilgisi (collapsible) */}
+          <div className="card">
+            <button onClick={() => toggleRight('bank')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
+                  <Landmark size={13} className="text-[var(--color-text-secondary)]" />
+                </div>
+                <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); onOpenBankManager(); }} title="Banka Yönetimi">
+                  <Landmark size={12} />
+                </button>
+                {rightCollapsed.bank ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
+              </div>
+            </button>
+            {!rightCollapsed.bank && (
+              <div className="card-body"><BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} /></div>
+            )}
+          </div>
+
+          {/* Şartlar & Notlar (collapsible) */}
+          <div className="card">
+            <button onClick={() => toggleRight('terms')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
+                  <StickyNote size={13} className="text-[var(--color-text-secondary)]" />
+                </div>
+                <span className="text-sm font-semibold text-[var(--color-text)]">{t('conditionsAndNotes')}</span>
+              </div>
+              {rightCollapsed.terms ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
+            </button>
+            {!rightCollapsed.terms && (
+              <div className="card-body"><TermsAndNotes data={quoteData} onChange={updateQuoteData} /></div>
+            )}
+          </div>
+
+          {/* Teklif Detayları (collapsible) */}
+          <div className="card">
+            <button onClick={() => toggleRight('quoteDetails')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
+                  <FileText size={13} className="text-[var(--color-text-secondary)]" />
+                </div>
+                <span className="text-sm font-semibold text-[var(--color-text)]">Teklif Detayları</span>
+              </div>
+              {rightCollapsed.quoteDetails ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
+            </button>
+            {!rightCollapsed.quoteDetails && (
+              <div className="card-body"><QuoteInfoForm data={quoteData} onChange={updateQuoteData} /></div>
+            )}
+          </div>
         </div>
       </div>
 
