@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { useState, useEffect, useRef, memo, useMemo } from "react";
+import { useState, useEffect, useRef, memo, useMemo, useCallback } from "react";
 import {
   Plus,
   Trash,
@@ -11,6 +11,7 @@ import {
   X,
   Table,
   Grid3X3,
+  AlertCircle,
 } from "lucide-react";
 import {
   DndContext,
@@ -43,6 +44,9 @@ const SortableRow = memo(
     formatCurrency,
     onKeyDown,
     t,
+    getFieldClass,
+    handleRowBlur,
+    rowErrors,
   }: any) => {
     const {
       attributes,
@@ -84,13 +88,18 @@ const SortableRow = memo(
         <td
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing w-10"
+          className={`cursor-grab active:cursor-grabbing w-10 ${rowErrors && Object.keys(rowErrors).length > 0 ? 'relative' : ''}`}
         >
           {" "}
           <GripVertical
             size={15}
             className="text-[var(--color-text-muted)] opacity-40 group-hover:opacity-70 transition-opacity"
           />{" "}
+          {rowErrors && Object.keys(rowErrors).length > 0 && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-error)] text-white text-[9px] font-bold flex items-center justify-center" title={`${Object.keys(rowErrors).length} hata`}>
+              {Object.keys(rowErrors).length}
+            </div>
+          )}
         </td>{" "}
         <td className="w-16">
           {" "}
@@ -121,23 +130,26 @@ const SortableRow = memo(
           {" "}
           <input
             type="text"
-            className="form-control mb-1 text-sm"
+            className={getFieldClass(item.id, "name", item) + " mb-1"}
             placeholder={t("productName")}
             value={item.name}
             onChange={(e) => handleItemChange(index, "name", e.target.value)}
+            onBlur={() => handleRowBlur(item.id, "name")}
             onKeyDown={(e) => onKeyDown(e, index, "name")}
             data-row={index}
             data-field="name"
             autoComplete="off"
           />{" "}
+          {rowErrors?.name && <div className="field-error-text" style={{marginBottom: '4px'}}>{rowErrors.name}</div>}
           <textarea
-            className="form-control text-xs resize-none"
+            className={getFieldClass(item.id, "description", item) + " resize-none"}
             placeholder={t("description")}
             rows={2}
             value={item.description}
             onChange={(e) =>
               handleItemChange(index, "description", e.target.value)
             }
+            onBlur={() => handleRowBlur(item.id, "description")}
             onKeyDown={(e) => onKeyDown(e, index, "description")}
             data-row={index}
             data-field="description"
@@ -148,17 +160,18 @@ const SortableRow = memo(
           {" "}
           <input
             type="text"
-            className="form-control text-sm text-center"
+            className={getFieldClass(item.id, "quantity", item) + " text-center"}
             value={item.quantity}
             onChange={(e) =>
               handleItemChange(index, "quantity", e.target.value)
             }
-            onBlur={(e) => handleCalc("quantity", e.target.value)}
+            onBlur={(e) => { handleRowBlur(item.id, "quantity"); handleCalc("quantity", e.target.value); }}
             onKeyDown={(e) => onKeyDown(e, index, "quantity")}
             data-row={index}
             data-field="quantity"
             autoComplete="off"
           />{" "}
+          {rowErrors?.quantity && <div className="field-error-text">{rowErrors.quantity}</div>}
         </td>{" "}
         <td className="w-24">
           {" "}
@@ -174,7 +187,7 @@ const SortableRow = memo(
             {" "}
             <option value="Adet">{t("unitPiece")}</option>{" "}
             <option value="Saat">{t("unitHour")}</option>{" "}
-            <option value="GÃ¼n">{t("unitDay")}</option>{" "}
+            <option value="Gün">{t("unitDay")}</option>{" "}
             <option value="Ay">{t("unitMonth")}</option>{" "}
             <option value="Kg">{t("unitKg")}</option>{" "}
             <option value="Mt">{t("unitMeter")}</option>{" "}
@@ -186,29 +199,31 @@ const SortableRow = memo(
           {" "}
           <input
             type="text"
-            className="form-control text-sm text-right"
+            className={getFieldClass(item.id, "price", item) + " text-right"}
             value={item.price}
             onChange={(e) => handleItemChange(index, "price", e.target.value)}
-            onBlur={(e) => handleCalc("price", e.target.value)}
+            onBlur={(e) => { handleRowBlur(item.id, "price"); handleCalc("price", e.target.value); }}
             onKeyDown={(e) => onKeyDown(e, index, "price")}
             data-row={index}
             data-field="price"
             autoComplete="off"
           />{" "}
+          {rowErrors?.price && <div className="field-error-text">{rowErrors.price}</div>}
         </td>{" "}
         <td className="w-16">
           {" "}
           <input
             type="text"
-            className="form-control text-sm text-center"
+            className={getFieldClass(item.id, "taxRate", item) + " text-center"}
             value={item.taxRate}
             onChange={(e) => handleItemChange(index, "taxRate", e.target.value)}
-            onBlur={(e) => handleCalc("taxRate", e.target.value)}
+            onBlur={(e) => { handleRowBlur(item.id, "taxRate"); handleCalc("taxRate", e.target.value); }}
             onKeyDown={(e) => onKeyDown(e, index, "taxRate")}
             data-row={index}
             data-field="taxRate"
             autoComplete="off"
           />{" "}
+          {rowErrors?.taxRate && <div className="field-error-text">{rowErrors.taxRate}</div>}
         </td>{" "}
         <td className="w-16">
           {" "}
@@ -251,7 +266,7 @@ const SortableRow = memo(
 );
 SortableRow.displayName = "SortableRow";
 const SortableRowCard = memo(
-  ({ item, index, handleItemChange, removeItem, formatCurrency, t }: any) => {
+  ({ item, index, handleItemChange, removeItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors }: any) => {
     const {
       attributes,
       listeners,
@@ -320,11 +335,13 @@ const SortableRowCard = memo(
             {" "}
             <input
               type="text"
-              className="form-control mb-1.5 text-sm font-semibold"
+              className={getFieldClass(item.id, "name", item) + " mb-1.5 font-semibold"}
               placeholder={t("productName")}
               value={item.name}
               onChange={(e) => handleItemChange(index, "name", e.target.value)}
+              onBlur={() => handleRowBlur(item.id, "name")}
             />{" "}
+            {rowErrors?.name && <div className="field-error-text mb-1">{rowErrors.name}</div>}
             <textarea
               className="form-control text-xs resize-none"
               placeholder={t("description")}
@@ -345,14 +362,16 @@ const SortableRowCard = memo(
             </label>{" "}
             <div className="flex gap-1">
               {" "}
-              <input
+          <input
                 type="text"
-                className="form-control text-sm flex-1"
+                className={(getFieldClass(item.id, "quantity", item)) + " flex-1"}
                 value={item.quantity}
                 onChange={(e) =>
                   handleItemChange(index, "quantity", e.target.value)
                 }
+                onBlur={() => handleRowBlur(item.id, "quantity")}
               />{" "}
+              {rowErrors?.quantity && <div className="field-error-text">{rowErrors.quantity}</div>}
               <select
                 className="form-control form-select text-sm w-20"
                 value={item.unit}
@@ -363,7 +382,7 @@ const SortableRowCard = memo(
                 {" "}
                 <option value="Adet">{t("unitPiece")}</option>{" "}
                 <option value="Saat">{t("unitHour")}</option>{" "}
-                <option value="GÃ¼n">{t("unitDay")}</option>{" "}
+                <option value="Gün">{t("unitDay")}</option>{" "}
                 <option value="Ay">{t("unitMonth")}</option>{" "}
                 <option value="Kg">{t("unitKg")}</option>{" "}
                 <option value="Mt">{t("unitMeter")}</option>{" "}
@@ -379,10 +398,12 @@ const SortableRowCard = memo(
             </label>{" "}
             <input
               type="text"
-              className="form-control text-sm"
+              className={getFieldClass(item.id, "price", item)}
               value={item.price}
               onChange={(e) => handleItemChange(index, "price", e.target.value)}
+              onBlur={() => handleRowBlur(item.id, "price")}
             />{" "}
+            {rowErrors?.price && <div className="field-error-text">{rowErrors.price}</div>}
           </div>{" "}
         </div>{" "}
         <div className="grid grid-cols-3 gap-2 mb-3">
@@ -394,12 +415,14 @@ const SortableRowCard = memo(
             </label>{" "}
             <input
               type="text"
-              className="form-control text-sm"
+              className={getFieldClass(item.id, "taxRate", item)}
               value={item.taxRate}
               onChange={(e) =>
                 handleItemChange(index, "taxRate", e.target.value)
               }
+              onBlur={() => handleRowBlur(item.id, "taxRate")}
             />{" "}
+            {rowErrors?.taxRate && <div className="field-error-text">{rowErrors.taxRate}</div>}
           </div>{" "}
           <div>
             {" "}
@@ -460,6 +483,35 @@ const ItemsTable = ({
   const [searchResults, setSearchResults] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
+  const [touchedRows, setTouchedRows] = useState<Record<string, Record<string, boolean>>>({});
+
+  const getRowErrors = useCallback((item: any) => {
+    const errs: Record<string, string> = {};
+    if (!item.name) errs.name = 'Ürün adı gerekli';
+    if (!item.quantity || parseFloat(item.quantity) <= 0) errs.quantity = 'Miktar > 0 olmalı';
+    if (item.price === undefined || item.price === '' || parseFloat(item.price) < 0) errs.price = 'Geçersiz fiyat';
+    const tax = parseFloat(item.taxRate);
+    if (isNaN(tax) || tax < 0 || tax > 100) errs.taxRate = 'KDV 0-100 arası';
+    return errs;
+  }, []);
+
+  const handleRowBlur = useCallback((itemId: string, field: string) => {
+    setTouchedRows(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], [field]: true }
+    }));
+  }, []);
+
+  const getFieldClass = useCallback((itemId: string, field: string, item: any) => {
+    const rowTouched = touchedRows[itemId];
+    const rowErrors = getRowErrors(item);
+    if (rowTouched?.[field] && rowErrors[field]) return 'form-control field-error text-sm';
+    return 'form-control text-sm';
+  }, [touchedRows, getRowErrors]);
+
+  const hasErrors = useMemo(() => {
+    return items.some((item: any) => Object.keys(getRowErrors(item)).length > 0);
+  }, [items, getRowErrors]);
   useEffect(() => {
     if (!db || searchQuery.length < 2) {
       setSearchResults([]);
@@ -787,6 +839,12 @@ const ItemsTable = ({
             </div>
           )}{" "}
         </div>{" "}
+        {hasErrors && items.length > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 bg-[var(--color-error)]/10 border border-[var(--color-error)]/20 rounded-[var(--radius)] text-xs text-[var(--color-error)]">
+            <AlertCircle size={14} />
+            <span>Bazı satırlarda hatalı alanlar var. Lütfen kırmızı işaretli alanları düzeltin.</span>
+          </div>
+        )}
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-[var(--color-border)] rounded-[var(--radius-lg)] bg-[var(--color-bg-muted)]/30">
             {" "}
@@ -883,6 +941,9 @@ const ItemsTable = ({
                           formatCurrency={formatCurrency}
                           onKeyDown={handleKeyDown}
                           t={t}
+                          getFieldClass={getFieldClass}
+                          handleRowBlur={handleRowBlur}
+                          rowErrors={getRowErrors(item)}
                         />
                       ))}{" "}
                     </tbody>{" "}
@@ -906,6 +967,9 @@ const ItemsTable = ({
                       removeItem={removeItem}
                       formatCurrency={formatCurrency}
                       t={t}
+                      getFieldClass={getFieldClass}
+                      handleRowBlur={handleRowBlur}
+                      rowErrors={getRowErrors(item)}
                     />
                   ))}{" "}
                 </SortableContext>{" "}
