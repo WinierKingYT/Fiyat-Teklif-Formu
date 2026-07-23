@@ -1,8 +1,9 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
+import useDebounce from '../hooks/useDebounce';
 import { Trash2, Edit, Plus, Search, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
@@ -109,9 +110,13 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
         setCurrentCustomer(null);
     };
 
-    const filteredCustomers = customers.filter(c =>
-        (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (c.company && c.company.toLowerCase().includes(searchTerm.toLowerCase()))
+    const debouncedSearch = useDebounce(searchTerm, 250);
+    const filteredCustomers = useMemo(() =>
+        customers.filter(c =>
+            (c.name && c.name.toLowerCase().includes(debouncedSearch.toLowerCase())) ||
+            (c.company && c.company.toLowerCase().includes(debouncedSearch.toLowerCase()))
+        ),
+        [customers, debouncedSearch]
     );
 
     const handleCancelEdit = () => {

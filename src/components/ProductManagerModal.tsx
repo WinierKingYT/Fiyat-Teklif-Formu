@@ -1,8 +1,9 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
+import useDebounce from '../hooks/useDebounce';
 import { Trash2, Edit, Plus, Search, Image as ImageIcon, Grid, List, Filter, CheckSquare, Square, Download, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ImageOptimizer from '../utils/imageOptimizer';
@@ -226,11 +227,16 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         setCurrentProduct(null);
     };
 
-    const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'Tümü' || p.category === selectedCategory;
-        return matchesSearch && matchesCategory;
-    });
+    const debouncedSearch = useDebounce(searchTerm, 250);
+    const filteredProducts = useMemo(() =>
+        products.filter(p => {
+            const q = debouncedSearch.toLowerCase();
+            const matchesSearch = p.name && p.name.toLowerCase().includes(q);
+            const matchesCategory = selectedCategory === 'Tümü' || p.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        }),
+        [products, debouncedSearch, selectedCategory]
+    );
 
     const handleCancelEdit = () => {
         resetForm();

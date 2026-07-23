@@ -1,8 +1,9 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import { Search, Package, Plus, Filter, CheckSquare, Square } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
+import useDebounce from '../hooks/useDebounce';
 import Logger from '../utils/logger';
 import Skeleton from './Skeleton';
 import EmptyState from './EmptyState';
@@ -67,11 +68,16 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
         onClose();
     };
 
-    const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.category?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'Tümü' || p.category === selectedCategory;
-        return matchesSearch && matchesCategory;
-    });
+    const debouncedSearch = useDebounce(searchTerm, 250);
+    const filteredProducts = useMemo(() =>
+        products.filter(p => {
+            const q = debouncedSearch.toLowerCase();
+            const matchesSearch = p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+            const matchesCategory = selectedCategory === 'Tümü' || p.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        }),
+        [products, debouncedSearch, selectedCategory]
+    );
 
     const hasFilter = searchTerm || selectedCategory !== 'Tümü';
 

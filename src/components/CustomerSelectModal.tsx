@@ -1,8 +1,9 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import { Search, User, Plus, Users } from 'lucide-react';
 import { useIndexedDB } from '../hooks/useIndexedDB';
+import useDebounce from '../hooks/useDebounce';
 import Logger from '../utils/logger';
 import Skeleton from './Skeleton';
 import EmptyState from './EmptyState';
@@ -29,9 +30,13 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
         }
     };
 
-    const filteredCustomers = customers.filter(c =>
-        c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.company?.toLowerCase().includes(searchTerm.toLowerCase())
+    const debouncedSearch = useDebounce(searchTerm, 250);
+    const filteredCustomers = useMemo(() =>
+        customers.filter(c =>
+            c.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            c.company?.toLowerCase().includes(debouncedSearch.toLowerCase())
+        ),
+        [customers, debouncedSearch]
     );
 
     return (

@@ -1,4 +1,4 @@
-import React from 'react'; import { useState, useEffect } from 'react'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+import React from 'react'; import { useState, useEffect, useMemo } from 'react'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
 
 const HistoryList = ({ onNavigate }) => {
     const { db, isReady } = useIndexedDB();
@@ -91,11 +91,16 @@ const HistoryList = ({ onNavigate }) => {
         toast.success(`${selected.length} teklif dışa aktarılıyor...`);
     };
 
-    const filteredQuotes = quotes.filter(q =>
-        q.quoteData?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.quoteData?.number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.customerData?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.customerData?.company?.toLowerCase().includes(searchTerm.toLowerCase())
+    const debouncedSearch = useDebounce(searchTerm, 250);
+    const filteredQuotes = useMemo(() =>
+        quotes.filter(q => {
+            const qs = debouncedSearch.toLowerCase();
+            return q.quoteData?.title?.toLowerCase().includes(qs) ||
+                q.quoteData?.number?.toLowerCase().includes(qs) ||
+                q.customerData?.name?.toLowerCase().includes(qs) ||
+                q.customerData?.company?.toLowerCase().includes(qs);
+        }),
+        [quotes, debouncedSearch]
     );
 
     const formatCurrency = (amount, currency = 'TRY') => {

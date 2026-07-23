@@ -1,4 +1,4 @@
-import React from 'react'; import { useState, useEffect } from 'react'; import Modal from './Modal'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+import React from 'react'; import { useState, useEffect, useMemo } from 'react'; import Modal from './Modal'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
 
 const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
     const { db, isReady } = useIndexedDB();
@@ -49,11 +49,16 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
         onNewQuote();
     };
 
-    const filteredQuotes = quotes.filter(q =>
-        q.quoteData?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.quoteData?.number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.customerData?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.customerData?.company?.toLowerCase().includes(searchTerm.toLowerCase())
+    const debouncedSearch = useDebounce(searchTerm, 250);
+    const filteredQuotes = useMemo(() =>
+        quotes.filter(q => {
+            const qs = debouncedSearch.toLowerCase();
+            return q.quoteData?.title?.toLowerCase().includes(qs) ||
+                q.quoteData?.number?.toLowerCase().includes(qs) ||
+                q.customerData?.name?.toLowerCase().includes(qs) ||
+                q.customerData?.company?.toLowerCase().includes(qs);
+        }),
+        [quotes, debouncedSearch]
     );
 
     const formatCurrency = (amount, currency = 'TRY') => {
