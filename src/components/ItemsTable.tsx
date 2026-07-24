@@ -1018,7 +1018,7 @@ const ItemsTable = ({
           </div>
         )}
         {selectedItems.size > 0 && (
-          <div className="flex items-center gap-3 px-3 py-2 mb-3 bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/20 rounded-[var(--radius)]">
+          <div className="flex flex-wrap items-center gap-2 px-3 py-2 mb-3 bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/20 rounded-[var(--radius)]">
             <button
               type="button"
               onClick={toggleSelectAll}
@@ -1156,7 +1156,7 @@ const ItemsTable = ({
                 </table>{" "}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3">
                 {" "}
                 <SortableContext
                   items={items.map((item) => item.id)}
@@ -1185,8 +1185,8 @@ const ItemsTable = ({
             )}{" "}
           </DndContext>
         )}{" "}
-        {items.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[var(--color-border)]">
+                {items.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 mt-3 pt-3 border-t border-[var(--color-border)]">
             <button
               type="button"
               className="btn btn-primary btn-sm"
@@ -1195,7 +1195,7 @@ const ItemsTable = ({
             >
               <Plus size={14} /> {t("addRow")}
             </button>
-            <div className="flex gap-2 ml-auto">
+            <div className="flex gap-2 sm:ml-auto">
               {onAddProduct && (
                 <button
                   type="button"
@@ -1222,7 +1222,7 @@ const ItemsTable = ({
               />
             </div>
           </div>
-        )}{" "}
+        )} {" "}
       </div>{" "}
       {contextMenu && (
         <ContextMenu

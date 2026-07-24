@@ -137,18 +137,18 @@ const QuoteBuilder = ({
   return (
     <div className="fade-in-up">
       {/* ─── HEADER BAR ─── */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-3 mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 min-w-0 flex-1">
           <input
             type="text"
             value={quoteData.title || ''}
             onChange={(e) => updateQuoteData('title', e.target.value)}
             placeholder="Teklif Başlığı"
-            className="text-lg font-bold bg-transparent border-0 outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/30 min-w-[160px] p-0"
+            className="text-base sm:text-lg font-bold bg-transparent border-0 outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/30 min-w-[140px] sm:min-w-[160px] p-0"
           />
-          <span className="text-[11px] text-[var(--color-text-muted)] hidden sm:inline whitespace-nowrap">{today}</span>
+          <span className="text-[11px] text-[var(--color-text-muted)] whitespace-nowrap">{today}</span>
         </div>
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0 flex-wrap sm:flex-nowrap">
           <select
             value={quoteData.currency || 'TRY'}
             onChange={(e) => updateQuoteData('currency', e.target.value)}
@@ -159,16 +159,16 @@ const QuoteBuilder = ({
             <option value="EUR">€ EUR</option>
             <option value="GBP">£ GBP</option>
           </select>
-          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
-          <button onClick={undo} disabled={!canUndo} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Geri Al (Ctrl+Z)"><Undo2 size={15} /></button>
-          <button onClick={redo} disabled={!canRedo} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="İleri Al (Ctrl+Y)"><Redo2 size={15} /></button>
-          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
-          <button onClick={saveQuote} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors" title="Kaydet (Ctrl+S)"><Save size={15} /></button>
-          <button onClick={handlePdfShortcut} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors" title="PDF Önizleme (Ctrl+P)"><FileText size={15} /></button>
-          <button onClick={handleNewQuote} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors" title="Yeni Teklif (Ctrl+N)"><Plus size={15} /></button>
-          <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
+          <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
+          <button onClick={undo} disabled={!canUndo} className="top-bar-btn" title="Geri Al (Ctrl+Z)"><Undo2 size={15} /></button>
+          <button onClick={redo} disabled={!canRedo} className="top-bar-btn" title="İleri Al (Ctrl+Y)"><Redo2 size={15} /></button>
+          <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
+          <button onClick={saveQuote} className="top-bar-btn" title="Kaydet (Ctrl+S)"><Save size={15} /></button>
+          <button onClick={handlePdfShortcut} className="top-bar-btn" title="PDF Önizleme (Ctrl+P)"><FileText size={15} /></button>
+          <button onClick={handleNewQuote} className="top-bar-btn" title="Yeni Teklif (Ctrl+N)"><Plus size={15} /></button>
+          <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
           <div className="relative group">
-            <button className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"><MoreHorizontal size={15} /></button>
+            <button className="top-bar-btn"><MoreHorizontal size={15} /></button>
             <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-lg py-1 min-w-[160px] z-50 hidden group-hover:block">
               <button onClick={fillTestData} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><FlaskConical size={13} /> Test Verisi Doldur</button>
               <button onClick={() => setConfirmReset(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><LogOut size={13} /> Sıfırla</button>

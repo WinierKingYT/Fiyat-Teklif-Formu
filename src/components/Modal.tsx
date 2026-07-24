@@ -124,7 +124,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
     if (!visible) return null;
 
-    const overlayClass = `fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm ${closing ? 'animate-fadeOut' : 'animate-fadeIn'} ${mobile ? 'modal-bottom-sheet' : ''}`;
+    const overlayClass = `fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm ${closing ? 'animate-fadeOut' : 'animate-fadeIn'} ${mobile ? 'modal-bottom-sheet' : ''} ${mobile ? 'overflow-hidden' : ''}`;
 
     return createPortal(
         <div
@@ -136,31 +136,33 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         >
             <div
                 ref={modalRef}
-                className={`bg-[var(--color-bg-card)] w-full max-h-[85vh] overflow-hidden shadow-lg flex flex-col ${closing ? (mobile ? 'animate-slideDown' : 'animate-scaleOut') : ''}`}
+                className={`bg-[var(--color-bg-card)] w-full shadow-lg flex flex-col ${closing ? (mobile ? 'animate-slideDown' : 'animate-scaleOut') : ''}`}
                 style={{
                     maxWidth: mobile ? '100%' : (sizeMap[size] || '500px'),
+                    maxHeight: mobile ? '100vh' : '85vh',
                     borderRadius: mobile ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
                     transform: mobile ? 'none' : undefined,
                     transition: mobile ? 'transform 0.3s ease-out' : undefined,
+                    overflow: 'hidden',
                 }}
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
             >
                 {mobile && <div className="modal-drag-handle" />}
-                <div className={`flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : ''}`}>
-                    <h2 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
+                <div className={`flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : 'sm:px-5 sm:py-4'}`}>
+                    <h2 className="text-sm sm:text-base font-semibold text-[var(--color-text)] flex items-center gap-2 truncate pr-2">
                         {title}
                     </h2>
                     <button
                         onClick={handleClose}
-                        className="p-1.5 rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text)] transition-colors"
+                        className="p-2 rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text)] transition-colors shrink-0"
                         aria-label="Kapat"
                     >
                         <X size={18} />
                     </button>
                 </div>
-                <div className="px-5 py-5 overflow-y-auto flex-1">
+                <div className="px-4 py-4 sm:px-5 sm:py-5 overflow-y-auto flex-1 overscroll-contain">
                     {children}
                 </div>
             </div>
