@@ -15,6 +15,7 @@ import Settings from './components/Settings';
 import HistoryList from './components/HistoryList';
 import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
+import ConfirmDialog from './components/ConfirmDialog';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
 import {
@@ -79,6 +80,7 @@ const QuoteBuilder = ({
     company: true, bank: true, terms: true, quoteDetails: true,
   });
   const toggleRight = (key: string) => setRightCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     const handleOpenHistory = () => setIsHistoryModalOpen(true);
@@ -86,7 +88,7 @@ const QuoteBuilder = ({
     return () => document.removeEventListener('open-history-modal', handleOpenHistory);
   }, []);
 
-  const handleSaveShortcut = () => { saveQuote(); };
+  const handleSaveShortcut = () => { toast.success('Teklif kaydediliyor...'); saveQuote(); };
   const handlePdfShortcut = () => { setIsLivePreviewMode(prev => !prev); };
   const handleNewQuote = async () => { addTab(); };
 
@@ -169,7 +171,7 @@ const QuoteBuilder = ({
             <button className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"><MoreHorizontal size={15} /></button>
             <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-lg py-1 min-w-[160px] z-50 hidden group-hover:block">
               <button onClick={fillTestData} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><FlaskConical size={13} /> Test Verisi Doldur</button>
-              <button onClick={async () => { await resetQuote(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><LogOut size={13} /> Sıfırla</button>
+              <button onClick={() => setConfirmReset(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><LogOut size={13} /> Sıfırla</button>
             </div>
           </div>
         </div>
@@ -294,10 +296,19 @@ const QuoteBuilder = ({
         </div>
       </div>
 
+      <ConfirmDialog
+        isOpen={confirmReset}
+        title="Teklifi Sıfırla"
+        message="Tüm veriler silinecek ve yeni bir teklif başlatılacak. Devam etmek istediğinize emin misiniz?"
+        onConfirm={async () => { setConfirmReset(false); await resetQuote(); }}
+        onCancel={() => setConfirmReset(false)}
+        variant="danger"
+      />
       <CustomerSelectModal
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
         onSelect={handleCustomerSelect}
+        onCreateNew={onOpenCustomerManager}
       />
 
       <ProductSelectModal

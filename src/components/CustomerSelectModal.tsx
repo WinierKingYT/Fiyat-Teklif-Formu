@@ -9,7 +9,7 @@ import Logger from '../utils/logger';
 import Skeleton from './Skeleton';
 import EmptyState from './EmptyState';
 
-const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
+const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }) => {
     const { db, isReady } = useIndexedDB();
     const [customers, setCustomers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -65,7 +65,7 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect }) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
                         <input type="text" className="form-control pl-9" placeholder="Müşteri veya firma ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
-                    <button className="btn btn-primary whitespace-nowrap">
+                    <button className="btn btn-primary whitespace-nowrap" onClick={() => { onClose(); onCreateNew?.(); }}>
                         <Plus size={16} /> Yeni Müşteri
                     </button>
                 </div>

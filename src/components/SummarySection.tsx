@@ -41,6 +41,8 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
         onDiscountChange({ ...discount, type });
     };
 
+    if (!items?.length) return null;
+
     return (
         <div className="card">
             <div className="card-header">

@@ -18,6 +18,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import ConfirmDialog from "./ConfirmDialog";
 import {
   DndContext,
   closestCenter,
@@ -511,18 +512,29 @@ const SortableRowCard = memo(
 );
 SortableRowCard.displayName = "SortableRowCard";
 const ContextMenu = ({ x, y, items: menuItems, onClose }) => {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = React.useState({ x, y });
   React.useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
+  React.useEffect(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      let ax = x, ay = y;
+      if (rect.right > window.innerWidth) ax = window.innerWidth - rect.width - 8;
+      if (rect.bottom > window.innerHeight) ay = window.innerHeight - rect.height - 8;
+      if (ax < 4) ax = 4; if (ay < 4) ay = 4;
+      setPos({ x: ax, y: ay });
+    }
+  }, [x, y]);
   if (!x && !y) return null;
   return (
     <div
       ref={ref}
       className="fixed z-[9999] bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-xl py-1 min-w-[160px]"
-      style={{ left: x, top: y }}
+      style={{ left: pos.x, top: pos.y }}
     >
       {menuItems.map((item, i) => (
         item.separator ? (
@@ -726,6 +738,7 @@ const ItemsTable = ({
     onItemsChange(copy);
   };
 
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; onConfirm: () => void }>({ isOpen: false, onConfirm: () => {} });
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const toggleSelectItem = (index) => {
     setSelectedItems(prev => {
@@ -1017,10 +1030,7 @@ const ItemsTable = ({
             <div className="w-px h-4 bg-[var(--color-border)]" />
             <button
               type="button"
-              onClick={() => {
-                const confirmed = window.confirm(`${selectedItems.size} adet kalemi silmek istediğinize emin misiniz?`);
-                if (confirmed) deleteSelected();
-              }}
+              onClick={() => setConfirmDelete({ isOpen: true, onConfirm: deleteSelected })}
               className="flex items-center gap-1.5 text-xs text-[var(--color-error)] hover:text-[var(--color-error)] font-medium transition-colors"
             >
               <Trash size={13} /> Seçili Kalemleri Sil
@@ -1228,6 +1238,14 @@ const ItemsTable = ({
           ]}
         />
       )}
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title="Kalemleri Sil"
+        message={`${selectedItems.size} adet kalemi silmek istediğinize emin misiniz?`}
+        onConfirm={() => { confirmDelete.onConfirm(); setConfirmDelete({ isOpen: false, onConfirm: () => {} }); }}
+        onCancel={() => setConfirmDelete({ isOpen: false, onConfirm: () => {} })}
+        variant="danger"
+      />
     </div>
   );
 };

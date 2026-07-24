@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Save, Download, Plus, FileSpreadsheet } from 'lucide-react';
 import { useQuote } from '../context/QuoteContext';
 import { useUI } from '../context/UIContext';
@@ -13,8 +13,8 @@ const StatusBar = () => {
   const { t } = useTranslation();
 
   const itemCount = items?.length || 0;
-  const subtotal = items?.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0) || 0;
-  const total = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: quoteData?.currency || 'TRY' }).format(subtotal);
+  const calc = useMemo(() => calculateQuoteTotals(items || [], discount || {}, { currency: quoteData?.currency || 'TRY' }), [items, discount, quoteData?.currency]);
+  const total = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: quoteData?.currency || 'TRY' }).format(itemCount > 0 ? calc.grandTotal : 0);
 
   const isSaving = saveStatus?.status === 'saving';
 
