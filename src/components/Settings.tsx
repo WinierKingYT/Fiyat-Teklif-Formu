@@ -6,7 +6,6 @@ import { useUI } from "../context/UIContext";
 import { useTranslation } from "../hooks/useTranslation";
 import {
   Save,
-  RefreshCw,
   GripVertical,
   Building,
   Check,
@@ -14,7 +13,6 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import CompanyInfoForm from "./CompanyInfoForm";
-import PerformanceMaintenanceTab from "./PerformanceMaintenanceTab";
 import {
   DndContext,
   closestCenter,
@@ -609,29 +607,7 @@ const Settings = () => {
           </div>{" "}
         </div>
       )}{" "}
-      {activeTab === "performance" && (
-        <div className="card">
-          {" "}
-          <div className="card-header">
-            {" "}
-            <div className="flex items-center gap-2">
-              {" "}
-              <div className="w-6 h-6 rounded-[var(--radius-sm)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-                {" "}
-                <RefreshCw
-                  size={13}
-                  className="text-[var(--color-primary)]"
-                />{" "}
-              </div>{" "}
-              <span className="card-title">Performans & Bak�-m</span>{" "}
-            </div>{" "}
-          </div>{" "}
-          <div className="card-body">
-            {" "}
-            <PerformanceMaintenanceTab />{" "}
-          </div>{" "}
-        </div>
-      )}{" "}
+
       {activeTab === "pdf" && (
         <div className="card">
           {" "}

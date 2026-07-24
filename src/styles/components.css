@@ -1,3 +1,7 @@
+/* ===== SKIP TO CONTENT ===== */
+.skip-link { position: absolute; top: -100%; left: 0; z-index: 9999; padding: 0.5rem 1rem; background: var(--color-primary); color: white; font-size: 0.875rem; font-weight: 600; text-decoration: none; border-radius: 0 0 var(--radius) 0; transition: top 0.15s; }
+.skip-link:focus { top: 0; outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
 /* ===== APP SHELL ===== */
 .app-shell { display: flex; height: 100vh; background: var(--color-bg); overflow: hidden; }
 

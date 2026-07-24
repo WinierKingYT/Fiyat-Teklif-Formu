@@ -28,7 +28,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
 
     const loadBanks = async () => {
         try {
-            const result = await (db as any).getAll('bankInfo');
+            const result = await (db).getAll('bankInfo');
             setBanks(result);
         } catch (error) {
             Logger.error('Error loading banks:', error);

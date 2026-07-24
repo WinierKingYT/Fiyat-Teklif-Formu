@@ -31,7 +31,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const loadProducts = async () => {
         setLoading(true);
         try {
-            const result = await (db as any).getAll('products');
+            const result = await (db).getAll('products');
             setProducts(result);
         } catch (error) {
             Logger.error('Error loading products:', error);
@@ -42,7 +42,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
 
     const loadCategories = async () => {
         try {
-            const storedCategories = await (db as any).get('settings', 'product_categories');
+            const storedCategories = await (db).get('settings', 'product_categories');
             if (storedCategories && (storedCategories as any).value) setCategories((storedCategories as any).value);
             else setCategories(['Genel', 'Hizmet', 'Elektronik', 'Giyim']);
         } catch (error) {

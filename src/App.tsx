@@ -227,7 +227,13 @@ const QuoteBuilder = ({
 
           {/* Firma Bilgisi (collapsible) */}
           <div className="card">
-            <button onClick={() => toggleRight('company')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+            <button
+              onClick={() => toggleRight('company')}
+              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
+              aria-expanded={!rightCollapsed.company}
+              aria-controls="panel-company"
+              id="panel-company-btn"
+            >
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
                   <Building2 size={13} className="text-[var(--color-text-secondary)]" />
@@ -237,13 +243,19 @@ const QuoteBuilder = ({
               {rightCollapsed.company ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
             </button>
             {!rightCollapsed.company && (
-              <div className="card-body"><CompanyInfoForm data={companyData} onChange={updateCompanyData} /></div>
+              <div className="card-body" id="panel-company" role="region" aria-labelledby="panel-company-btn"><CompanyInfoForm data={companyData} onChange={updateCompanyData} /></div>
             )}
           </div>
 
           {/* Banka Bilgisi (collapsible) */}
           <div className="card">
-            <button onClick={() => toggleRight('bank')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+            <button
+              onClick={() => toggleRight('bank')}
+              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
+              aria-expanded={!rightCollapsed.bank}
+              aria-controls="panel-bank"
+              id="panel-bank-btn"
+            >
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
                   <Landmark size={13} className="text-[var(--color-text-secondary)]" />
@@ -251,20 +263,26 @@ const QuoteBuilder = ({
                 <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); onOpenBankManager(); }} title="Banka Yönetimi">
+                <button type="button" className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); onOpenBankManager(); }} title="Banka Yönetimi" aria-label="Banka Yönetimi">
                   <Landmark size={12} />
                 </button>
                 {rightCollapsed.bank ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
               </div>
             </button>
             {!rightCollapsed.bank && (
-              <div className="card-body"><BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} /></div>
+              <div className="card-body" id="panel-bank" role="region" aria-labelledby="panel-bank-btn"><BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} /></div>
             )}
           </div>
 
           {/* Şartlar & Notlar (collapsible) */}
           <div className="card">
-            <button onClick={() => toggleRight('terms')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+            <button
+              onClick={() => toggleRight('terms')}
+              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
+              aria-expanded={!rightCollapsed.terms}
+              aria-controls="panel-terms"
+              id="panel-terms-btn"
+            >
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
                   <StickyNote size={13} className="text-[var(--color-text-secondary)]" />
@@ -274,13 +292,19 @@ const QuoteBuilder = ({
               {rightCollapsed.terms ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
             </button>
             {!rightCollapsed.terms && (
-              <div className="card-body"><TermsAndNotes data={quoteData} onChange={updateQuoteData} /></div>
+              <div className="card-body" id="panel-terms" role="region" aria-labelledby="panel-terms-btn"><TermsAndNotes data={quoteData} onChange={updateQuoteData} /></div>
             )}
           </div>
 
           {/* Teklif Detayları (collapsible) */}
           <div className="card">
-            <button onClick={() => toggleRight('quoteDetails')} className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors">
+            <button
+              onClick={() => toggleRight('quoteDetails')}
+              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
+              aria-expanded={!rightCollapsed.quoteDetails}
+              aria-controls="panel-quoteDetails"
+              id="panel-quoteDetails-btn"
+            >
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
                   <FileText size={13} className="text-[var(--color-text-secondary)]" />
@@ -290,7 +314,7 @@ const QuoteBuilder = ({
               {rightCollapsed.quoteDetails ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
             </button>
             {!rightCollapsed.quoteDetails && (
-              <div className="card-body"><QuoteInfoForm data={quoteData} onChange={updateQuoteData} /></div>
+              <div className="card-body" id="panel-quoteDetails" role="region" aria-labelledby="panel-quoteDetails-btn"><QuoteInfoForm data={quoteData} onChange={updateQuoteData} /></div>
             )}
           </div>
         </div>

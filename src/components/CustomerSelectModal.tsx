@@ -24,7 +24,7 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }) => {
     const loadCustomers = async () => {
         setLoading(true);
         try {
-            const result = await (db as any).getAll('customers');
+            const result = await (db).getAll('customers');
             setCustomers(result);
         } catch (error) {
             Logger.error('Error loading customers:', error);

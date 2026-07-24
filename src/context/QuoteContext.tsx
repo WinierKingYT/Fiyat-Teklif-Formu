@@ -121,7 +121,7 @@ export const QuoteProvider = ({ children }) => {
             const loadTabs = async () => {
                 try {
                     // 1. Try to load from IndexedDB
-                    const savedTabs = await (db as any).getByIndex('settings', 'key', 'session_tabs');
+                    const savedTabs = await (db).getByIndex('settings', 'key', 'session_tabs');
 
                     if (savedTabs && (savedTabs as any).value) {
                         setTabs((savedTabs as any).value);
@@ -162,7 +162,7 @@ export const QuoteProvider = ({ children }) => {
             const saveTabs = async () => {
                 try {
                     // Check if record exists to get ID
-                    const existingRecord = await (db as any).getByIndex('settings', 'key', 'session_tabs');
+                    const existingRecord = await (db).getByIndex('settings', 'key', 'session_tabs');
                     const record: any = {
                         id: 'session_tabs',
                         key: 'session_tabs',
@@ -622,7 +622,7 @@ export const QuoteProvider = ({ children }) => {
         if (isReady && db) {
             const loadSettings = async () => {
                 try {
-                    const settings = await (db as any).get('settings', 'global');
+                    const settings = await (db).get('settings', 'global');
                     if (settings) {
                         if ((settings as any).currency) {
                             updateQuoteData('currency', (settings as any).currency);
@@ -630,7 +630,7 @@ export const QuoteProvider = ({ children }) => {
                     }
 
                     // Load Company Defaults
-                    const defaultsRecord = await (db as any).getByIndex('settings', 'key', 'company_defaults');
+                    const defaultsRecord = await (db).getByIndex('settings', 'key', 'company_defaults');
                     if (defaultsRecord && (defaultsRecord as any).value) {
                         setCompanyDefaults((defaultsRecord as any).value);
                     }
@@ -824,12 +824,12 @@ export const QuoteProvider = ({ children }) => {
 
         try {
             if (tabSavedQuoteId) {
-                const existing = await (db as any).get('quotes', tabSavedQuoteId);
+                const existing = await (db).get('quotes', tabSavedQuoteId);
                 if (existing) {
                     quote.createdAt = (existing as any).createdAt;
                     quote.status = isFinal ? 'final' : (existing as any).status;
                 }
-                await (db as any).put('quotes', quote);
+                await (db).put('quotes', quote);
                 toast.success('Teklif güncellendi!');
             } else {
                 await db.add('quotes', quote);
@@ -890,11 +890,11 @@ export const QuoteProvider = ({ children }) => {
         // ... (Keep existing backup logic)
         try {
             const [customers, products, quotes, templates, banks] = await Promise.all([
-                (db as any).getAll('customers'),
-                (db as any).getAll('products'),
-                (db as any).getAll('quotes'),
-                (db as any).getAll('templates'),
-                (db as any).getAll('bankInfo')
+                (db).getAll('customers'),
+                (db).getAll('products'),
+                (db).getAll('quotes'),
+                (db).getAll('templates'),
+                (db).getAll('bankInfo')
             ]);
 
             const data = {
@@ -931,11 +931,11 @@ export const QuoteProvider = ({ children }) => {
             try {
                 const data = JSON.parse((event.target as any).result);
 
-                if (data.customers) await Promise.all(data.customers.map((item: any) => (db as any).put('customers', item)));
-                if (data.products) await Promise.all(data.products.map((item: any) => (db as any).put('products', item)));
-                if (data.quotes) await Promise.all(data.quotes.map((item: any) => (db as any).put('quotes', item)));
-                if (data.templates) await Promise.all(data.templates.map((item: any) => (db as any).put('templates', item)));
-                if (data.banks) await Promise.all(data.banks.map((item: any) => (db as any).put('bankInfo', item)));
+                if (data.customers) await Promise.all(data.customers.map((item: any) => (db).put('customers', item)));
+                if (data.products) await Promise.all(data.products.map((item: any) => (db).put('products', item)));
+                if (data.quotes) await Promise.all(data.quotes.map((item: any) => (db).put('quotes', item)));
+                if (data.templates) await Promise.all(data.templates.map((item: any) => (db).put('templates', item)));
+                if (data.banks) await Promise.all(data.banks.map((item: any) => (db).put('bankInfo', item)));
 
                 toast.success('Yedek başarıyla yüklendi');
             } catch (error) {

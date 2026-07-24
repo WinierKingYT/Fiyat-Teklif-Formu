@@ -40,11 +40,11 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
     const loadStats = async () => {
         try {
             const [customers, products, quotes, templates, banks] = await Promise.all([
-                (db as any).getAll('customers'),
-                (db as any).getAll('products'),
-                (db as any).getAll('quotes'),
-                (db as any).getAll('templates'),
-                (db as any).getAll('bankInfo')
+                (db).getAll('customers'),
+                (db).getAll('products'),
+                (db).getAll('quotes'),
+                (db).getAll('templates'),
+                (db).getAll('bankInfo')
             ]);
 
             setStats({
@@ -70,7 +70,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
         const counts = {};
         for (const store of ALL_STORES) {
             try {
-                const items = await (db as any).getAll(store);
+                const items = await (db).getAll(store);
                 if (items.length > 0) counts[store] = items.length;
             } catch {}
         }
@@ -78,7 +78,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
             .map(([store, count]) => `${store}: ${count} kayıt`)
             .join(', ');
 
-        setConfirmDialog({ isOpen: true, title: 'Tüm Verileri Sil', message: `Bu işlem tüm verileri kalıcı olarak silecek: ${summary}. Devam etmek istediğinize emin misiniz?`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => (db as any).clear(store).catch(() => {}))); toast.success('Tüm veriler temizlendi'); setClearConfirmText(''); loadStats(); } catch (error) { console.error('Error clearing data:', error); toast.error('Veriler temizlenirken hata oluştu'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: 'Tüm Verileri Sil', message: `Bu işlem tüm verileri kalıcı olarak silecek: ${summary}. Devam etmek istediğinize emin misiniz?`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {}))); toast.success('Tüm veriler temizlendi'); setClearConfirmText(''); loadStats(); } catch (error) { console.error('Error clearing data:', error); toast.error('Veriler temizlenirken hata oluştu'); } }, variant: 'danger' });
     };
 
     const handleExport = async () => {
@@ -91,7 +91,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
             const results = await Promise.all(
                 ALL_STORES.map(async (store) => {
                     try {
-                        return { store, data: await (db as any).getAll(store) };
+                        return { store, data: await (db).getAll(store) };
                     } catch {
                         return { store, data: [] };
                     }
@@ -186,12 +186,12 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                 // Execute atomically
                 for (const op of allOperations) {
                     if (op.action === 'clear') {
-                        await (db as any).clear(op.store);
+                        await (db).clear(op.store);
                     } else if (op.action === 'put') {
-                        await (db as any).put(op.store, op.item);
+                        await (db).put(op.store, op.item);
                     } else if (op.action === 'tryAdd') {
                         try {
-                            await (db as any).add(op.store, op.item);
+                            await (db).add(op.store, op.item);
                         } catch {
                             // Skip duplicates silently
                         }

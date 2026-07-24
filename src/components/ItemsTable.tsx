@@ -622,7 +622,7 @@ const ItemsTable = ({
     }, 250);
     return () => clearTimeout(timer);
   }, [searchQuery, db]);
-  const addProductFromSearch = (product) => {
+  const addProductFromSearch = useCallback((product) => {
     const newItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: product.name,
@@ -640,7 +640,7 @@ const ItemsTable = ({
     setSearchQuery("");
     setSearchResults([]);
     searchRef.current?.focus();
-  };
+  }, [items, onItemsChange]);
   const handleSearchKeyDown = (e) => {
     if (!searchResults.length) return;
     if (e.key === "ArrowDown") {
@@ -683,14 +683,14 @@ const ItemsTable = ({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-  const handleDragEnd = (event) => {
+  const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = items.findIndex((item) => item.id === active.id);
     const newIndex = items.findIndex((item) => item.id === over.id);
     onItemsChange(arrayMove(items, oldIndex, newIndex));
-  };
-  const handleItemChange = (index, field, value) => {
+  }, [items, onItemsChange]);
+  const handleItemChange = useCallback((index, field, value) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: sanitizeInput(value) };
     if (field === "quantity" || field === "price" || field === "discountRate") {
@@ -700,8 +700,8 @@ const ItemsTable = ({
       newItems[index].total = qty * price * (1 - discountRate / 100);
     }
     onItemsChange(newItems);
-  };
-  const addItem = (prepend = false) => {
+  }, [items, onItemsChange]);
+  const addItem = useCallback((prepend = false) => {
     const newItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: "",
@@ -715,8 +715,8 @@ const ItemsTable = ({
       image: null,
     };
     onItemsChange(prepend ? [newItem, ...items] : [...items, newItem]);
-  };
-  const duplicateItem = (index) => {
+  }, [items, onItemsChange]);
+  const duplicateItem = useCallback((index) => {
     const original = items[index];
     const copy = {
       ...original,
@@ -724,41 +724,41 @@ const ItemsTable = ({
       name: (original.name || '') + ' (kopya)',
     };
     onItemsChange([...items.slice(0, index + 1), copy, ...items.slice(index + 1)]);
-  };
+  }, [items, onItemsChange]);
 
-  const removeItem = (index) =>
-    onItemsChange(items.filter((_, i) => i !== index));
+  const removeItem = useCallback((index) =>
+    onItemsChange(items.filter((_, i) => i !== index)), [items, onItemsChange]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; index: number } | null>(null);
-  const moveItem = (from: number, to: number) => {
+  const moveItem = useCallback((from: number, to: number) => {
     if (to < 0 || to >= items.length) return;
     const copy = [...items];
     const [removed] = copy.splice(from, 1);
     copy.splice(to, 0, removed);
     onItemsChange(copy);
-  };
+  }, [items, onItemsChange]);
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; onConfirm: () => void }>({ isOpen: false, onConfirm: () => {} });
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
-  const toggleSelectItem = (index) => {
+  const toggleSelectItem = useCallback((index) => {
     setSelectedItems(prev => {
       const next = new Set(prev);
       if (next.has(index)) next.delete(index); else next.add(index);
       return next;
     });
-  };
-  const toggleSelectAll = () => {
+  }, []);
+  const toggleSelectAll = useCallback(() => {
     if (selectedItems.size === items.length) {
       setSelectedItems(new Set());
     } else {
       setSelectedItems(new Set(items.map((_, i) => i)));
     }
-  };
-  const deleteSelected = () => {
+  }, [selectedItems, items]);
+  const deleteSelected = useCallback(() => {
     if (selectedItems.size === 0) return;
     onItemsChange(items.filter((_, i) => !selectedItems.has(i)));
     setSelectedItems(new Set());
-  };
+  }, [selectedItems, items, onItemsChange]);
 
   const formatCurrency = useMemo(
     () => (amount) =>

@@ -172,7 +172,7 @@ class IndexedDBManager {
         return this.db;
     }
 
-    async get(storeName, key) {
+    async get(storeName, key): Promise<any> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -195,7 +195,7 @@ class IndexedDBManager {
         });
     }
 
-    async getByIndex(storeName, indexName, key) {
+    async getByIndex(storeName, indexName, key): Promise<any> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -219,7 +219,7 @@ class IndexedDBManager {
         });
     }
 
-    async getAll(storeName, indexName = null) {
+    async getAll(storeName, indexName = null): Promise<any[]> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -249,7 +249,7 @@ class IndexedDBManager {
         });
     }
 
-    async add(storeName, data) {
+    async add(storeName, data): Promise<any> {
         this.validateData(storeName, data);
         await this.ensureConnection();
 
@@ -281,7 +281,7 @@ class IndexedDBManager {
         });
     }
 
-    async put(storeName, data) {
+    async put(storeName, data): Promise<any> {
         this.validateData(storeName, data);
         await this.ensureConnection();
 
@@ -312,7 +312,7 @@ class IndexedDBManager {
         });
     }
 
-    async delete(storeName, key) {
+    async delete(storeName, key): Promise<any> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -335,7 +335,7 @@ class IndexedDBManager {
         });
     }
 
-    async clear(storeName) {
+    async clear(storeName): Promise<any> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {

@@ -69,6 +69,9 @@ const Layout = ({
 
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        İçeriğe atla
+      </a>
       <Sidebar
         currentView={currentView}
         onNavigate={onNavigate}
@@ -100,7 +103,7 @@ const Layout = ({
           </div>
         )}
 
-        <div className="content-area">
+        <div className="content-area" id="main-content">
           <div style={{ display: isLivePreviewMode ? 'none' : 'block' }}>
             {children}
           </div>

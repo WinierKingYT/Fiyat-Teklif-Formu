@@ -20,7 +20,7 @@ const HistoryList = ({ onNavigate }) => {
     const loadQuotes = async () => {
         setLoading(true);
         try {
-            const result = await (db as any).getAll('quotes');
+            const result = await (db).getAll('quotes');
             result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             setQuotes(result);
         } catch (error) {
@@ -34,7 +34,7 @@ const HistoryList = ({ onNavigate }) => {
         if (e) e.stopPropagation();
         const isSingle = !Array.isArray(id);
         const ids = Array.isArray(id) ? id : [id];
-        setConfirmDialog({ isOpen: true, title: isSingle ? 'Teklifi Sil' : 'Teklifleri Sil', message: isSingle ? 'Bu teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)' : `${ids.length} teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const deleteId of ids) { const quoteToDelete = quotes.find(q => q.id === deleteId); if (quoteToDelete) { await (db as any).add('recycle_bin', { originalStore: 'quotes', originalId: deleteId, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db as any).delete('quotes', deleteId); if (currentQuoteId === deleteId) setCurrentQuoteId(null); } toast.success(`${ids.length} teklif geri dönüşüm kutusuna taşındı`); setSelectedIds(new Set()); setSelectAll(false); loadQuotes(); } catch (error) { Logger.error('Error deleting quotes:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: isSingle ? 'Teklifi Sil' : 'Teklifleri Sil', message: isSingle ? 'Bu teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)' : `${ids.length} teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const deleteId of ids) { const quoteToDelete = quotes.find(q => q.id === deleteId); if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: deleteId, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', deleteId); if (currentQuoteId === deleteId) setCurrentQuoteId(null); } toast.success(`${ids.length} teklif geri dönüşüm kutusuna taşındı`); setSelectedIds(new Set()); setSelectAll(false); loadQuotes(); } catch (error) { Logger.error('Error deleting quotes:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
     };
 
     const handleLoad = (quote) => {

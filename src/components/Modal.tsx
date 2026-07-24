@@ -26,14 +26,22 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     const isDragging = useRef(false);
     const [mobile, setMobile] = useState(false);
 
+    const restoreFocus = useCallback(() => {
+        if (prevFocusRef.current && typeof (prevFocusRef.current as HTMLElement).focus === 'function') {
+            (prevFocusRef.current as HTMLElement).focus();
+        }
+        prevFocusRef.current = null;
+    }, []);
+
     const handleClose = useCallback(() => {
         setClosing(true);
         setTimeout(() => {
             setClosing(false);
             setVisible(false);
+            restoreFocus();
             onClose();
         }, 200);
-    }, [onClose]);
+    }, [onClose, restoreFocus]);
 
     useEffect(() => {
         if (isOpen) {
@@ -89,12 +97,6 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
             return () => document.removeEventListener('keydown', handler);
         }
     }, [visible, closing]);
-
-    useEffect(() => {
-        if (!visible) {
-            prevFocusRef.current && (prevFocusRef.current as HTMLElement).focus?.();
-        }
-    }, [visible]);
 
     const handleTouchStart = (e) => {
         touchStartY.current = e.touches[0].clientY;

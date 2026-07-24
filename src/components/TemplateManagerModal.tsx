@@ -24,7 +24,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     }, [isOpen, db]);
 
     const loadTemplates = async () => {
-        const allTemplates = await (db as any).getAll('templates');
+        const allTemplates = await (db).getAll('templates');
         setTemplates(allTemplates);
     };
 

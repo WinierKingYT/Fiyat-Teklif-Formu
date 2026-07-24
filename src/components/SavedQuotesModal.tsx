@@ -17,7 +17,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
     const loadQuotes = async () => {
         setLoading(true);
         try {
-            const result = await (db as any).getAll('quotes');
+            const result = await (db).getAll('quotes');
             result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             setQuotes(result);
         } catch (error) {
@@ -29,7 +29,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
 
     const handleDelete = async (id: any, e?: any) => {
         if (e) e.stopPropagation();
-        setConfirmDialog({ isOpen: true, title: 'Teklifi Sil', message: 'Bu teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const quoteToDelete = quotes.find(q => q.id === id); try { if (quoteToDelete) { await (db as any).add('recycle_bin', { originalStore: 'quotes', originalId: id, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db as any).delete('quotes', id); toast.success('Teklif geri dönüşüm kutusuna taşındı'); loadQuotes(); if (currentQuoteId === id) setCurrentQuoteId(null); } catch (error) { Logger.error('Error deleting quote:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: 'Teklifi Sil', message: 'Bu teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const quoteToDelete = quotes.find(q => q.id === id); try { if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: id, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', id); toast.success('Teklif geri dönüşüm kutusuna taşındı'); loadQuotes(); if (currentQuoteId === id) setCurrentQuoteId(null); } catch (error) { Logger.error('Error deleting quote:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
     };
 
     const handleSaveCurrent = async () => {

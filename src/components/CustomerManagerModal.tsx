@@ -38,7 +38,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
     }, [isOpen, db]);
 
     const loadCustomers = async () => {
-        const allCustomers = await (db as any).getAll('customers');
+        const allCustomers = await (db).getAll('customers');
         setCustomers(allCustomers);
     };
 
