@@ -28,7 +28,7 @@ export const evaluateMathExpression = (value: any) => {
 
         // Use Function constructor for evaluation (safer than eval, but still needs care)
         // We already validated allowed characters, so it should be relatively safe from injection
-        // eslint-disable-next-line no-new-func
+         
         const result = new Function(`return ${normalizedExpression}`)();
 
         // Check if result is a valid finite number

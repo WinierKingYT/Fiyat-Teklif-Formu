@@ -11,7 +11,7 @@ import EmptyState from './EmptyState';
 
 const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const { db, isReady } = useIndexedDB();
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState(['Genel']);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tümü');

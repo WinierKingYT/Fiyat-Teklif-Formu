@@ -6,6 +6,7 @@ import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Database, Download, Upload, Trash, RefreshCw, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getLocalDateString } from '../utils/dateUtils';
+import Logger from '../utils/logger';
 
 const BACKUP_SCHEMA_VERSION = 3;
 
@@ -55,7 +56,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                 banks: banks.length
             });
         } catch (error) {
-            console.error('Error loading stats:', error);
+            Logger.error('Error loading stats:', error);
         }
     };
 
@@ -78,7 +79,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
             .map(([store, count]) => `${store}: ${count} kayıt`)
             .join(', ');
 
-        setConfirmDialog({ isOpen: true, title: 'Tüm Verileri Sil', message: `Bu işlem tüm verileri kalıcı olarak silecek: ${summary}. Devam etmek istediğinize emin misiniz?`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {}))); toast.success('Tüm veriler temizlendi'); setClearConfirmText(''); loadStats(); } catch (error) { console.error('Error clearing data:', error); toast.error('Veriler temizlenirken hata oluştu'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: 'Tüm Verileri Sil', message: `Bu işlem tüm verileri kalıcı olarak silecek: ${summary}. Devam etmek istediğinize emin misiniz?`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {}))); toast.success('Tüm veriler temizlendi'); setClearConfirmText(''); loadStats(); } catch (error) { Logger.error('Error clearing data:', error); toast.error('Veriler temizlenirken hata oluştu'); } }, variant: 'danger' });
     };
 
     const handleExport = async () => {
@@ -120,7 +121,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
             setShowExportWarning(false);
             toast.success('Yedek dosyası indirildi (tüm veriler)');
         } catch (error) {
-            console.error('Error exporting data:', error);
+            Logger.error('Error exporting data:', error);
             toast.error('Dışa aktarma hatası');
         }
     };
@@ -155,12 +156,12 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const data = JSON.parse(event.target.result as string);
+                const data = JSON.parse((event.currentTarget as FileReader).result as string);
 
                 validateBackup(data);
 
                 // Atomic import: first validate all stores, then execute
-                const allOperations = [];
+                const allOperations: any[] = [];
 
                 for (const [store, items] of Object.entries(data.stores)) {
                     if (EXCLUDED_IMPORT_STORES.includes(store)) continue;
@@ -202,8 +203,8 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                 loadStats();
                 toast('Yedek dosyasını güvenli bir yerde saklayın. Dosya müşteri, banka ve ticari veriler içerir.', { duration: 5000, icon: '⚠️' });
             } catch (error) {
-                console.error('Error importing data:', error);
-                toast.error(error.message || 'İçe aktarma hatası: Geçersiz dosya formatı');
+                Logger.error('Error importing data:', error);
+                toast.error((error as any).message || 'İçe aktarma hatası: Geçersiz dosya formatı');
             } finally {
                 setImportFile(null);
             }
@@ -276,7 +277,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                             />
                             <button
                                 className="btn btn-outline w-full flex items-center justify-center gap-2"
-                                onClick={() => document.getElementById('dbImport').click()}
+                                onClick={() => document.getElementById('dbImport')?.click()}
                             >
                                 <Upload size={18} /> Veri İçe Aktar
                             </button>

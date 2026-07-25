@@ -5,14 +5,18 @@ import Pagination from './Pagination';
 import ConfirmDialog from './ConfirmDialog';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import useDebounce from '../hooks/useDebounce';
+import { useTranslation } from '../hooks/useTranslation';
+import { useQuote } from '../context/QuoteContext';
 import { Trash2, Edit, Plus, Search, Image as ImageIcon, Grid, List, Filter, CheckSquare, Square, Download, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ImageOptimizer from '../utils/imageOptimizer';
 import { parseExcelFile } from '../utils/excelParser';
+import Logger from '../utils/logger';
 
 const ProductManagerModal = ({ isOpen, onClose }) => {
+    const { t } = useTranslation();
     const { db } = useIndexedDB();
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState(['Genel']);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
@@ -21,7 +25,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
 
     // Edit/Add State
     const [isEditing, setIsEditing] = useState(false);
-    const [currentProduct, setCurrentProduct] = useState(null);
+    const [currentProduct, setCurrentProduct] = useState<any>(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
@@ -36,7 +40,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         unit: 'Adet',
         taxRate: 20,
         category: 'Genel',
-        image: null
+        image: null as string | null
     });
 
     useEffect(() => {
@@ -63,7 +67,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                 setCategories(defaults);
             }
         } catch (error) {
-            console.error('Error loading categories:', error);
+            Logger.error('Error loading categories:', error);
         }
     };
 
@@ -78,11 +82,11 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         setCategories(updatedCategories);
         await db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories });
         setNewCategoryName('');
-        toast.success('Kategori eklendi');
+        toast.success(t('savedSuccess'));
     };
 
     const handleDeleteCategory = async (categoryToDelete) => {
-        setConfirmDialog({ isOpen: true, title: 'Kategoriyi Sil', message: `${categoryToDelete} kategorisini silmek istediğinize emin misiniz?`, onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const updatedCategories = categories.filter(c => c !== categoryToDelete); setCategories(updatedCategories); db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories }); toast.success('Kategori silindi'); }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('delete'), message: `${categoryToDelete} kategorisini silmek istediğinize emin misiniz?`, onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const updatedCategories = categories.filter(c => c !== categoryToDelete); setCategories(updatedCategories); db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories }); toast.success(t('deletedSuccess')); }, variant: 'danger' });
     };
 
     const handleInputChange = (e) => {
@@ -96,10 +100,10 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
             try {
                 const optimizer = new ImageOptimizer();
                 const optimizedImage = await optimizer.optimizeImage(file);
-                setFormData(prev => ({ ...prev, image: optimizedImage }));
+                setFormData(prev => ({ ...prev, image: optimizedImage as string | null }));
             } catch (error) {
-                console.error("Image upload error:", error);
-                toast.error('Resim yüklenirken hata oluştu');
+                Logger.error("Image upload error:", error);
+                toast.error(t('error'));
             }
         }
     };
@@ -137,16 +141,16 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         try {
             if (isEditing && currentProduct) {
                 await db.put('products', { ...productData, id: currentProduct.id });
-                toast.success('Ürün güncellendi');
+                toast.success(t('savedSuccess'));
             } else {
                 await db.add('products', { ...productData, id: Date.now() });
-                toast.success('Ürün eklendi');
+                toast.success(t('savedSuccess'));
             }
             loadProducts();
             resetForm();
         } catch (error) {
-            console.error(error);
-            toast.error('Bir hata oluştu');
+            Logger.error(error);
+            toast.error(t('error'));
         }
     };
 
@@ -165,7 +169,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleDelete = async (id) => {
-        setConfirmDialog({ isOpen: true, title: 'Ürünü Sil', message: 'Bu ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performDelete(id); }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('deleteProduct'), message: 'Bu ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performDelete(id); }, variant: 'danger' });
     };
 
     const performDelete = async (id) => {
@@ -179,7 +183,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                     originalId: id
                 });
                 await db.delete('products', id);
-                toast.success('Ürün geri dönüşüm kutusuna taşındı');
+                toast.success(t('deletedSuccess'));
                 loadProducts();
                 if (selectedProducts.has(id)) {
                     const newSelected = new Set(selectedProducts);
@@ -188,13 +192,13 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                 }
             }
         } catch (error) {
-            console.error(error);
-            toast.error('Silinirken hata oluştu');
+            Logger.error(error);
+            toast.error(t('error'));
         }
     };
 
     const handleBulkDelete = async () => {
-        setConfirmDialog({ isOpen: true, title: 'Toplu Sil', message: `${selectedProducts.size} adet ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const id of selectedProducts) { const productToDelete = products.find(p => p.id === id); if (productToDelete) { await db.add('recycle_bin', { ...productToDelete, originalStore: 'products', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('products', id); } } toast.success('Seçili ürünler geri dönüşüm kutusuna taşındı'); setSelectedProducts(new Set()); loadProducts(); } catch (error) { console.error(error); toast.error('Toplu silme işlemi başarısız oldu'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('delete'), message: `${selectedProducts.size} adet ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const id of selectedProducts) { const productToDelete = products.find(p => p.id === id); if (productToDelete) { await db.add('recycle_bin', { ...productToDelete, originalStore: 'products', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('products', id); } } toast.success(t('deletedSuccess')); setSelectedProducts(new Set()); loadProducts(); } catch (error) { Logger.error(error); toast.error(t('error')); } }, variant: 'danger' });
     };
 
     const toggleProductSelection = (id) => {
@@ -277,8 +281,8 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         if (!file) return;
 
         try {
-            toast.loading('İçe aktarılıyor...', { id: 'import-loading' });
-            let importedProducts = [];
+            toast.loading(t('loading'), { id: 'import-loading' });
+            let importedProducts: any[] = [];
 
             if (file.name.endsWith('.json')) {
                 const text = await file.text();
@@ -286,7 +290,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
             } else if (file.name.match(/\.(xlsx|xls|csv)$/)) {
                 importedProducts = (await parseExcelFile(file)) as any[];
             } else {
-                toast.error('Desteklenmeyen dosya formatı', { id: 'import-loading' });
+                toast.error(t('error'), { id: 'import-loading' });
                 return;
             }
 
@@ -304,21 +308,21 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                         });
                     }
                 }
-                toast.success(`${count} ürün başarıyla eklendi`);
+                toast.success(`${count} ${t('itemsAddedSuccessfully')}`);
                 loadProducts();
             } else {
                 toast.error('Geçersiz veri formatı');
             }
         } catch (error) {
-            console.error('Import error:', error);
-            toast.error('İçe aktarma hatası: ' + error.message, { id: 'import-loading' });
+            Logger.error('Import error:', error);
+            toast.error(`${t('error')}: ${(error as any).message}`, { id: 'import-loading' });
         }
 
         e.target.value = '';
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Ürün Kataloğu Yönetimi" size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('productManagement')} size="xl">
             <div className="flex flex-col md:flex-row gap-6 h-[75vh]">
 
                 {/* Left: List/Grid */}
@@ -332,7 +336,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                 <input
                                     type="text"
                                     className="form-control pl-10"
-                                    placeholder="Ürün Ara..."
+                                    placeholder={t('search')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -341,28 +345,28 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                 <button
                                     className={`p-2 rounded ${viewMode === 'list' ? 'bg-[var(--color-bg-card)] shadow-sm' : 'text-[var(--color-text-muted)]'}`}
                                     onClick={() => setViewMode('list')}
-                                    title="Liste Görünümü"
+                                    title={t('tableView')}
                                 >
                                     <List size={18} />
                                 </button>
                                 <button
                                     className={`p-2 rounded ${viewMode === 'grid' ? 'bg-[var(--color-bg-card)] shadow-sm' : 'text-[var(--color-text-muted)]'}`}
                                     onClick={() => setViewMode('grid')}
-                                    title="Izgara Görünümü"
+                                    title={t('galleryView')}
                                 >
                                     <Grid size={18} />
                                 </button>
                             </div>
 
                             <div className="flex gap-1 ml-2 items-center">
-                                <label className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] cursor-pointer transition-colors" title="İçe Aktar (Excel/CSV/JSON)">
+                                <label className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] cursor-pointer transition-colors" title={t('importExcel')}>
                                     <Upload size={18} />
                                     <input type="file" className="hidden" accept=".json, .xlsx, .xls, .csv" onChange={handleImport} />
                                 </label>
                                 <button
                                     className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                                     onClick={handleExport}
-                                    title="JSON Dışa Aktar"
+                                    title={t('exportExcel')}
                                 >
                                     <Download size={18} />
                                 </button>
@@ -399,7 +403,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                     className="btn btn-sm btn-danger flex items-center gap-1"
                                     onClick={handleBulkDelete}
                                 >
-                                    <Trash2 size={14} /> Seçilenleri Sil
+                                    <Trash2 size={14} /> {t('delete')}
                                 </button>
                             </div>
                         )}
@@ -409,7 +413,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
                         {filteredProducts.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)]">
-                                <p>Ürün bulunamadı.</p>
+                                <p>{t('noData')}</p>
                             </div>
                         ) : (
                             <>
@@ -419,8 +423,8 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                             <button onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]">
                                                 {selectedProducts.size === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
                                             </button>
-                                            <span className="flex-1">Ürün Adı</span>
-                                            <span className="w-24 text-right">Fiyat</span>
+                                            <span className="flex-1">{t('productName')}</span>
+                                            <span className="w-24 text-right">{t('unitPrice')}</span>
                                             <span className="w-8"></span>
                                         </div>
                                         {paginatedProducts.map(product => (
@@ -520,12 +524,12 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                 < div className="w-full md:w-2/5 pl-2 overflow-y-auto custom-scrollbar" >
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                            {isEditing ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}
+                            {isEditing ? t('edit') : t('addProduct')}
                         </h3>
                         <div className="flex gap-2">
                             {isEditing ? (
                                 <button className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
-                                    Vazgeç
+                                    {t('cancel')}
                                 </button>
                             ) : (
                                 <button
@@ -533,7 +537,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                     onClick={resetForm}
                                     title="Formu Temizle"
                                 >
-                                    <Plus size={16} /> Yeni
+                                    <Plus size={16} /> {t('add')}
                                 </button>
                             )}
                         </div>
@@ -542,35 +546,35 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="form-group">
-                            <label className="form-label" htmlFor="productName">Ürün Adı <span className="text-[var(--color-error)]">*</span></label>
+                            <label className="form-label" htmlFor="productName">{t('productName')} <span className="text-[var(--color-error)]">*</span></label>
                             <input type="text" className="form-control" id="productName" name="name" value={formData.name} onChange={handleInputChange} autoComplete="off" required />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="form-group">
-                                <label className="form-label" htmlFor="productPrice">Birim Fiyat (₺) <span className="text-[var(--color-error)]">*</span></label>
+                                <label className="form-label" htmlFor="productPrice">{t('unitPrice')} (₺) <span className="text-[var(--color-error)]">*</span></label>
                                 <input type="number" className="form-control" id="productPrice" name="price" value={formData.price} onChange={handleInputChange} min="0" step="0.01" required />
                             </div>
                             <div className="form-group">
                                 <label className="form-label" htmlFor="productUnit">Birim</label>
                                 <select className="form-control form-select" id="productUnit" name="unit" value={formData.unit} onChange={handleInputChange}>
-                                    <option value="Adet">Adet</option>
-                                    <option value="Metre">Metre</option>
-                                    <option value="Kg">Kg</option>
+                                    <option value="Adet">{t('unitPiece')}</option>
+                                    <option value="Metre">{t('unitMeter')}</option>
+                                    <option value="Kg">{t('unitKg')}</option>
                                     <option value="Litre">Litre</option>
-                                    <option value="Saat">Saat</option>
-                                    <option value="Gün">Gün</option>
-                                    <option value="Ay">Ay</option>
+                                    <option value="Saat">{t('unitHour')}</option>
+                                    <option value="Gün">{t('unitDay')}</option>
+                                    <option value="Ay">{t('unitMonth')}</option>
                                     <option value="Yıl">Yıl</option>
                                     <option value="Paket">Paket</option>
-                                    <option value="Koli">Koli</option>
+                                    <option value="Koli">{t('unitBox')}</option>
                                     <option value="Set">Set</option>
                                 </select>
                             </div>
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label" htmlFor="productTax">KDV Oranı (%)</label>
+                            <label className="form-label" htmlFor="productTax">{t('vatRate')} (%)</label>
                             <select className="form-control form-select" id="productTax" name="taxRate" value={formData.taxRate} onChange={handleInputChange}>
                                 <option value="0">%0</option>
                                 <option value="1">%1</option>
@@ -583,13 +587,13 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
 
                         <div className="form-group">
                             <div className="flex justify-between items-center mb-1">
-                                <label className="form-label mb-0" htmlFor="productCategory">Kategori</label>
+                                <label className="form-label mb-0" htmlFor="productCategory">{t('category')}</label>
                                 <button
                                     type="button"
                                     className="text-xs text-[var(--color-primary)] hover:underline"
                                     onClick={() => setShowCategoryManager(!showCategoryManager)}
                                 >
-                                    {showCategoryManager ? 'Kapat' : 'Yönet'}
+                                    {showCategoryManager ? t('close') : 'Yönet'}
                                 </button>
                             </div>
 
@@ -603,7 +607,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                             value={newCategoryName}
                                             onChange={(e) => setNewCategoryName(e.target.value)}
                                         />
-                                        <button type="button" className="btn btn-sm btn-primary" onClick={handleAddCategory}>Ekle</button>
+                                        <button type="button" className="btn btn-sm btn-primary" onClick={handleAddCategory}>{t('add')}</button>
                                     </div>
                                     <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                                         {categories.map(cat => (
@@ -634,7 +638,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label" htmlFor="productDescription">Açıklama</label>
+                            <label className="form-label" htmlFor="productDescription">{t('description')}</label>
                             <textarea
                                 className="form-control"
                                 id="productDescription"
@@ -647,7 +651,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label">Ürün Görseli</label>
+                            <label className="form-label">{t('image')}</label>
                             <div className="flex items-center gap-4">
                                 {formData.image ? (
                                     <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-[var(--color-border)] group">
@@ -668,7 +672,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                 <div className="flex-1">
                                     <label className="btn btn-outline btn-sm cursor-pointer inline-flex items-center gap-2">
                                         <Upload size={16} />
-                                        Görsel Seç
+                                        {t('addImage')}
                                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                                     </label>
                                     <p className="text-xs text-[var(--color-text-muted)] mt-1">
@@ -680,7 +684,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
 
                         <div className="flex justify-end gap-2 pt-4">
                             <button type="submit" className="btn btn-primary w-full">
-                                {isEditing ? 'Değişiklikleri Kaydet' : 'Ürünü Ekle'}
+                                {isEditing ? t('save') : t('addProduct')}
                             </button>
                         </div>
                     </form>

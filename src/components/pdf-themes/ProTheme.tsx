@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMemo } from 'react';
+import { getAdjustedFontSize } from '../../utils/themeHelpers';
 
 const ProTheme = ({
     id,
@@ -23,17 +24,6 @@ const ProTheme = ({
     currentLocale,
     hasLineItemDiscounts
 }) => {
-    const getAdjustedFontSize = (size) => {
-        const factor = 0.8;
-        if (!size || size === 'inherit') return '0.75em';
-        if (typeof size === 'number') return `${size * factor}px`;
-        if (typeof size === 'string') {
-            if (size.endsWith('px')) return `${parseFloat(size) * factor}px`;
-            if (size.endsWith('rem') || size.endsWith('em')) return `calc(${size} * ${factor})`;
-        }
-        return '0.75em';
-    };
-
     const proStyles = useMemo(() => `
         .pro-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
@@ -232,7 +222,7 @@ const ProTheme = ({
         }
 
         .pro-theme-container .pdf-items-table td {
-            font-size: ${getAdjustedFontSize(config.tableBodyFontSize)} !important;
+            font-size: ${getAdjustedFontSize(config.tableBodyFontSize, 0.8, '0.75em')} !important;
             font-weight: ${config.tableBodyFontWeight || '500'} !important;
             padding: ${config.tableCellPadding || '0.8em'};
             border-bottom: 1px solid #e2e8f0;

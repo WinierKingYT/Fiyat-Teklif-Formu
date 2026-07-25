@@ -25,6 +25,7 @@ const TabBar = () => {
                         }`}
                         onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
                         title="Kapat"
+                        aria-label={`${tab.title || 'Yeni Teklif'} sekmesini kapat`}
                     >
                         <X size={11} />
                     </button>
@@ -34,6 +35,7 @@ const TabBar = () => {
                 onClick={addTab}
                 className="ml-0.5 p-1 rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors"
                 title="Yeni Sekme"
+                aria-label="Yeni Sekme"
             >
                 <Plus size={16} />
             </button>

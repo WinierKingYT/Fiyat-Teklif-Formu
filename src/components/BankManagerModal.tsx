@@ -9,8 +9,8 @@ import Logger from '../utils/logger';
 
 const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
     const { db } = useIndexedDB();
-    const [banks, setBanks] = useState([]);
-    const [editingBank, setEditingBank] = useState(null);
+    const [banks, setBanks] = useState<any[]>([]);
+    const [editingBank, setEditingBank] = useState<any>(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [formData, setFormData] = useState({
         bankName: '',

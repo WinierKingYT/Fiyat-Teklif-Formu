@@ -11,7 +11,7 @@ import EmptyState from './EmptyState';
 
 const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }) => {
     const { db, isReady } = useIndexedDB();
-    const [customers, setCustomers] = useState([]);
+    const [customers, setCustomers] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);

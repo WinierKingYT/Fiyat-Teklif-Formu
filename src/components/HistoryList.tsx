@@ -1,10 +1,10 @@
-import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
 
 const HistoryList = ({ onNavigate }) => {
     const { db, isReady } = useIndexedDB();
     const { currentQuoteId, setCurrentQuoteId, loadQuote } = useQuote();
     const { t } = useTranslation();
-    const [quotes, setQuotes] = useState([]);
+    const [quotes, setQuotes] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -93,6 +93,37 @@ const HistoryList = ({ onNavigate }) => {
         toast.success(`${selected.length} teklif dışa aktarılıyor...`);
     };
 
+    const handleBatchPrint = () => {
+        const selected = quotes.filter(q => selectedIds.has(q.id));
+        if (selected.length === 0) return;
+        selected.forEach((quote, i) => {
+            setTimeout(() => {
+                const calc = calculateQuoteTotals(quote.items || [], quote.discount || {}, { currency: quote.quoteData?.currency || 'TRY' });
+                const win = window.open('', '_blank');
+                if (!win) return;
+                const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                    .map(s => s.outerHTML).join('\n');
+                const rows = (quote.items || []).map(item =>
+                    `<tr><td>${item.name || ''}</td><td>${item.quantity || 0}</td><td>${item.unit || ''}</td><td style="text-align:right">${Number(item.price || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td><td style="text-align:right">${Number(item.netTotal || (item.quantity * item.price)).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td></tr>`
+                ).join('');
+                win.document.write(`
+                    <!DOCTYPE html><html><head><title>${quote.quoteData?.title || 'Teklif'}</title>${styles}
+                    <style>body{font-family:sans-serif;padding:10mm;color:#333}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}th{background:#f5f5f5}.total{font-weight:700;font-size:1.1em}</style>
+                    </head><body>
+                    <h1>${quote.quoteData?.title || 'Fiyat Teklifi'}</h1>
+                    <p><strong>Teklif No:</strong> ${quote.quoteData?.number || '-'} | <strong>Tarih:</strong> ${quote.quoteData?.date || '-'}</p>
+                    <p><strong>Müşteri:</strong> ${quote.customerData?.name || '-'} ${quote.customerData?.company ? `(${quote.customerData.company})` : ''}</p>
+                    <hr/><table><thead><tr><th>Ürün/Hizmet</th><th>Miktar</th><th>Birim</th><th>Birim Fiyat</th><th>Toplam</th></tr></thead><tbody>${rows}</tbody></table>
+                    <hr/><p class="total">Genel Toplam: ${calc.grandTotal.toLocaleString('tr-TR', { style: 'currency', currency: quote.quoteData?.currency || 'TRY' })}</p>
+                    <script>window.onload=function(){window.print();window.close()};<\/script>
+                    </body></html>
+                `);
+                win.document.close();
+            }, i * 500);
+        });
+        toast.success(`${selected.length} teklif yazdırılıyor...`);
+    };
+
     const debouncedSearch = useDebounce(searchTerm, 250);
     const filteredQuotes = useMemo(() =>
         quotes.filter(q => {
@@ -119,11 +150,6 @@ const HistoryList = ({ onNavigate }) => {
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch]);
-
-    const formatCurrency = (amount, currency = 'TRY') => {
-        const locale = currency === 'TRY' ? 'tr-TR' : 'en-US';
-        return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
-    };
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-bg-page)]">
@@ -177,6 +203,13 @@ const HistoryList = ({ onNavigate }) => {
                         >
                             <Download size={14} />
                             CSV'ye Aktar
+                        </button>
+                        <button
+                            onClick={handleBatchPrint}
+                            className="btn btn-sm btn-outline flex items-center gap-1.5"
+                        >
+                            <FileText size={14} />
+                            Yazdır
                         </button>
                         <button
                             onClick={() => handleDelete([...selectedIds] as any)}

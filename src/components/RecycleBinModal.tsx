@@ -9,7 +9,7 @@ import Logger from '../utils/logger';
 
 const RecycleBinModal = ({ isOpen, onClose }) => {
     const { db } = useIndexedDB();
-    const [deletedItems, setDeletedItems] = useState([]);
+    const [deletedItems, setDeletedItems] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('all');
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });

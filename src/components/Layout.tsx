@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Sidebar from './Sidebar';
 import TabBar from './TabBar';
 import StatusBar from './StatusBar';
@@ -14,6 +14,15 @@ const TopBar = ({ currentView, onToggleMobile }) => {
   const { viewMode, setViewMode, isLivePreviewMode, setIsLivePreviewMode, appTheme, setAppTheme } = useUI();
   const { saveQuote } = useQuote();
   const { t } = useTranslation();
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline = () => setIsOffline(false);
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', goOnline);
+    return () => { window.removeEventListener('offline', goOffline); window.removeEventListener('online', goOnline); };
+  }, []);
 
   return (
     <div className="top-bar">
@@ -48,6 +57,11 @@ const TopBar = ({ currentView, onToggleMobile }) => {
         >
           <Download size={15} />
         </button>
+        {isOffline && (
+          <span className="top-bar-btn text-[var(--color-warning)] text-xs font-semibold" title="Çevrimdışı mod">
+            ⚡ Çevrimdışı
+          </span>
+        )}
       </div>
     </div>
   );

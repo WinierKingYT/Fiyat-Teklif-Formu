@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, renderHook } from '@testing-library/react';
+import { render, act, renderHook } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/dom';
 import { QuoteProvider, useQuote } from '../context/QuoteContext';
 import { getLocalDateString } from '../utils/dateUtils';
 
@@ -35,8 +36,8 @@ const TestComponent = () => {
         addTab,
         activeTabId,
         updateQuoteData,
-        activeTab
     } = useQuote();
+    const activeTab = tabs.find(t => t.id === activeTabId);
 
     return (
         <div>

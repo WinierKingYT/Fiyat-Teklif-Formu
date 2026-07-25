@@ -1,1 +1,99 @@
-import React from 'react'; import { Landmark, CreditCard, User, Building, Hash } from 'lucide-react'; import { useQuote } from '../context/QuoteContext'; import { useTranslation } from '../hooks/useTranslation';  const BankInfoForm = ({ data = {}, onChange, onOpenManager }) => {     const { quoteData } = useQuote();     const { t } = useTranslation(quoteData?.language);     const handleChange = (e) => {         const { name, value } = e.target;         onChange(name, value);     };      return (         <div className="space-y-3">             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">                 <div className="relative">                     <Building size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />                     <input type="text" className="form-control pl-9" id="bankName" name="bankName" value={(data as any).bankName || ''} onChange={handleChange} placeholder={t('bankName')} />                 </div>                 <div className="relative">                     <Hash size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />                     <input type="text" className="form-control pl-9" id="bankBranch" name="branch" value={(data as any).branch || ''} onChange={handleChange} placeholder={t('branch')} />                 </div>             </div>             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">                 <div className="relative">                     <CreditCard size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />                     <input type="text" className="form-control pl-9" id="accountNumber" name="accountNumber" value={(data as any).accountNumber || ''} onChange={handleChange} placeholder={t('accountNumber')} />                 </div>                 <div className="relative">                     <Landmark size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />                     <input type="text" className="form-control pl-9" id="iban" name="iban" value={(data as any).iban || ''} onChange={handleChange} placeholder={t('iban')} />                 </div>             </div>             <div className="relative">                 <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />                 <input type="text" className="form-control pl-9" id="accountHolder" name="accountHolder" value={(data as any).accountHolder || ''} onChange={handleChange} placeholder={t('accountHolder')} />             </div>         </div>     ); };  export default BankInfoForm;
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Landmark, CreditCard, User, Building, Hash } from 'lucide-react';
+import { useQuote } from '../context/QuoteContext';
+import { useTranslation } from '../hooks/useTranslation';
+import { InputField } from './ui';
+
+const bankInfoSchema = z.object({
+  bankName: z.string().optional(),
+  branch: z.string().optional(),
+  accountNumber: z.string().optional(),
+  iban: z.string().optional(),
+  accountHolder: z.string().optional(),
+});
+
+type BankInfoFormData = z.infer<typeof bankInfoSchema>;
+
+interface BankInfoFormProps {
+  data?: Record<string, any>;
+  onChange: (name: string, value: any) => void;
+  onOpenManager?: () => void;
+}
+
+const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpenManager }) => {
+  const { quoteData } = useQuote();
+  const { t } = useTranslation(quoteData?.language);
+
+  const {
+    register,
+  } = useForm<BankInfoFormData>({
+    resolver: zodResolver(bankInfoSchema),
+    defaultValues: {
+      bankName: (data as any).bankName || '',
+      branch: (data as any).branch || '',
+      accountNumber: (data as any).accountNumber || '',
+      iban: (data as any).iban || '',
+      accountHolder: (data as any).accountHolder || '',
+    },
+    mode: 'onBlur',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    onChange(name, value);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <InputField
+          id="bankName"
+          name="bankName"
+          register={register}
+          icon={<Building size={15} />}
+          placeholder={t('bankName')}
+          onChange={handleChange}
+        />
+        <InputField
+          id="bankBranch"
+          name="branch"
+          register={register}
+          icon={<Hash size={15} />}
+          placeholder={t('branch')}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <InputField
+          id="accountNumber"
+          name="accountNumber"
+          register={register}
+          icon={<CreditCard size={15} />}
+          placeholder={t('accountNumber')}
+          onChange={handleChange}
+        />
+        <InputField
+          id="iban"
+          name="iban"
+          register={register}
+          icon={<Landmark size={15} />}
+          placeholder={t('iban')}
+          onChange={handleChange}
+        />
+      </div>
+      <InputField
+        id="accountHolder"
+        name="accountHolder"
+        register={register}
+        icon={<User size={15} />}
+        placeholder={t('accountHolder')}
+        onChange={handleChange}
+      />
+    </div>
+  );
+};
+
+export default React.memo(BankInfoForm);

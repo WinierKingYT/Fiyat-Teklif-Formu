@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Eraser, Check, Upload, X } from 'lucide-react';
 
 const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
-    const canvasRef = useRef(null);
+    const canvasRef = useRef<any>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasSignature, setHasSignature] = useState(false);
     const [lineWidth, setLineWidth] = useState(2);
@@ -107,7 +107,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
         const ctx = canvas.getContext('2d');
         const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const l = pixels.data.length;
-        let bound = { top: null, left: null, right: null, bottom: null };
+        const bound = { top: null, left: null, right: null, bottom: null };
         let x, y;
 
         for (let i = 0; i < l; i += 4) {
@@ -127,8 +127,8 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
 
         if (bound.top === null) return null;
 
-        const trimHeight = bound.bottom - bound.top + 1;
-        const trimWidth = bound.right - bound.left + 1;
+        const trimHeight = bound.bottom! - bound.top! + 1;
+        const trimWidth = bound.right! - bound.left! + 1;
 
         // Add some padding
         const padding = 10;
@@ -137,9 +137,9 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
         trimmed.height = trimHeight + (padding * 2);
         const trimmedCtx = trimmed.getContext('2d');
 
-        trimmedCtx.drawImage(
+        trimmedCtx!.drawImage(
             canvas,
-            bound.left, bound.top, trimWidth, trimHeight,
+            bound.left!, bound.top!, trimWidth, trimHeight,
             padding, padding, trimWidth, trimHeight
         );
 

@@ -1,9 +1,9 @@
 import React from 'react';
-import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useDialogBehavior } from '../hooks/useDialogBehavior';
 
-const sizeMap = {
+const sizeMap: Record<string, string> = {
     sm: '350px',
     md: '500px',
     lg: '700px',
@@ -12,117 +12,25 @@ const sizeMap = {
     full: '95%',
 };
 
-const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+interface ModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    children: React.ReactNode;
+    size?: string;
+}
 
-const isMobile = () => window.innerWidth < 768;
-
-const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
-    const [visible, setVisible] = useState(false);
-    const [closing, setClosing] = useState(false);
-    const modalRef = useRef(null);
-    const prevFocusRef = useRef(null);
-    const touchStartY = useRef(0);
-    const touchDeltaY = useRef(0);
-    const isDragging = useRef(false);
-    const [mobile, setMobile] = useState(false);
-
-    const restoreFocus = useCallback(() => {
-        if (prevFocusRef.current && typeof (prevFocusRef.current as HTMLElement).focus === 'function') {
-            (prevFocusRef.current as HTMLElement).focus();
-        }
-        prevFocusRef.current = null;
-    }, []);
-
-    const handleClose = useCallback(() => {
-        setClosing(true);
-        setTimeout(() => {
-            setClosing(false);
-            setVisible(false);
-            restoreFocus();
-            onClose();
-        }, 200);
-    }, [onClose, restoreFocus]);
-
-    useEffect(() => {
-        if (isOpen) {
-            setVisible(true);
-            setClosing(false);
-            setMobile(window.innerWidth < 768);
-            prevFocusRef.current = document.activeElement;
-        } else if (visible) {
-            handleClose();
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (!visible) return;
-        const handler = (e) => { if (e.key === 'Escape') handleClose(); };
-        document.addEventListener('keydown', handler);
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.removeEventListener('keydown', handler);
-            document.body.style.overflow = '';
-        };
-    }, [visible, handleClose]);
-
-    useEffect(() => {
-        if (!visible || closing) return;
-        const timer = requestAnimationFrame(() => {
-            const el = modalRef.current;
-            if (!el) return;
-            const firstFocusable = el.querySelectorAll(focusableSelector)[0];
-            if (firstFocusable) (firstFocusable as HTMLElement).focus();
-        });
-        return () => cancelAnimationFrame(timer);
-    }, [visible, closing]);
-
-    useEffect(() => {
-        if (visible && !closing) {
-            const handler = (e) => {
-                const el = modalRef.current;
-                if (!el || e.key !== 'Tab') return;
-                const focusables = el.querySelectorAll(focusableSelector);
-                if (focusables.length === 0) return;
-                const first = focusables[0] as HTMLElement;
-                const last = focusables[focusables.length - 1] as HTMLElement;
-                if (e.shiftKey && document.activeElement === first) {
-                    e.preventDefault();
-                    last.focus();
-                } else if (!e.shiftKey && document.activeElement === last) {
-                    e.preventDefault();
-                    first.focus();
-                }
-            };
-            document.addEventListener('keydown', handler);
-            return () => document.removeEventListener('keydown', handler);
-        }
-    }, [visible, closing]);
-
-    const handleTouchStart = (e) => {
-        touchStartY.current = e.touches[0].clientY;
-        touchDeltaY.current = 0;
-        isDragging.current = true;
-    };
-
-    const handleTouchMove = (e) => {
-        if (!isDragging.current) return;
-        touchDeltaY.current = e.touches[0].clientY - touchStartY.current;
-        if (touchDeltaY.current > 0 && modalRef.current) {
-            const translate = Math.min(touchDeltaY.current, 200);
-            modalRef.current.style.transform = `translateY(${translate}px)`;
-            modalRef.current.style.transition = 'none';
-        }
-    };
-
-    const handleTouchEnd = () => {
-        isDragging.current = false;
-        if (touchDeltaY.current > 100) {
-            handleClose();
-        } else if (modalRef.current) {
-            modalRef.current.style.transform = '';
-            modalRef.current.style.transition = '';
-        }
-    };
+const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) => {
+    const {
+        visible,
+        closing,
+        mobile,
+        dialogRef,
+        handleClose,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
+    } = useDialogBehavior(isOpen, onClose);
 
     if (!visible) return null;
 
@@ -137,7 +45,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
             onTouchEnd={mobile ? handleTouchEnd : undefined}
         >
             <div
-                ref={modalRef}
+                ref={dialogRef}
                 className={`bg-[var(--color-bg-card)] w-full shadow-lg flex flex-col ${closing ? (mobile ? 'animate-slideDown' : 'animate-scaleOut') : ''}`}
                 style={{
                     maxWidth: mobile ? '100%' : (sizeMap[size] || '500px'),

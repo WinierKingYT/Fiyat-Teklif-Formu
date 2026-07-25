@@ -12,10 +12,10 @@ import { getLocalDateString } from '../utils/dateUtils';
 
 const CustomerManagerModal = ({ isOpen, onClose }) => {
     const { db } = useIndexedDB();
-    const [customers, setCustomers] = useState([]);
+    const [customers, setCustomers] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditing, setIsEditing] = useState(false);
-    const [currentCustomer, setCurrentCustomer] = useState(null);
+    const [currentCustomer, setCurrentCustomer] = useState<any>(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
@@ -216,7 +216,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                         <button className="btn btn-outline btn-sm flex-1" onClick={handleExport}>
                             <Download size={14} /> Dışa Aktar
                         </button>
-                        <button className="btn btn-outline btn-sm flex-1" onClick={() => document.getElementById('importCustomerInput').click()}>
+                        <button className="btn btn-outline btn-sm flex-1" onClick={() => document.getElementById('importCustomerInput')?.click()}>
                             <Upload size={14} /> İçe Aktar
                         </button>
                         <input

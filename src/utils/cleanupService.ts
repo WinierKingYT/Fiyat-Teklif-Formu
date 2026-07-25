@@ -31,7 +31,7 @@ class CleanupService {
      */
     async loadSettings() {
         if (!this.dbManager) {
-            console.warn('Database not initialized');
+            Logger.warn('Database not initialized');
             return this.settings;
         }
 
@@ -43,7 +43,7 @@ class CleanupService {
             }
             return this.settings;
         } catch (error) {
-            console.error('Error loading cleanup settings:', error);
+            Logger.error('Error loading cleanup settings:', error);
             return this.settings;
         }
     }
@@ -175,7 +175,7 @@ class CleanupService {
                 }
             } catch (err) {
                 // Store might not exist
-                console.warn('formState store not accessible:', err.message);
+                Logger.warn('formState store not accessible:', (err as any).message);
             }
 
             Logger.log(`Cleaned ${cleanedCount} orphaned data entries`);
@@ -285,7 +285,13 @@ class CleanupService {
      * @returns {Promise<Object>}
      */
     async performFullCleanup(options: any = {}) {
-        const results = {
+        const results: {
+            oldQuotes: any;
+            recycleBin: any;
+            orphanedData: any;
+            success: boolean;
+            errors: string[];
+        } = {
             oldQuotes: null,
             recycleBin: null,
             orphanedData: null,
@@ -309,7 +315,7 @@ class CleanupService {
             Logger.log('FullCleanup completed', results);
         } catch (error) {
             results.success = false;
-            results.errors.push(error.message);
+            results.errors.push((error as any).message);
             Logger.error('Full cleanup failed', error);
         }
 

@@ -15,7 +15,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
         updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscount
     } = useQuote();
 
-    const [templates, setTemplates] = useState([]);
+    const [templates, setTemplates] = useState<any[]>([]);
     const [templateName, setTemplateName] = useState('');
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
@@ -106,7 +106,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-sm font-semibold text-[var(--color-text)]">Kayıtlı Şablonlar</h3>
                         <div className="flex gap-2">
-                            <button className="btn btn-sm btn-outline" onClick={() => document.getElementById('importTemplateInput').click()} title="Şablon İçe Aktar">
+                            <button className="btn btn-sm btn-outline" onClick={() => document.getElementById('importTemplateInput')?.click()} title="Şablon İçe Aktar">
                                 <Upload size={14} /> İçe Aktar
                             </button>
                             <input type="file" id="importTemplateInput" accept=".json" style={{ display: 'none' }} onChange={handleImportTemplate} />

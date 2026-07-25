@@ -12,6 +12,7 @@ import {
   Settings2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Logger from '../utils/logger';
 import CompanyInfoForm from "./CompanyInfoForm";
 import {
   DndContext,
@@ -100,10 +101,10 @@ const Settings = () => {
   });
   const appColors = [
     { id: "blue", name: "Okyanus Mavisi", color: "#2563eb" },
-    { id: "emerald", name: "Z+-mr+-t Ye+�ili", color: "#10b981" },
+    { id: "emerald", name: "Zümrüt Yeşili", color: "#10b981" },
     { id: "violet", name: "Asil Mor", color: "#8b5cf6" },
-    { id: "amber", name: "G+-n Bat�-m�-", color: "#f59e0b" },
-    { id: "rose", name: "G+-l Kurusu", color: "#f43f5e" },
+    { id: "amber", name: "Gün Batımı", color: "#f59e0b" },
+    { id: "rose", name: "Gül Kurusu", color: "#f43f5e" },
     { id: "slate", name: "Kurumsal Gri", color: "#475569" },
   ];
   const [companySettings, setCompanySettings] = useState({
@@ -141,7 +142,7 @@ const Settings = () => {
         }
         setLoading(false);
       } catch (error) {
-        console.error("Error loading settings:", error);
+        Logger.error("Error loading settings:", error);
         setLoading(false);
       }
     };
@@ -159,10 +160,10 @@ const Settings = () => {
     try {
       await db.put("settings", { id: "global", ...settings });
       await db.put("company_defaults", { id: "default", ...companySettings });
-      toast.success("Ayarlar ba+�ar�-yla kaydedildi!");
+      toast.success("Ayarlar başarıyla kaydedildi!");
     } catch (error) {
-      console.error("Error saving settings:", error);
-      toast.error("Ayarlar kaydedilirken bir hata olu+�tu.");
+      Logger.error("Error saving settings:", error);
+      toast.error("Ayarlar kaydedilirken bir hata oluştu.");
     }
   };
   const handleDragEnd = (event) => {
@@ -189,14 +190,14 @@ const Settings = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center p-12 text-[var(--color-text-muted)] text-sm">
-        Y+-kleniyor...
+        Yükleniyor...
       </div>
     );
   const tabs = [
     { id: "general", label: "Genel Ayarlar" },
-    { id: "company", label: "Varsay�-lan Bilgiler" },
-    { id: "performance", label: "Performans & Bak�-m" },
-    { id: "pdf", label: "PDF D+-zeni" },
+    { id: "company", label: "Varsayılan Bilgiler" },
+    { id: "performance", label: "Performans & Bakım" },
+    { id: "pdf", label: "PDF Düzeni" },
     { id: "watermark", label: "Filigran" },
   ];
   return (
@@ -209,7 +210,7 @@ const Settings = () => {
           <Settings2 size={17} className="text-[var(--color-primary)]" />{" "}
         </div>{" "}
         <h1 className="text-xl font-bold text-[var(--color-text)]">
-          Uygulama Ayarlar�-
+          Uygulama Ayarları
         </h1>{" "}
       </div>{" "}
       <div className="tab-nav">
@@ -239,11 +240,11 @@ const Settings = () => {
                   className="text-[var(--color-primary)]"
                 />{" "}
               </div>{" "}
-              <span className="card-title">G+�r+-n+-m Ayarlar�-</span>{" "}
+              <span className="card-title">Görünüm Ayarları</span>{" "}
             </div>{" "}
             <button className="btn btn-primary btn-sm" onClick={handleSave}>
               {" "}
-              <Save size={14} /> Ayarlar�- Kaydet{" "}
+              <Save size={14} /> Ayarları Kaydet{" "}
             </button>{" "}
           </div>{" "}
           <div className="card-body space-y-6">
@@ -264,7 +265,7 @@ const Settings = () => {
                       name="appTheme"
                       value={mode}
                       checked={appTheme === mode}
-                      onChange={(e) => setAppTheme(e.target.value)}
+                      onChange={(e) => setAppTheme(e.target.value as 'light' | 'dark')}
                       className="form-radio"
                     />{" "}
                     <div className="flex flex-col">
@@ -274,8 +275,8 @@ const Settings = () => {
                       </span>{" "}
                       <span className="text-xs text-[var(--color-text-muted)]">
                         {mode === "light"
-                          ? "Standart beyaz g+�r+-n+-m"
-                          : "G+�z yormayan koyu g+�r+-n+-m"}
+                          ? "Standart beyaz görünüm"
+                          : "Göz yormayan koyu görünüm"}
                       </span>{" "}
                     </div>{" "}
                   </label>
@@ -290,7 +291,7 @@ const Settings = () => {
                 {appColors.map((color) => (
                   <button
                     key={color.id}
-                    onClick={() => setAppColor(color.id)}
+                    onClick={() => setAppColor(color.id as 'blue' | 'purple' | 'green' | 'red' | 'orange')}
                     className={`flex items-center gap-3 p-2.5 rounded-[var(--radius)] border transition-all ${appColor === color.id ? "bg-[var(--color-primary-muted)] border-[var(--color-primary)]" : "bg-[var(--color-bg-card)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]"}`}
                   >
                     {" "}
@@ -312,19 +313,19 @@ const Settings = () => {
             </div>{" "}
             <div className="form-group">
               {" "}
-              <label className="form-label">Aray+-z Tasar�-m�-</label>{" "}
+              <label className="form-label">Arayüz Tasarımı</label>{" "}
               <div className="flex gap-3">
                 {" "}
                 {[
                   {
                     id: "modern",
                     label: "Modern Dashboard",
-                    desc: "Yeni, cam efektli ve panelli g+�r+-n+-m",
+                    desc: "Yeni, cam efektli ve panelli görünüm",
                   },
                   {
                     id: "classic",
-                    label: "Klasik G+�r+-n+-m",
-                    desc: "Basit, tek s+-tunlu standart g+�r+-n+-m",
+                    label: "Klasik Görünüm",
+                    desc: "Basit, tek sütunlu standart görünüm",
                   },
                 ].map((layout) => (
                   <label
@@ -337,7 +338,7 @@ const Settings = () => {
                       name="appLayout"
                       value={layout.id}
                       checked={appLayout === layout.id}
-                      onChange={(e) => setAppLayout(e.target.value)}
+                      onChange={(e) => setAppLayout(e.target.value as 'modern' | 'classic')}
                       className="form-radio"
                     />{" "}
                     <div className="flex flex-col">
@@ -355,19 +356,19 @@ const Settings = () => {
             </div>{" "}
             <div className="form-group">
               {" "}
-              <label className="form-label">Cihaz G+�r+-n+-m+-</label>{" "}
+              <label className="form-label">Cihaz Görünümü</label>{" "}
               <div className="flex gap-3">
                 {" "}
                 {[
                   {
                     id: "desktop",
-                    label: "Bilgisayar (Masa+-st+-)",
-                    desc: "Geni+� ekran g+�r+-n+-m+-",
+                    label: "Bilgisayar (Masaüstü)",
+                    desc: "Geniş ekran görünümü",
                   },
                   {
                     id: "mobile",
                     label: "Mobil",
-                    desc: "Dar ekran g+�r+-n+-m+-",
+                    desc: "Dar ekran görünümü",
                   },
                 ].map((mode) => (
                   <label
@@ -380,7 +381,7 @@ const Settings = () => {
                       name="viewMode"
                       value={mode.id}
                       checked={viewMode === mode.id}
-                      onChange={(e) => setViewMode(e.target.value)}
+                      onChange={(e) => setViewMode(e.target.value as 'desktop' | 'mobile')}
                       className="form-radio"
                     />{" "}
                     <div className="flex flex-col">
@@ -416,15 +417,15 @@ const Settings = () => {
                     Performans Modu (Hafif Mod)
                   </span>{" "}
                   <span className="text-xs text-[var(--color-text-muted)]">
-                    Daha h�-zl�- +�al�-+�mas�- i+�in animasyonlar�- ve ge+�i+�
-                    efektlerini kapat�-r. Eski cihazlar i+�in +�nerilir.
+                    Daha hızlı çalışması için animasyonları ve geçiş
+                    efektlerini kapatır. Eski cihazlar için önerilir.
                   </span>{" "}
                 </div>{" "}
               </label>{" "}
             </div>{" "}
             <div className="form-group">
               {" "}
-              <label className="form-label">G+�r+-n+-m Yo��unlu��u</label>{" "}
+              <label className="form-label">Görünüm Yoğunluğu</label>{" "}
               <label className="flex items-center gap-3 p-3 border border-[var(--color-border)] rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer">
                 {" "}
                 <div className="form-switch">
@@ -439,30 +440,30 @@ const Settings = () => {
                 <div className="flex flex-col">
                   {" "}
                   <span className="text-sm font-medium text-[var(--color-text)]">
-                    Kompakt Mod (S�-k�-+��-k G+�r+-n+-m)
+                    Kompakt Mod (Sıkışık Görünüm)
                   </span>{" "}
                   <span className="text-xs text-[var(--color-text-muted)]">
-                    Daha fazla veriyi ekrana s�-��d�-rmak i+�in bo+�luklar�-
-                    azalt�-r.
+                    Daha fazla veriyi ekrana sığdırmak için boşlukları
+                    azaltır.
                   </span>{" "}
                 </div>{" "}
               </label>{" "}
             </div>{" "}
             <div className="form-group">
               {" "}
-              <label className="form-label">Uygulama Yaz�- Boyutu</label>{" "}
+              <label className="form-label">Uygulama Yazı Boyutu</label>{" "}
               <div className="p-4 border border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--color-bg-muted)]">
                 {" "}
                 <div className="flex items-center justify-between mb-2">
                   {" "}
                   <span className="text-xs font-medium text-[var(--color-text-muted)]">
-                    K+-+�+-k
+                    Küçük
                   </span>{" "}
                   <span className="text-sm font-bold text-[var(--color-primary)]">
                     {appFontSize}px
                   </span>{" "}
                   <span className="text-xs font-medium text-[var(--color-text-muted)]">
-                    B+-y+-k
+                    Büyük
                   </span>{" "}
                 </div>{" "}
                 <input
@@ -495,11 +496,11 @@ const Settings = () => {
                   className="text-[var(--color-primary)]"
                 />{" "}
               </div>{" "}
-              <span className="card-title">Teklif Varsay�-lanlar�-</span>{" "}
+              <span className="card-title">Teklif Varsayılanları</span>{" "}
             </div>{" "}
             <button className="btn btn-primary btn-sm" onClick={handleSave}>
               {" "}
-              <Save size={14} /> Ayarlar�- Kaydet{" "}
+              <Save size={14} /> Ayarları Kaydet{" "}
             </button>{" "}
           </div>{" "}
           <div className="card-body">
@@ -509,7 +510,7 @@ const Settings = () => {
               <div className="form-group">
                 {" "}
                 <label className="form-label">
-                  Varsay�-lan Teklif Ba+�l�-���-
+                  Varsayılan Teklif Başlığı
                 </label>{" "}
                 <input
                   type="text"
@@ -517,13 +518,13 @@ const Settings = () => {
                   name="defaultTitle"
                   value={settings.defaultTitle || ""}
                   onChange={handleChange}
-                  placeholder="+�rn: Hizmet Teklifi"
+                  placeholder="Örn: Hizmet Teklifi"
                 />{" "}
               </div>{" "}
               <div className="form-group">
                 {" "}
                 <label className="form-label">
-                  Varsay�-lan Ge+�erlilik (G+-n)
+                  Varsayılan Geçerlilik (Gün)
                 </label>{" "}
                 <input
                   type="number"
@@ -537,7 +538,7 @@ const Settings = () => {
             <div className="form-group">
               {" "}
               <label className="form-label">
-                Varsay�-lan Teklif A+�-klamas�-
+                Varsayılan Teklif Açıklaması
               </label>{" "}
               <textarea
                 className="form-control"
@@ -545,13 +546,13 @@ const Settings = () => {
                 name="defaultDescription"
                 value={settings.defaultDescription || ""}
                 onChange={handleChange}
-                placeholder="+�rn: A+�a���-daki hizmetlerin d+�k+-m+-d+-r..."
+                placeholder="Örn: Aşağıdaki hizmetlerin dökümüdür..."
               ></textarea>{" "}
             </div>{" "}
             <div className="form-group">
               {" "}
               <label className="form-label">
-                Varsay�-lan Teslimat Ko+�ullar�-
+                Varsayılan Teslimat Koşulları
               </label>{" "}
               <textarea
                 className="form-control"
@@ -559,13 +560,13 @@ const Settings = () => {
                 name="defaultDeliveryTerms"
                 value={settings.defaultDeliveryTerms || ""}
                 onChange={handleChange}
-                placeholder="+�rn: Sipari+� onay�-ndan sonra 3 i+� g+-n+- i+�inde..."
+                placeholder="Örn: Sipariş onayından sonra 3 iş günü içinde..."
               ></textarea>{" "}
             </div>{" "}
             <div className="form-group">
               {" "}
               <label className="form-label">
-                Varsay�-lan Garanti Ko+�ullar�-
+                Varsayılan Garanti Koşulları
               </label>{" "}
               <textarea
                 className="form-control"
@@ -573,13 +574,13 @@ const Settings = () => {
                 name="defaultWarrantyTerms"
                 value={settings.defaultWarrantyTerms || ""}
                 onChange={handleChange}
-                placeholder="+�rn: 2 y�-l par+�a ve i+�+�ilik garantilidir..."
+                placeholder="Örn: 2 yıl parça ve işçilik garantilidir..."
               ></textarea>{" "}
             </div>{" "}
             <div className="form-group">
               {" "}
               <label className="form-label">
-                Varsay�-lan Ek Notlar / +�artlar
+                Varsayılan Ek Notlar / Şartlar
               </label>{" "}
               <textarea
                 className="form-control"
@@ -587,17 +588,17 @@ const Settings = () => {
                 name="defaultNote"
                 value={settings.defaultNote}
                 onChange={handleChange}
-                placeholder="Di��er +�zel +�artlar ve notlar..."
+                placeholder="Diğer özel şartlar ve notlar..."
               ></textarea>{" "}
             </div>{" "}
             <div className="border-t border-[var(--color-border)] pt-5 mt-6">
               {" "}
               <h3 className="text-base font-bold text-[var(--color-text)] mb-1.5">
-                Varsay�-lan Firma Bilgileri
+                Varsayılan Firma Bilgileri
               </h3>{" "}
               <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                Buraya girece��iniz bilgiler, yeni olu+�turaca���-n�-z t+-m
-                tekliflerde otomatik olarak doldurulacakt�-r.
+                Buraya gireceğiniz bilgiler, yeni oluşturacağınız tüm
+                tekliflerde otomatik olarak doldurulacaktır.
               </p>{" "}
               <CompanyInfoForm
                 data={companySettings}
@@ -622,14 +623,14 @@ const Settings = () => {
                   className="text-[var(--color-primary)]"
                 />{" "}
               </div>{" "}
-              <span className="card-title">PDF B+�l+-m S�-ralamas�-</span>{" "}
+              <span className="card-title">PDF Bölüm Sıralaması</span>{" "}
             </div>{" "}
           </div>{" "}
           <div className="card-body">
             {" "}
             <p className="text-sm text-[var(--color-text-muted)] mb-4">
-              PDF +�-kt�-s�-nda b+�l+-mlerin s�-ras�-n�- de��i+�tirmek i+�in
-              s+-r+-kleyip b�-rak�-n. G+�r+-nmesini istemedi��iniz b+�l+-mleri
+              PDF çıktısında bölümlerin sırasını değiştirmek için
+              sürükleyip bırakın. Görünmesini istemediğiniz bölümleri
               kapatabilirsiniz.
             </p>{" "}
             <DndContext
@@ -671,14 +672,14 @@ const Settings = () => {
                   className="text-[var(--color-primary)]"
                 />{" "}
               </div>{" "}
-              <span className="card-title">Filigran Ayarlar�-</span>{" "}
+              <span className="card-title">Filigran Ayarları</span>{" "}
             </div>{" "}
           </div>{" "}
           <div className="card-body">
             {" "}
             <p className="text-sm text-[var(--color-text-muted)] mb-5">
-              PDF +�-kt�-lar�-na eklenecek filigran�- buradan
-              +�zelle+�tirebilirsiniz.
+              PDF çıktılarına eklenecek filigranı buradan
+              özelleştirebilirsiniz.
             </p>{" "}
             <div className="space-y-5">
               {" "}
@@ -687,10 +688,10 @@ const Settings = () => {
                 <div>
                   {" "}
                   <h4 className="text-sm font-medium text-[var(--color-text)]">
-                    Filigran G+�ster
+                    Filigran Göster
                   </h4>{" "}
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    PDF sayfalar�-n�-n arka plan�-nda filigran g+�r+-nt+-lenir.
+                    PDF sayfalarının arka planında filigran görüntülenir.
                   </p>{" "}
                 </div>{" "}
                 <div className="form-switch">
@@ -724,7 +725,7 @@ const Settings = () => {
                           watermarkText: e.target.value,
                         })
                       }
-                      placeholder="+�rn: TASLAK"
+                      placeholder="Örn: TASLAK"
                     />{" "}
                   </div>{" "}
                   <div className="form-group">
@@ -752,7 +753,7 @@ const Settings = () => {
                     <div className="flex justify-between mb-2">
                       {" "}
                       <label className="form-label">
-                        Opakl�-k (Saydaml�-k)
+                        Opaklık (Saydamlık)
                       </label>{" "}
                       <span className="text-sm font-bold text-[var(--color-primary)]">
                         %{Math.round(pdfConfig.watermarkOpacity * 100)}
@@ -777,7 +778,7 @@ const Settings = () => {
                     <div className="flex justify-between mb-2">
                       {" "}
                       <label className="form-label">
-                        D+�nd+-rme A+�-s�-
+                        Döndürme Açısı
                       </label>{" "}
                       <span className="text-sm font-bold text-[var(--color-primary)]">
                         {pdfConfig.watermarkRotation}T-
@@ -799,7 +800,7 @@ const Settings = () => {
                   </div>{" "}
                   <div className="form-group">
                     {" "}
-                    <label className="form-label">Yaz�- Boyutu (px)</label>{" "}
+                    <label className="form-label">Yazı Boyutu (px)</label>{" "}
                     <input
                       type="number"
                       className="form-control"

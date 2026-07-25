@@ -33,7 +33,7 @@ class ImageOptimizer {
 
             img.onload = () => {
                 try {
-                    let { width, height } = this.calculateScale(img.width, img.height);
+                    const { width, height } = this.calculateScale(img.width, img.height);
 
                     canvas.width = width;
                     canvas.height = height;

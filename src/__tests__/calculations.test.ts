@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { calculateQuoteTotals } from '../utils/calculations';
+import { QuoteItem } from '../context/quote/types';
 
 describe('calculateQuoteTotals', () => {
     it('should return zeros for empty input', () => {
-        const result = calculateQuoteTotals([], {});
+        const result = calculateQuoteTotals([]);
         expect(result.subtotal).toBe(0);
         expect(result.taxTotal).toBe(0);
         expect(result.grandTotal).toBe(0);
@@ -12,21 +13,21 @@ describe('calculateQuoteTotals', () => {
     });
 
     it('should calculate subtotal correctly for simple items', () => {
-        const items = [
-            { price: 100, quantity: 2, taxRate: 0 },
-            { price: 50, quantity: 1, taxRate: 0 }
+        const items: QuoteItem[] = [
+            { id: '1', name: 'Item 1', price: 100, quantity: 2, taxRate: 0 },
+            { id: '2', name: 'Item 2', price: 50, quantity: 1, taxRate: 0 }
         ];
-        const result = calculateQuoteTotals(items, {});
+        const result = calculateQuoteTotals(items);
         expect(result.subtotal).toBe(250);
         expect(result.grandTotal).toBe(250);
     });
 
     it('should calculate tax correctly', () => {
-        const items = [
-            { price: 100, quantity: 1, taxRate: 20 },
-            { price: 200, quantity: 1, taxRate: 10 }
+        const items: QuoteItem[] = [
+            { id: '1', name: 'Item 1', price: 100, quantity: 1, taxRate: 20 },
+            { id: '2', name: 'Item 2', price: 200, quantity: 1, taxRate: 10 }
         ];
-        const result = calculateQuoteTotals(items, {});
+        const result = calculateQuoteTotals(items);
         expect(result.subtotal).toBe(300);
         expect(result.taxTotal).toBe(40);
         expect(result.grandTotal).toBe(340);
@@ -34,8 +35,10 @@ describe('calculateQuoteTotals', () => {
     });
 
     it('should apply percentage discount correctly', () => {
-        const items = [{ price: 100, quantity: 1, taxRate: 20 }];
-        const discount = { type: 'percentage', value: 10 };
+        const items: QuoteItem[] = [
+            { id: '1', name: 'Item 1', price: 100, quantity: 1, taxRate: 20 }
+        ];
+        const discount = { type: 'percentage' as const, value: 10 };
         const result = calculateQuoteTotals(items, discount);
         expect(result.subtotal).toBe(100);
         expect(result.globalDiscountAmount).toBe(10);
@@ -44,8 +47,10 @@ describe('calculateQuoteTotals', () => {
     });
 
     it('should apply fixed discount correctly', () => {
-        const items = [{ price: 100, quantity: 1, taxRate: 20 }];
-        const discount = { type: 'fixed', value: 50 };
+        const items: QuoteItem[] = [
+            { id: '1', name: 'Item 1', price: 100, quantity: 1, taxRate: 20 }
+        ];
+        const discount = { type: 'fixed' as const, value: 50 };
         const result = calculateQuoteTotals(items, discount);
         expect(result.subtotal).toBe(100);
         expect(result.globalDiscountAmount).toBe(50);
@@ -54,8 +59,10 @@ describe('calculateQuoteTotals', () => {
     });
 
     it('should cap discount calculation at subtotal', () => {
-        const items = [{ price: 100, quantity: 1, taxRate: 0 }];
-        const discount = { type: 'fixed', value: 200 };
+        const items: QuoteItem[] = [
+            { id: '1', name: 'Item 1', price: 100, quantity: 1, taxRate: 0 }
+        ];
+        const discount = { type: 'fixed' as const, value: 200 };
         const result = calculateQuoteTotals(items, discount);
         expect(result.subtotal).toBe(100);
         expect(result.globalDiscountAmount).toBe(100);
@@ -64,11 +71,11 @@ describe('calculateQuoteTotals', () => {
 
     it('should handle zero quantity or invalid inputs gracefully', () => {
         const items = [
-            { price: 100, quantity: 'invalid', taxRate: 0 },
-            { price: 'invalid', quantity: 2, taxRate: 0 },
-            { price: 100, quantity: 0, taxRate: 20 }
-        ];
-        const result = calculateQuoteTotals(items, {});
+            { id: '1', name: 'Item 1', price: 100, quantity: 0, taxRate: 0 },
+            { id: '2', name: 'Item 2', price: 0, quantity: 2, taxRate: 0 },
+            { id: '3', name: 'Item 3', price: 100, quantity: 0, taxRate: 20 }
+        ] as QuoteItem[];
+        const result = calculateQuoteTotals(items);
         expect(result.subtotal).toBe(0);
         expect(result.grandTotal).toBe(0);
     });

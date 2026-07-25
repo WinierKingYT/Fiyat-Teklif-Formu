@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMemo, useState, useEffect } from 'react';
 import { Calculator, Percent, Receipt, RefreshCw } from 'lucide-react';
-import { calculateQuoteTotals } from '../utils/calculations';
+import { calculateQuoteTotals, formatCurrency } from '../utils/calculations';
 import { getExchangeRates, CURRENCIES } from '../utils/exchangeRates';
 
 const SummarySection = React.memo(({ items, discount = { type: 'percentage', value: 0 }, onDiscountChange, currency = 'TRY' }: any) => {
@@ -25,11 +25,6 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
         const amountInTRY = calc.grandTotal / fromRate;
         return amountInTRY * toRate;
     }, [calc.grandTotal, rates, currency, targetCurrency]);
-
-    const formatCurrency = (amount) => {
-        const locale = currency === 'TRY' ? 'tr-TR' : 'en-US';
-        return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
-    };
 
     const handleDiscountValueChange = (e) => {
         const value = parseFloat(e.target.value) || 0;

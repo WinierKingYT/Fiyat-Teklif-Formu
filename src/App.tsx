@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import Layout from './components/Layout';
 import QuoteInfoForm from './components/QuoteInfoForm';
 import CustomerInfoForm from './components/CustomerInfoForm';
@@ -16,6 +16,7 @@ import HistoryList from './components/HistoryList';
 import TermsAndNotes from './components/TermsAndNotes';
 import BankInfoForm from './components/BankInfoForm';
 import ConfirmDialog from './components/ConfirmDialog';
+import CollapsiblePanel from './components/CollapsiblePanel';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
 import {
@@ -160,15 +161,15 @@ const QuoteBuilder = ({
             <option value="GBP">£ GBP</option>
           </select>
           <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
-          <button onClick={undo} disabled={!canUndo} className="top-bar-btn" title="Geri Al (Ctrl+Z)"><Undo2 size={15} /></button>
-          <button onClick={redo} disabled={!canRedo} className="top-bar-btn" title="İleri Al (Ctrl+Y)"><Redo2 size={15} /></button>
+          <button onClick={undo} disabled={!canUndo} className="top-bar-btn" title="Geri Al (Ctrl+Z)" aria-label="Geri Al (Ctrl+Z)"><Undo2 size={15} /></button>
+          <button onClick={redo} disabled={!canRedo} className="top-bar-btn" title="İleri Al (Ctrl+Y)" aria-label="İleri Al (Ctrl+Y)"><Redo2 size={15} /></button>
           <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
-          <button onClick={saveQuote} className="top-bar-btn" title="Kaydet (Ctrl+S)"><Save size={15} /></button>
-          <button onClick={handlePdfShortcut} className="top-bar-btn" title="PDF Önizleme (Ctrl+P)"><FileText size={15} /></button>
-          <button onClick={handleNewQuote} className="top-bar-btn" title="Yeni Teklif (Ctrl+N)"><Plus size={15} /></button>
+          <button onClick={() => saveQuote()} className="top-bar-btn" title="Kaydet (Ctrl+S)" aria-label="Kaydet (Ctrl+S)"><Save size={15} /></button>
+          <button onClick={handlePdfShortcut} className="top-bar-btn" title="PDF Önizleme (Ctrl+P)" aria-label="PDF Önizleme (Ctrl+P)"><FileText size={15} /></button>
+          <button onClick={handleNewQuote} className="top-bar-btn" title="Yeni Teklif (Ctrl+N)" aria-label="Yeni Teklif (Ctrl+N)"><Plus size={15} /></button>
           <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
           <div className="relative group">
-            <button className="top-bar-btn"><MoreHorizontal size={15} /></button>
+            <button className="top-bar-btn" aria-label="Diğer İşlemler"><MoreHorizontal size={15} /></button>
             <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-lg py-1 min-w-[160px] z-50 hidden group-hover:block">
               <button onClick={fillTestData} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><FlaskConical size={13} /> Test Verisi Doldur</button>
               <button onClick={() => setConfirmReset(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><LogOut size={13} /> Sıfırla</button>
@@ -226,97 +227,45 @@ const QuoteBuilder = ({
           />
 
           {/* Firma Bilgisi (collapsible) */}
-          <div className="card">
-            <button
-              onClick={() => toggleRight('company')}
-              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
-              aria-expanded={!rightCollapsed.company}
-              aria-controls="panel-company"
-              id="panel-company-btn"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
-                  <Building2 size={13} className="text-[var(--color-text-secondary)]" />
-                </div>
-                <span className="text-sm font-semibold text-[var(--color-text)]">{t('companyInfo')}</span>
-              </div>
-              {rightCollapsed.company ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
-            </button>
-            {!rightCollapsed.company && (
-              <div className="card-body" id="panel-company" role="region" aria-labelledby="panel-company-btn"><CompanyInfoForm data={companyData} onChange={updateCompanyData} /></div>
-            )}
-          </div>
+          <CollapsiblePanel
+            title={t('companyInfo')}
+            icon={<Building2 size={13} className="text-[var(--color-text-secondary)]" />}
+            defaultCollapsed={rightCollapsed.company}
+          >
+            <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
+          </CollapsiblePanel>
 
           {/* Banka Bilgisi (collapsible) */}
-          <div className="card">
-            <button
-              onClick={() => toggleRight('bank')}
-              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
-              aria-expanded={!rightCollapsed.bank}
-              aria-controls="panel-bank"
-              id="panel-bank-btn"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
-                  <Landmark size={13} className="text-[var(--color-text-secondary)]" />
-                </div>
-                <span className="text-sm font-semibold text-[var(--color-text)]">{t('bankInfo')}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button type="button" className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); onOpenBankManager(); }} title="Banka Yönetimi" aria-label="Banka Yönetimi">
-                  <Landmark size={12} />
-                </button>
-                {rightCollapsed.bank ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
-              </div>
-            </button>
-            {!rightCollapsed.bank && (
-              <div className="card-body" id="panel-bank" role="region" aria-labelledby="panel-bank-btn"><BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} /></div>
-            )}
-          </div>
+          <CollapsiblePanel
+            title={t('bankInfo')}
+            icon={<Landmark size={13} className="text-[var(--color-text-secondary)]" />}
+            defaultCollapsed={rightCollapsed.bank}
+            actions={
+              <button type="button" className="btn btn-ghost btn-xs" onClick={onOpenBankManager} title="Banka Yönetimi" aria-label="Banka Yönetimi">
+                <Landmark size={12} />
+              </button>
+            }
+          >
+            <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
+          </CollapsiblePanel>
 
           {/* Şartlar & Notlar (collapsible) */}
-          <div className="card">
-            <button
-              onClick={() => toggleRight('terms')}
-              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
-              aria-expanded={!rightCollapsed.terms}
-              aria-controls="panel-terms"
-              id="panel-terms-btn"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
-                  <StickyNote size={13} className="text-[var(--color-text-secondary)]" />
-                </div>
-                <span className="text-sm font-semibold text-[var(--color-text)]">{t('conditionsAndNotes')}</span>
-              </div>
-              {rightCollapsed.terms ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
-            </button>
-            {!rightCollapsed.terms && (
-              <div className="card-body" id="panel-terms" role="region" aria-labelledby="panel-terms-btn"><TermsAndNotes data={quoteData} onChange={updateQuoteData} /></div>
-            )}
-          </div>
+          <CollapsiblePanel
+            title={t('conditionsAndNotes')}
+            icon={<StickyNote size={13} className="text-[var(--color-text-secondary)]" />}
+            defaultCollapsed={rightCollapsed.terms}
+          >
+            <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+          </CollapsiblePanel>
 
           {/* Teklif Detayları (collapsible) */}
-          <div className="card">
-            <button
-              onClick={() => toggleRight('quoteDetails')}
-              className="card-header w-full flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-muted)] transition-colors"
-              aria-expanded={!rightCollapsed.quoteDetails}
-              aria-controls="panel-quoteDetails"
-              id="panel-quoteDetails-btn"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center">
-                  <FileText size={13} className="text-[var(--color-text-secondary)]" />
-                </div>
-                <span className="text-sm font-semibold text-[var(--color-text)]">Teklif Detayları</span>
-              </div>
-              {rightCollapsed.quoteDetails ? <ChevronDown size={14} className="text-[var(--color-text-muted)]" /> : <ChevronUp size={14} className="text-[var(--color-text-muted)]" />}
-            </button>
-            {!rightCollapsed.quoteDetails && (
-              <div className="card-body" id="panel-quoteDetails" role="region" aria-labelledby="panel-quoteDetails-btn"><QuoteInfoForm data={quoteData} onChange={updateQuoteData} /></div>
-            )}
-          </div>
+          <CollapsiblePanel
+            title="Teklif Detayları"
+            icon={<FileText size={13} className="text-[var(--color-text-secondary)]" />}
+            defaultCollapsed={rightCollapsed.quoteDetails}
+          >
+            <QuoteInfoForm data={quoteData} onChange={updateQuoteData} />
+          </CollapsiblePanel>
         </div>
       </div>
 
@@ -362,8 +311,24 @@ function BankManagerModalWithSelect({ isOpen, onClose }) {
   return <BankManagerModal isOpen={isOpen} onClose={onClose} onSelect={handleSelect} />;
 }
 
+function getInitialView() {
+  const params = new URLSearchParams(window.location.search);
+  const view = params.get('view');
+  if (view === 'history' || view === 'settings') return view;
+  return 'builder';
+}
+
 function App() {
-  const [currentView, setCurrentView] = useState('builder');
+  const [currentView, setCurrentView] = useState(getInitialView);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (currentView === 'builder') params.delete('view');
+    else params.set('view', currentView);
+    const qs = params.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', url);
+  }, [currentView]);
 
   const [isCustomerManagerOpen, setIsCustomerManagerOpen] = useState(false);
   const [isProductManagerOpen, setIsProductManagerOpen] = useState(false);

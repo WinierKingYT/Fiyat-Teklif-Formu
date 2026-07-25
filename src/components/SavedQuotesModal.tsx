@@ -1,9 +1,9 @@
-import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Modal from './Modal'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Modal from './Modal'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
 
 const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
     const { db, isReady } = useIndexedDB();
     const { saveQuote, currentQuoteId, setCurrentQuoteId } = useQuote();
-    const [quotes, setQuotes] = useState([]);
+    const [quotes, setQuotes] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
@@ -77,11 +77,6 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote }) => {
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch]);
-
-    const formatCurrency = (amount, currency = 'TRY') => {
-        const locale = currency === 'TRY' ? 'tr-TR' : 'en-US';
-        return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
-    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Teklif İşlemleri" size="xl">

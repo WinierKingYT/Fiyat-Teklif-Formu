@@ -1,5 +1,4 @@
 import Logger from './logger';
-import * as XLSX from 'xlsx';
 
 const COL_WIDTHS = [30, 30, 10, 10, 15, 10, 10, 15];
 
@@ -14,7 +13,8 @@ function toLocale(val: any) {
 
 export const exportQuoteToExcel = async (quoteData: any, items: any[]) => {
     try {
-        const rows = [];
+        const XLSX = await import('xlsx').then(m => m.default || m);
+        const rows: any[] = [];
 
         rows.push(['FİYAT TEKLİFİ']);
         rows.push([]);

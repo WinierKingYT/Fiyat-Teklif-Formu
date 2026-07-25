@@ -50,13 +50,15 @@ class PerformanceMonitor {
         if (navigator.storage && navigator.storage.estimate) {
             try {
                 const estimate = await navigator.storage.estimate();
+                const usage = estimate.usage ?? 0;
+                const quota = estimate.quota ?? 1;
                 return {
-                    usage: estimate.usage,
-                    quota: estimate.quota,
-                    usagePercentage: ((estimate.usage / estimate.quota) * 100).toFixed(2),
-                    usageMB: (estimate.usage / (1024 * 1024)).toFixed(2),
-                    quotaMB: (estimate.quota / (1024 * 1024)).toFixed(2),
-                    availableMB: ((estimate.quota - estimate.usage) / (1024 * 1024)).toFixed(2)
+                    usage,
+                    quota,
+                    usagePercentage: ((usage / quota) * 100).toFixed(2),
+                    usageMB: (usage / (1024 * 1024)).toFixed(2),
+                    quotaMB: (quota / (1024 * 1024)).toFixed(2),
+                    availableMB: ((quota - usage) / (1024 * 1024)).toFixed(2)
                 };
             } catch (error: any) {
                 Logger.error('Error getting storage estimate:', error);
@@ -154,9 +156,9 @@ class PerformanceMonitor {
             let totalSize = 0;
             const items = {};
 
-            for (let key in localStorage) {
+            for (const key in localStorage) {
                 if (localStorage.hasOwnProperty(key)) {
-                    const value = localStorage.getItem(key);
+                    const value = localStorage.getItem(key) ?? '';
                     const size = new Blob([value]).size;
                     totalSize += size;
                     items[key] = {
@@ -237,7 +239,11 @@ class PerformanceMonitor {
      * @returns {Object} Recommendations
      */
     getRecommendations(metrics = this.metrics) {
-        const recommendations = {
+        const recommendations: {
+            needsCleanup: boolean;
+            warnings: { type: string; severity: string; message: string }[];
+            suggestions: { type: string; message: string }[];
+        } = {
             needsCleanup: false,
             warnings: [],
             suggestions: []

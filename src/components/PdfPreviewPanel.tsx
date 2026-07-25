@@ -12,6 +12,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
 import useDebounce from '../hooks/useDebounce';
+import PdfSectionsTab from './pdf-tabs/PdfSectionsTab';
 
 const PdfPreviewPanel = React.memo(() => {
     const {
@@ -31,9 +32,9 @@ const PdfPreviewPanel = React.memo(() => {
     const { t } = useTranslation(quoteData?.language);
 
     const [activeTab, setActiveTab] = useState('sections');
-    const [savedTemplates, setSavedTemplates] = useState([]);
+    const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
     const [templateName, setTemplateName] = useState('');
-    const [signature, setSignature] = useState(null);
+    const [signature, setSignature] = useState<string | null>(null);
     const [performanceMode, setPerformanceMode] = useState(false);
     const [manualRefreshMode, setManualRefreshMode] = useState(false);
     const [renderedConfig, setRenderedConfig] = useState(pdfConfig);
@@ -44,7 +45,7 @@ const PdfPreviewPanel = React.memo(() => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStage, setGenerationStage] = useState('');
     const [estimatedPages, setEstimatedPages] = useState(1);
-    const contentRef = useRef(null);
+    const contentRef = useRef<any>(null);
 
 
     // Estimate page count from content height
@@ -76,7 +77,7 @@ const PdfPreviewPanel = React.memo(() => {
 
     const handleManualRefresh = () => {
         setRenderedConfig(pdfConfig);
-        toast.success('ÖnÖnizleme güncellendi');
+        toast.success('Önizleme güncellendi');
     };
 
     // Check if there are pending changes in Manual Mode
@@ -152,7 +153,7 @@ const PdfPreviewPanel = React.memo(() => {
             const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
             await new Promise(resolve => setTimeout(resolve, 100));
             setGenerationStage('Sayfalar işleniyor...');
-            await generatePDF('printable-quote-container-hidden', filename, {
+            await generatePDF('printable-quote-container-panel', filename, {
                 theme: pdfConfig.theme,
                 color: pdfConfig.color,
                 pageSize,
@@ -173,19 +174,38 @@ const PdfPreviewPanel = React.memo(() => {
 
     const handleShare = async () => {
         try {
-            const element = document.getElementById('printable-quote-container-hidden');
+            const element = document.getElementById('printable-quote-container-panel');
             if (!element) { toast.error('PDF Alanı bulunamadı'); return; }
             const { default: html2pdf } = await import('html2pdf.js');
+            await document.fonts.ready;
             const isLandscape = pdfConfig.pageOrientation === 'landscape';
             const shareFormat = pageSize === 'a4' && !isLandscape ? 'a4' : isLandscape ? 'a4' : pageSize;
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
-            const pdfBlob = await html2pdf().set({ margin: 0, image: { type: 'png' }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: shareFormat, orientation: shareOrientation } }).from(element).outputPdf('blob');
+            const qual = quality === 'draft' ? 2 : quality === 'normal' ? 3 : quality === 'high' ? 4 : quality === 'print' ? 5 : 6;
+            const pdfBlob = await html2pdf().set({
+                margin: 0,
+                image: { type: 'png', quality: 1.0 },
+                html2canvas: {
+                    scale: qual,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    imageTimeout: 0,
+                    letterRendering: quality !== 'draft'
+                },
+                jsPDF: {
+                    unit: 'mm',
+                    format: shareFormat,
+                    orientation: shareOrientation,
+                    compress: true
+                } as any
+            }).from(element).outputPdf('blob');
             const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
             await shareQuote(pdfBlob, filename);
             toast.success('Paylaşım başarılı');
         } catch (error) {
-            if (error.message !== 'Share cancelled') {
-                toast.error('Paylaşım yapılamadı: ' + error.message);
+            if ((error as any).message !== 'Share cancelled') {
+                toast.error('Paylaşım yapılamadı: ' + (error as any).message);
             }
         }
     };
@@ -261,10 +281,10 @@ const PdfPreviewPanel = React.memo(() => {
                     <button
                         onClick={handlePrint}
                         className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-                        title={t('print') || "Yazdır"}
+                        title={t('print')}
                     >
                         <Printer size={18} />
-                        <span className="hidden sm:inline text-xs">{t('print') || "Yazdır"}</span>
+                        <span className="hidden sm:inline text-xs">{t('print')}</span>
                     </button>
                     <button
                         onClick={handleShare}
@@ -286,7 +306,7 @@ const PdfPreviewPanel = React.memo(() => {
                         onClick={handleDownload}
                         disabled={isGenerating}
                         className={`flex items-center gap-2 px-4 py-2 text-white rounded-[var(--radius)] shadow hover:shadow-[var(--shadow-lg)] transition-all font-semibold ${isGenerating ? 'bg-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-info)] hover:opacity-90'}`}
-                        title="PDF İndir"
+                        title={t('downloadPdf')}
                     >
                         {isGenerating ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
@@ -519,347 +539,7 @@ const PdfPreviewPanel = React.memo(() => {
 
                         {/* SECTIONS TAB (Granular Typography) */}
                         {activeTab === 'sections' && (
-                            <div className="space-y-6">
-                                {/* Header Section */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Üst Bilgi (Header)</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Başlık Boyutu</label>
-                                            <select
-                                                value={pdfConfig.headerTitleFontSize || '1rem'}
-                                                onChange={(e) => handleConfigChange('headerTitleFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.8rem">Küçük</option>
-                                                <option value="1rem">Normal</option>
-                                                <option value="1.2rem">Büyük</option>
-                                                <option value="1.5rem">Çok Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Başlık Kalınlığı</label>
-                                            <select
-                                                value={pdfConfig.headerTitleFontWeight || '700'}
-                                                onChange={(e) => handleConfigChange('headerTitleFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="400">Normal</option>
-                                                <option value="600">Orta</option>
-                                                <option value="700">Kalın</option>
-                                                <option value="800">Çok Kalın</option>
-                                            </select>
-                                        </div>
-                                        <div className="col-span-2">
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Bilgi Yazı Boyutu</label>
-                                            <select
-                                                value={pdfConfig.headerInfoFontSize || '0.7rem'}
-                                                onChange={(e) => handleConfigChange('headerInfoFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.6rem">Küçük</option>
-                                                <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Customer/Seller Section */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Müşteri & Satıcı</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Başlık Boyutu</label>
-                                            <select
-                                                value={pdfConfig.customerTitleFontSize || '0.8rem'}
-                                                onChange={(e) => handleConfigChange('customerTitleFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.7rem">Küçük</option>
-                                                <option value="0.8rem">Normal</option>
-                                                <option value="0.9rem">Büyük</option>
-                                                <option value="1rem">Çok Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Başlık Kalınlığı</label>
-                                            <select
-                                                value={pdfConfig.customerTitleFontWeight || '600'}
-                                                onChange={(e) => handleConfigChange('customerTitleFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="400">Normal</option>
-                                                <option value="600">Orta</option>
-                                                <option value="700">Kalın</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Boyutu (rn: Firma:)</label>
-                                            <select
-                                                value={pdfConfig.customerLabelFontSize || 'inherit'}
-                                                onChange={(e) => handleConfigChange('customerLabelFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="inherit">Otomatik</option>
-                                                <option value="0.6rem">Küçük</option>
-                                                <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalınl</label>
-                                            <select
-                                                value={pdfConfig.customerLabelFontWeight || '500'}
-                                                onChange={(e) => handleConfigChange('customerLabelFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="400">Normal</option>
-                                                <option value="500">Orta</option>
-                                                <option value="600">Kalın</option>
-                                                <option value="700">Çok Kalın</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deer Boyutu</label>
-                                            <select
-                                                value={pdfConfig.customerValueFontSize || 'inherit'}
-                                                onChange={(e) => handleConfigChange('customerValueFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="inherit">Otomatik</option>
-                                                <option value="0.6rem">Küçük</option>
-                                                <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deer Kalınl</label>
-                                            <select
-                                                value={pdfConfig.customerValueFontWeight || 'normal'}
-                                                onChange={(e) => handleConfigChange('customerValueFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="normal">Normal</option>
-                                                <option value="500">Orta</option>
-                                                <option value="600">Kalın</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Quote Meta Section */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Teklif Bilgileri (Sağ Üst)</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Boyutu</label>
-                                            <select
-                                                value={pdfConfig.quoteMetaLabelFontSize || '0.7rem'}
-                                                onChange={(e) => handleConfigChange('quoteMetaLabelFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.6rem">Küçük</option>
-                                                <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalınl</label>
-                                            <select
-                                                value={pdfConfig.quoteMetaLabelFontWeight || 'normal'}
-                                                onChange={(e) => handleConfigChange('quoteMetaLabelFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="normal">Normal</option>
-                                                <option value="500">Orta</option>
-                                                <option value="600">Kalın</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deer Boyutu</label>
-                                            <select
-                                                value={pdfConfig.quoteMetaValueFontSize || 'inherit'}
-                                                onChange={(e) => handleConfigChange('quoteMetaValueFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="inherit">Otomatik</option>
-                                                <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                                <option value="0.9rem">Çok Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deer Kalınl</label>
-                                            <select
-                                                value={pdfConfig.quoteMetaValueFontWeight || '600'}
-                                                onChange={(e) => handleConfigChange('quoteMetaValueFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="400">Normal</option>
-                                                <option value="600">Orta</option>
-                                                <option value="700">Kalın</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Products Table */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Ürünler Tablosu</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Başlık Boyutu</label>
-                                            <input
-                                                type="range"
-                                                min="10"
-                                                max="30"
-                                                step="1"
-                                                value={parseInt(pdfConfig.tableHeaderFontSize) || 14}
-                                                onChange={(e) => handleConfigChange('tableHeaderFontSize', parseInt(e.target.value))}
-                                                className="w-full h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                            />
-                                            <div className="text-[10px] text-right text-[var(--color-text-muted)]">{parseInt(pdfConfig.tableHeaderFontSize) || 14}px</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Başlık Kalınlığı</label>
-                                            <select
-                                                value={pdfConfig.tableHeaderFontWeight || '600'}
-                                                onChange={(e) => handleConfigChange('tableHeaderFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="normal">Normal</option>
-                                                <option value="600">Kalın</option>
-                                                <option value="700">Çok Kalın</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">İçerik Boyutu</label>
-                                            <select
-                                                value={pdfConfig.tableBodyFontSize || '0.7rem'}
-                                                onChange={(e) => handleConfigChange('tableBodyFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.6rem">Küçük</option>
-                                                <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                                <option value="0.9rem">Çok Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">İçerik Kalınl</label>
-                                            <select
-                                                value={pdfConfig.tableBodyFontWeight || 'normal'}
-                                                onChange={(e) => handleConfigChange('tableBodyFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="normal">Normal</option>
-                                                <option value="500">Orta</option>
-                                                <option value="600">Kalın</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Summary Section */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Özet Alanı</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Boyutu</label>
-                                            <select
-                                                value={pdfConfig.summaryLabelFontSize || '0.75rem'}
-                                                onChange={(e) => handleConfigChange('summaryLabelFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.65rem">Küçük</option>
-                                                <option value="0.75rem">Normal</option>
-                                                <option value="0.85rem">Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Etiket Kalınl</label>
-                                            <select
-                                                value={pdfConfig.summaryLabelFontWeight || 'normal'}
-                                                onChange={(e) => handleConfigChange('summaryLabelFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="normal">Normal</option>
-                                                <option value="500">Orta</option>
-                                                <option value="600">Kalın</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deer Boyutu</label>
-                                            <select
-                                                value={pdfConfig.summaryValueFontSize || 'inherit'}
-                                                onChange={(e) => handleConfigChange('summaryValueFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="inherit">Otomatik</option>
-                                                <option value="0.75rem">Normal</option>
-                                                <option value="0.85rem">Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Deer Kalınl</label>
-                                            <select
-                                                value={pdfConfig.summaryValueFontWeight || '500'}
-                                                onChange={(e) => handleConfigChange('summaryValueFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="400">Normal</option>
-                                                <option value="500">Orta</option>
-                                                <option value="600">Kalın</option>
-                                            </select>
-                                        </div>
-                                        <div className="col-span-2">
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Genel Toplam Boyutu</label>
-                                            <select
-                                                value={pdfConfig.summaryTotalFontSize || '0.9rem'}
-                                                onChange={(e) => handleConfigChange('summaryTotalFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.8rem">Küçük</option>
-                                                <option value="0.9rem">Normal</option>
-                                                <option value="1rem">Büyük</option>
-                                                <option value="1.2rem">Çok Büyük</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Footer */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Alt Bilgi (Footer)</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Yazı Boyutu</label>
-                                            <select
-                                                value={pdfConfig.footerFontSize || '0.7rem'}
-                                                onChange={(e) => handleConfigChange('footerFontSize', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="0.6rem">Küçük</option>
-                                                <option value="0.7rem">Normal</option>
-                                                <option value="0.8rem">Büyük</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Yazı Kalınlığı</label>
-                                            <select
-                                                value={pdfConfig.footerFontWeight || 'normal'}
-                                                onChange={(e) => handleConfigChange('footerFontWeight', e.target.value)}
-                                                className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded"
-                                            >
-                                                <option value="normal">Normal</option>
-                                                <option value="500">Orta</option>
-                                                <option value="600">Kalın</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <PdfSectionsTab pdfConfig={pdfConfig} handleConfigChange={handleConfigChange} />
                         )}
 
                         {/* LAYOUT TAB */}
@@ -982,10 +662,10 @@ const PdfPreviewPanel = React.memo(() => {
                             <div className="space-y-2">
                                 {[
                                     { key: 'showLogo', label: 'Firma Logosu' },
-                                    { key: 'showBankInfo', label: 'Banka Bilgileri' },
+                                    { key: 'showBankInfo', label: t('bankInfo') },
                                     { key: 'showSignatures', label: 'İmza ve Kaşe Alanı' },
                                     { key: 'showTerms', label: 'Koullar' },
-                                    { key: 'showNotes', label: 'Notlar' },
+                                    { key: 'showNotes', label: t('notes') },
                                     { key: 'showSummary', label: 'Fiyat zeti' }
                                 ].map((item) => (
                                     <label key={item.key} className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
@@ -1137,7 +817,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                 type="text"
                                                 value={pdfConfig.textItem || ''}
                                                 onChange={(e) => handleConfigChange('textItem', e.target.value)}
-                                                placeholder="Varsaylan: rn/Hizmet"
+                                                placeholder={t('item')}
                                                 className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                             />
                                         </div>
@@ -1147,7 +827,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                 type="text"
                                                 value={pdfConfig.textDescription || ''}
                                                 onChange={(e) => handleConfigChange('textDescription', e.target.value)}
-                                                placeholder="Varsaylan: Aklama"
+                                                placeholder={t('description')}
                                                 className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                             />
                                         </div>
@@ -1158,7 +838,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                     type="text"
                                                     value={pdfConfig.textUnit || ''}
                                                     onChange={(e) => handleConfigChange('textUnit', e.target.value)}
-                                                    placeholder="Varsaylan: Birim"
+                                                    placeholder={t('unit')}
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
@@ -1168,7 +848,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                     type="text"
                                                     value={pdfConfig.textQuantity || ''}
                                                     onChange={(e) => handleConfigChange('textQuantity', e.target.value)}
-                                                    placeholder="Varsaylan: Miktar"
+                                                    placeholder={t('quantity')}
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
@@ -1180,7 +860,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                     type="text"
                                                     value={pdfConfig.textUnitPrice || ''}
                                                     onChange={(e) => handleConfigChange('textUnitPrice', e.target.value)}
-                                                    placeholder="Varsaylan: Birim Fiyat"
+                                                    placeholder={t('unitPrice')}
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
@@ -1190,7 +870,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                     type="text"
                                                     value={pdfConfig.textVat || ''}
                                                     onChange={(e) => handleConfigChange('textVat', e.target.value)}
-                                                    placeholder="Varsaylan: KDV"
+                                                    placeholder={t('vat')}
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                                 />
                                             </div>
@@ -1201,7 +881,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                 type="text"
                                                 value={pdfConfig.textTotal || ''}
                                                 onChange={(e) => handleConfigChange('textTotal', e.target.value)}
-                                                placeholder="Varsaylan: Toplam"
+                                                placeholder={t('total')}
                                                 className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                             />
                                         </div>
@@ -1374,14 +1054,14 @@ const PdfPreviewPanel = React.memo(() => {
                                 {/* Footer */}
                                 <div>
                                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">
-                                        Alt Bilgi
+                                        {t('footer')}
                                     </label>
                                     <input
                                         type="text"
                                         value={pdfConfig.customFooter}
                                         onChange={(e) => handleConfigChange('customFooter', e.target.value)}
                                         className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        placeholder="Özel alt bilgi metni"
+                                        placeholder={t('footer')}
                                     />
                                 </div>
                             </div>
@@ -1411,11 +1091,11 @@ const PdfPreviewPanel = React.memo(() => {
                                                 type="file"
                                                 accept="image/*"
                                                 onChange={(e) => {
-                                                    const file = e.target.files[0];
+                                                    const file = (e.target as HTMLInputElement).files?.[0];
                                                     if (file) {
                                                         const reader = new FileReader();
                                                         reader.onloadend = () => {
-                                                            setSignature(reader.result);
+                                                            setSignature(reader.result as string);
                                                         };
                                                         reader.readAsDataURL(file);
                                                     }
@@ -1479,7 +1159,7 @@ const PdfPreviewPanel = React.memo(() => {
                     )}
 
                     <div className="flex-1 overflow-auto custom-scrollbar p-8 flex justify-center items-start">
-                        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)]" style={{ transform: `scale(${zoomLevel})` }}>
+                        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)]" style={{ transform: `scale(${zoomLevel})`, imageRendering: zoomLevel < 0.5 ? 'auto' : 'crisp-edges' } as any}>
                             <div ref={contentRef} className="relative">
                 <PrintableQuote
                     id="printable-quote-container-panel"
@@ -1510,7 +1190,7 @@ const PdfPreviewPanel = React.memo(() => {
                                             >
                                                 <hr className="flex-1 border-t-2 border-dashed border-[var(--color-border)]" />
                                                 <span className="text-[10px] text-[var(--color-text-muted)] bg-[var(--color-bg-card)] px-1.5 py-0.5 rounded whitespace-nowrap">
-                                                    Sayfa {i + 2}
+                                                    {t('page')} {i + 2}
                                                 </span>
                                                 <hr className="flex-1 border-t-2 border-dashed border-[var(--color-border)]" />
                                             </div>
@@ -1561,24 +1241,7 @@ const PdfPreviewPanel = React.memo(() => {
                 </div>
             </div>
 
-            {/* Hidden Container for PDF Generation (uses live pdfConfig, not debounced) */}
-            <div className="absolute left-[-9999px] top-[-9999px]">
-                <PrintableQuote
-                    id="printable-quote-container-hidden"
-                    theme={pdfConfig.theme}
-                    color={pdfConfig.color}
-                    quoteData={quoteData}
-                    items={items}
-                    customerData={customerData}
-                    companyData={companyData}
-                    bankData={bankData}
-                    discount={discount}
-                    config={pdfConfig}
-                    layout={pdfLayout}
-                    signature={signature}
-                    onEdit={() => {}}
-                />
-            </div>
+
             {/* Popup Editor (Global) */}
             <PopupEditor
                 isOpen={isEditorOpen}

@@ -1,11 +1,10 @@
-import * as XLSX from 'xlsx';
-
 /**
  * Parses an Excel or CSV file and returns a list of normalized products.
  * @param {File} file - The file object to parse.
  * @returns {Promise<Array>} - A promise that resolves to an array of product objects.
  */
-export const parseExcelFile = (file) => {
+export const parseExcelFile = async (file) => {
+    const XLSX = await import('xlsx').then(m => m.default || m);
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
 

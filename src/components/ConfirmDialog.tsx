@@ -1,16 +1,24 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Info, X } from 'lucide-react';
+import { useDialogBehavior } from '../hooks/useDialogBehavior';
 
-const variantConfig = {
+const variantConfig: Record<string, { icon: React.FC<{ size: number }>; iconColor: string; btnColor: string; label: string }> = {
     danger: { icon: AlertTriangle, iconColor: 'var(--color-error)', btnColor: 'var(--color-error)', label: 'danger' },
     warning: { icon: AlertTriangle, iconColor: 'var(--color-warning)', btnColor: 'var(--color-warning)', label: 'warning' },
     info: { icon: Info, iconColor: 'var(--color-primary)', btnColor: 'var(--color-primary)', label: 'info' },
 };
 
-const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-const isMobile = () => window.innerWidth < 768;
+interface ConfirmDialogProps {
+    isOpen: boolean;
+    onConfirm: () => void;
+    onCancel: () => void;
+    title?: string;
+    message?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: string;
+}
 
 const ConfirmDialog = ({
     isOpen,
@@ -20,111 +28,24 @@ const ConfirmDialog = ({
     message = 'Bu işlemi gerçekleştirmek istediğinize emin misiniz?',
     confirmText = 'Onayla',
     cancelText = 'İptal',
-    variant = 'danger',
-}) => {
-    const [visible, setVisible] = useState(false);
-    const [closing, setClosing] = useState(false);
-    const dialogRef = useRef(null);
-    const prevFocusRef = useRef(null);
-    const [mobile, setMobile] = useState(false);
-    const touchStartY = useRef(0);
-    const touchDeltaY = useRef(0);
-    const isDragging = useRef(false);
-
-    const handleCancel = useCallback(() => {
-        setClosing(true);
-        setTimeout(() => {
-            setClosing(false);
-            setVisible(false);
-            onCancel();
-        }, 200);
-    }, [onCancel]);
+    variant: variantProp = 'danger',
+}: ConfirmDialogProps) => {
+    const variant = (['danger', 'warning', 'info'].includes(variantProp) ? variantProp : 'danger') as 'danger' | 'warning' | 'info';
+    const {
+        visible,
+        closing,
+        mobile,
+        dialogRef,
+        handleClose,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
+    } = useDialogBehavior(isOpen, onCancel);
 
     const handleConfirm = useCallback(() => {
-        setClosing(true);
-        setTimeout(() => {
-            setClosing(false);
-            setVisible(false);
-            onConfirm();
-        }, 200);
-    }, [onConfirm]);
-
-    useEffect(() => {
-        if (isOpen) {
-            setVisible(true);
-            setClosing(false);
-            setMobile(window.innerWidth < 768);
-            prevFocusRef.current = document.activeElement;
-        } else if (visible) {
-            handleCancel();
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (!visible || closing) return;
-        const timer = requestAnimationFrame(() => {
-            const el = dialogRef.current;
-            if (!el) return;
-            const firstFocusable = el.querySelectorAll(focusableSelector)[0];
-            if (firstFocusable) (firstFocusable as HTMLElement).focus();
-        });
-        return () => cancelAnimationFrame(timer);
-    }, [visible, closing]);
-
-    useEffect(() => {
-        if (visible && !closing) {
-            const handler = (e) => {
-                if (e.key === 'Escape') { e.preventDefault(); handleCancel(); return; }
-                const el = dialogRef.current;
-                if (!el || e.key !== 'Tab') return;
-                const focusables = el.querySelectorAll(focusableSelector);
-                if (focusables.length === 0) return;
-                const first = focusables[0] as HTMLElement;
-                const last = focusables[focusables.length - 1] as HTMLElement;
-                if (e.shiftKey && document.activeElement === first) {
-                    e.preventDefault();
-                    last.focus();
-                } else if (!e.shiftKey && document.activeElement === last) {
-                    e.preventDefault();
-                    first.focus();
-                }
-            };
-            document.addEventListener('keydown', handler);
-            return () => document.removeEventListener('keydown', handler);
-        }
-    }, [visible, closing, handleCancel]);
-
-    useEffect(() => {
-        if (!visible) {
-            prevFocusRef.current && (prevFocusRef.current as HTMLElement).focus?.();
-        }
-    }, [visible]);
-
-    const handleTouchStart = (e) => {
-        touchStartY.current = e.touches[0].clientY;
-        touchDeltaY.current = 0;
-        isDragging.current = true;
-    };
-
-    const handleTouchMove = (e) => {
-        if (!isDragging.current) return;
-        touchDeltaY.current = e.touches[0].clientY - touchStartY.current;
-        if (touchDeltaY.current > 0 && dialogRef.current) {
-            const translate = Math.min(touchDeltaY.current, 200);
-            dialogRef.current.style.transform = `translateY(${translate}px)`;
-            dialogRef.current.style.transition = 'none';
-        }
-    };
-
-    const handleTouchEnd = () => {
-        isDragging.current = false;
-        if (touchDeltaY.current > 100) {
-            handleCancel();
-        } else if (dialogRef.current) {
-            dialogRef.current.style.transform = '';
-            dialogRef.current.style.transition = '';
-        }
-    };
+        handleClose();
+        setTimeout(() => onConfirm(), 200);
+    }, [handleClose, onConfirm]);
 
     if (!visible) return null;
 
@@ -137,7 +58,7 @@ const ConfirmDialog = ({
     return createPortal(
         <div
             className={overlayClass}
-            onClick={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
+            onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
             onTouchStart={mobile ? handleTouchStart : undefined}
             onTouchMove={mobile ? handleTouchMove : undefined}
             onTouchEnd={mobile ? handleTouchEnd : undefined}
@@ -155,7 +76,7 @@ const ConfirmDialog = ({
                         </div>
                         <h3 className="text-lg font-bold text-[var(--color-text)]">{title}</h3>
                     </div>
-                    <button onClick={handleCancel} className="p-1.5 rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors" aria-label="Kapat">
+                    <button onClick={handleClose} className="p-1.5 rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors" aria-label="Kapat">
                         <X size={18} />
                     </button>
                 </div>
@@ -165,7 +86,7 @@ const ConfirmDialog = ({
                 </div>
 
                 <div className="flex gap-3 p-5 border-t border-[var(--color-border)]">
-                    <button onClick={handleCancel} className="btn btn-outline flex-1">{cancelText}</button>
+                    <button onClick={handleClose} className="btn btn-outline flex-1">{cancelText}</button>
                     <button
                         onClick={handleConfirm}
                         className="btn flex-1 text-white"

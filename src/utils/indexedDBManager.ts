@@ -169,7 +169,7 @@ class IndexedDBManager {
             Logger.log('Database bağlantısı yeniden kuruluyor...');
             await this.initialize();
         }
-        return this.db;
+        return this.db!;
     }
 
     async get(storeName, key): Promise<any> {
@@ -177,7 +177,7 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db.transaction([storeName], 'readonly');
+                const transaction = this.db!.transaction([storeName], 'readonly');
                 const store = transaction.objectStore(storeName);
                 const request = store.get(key);
 
@@ -200,7 +200,7 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db.transaction([storeName], 'readonly');
+                const transaction = this.db!.transaction([storeName], 'readonly');
                 const store = transaction.objectStore(storeName);
                 const index = store.index(indexName);
                 const request = index.get(key);
@@ -224,7 +224,7 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db.transaction([storeName], 'readonly');
+                const transaction = this.db!.transaction([storeName], 'readonly');
                 const store = transaction.objectStore(storeName);
                 let request;
 
@@ -255,7 +255,7 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db.transaction([storeName], 'readwrite');
+                const transaction = this.db!.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
 
                 const item = {
@@ -287,7 +287,7 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db.transaction([storeName], 'readwrite');
+                const transaction = this.db!.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
 
                 const item = {
@@ -317,7 +317,7 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db.transaction([storeName], 'readwrite');
+                const transaction = this.db!.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
                 const request = store.delete(key);
 
@@ -340,7 +340,7 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db.transaction([storeName], 'readwrite');
+                const transaction = this.db!.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
                 const request = store.clear();
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import { waitFor } from '@testing-library/dom';
 import App from '../App';
 
 // --- Mocks ---
@@ -88,10 +89,9 @@ describe('App Integration', () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByTestId('dashboard-hero')).toBeInTheDocument();
+            expect(screen.getByTestId('items-table')).toBeInTheDocument();
         });
 
-        expect(screen.getByTestId('items-table')).toBeInTheDocument();
         expect(screen.getByTestId('summary-section')).toBeInTheDocument();
     });
 });

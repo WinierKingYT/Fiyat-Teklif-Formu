@@ -1,10 +1,8 @@
 ﻿import React from "react";
-import { useState, useEffect, useRef, memo, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Plus,
   Trash,
-  GripVertical,
-  Image as ImageIcon,
   Package,
   Upload,
   Search,
@@ -12,13 +10,15 @@ import {
   Table,
   Grid3X3,
   AlertCircle,
-  Copy,
-  CheckSquare,
-  Square,
   ArrowUp,
   ArrowDown,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
+import SortableRow from "./items/SortableRow";
+import SortableRowCard from "./items/SortableRowCard";
+import ContextMenu from "./items/ContextMenu";
 import {
   DndContext,
   closestCenter,
@@ -32,527 +32,14 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import Logger from "../utils/logger";
 import { useQuote } from "../context/QuoteContext";
 import { useTranslation } from "../hooks/useTranslation";
 import { sanitizeInput } from "../utils/sanitize";
 import { evaluateMathExpression } from "../utils/smartCalc";
-import * as XLSX from "xlsx";
+import { formatCurrency } from "../utils/calculations";
 import toast from "react-hot-toast";
-const SortableRow = memo(
-  ({
-    item,
-    index,
-    handleItemChange,
-    removeItem,
-    duplicateItem,
-    formatCurrency,
-    onKeyDown,
-    t,
-    getFieldClass,
-    handleRowBlur,
-    rowErrors,
-    selected,
-    toggleSelectItem,
-    onContextMenu,
-  }: any) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: item.id });
-    const fileInputRef = useRef(null);
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-      position: "relative",
-      zIndex: isDragging ? 999 : "auto",
-    };
-    const handleImageUpload = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () =>
-          handleItemChange(index, "image", reader.result);
-        reader.readAsDataURL(file);
-      }
-    };
-    const handleCalc = (field, value) => {
-      const calculatedValue = evaluateMathExpression(value);
-      if (calculatedValue !== value)
-        handleItemChange(index, field, calculatedValue);
-    };
-    return (
-      <tr
-        ref={setNodeRef}
-        style={style as React.CSSProperties}
-        className="group hover:bg-[var(--color-bg-muted)]/40"
-        onContextMenu={onContextMenu}
-      >
-        {" "}
-        <td className="w-6 px-1">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
-            className={`p-0.5 rounded transition-colors ${selected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] opacity-0 group-hover:opacity-60'}`}
-          >
-            {selected ? <CheckSquare size={13} /> : <Square size={13} />}
-          </button>
-        </td>
-        <td
-          {...attributes}
-          {...listeners}
-          className={`cursor-grab active:cursor-grabbing w-8 ${rowErrors && Object.keys(rowErrors).length > 0 ? 'relative' : ''}`}
-        >
-          <GripVertical
-            size={13}
-            className="text-[var(--color-text-muted)] opacity-40 group-hover:opacity-70 transition-opacity"
-          />
-          {rowErrors && Object.keys(rowErrors).length > 0 && (
-            <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[var(--color-error)] text-white text-[8px] font-bold flex items-center justify-center" title={`${Object.keys(rowErrors).length} hata`}>
-              {Object.keys(rowErrors).length}
-            </div>
-          )}
-        </td>{" "}
-        <td className="w-16">
-          {" "}
-          <div
-            className="w-10 h-10 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center cursor-pointer overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-muted)] transition-all"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {" "}
-            {item.image ? (
-              <img
-                src={item.image}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <ImageIcon size={16} className="text-[var(--color-text-muted)]" />
-            )}{" "}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              accept="image/*"
-              className="hidden"
-            />{" "}
-          </div>{" "}
-        </td>{" "}
-        <td className="min-w-[200px]">
-          {" "}
-          <input
-            type="text"
-            className={getFieldClass(item.id, "name", item) + " mb-1"}
-            placeholder={t("productName")}
-            value={item.name}
-            onChange={(e) => handleItemChange(index, "name", e.target.value)}
-            onBlur={() => handleRowBlur(item.id, "name")}
-            onKeyDown={(e) => onKeyDown(e, index, "name")}
-            data-row={index}
-            data-field="name"
-            autoComplete="off"
-          />{" "}
-          {rowErrors?.name && <div className="field-error-text" style={{marginBottom: '4px'}}>{rowErrors.name}</div>}
-          <textarea
-            className={getFieldClass(item.id, "description", item) + " resize-none"}
-            placeholder={t("description")}
-            rows={2}
-            value={item.description}
-            onChange={(e) =>
-              handleItemChange(index, "description", e.target.value)
-            }
-            onBlur={() => handleRowBlur(item.id, "description")}
-            onKeyDown={(e) => onKeyDown(e, index, "description")}
-            data-row={index}
-            data-field="description"
-            autoComplete="off"
-          />{" "}
-        </td>{" "}
-        <td className="w-20">
-          {" "}
-          <input
-            type="text"
-            className={getFieldClass(item.id, "quantity", item) + " text-center"}
-            value={item.quantity}
-            onChange={(e) =>
-              handleItemChange(index, "quantity", e.target.value)
-            }
-            onBlur={(e) => { handleRowBlur(item.id, "quantity"); handleCalc("quantity", e.target.value); }}
-            onKeyDown={(e) => onKeyDown(e, index, "quantity")}
-            data-row={index}
-            data-field="quantity"
-            autoComplete="off"
-          />{" "}
-          {rowErrors?.quantity && <div className="field-error-text">{rowErrors.quantity}</div>}
-        </td>{" "}
-        <td className="w-24">
-          {" "}
-          <select
-            className="form-control form-select text-sm"
-            value={item.unit}
-            onChange={(e) => handleItemChange(index, "unit", e.target.value)}
-            onKeyDown={(e) => onKeyDown(e, index, "unit")}
-            data-row={index}
-            data-field="unit"
-            autoComplete="off"
-          >
-            {" "}
-            <option value="Adet">{t("unitPiece")}</option>{" "}
-            <option value="Saat">{t("unitHour")}</option>{" "}
-            <option value="Gün">{t("unitDay")}</option>{" "}
-            <option value="Ay">{t("unitMonth")}</option>{" "}
-            <option value="Kg">{t("unitKg")}</option>{" "}
-            <option value="Mt">{t("unitMeter")}</option>{" "}
-            <option value="M2">{t("unitM2")}</option>{" "}
-            <option value="Kutu">{t("unitBox")}</option>{" "}
-          </select>{" "}
-        </td>{" "}
-        <td className="w-28">
-          {" "}
-          <input
-            type="text"
-            className={getFieldClass(item.id, "price", item) + " text-right"}
-            value={item.price}
-            onChange={(e) => handleItemChange(index, "price", e.target.value)}
-            onBlur={(e) => { handleRowBlur(item.id, "price"); handleCalc("price", e.target.value); }}
-            onKeyDown={(e) => onKeyDown(e, index, "price")}
-            data-row={index}
-            data-field="price"
-            autoComplete="off"
-          />{" "}
-          {rowErrors?.price && <div className="field-error-text">{rowErrors.price}</div>}
-        </td>{" "}
-        <td className="w-16">
-          {" "}
-          <input
-            type="text"
-            className={getFieldClass(item.id, "taxRate", item) + " text-center"}
-            value={item.taxRate}
-            onChange={(e) => handleItemChange(index, "taxRate", e.target.value)}
-            onBlur={(e) => { handleRowBlur(item.id, "taxRate"); handleCalc("taxRate", e.target.value); }}
-            onKeyDown={(e) => onKeyDown(e, index, "taxRate")}
-            data-row={index}
-            data-field="taxRate"
-            autoComplete="off"
-          />{" "}
-          {rowErrors?.taxRate && <div className="field-error-text">{rowErrors.taxRate}</div>}
-        </td>{" "}
-        <td className="w-16">
-          {" "}
-          <input
-            type="text"
-            className="form-control text-sm text-center"
-            value={item.discountRate || 0}
-            onChange={(e) =>
-              handleItemChange(index, "discountRate", e.target.value)
-            }
-            onBlur={(e) => handleCalc("discountRate", e.target.value)}
-            onKeyDown={(e) => onKeyDown(e, index, "discountRate")}
-            data-row={index}
-            data-field="discountRate"
-            autoComplete="off"
-          />{" "}
-        </td>{" "}
-        <td className="text-right font-semibold text-sm w-28 text-[var(--color-text)]">
-          {" "}
-          {formatCurrency(
-            (parseFloat(item.quantity) || 0) *
-              (parseFloat(item.price) || 0) *
-              (1 - (parseFloat(item.discountRate) || 0) / 100),
-          )}{" "}
-        </td>{" "}
-        <td className="w-16">
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => duplicateItem(index)}
-              title="Çoğalt"
-            >
-              <Copy size={13} />
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm p-1 text-[var(--color-text-muted)] hover:text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => removeItem(index)}
-            >
-              <Trash size={13} />
-            </button>
-          </div>
-        </td>{" "}
-      </tr>
-    );
-  },
-);
-SortableRow.displayName = "SortableRow";
-const SortableRowCard = memo(
-  ({ item, index, handleItemChange, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem }: any) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: item.id });
-    const fileInputRef = useRef(null);
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-      position: "relative",
-      zIndex: isDragging ? 999 : "auto",
-    };
-    const handleImageUpload = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () =>
-          handleItemChange(index, "image", reader.result);
-        reader.readAsDataURL(file);
-      }
-    };
-    return (
-      <div
-        ref={setNodeRef}
-        style={style as React.CSSProperties}
-        className="card p-4 relative group"
-      >
-        {" "}
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute top-3 right-3 p-1.5 cursor-grab active:cursor-grabbing rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors"
-        >
-          {" "}
-          <GripVertical size={15} />{" "}
-        </div>{" "}
-        <div className="flex gap-3 mb-3">
-          {" "}
-          <div
-            className="w-16 h-16 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center cursor-pointer overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors flex-shrink-0"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {" "}
-            {item.image ? (
-              <img
-                src={item.image}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <ImageIcon size={20} className="text-[var(--color-text-muted)]" />
-            )}{" "}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              accept="image/*"
-              className="hidden"
-            />{" "}
-          </div>{" "}
-          <div className="flex-1 min-w-0">
-            {" "}
-            <input
-              type="text"
-              className={getFieldClass(item.id, "name", item) + " mb-1.5 font-semibold"}
-              placeholder={t("productName")}
-              value={item.name}
-              onChange={(e) => handleItemChange(index, "name", e.target.value)}
-              onBlur={() => handleRowBlur(item.id, "name")}
-            />{" "}
-            {rowErrors?.name && <div className="field-error-text mb-1">{rowErrors.name}</div>}
-            <textarea
-              className="form-control text-xs resize-none"
-              placeholder={t("description")}
-              rows={2}
-              value={item.description}
-              onChange={(e) =>
-                handleItemChange(index, "description", e.target.value)
-              }
-            />{" "}
-          </div>{" "}
-        </div>{" "}
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          {" "}
-          <div>
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
-              {t("quantity")}
-            </label>{" "}
-            <div className="flex gap-1">
-              {" "}
-          <input
-                type="text"
-                className={(getFieldClass(item.id, "quantity", item)) + " flex-1"}
-                value={item.quantity}
-                onChange={(e) =>
-                  handleItemChange(index, "quantity", e.target.value)
-                }
-                onBlur={() => handleRowBlur(item.id, "quantity")}
-              />{" "}
-              {rowErrors?.quantity && <div className="field-error-text">{rowErrors.quantity}</div>}
-              <select
-                className="form-control form-select text-sm w-20"
-                value={item.unit}
-                onChange={(e) =>
-                  handleItemChange(index, "unit", e.target.value)
-                }
-              >
-                {" "}
-                <option value="Adet">{t("unitPiece")}</option>{" "}
-                <option value="Saat">{t("unitHour")}</option>{" "}
-                <option value="Gün">{t("unitDay")}</option>{" "}
-                <option value="Ay">{t("unitMonth")}</option>{" "}
-                <option value="Kg">{t("unitKg")}</option>{" "}
-                <option value="Mt">{t("unitMeter")}</option>{" "}
-                <option value="M2">{t("unitM2")}</option>{" "}
-                <option value="Kutu">{t("unitBox")}</option>{" "}
-              </select>{" "}
-            </div>{" "}
-          </div>{" "}
-          <div>
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
-              {t("unitPrice")}
-            </label>{" "}
-            <input
-              type="text"
-              className={getFieldClass(item.id, "price", item)}
-              value={item.price}
-              onChange={(e) => handleItemChange(index, "price", e.target.value)}
-              onBlur={() => handleRowBlur(item.id, "price")}
-            />{" "}
-            {rowErrors?.price && <div className="field-error-text">{rowErrors.price}</div>}
-          </div>{" "}
-        </div>{" "}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {" "}
-          <div>
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
-              {t("vatRate")}
-            </label>{" "}
-            <input
-              type="text"
-              className={getFieldClass(item.id, "taxRate", item)}
-              value={item.taxRate}
-              onChange={(e) =>
-                handleItemChange(index, "taxRate", e.target.value)
-              }
-              onBlur={() => handleRowBlur(item.id, "taxRate")}
-            />{" "}
-            {rowErrors?.taxRate && <div className="field-error-text">{rowErrors.taxRate}</div>}
-          </div>{" "}
-          <div>
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
-              {t("discountRate")}
-            </label>{" "}
-            <input
-              type="text"
-              className="form-control text-sm"
-              value={item.discountRate || 0}
-              onChange={(e) =>
-                handleItemChange(index, "discountRate", e.target.value)
-              }
-            />{" "}
-          </div>{" "}
-          <div className="flex flex-col justify-end">
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block text-right">
-              {t("total")}
-            </label>{" "}
-            <div className="text-right font-bold text-[var(--color-primary)] text-sm pt-1">
-              {" "}
-              {formatCurrency(
-                (parseFloat(item.quantity) || 0) *
-                  (parseFloat(item.price) || 0) *
-                  (1 - (parseFloat(item.discountRate) || 0) / 100),
-              )}{" "}
-            </div>{" "}
-          </div>{" "}
-        </div>{" "}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
-            className={`p-1.5 rounded-lg transition-colors ${selected ? 'text-[var(--color-primary)] bg-[var(--color-primary-muted)]' : 'text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100'}`}
-            title={selected ? 'Seçimi kaldır' : 'Seç'}
-          >
-            {selected ? <CheckSquare size={14} /> : <Square size={14} />}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => duplicateItem(index)}
-            title="Çoğalt"
-          >
-            <Copy size={14} />
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger btn-sm flex-1 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => removeItem(index)}
-          >
-            <Trash size={13} /> {t("deleteProduct")}
-          </button>
-        </div>
-      </div>
-    );
-  },
-);
-SortableRowCard.displayName = "SortableRowCard";
-const ContextMenu = ({ x, y, items: menuItems, onClose }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = React.useState({ x, y });
-  React.useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
-  React.useEffect(() => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      let ax = x, ay = y;
-      if (rect.right > window.innerWidth) ax = window.innerWidth - rect.width - 8;
-      if (rect.bottom > window.innerHeight) ay = window.innerHeight - rect.height - 8;
-      if (ax < 4) ax = 4; if (ay < 4) ay = 4;
-      setPos({ x: ax, y: ay });
-    }
-  }, [x, y]);
-  if (!x && !y) return null;
-  return (
-    <div
-      ref={ref}
-      className="fixed z-[9999] bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-xl py-1 min-w-[160px]"
-      style={{ left: pos.x, top: pos.y }}
-    >
-      {menuItems.map((item, i) => (
-        item.separator ? (
-          <div key={i} className="h-px bg-[var(--color-border)] my-1" />
-        ) : (
-          <button
-            key={i}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-left text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"
-            onClick={() => { item.onClick(); onClose(); }}
-          >
-            {item.icon && <span className="text-[var(--color-text-muted)]">{item.icon}</span>}
-            {item.label}
-          </button>
-        )
-      ))}
-    </div>
-  );
-};
 
 const ItemsTable = ({
   items,
@@ -562,13 +49,13 @@ const ItemsTable = ({
 }) => {
   const { quoteData, db } = useQuote();
   const { t } = useTranslation(quoteData?.language);
-  const fileInputRef = useRef(null);
-  const searchRef = useRef(null);
+  const fileInputRef = useRef<any>(null);
+  const searchRef = useRef<any>(null);
   const [viewMode, setViewMode] = useState(
     window.innerWidth < 768 ? "card" : "table",
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
   const [touchedRows, setTouchedRows] = useState<Record<string, Record<string, boolean>>>({});
@@ -653,55 +140,111 @@ const ItemsTable = ({
       e.preventDefault();
       addProductFromSearch(searchResults[searchIndex]);
     } else if (e.key === "Escape") {
-      setSearchQuery("");
-      setSearchResults([]);
+      setShowSearch(false);
     }
   };
-  useEffect(() => {
-    const handleResize = () =>
-      setViewMode(window.innerWidth < 768 ? "card" : "table");
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+  const [recentProducts, setRecentProducts] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("recentProducts");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const addToRecentProducts = useCallback((product) => {
+    setRecentProducts((prev) => {
+      const filtered = prev.filter((p) => p.id !== product.id);
+      const updated = [product, ...filtered].slice(0, 5);
+      localStorage.setItem("recentProducts", JSON.stringify(updated));
+      return updated;
+    });
   }, []);
-  useEffect(() => {
-    const itemsWithIds = items.map((item) =>
-      item.id
-        ? item
-        : {
-            ...item,
-            id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          },
-    );
-    const hasChanges = items.some(
-      (item, index) => item.id !== itemsWithIds[index].id,
-    );
-    if (hasChanges) onItemsChange(itemsWithIds);
-  }, [items, onItemsChange]);
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = items.findIndex((item) => item.id === active.id);
-    const newIndex = items.findIndex((item) => item.id === over.id);
-    onItemsChange(arrayMove(items, oldIndex, newIndex));
-  }, [items, onItemsChange]);
-  const handleItemChange = useCallback((index, field, value) => {
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const toggleSelectItem = useCallback((index: number) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
+  const selectAll = useCallback(() => {
+    if (selectedItems.size === items.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(items.map((_, i) => i)));
+    }
+  }, [items, selectedItems.size]);
+  const deleteSelected = useCallback(() => {
+    const newItems = items.filter((_, i) => !selectedItems.has(i));
+    onItemsChange(newItems);
+    setSelectedItems(new Set());
+  }, [selectedItems, items, onItemsChange]);
+  const duplicateSelected = useCallback(() => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: sanitizeInput(value) };
-    if (field === "quantity" || field === "price" || field === "discountRate") {
-      const qty = parseFloat(newItems[index].quantity) || 0;
-      const price = parseFloat(newItems[index].price) || 0;
-      const discountRate = parseFloat(newItems[index].discountRate) || 0;
-      newItems[index].total = qty * price * (1 - discountRate / 100);
+    const duplicates = Array.from(selectedItems)
+      .sort((a, b) => b - a)
+      .map((i) => ({
+        ...newItems[i],
+        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      }));
+    const result = [...newItems, ...duplicates];
+    onItemsChange(result);
+    setSelectedItems(new Set());
+  }, [selectedItems, items, onItemsChange]);
+  const moveSelectedUp = useCallback(() => {
+    if (selectedItems.size === 0) return;
+    const newItems = [...items];
+    const indices = Array.from(selectedItems).sort((a, b) => a - b);
+    if (indices[0] === 0) return;
+    for (const i of indices) {
+      [newItems[i - 1], newItems[i]] = [newItems[i], newItems[i - 1]];
     }
     onItemsChange(newItems);
+    setSelectedItems(new Set(indices.map((i) => i - 1)));
+  }, [selectedItems, items, onItemsChange]);
+  const moveSelectedDown = useCallback(() => {
+    if (selectedItems.size === 0) return;
+    const newItems = [...items];
+    const indices = Array.from(selectedItems).sort((a, b) => b - a);
+    if (indices[0] === items.length - 1) return;
+    for (const i of indices) {
+      [newItems[i], newItems[i + 1]] = [newItems[i + 1], newItems[i]];
+    }
+    onItemsChange(newItems);
+    setSelectedItems(new Set(indices.map((i) => i + 1)));
+  }, [selectedItems, items, onItemsChange]);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const handleItemChange = useCallback((index, field, value) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    onItemsChange(newItems);
   }, [items, onItemsChange]);
-  const addItem = useCallback((prepend = false) => {
+  const removeItem = useCallback((index) => {
+    onItemsChange(items.filter((_, i) => i !== index));
+  }, [items, onItemsChange]);
+  const duplicateItem = useCallback((index) => {
+    const duplicate = {
+      ...items[index],
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    const newItems = [...items];
+    newItems.splice(index + 1, 0, duplicate);
+    onItemsChange(newItems);
+  }, [items, onItemsChange]);
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+      onItemsChange(arrayMove(items, oldIndex, newIndex));
+    }
+  }, [items, onItemsChange]);
+  const addNewItem = useCallback(() => {
     const newItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: "",
@@ -714,544 +257,283 @@ const ItemsTable = ({
       total: 0,
       image: null,
     };
-    onItemsChange(prepend ? [newItem, ...items] : [...items, newItem]);
+    onItemsChange([...items, newItem]);
   }, [items, onItemsChange]);
-  const duplicateItem = useCallback((index) => {
-    const original = items[index];
-    const copy = {
-      ...original,
-      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: (original.name || '') + ' (kopya)',
-    };
-    onItemsChange([...items.slice(0, index + 1), copy, ...items.slice(index + 1)]);
-  }, [items, onItemsChange]);
-
-  const removeItem = useCallback((index) =>
-    onItemsChange(items.filter((_, i) => i !== index)), [items, onItemsChange]);
-
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; index: number } | null>(null);
-  const moveItem = useCallback((from: number, to: number) => {
-    if (to < 0 || to >= items.length) return;
-    const copy = [...items];
-    const [removed] = copy.splice(from, 1);
-    copy.splice(to, 0, removed);
-    onItemsChange(copy);
-  }, [items, onItemsChange]);
-
-  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; onConfirm: () => void }>({ isOpen: false, onConfirm: () => {} });
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
-  const toggleSelectItem = useCallback((index) => {
-    setSelectedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index); else next.add(index);
-      return next;
-    });
-  }, []);
-  const toggleSelectAll = useCallback(() => {
-    if (selectedItems.size === items.length) {
-      setSelectedItems(new Set());
-    } else {
-      setSelectedItems(new Set(items.map((_, i) => i)));
-    }
-  }, [selectedItems, items]);
-  const deleteSelected = useCallback(() => {
-    if (selectedItems.size === 0) return;
-    onItemsChange(items.filter((_, i) => !selectedItems.has(i)));
-    setSelectedItems(new Set());
-  }, [selectedItems, items, onItemsChange]);
-
-  const formatCurrency = useMemo(
-    () => (amount) =>
-      new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(
-        amount,
-      ),
-    [currency],
-  );
-  const handleExcelUpload = (e) => {
+  const handleExcelUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const XLSX = await import('xlsx').then(m => m.default || m);
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target.result as ArrayBuffer);
+        const data = new Uint8Array((e.currentTarget as FileReader).result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        let startIndex = 0;
-        if (jsonData.length > 0 && typeof jsonData[0][0] === "string")
-          startIndex = 1;
-        const newItems = [];
-        for (let i = startIndex; i < jsonData.length; i++) {
-          const row = jsonData[i];
-          if (!row || (row as any[]).length === 0) continue;
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const newItems: any[] = [];
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i] as any[];
+          if (!row || row.length === 0) continue;
           newItems.push({
-            id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${i}`,
+            id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name: row[0] || "",
             description: row[1] || "",
             quantity: parseFloat(row[2]) || 1,
             unit: row[3] || "Adet",
             price: parseFloat(row[4]) || 0,
             taxRate: parseFloat(row[5]) || 20,
-            total: (parseFloat(row[2]) || 1) * (parseFloat(row[4]) || 0),
+            discountRate: parseFloat(row[6]) || 0,
+            total: 0,
             image: null,
           });
         }
         if (newItems.length > 0) {
           onItemsChange([...items, ...newItems]);
-          Logger.log(`${newItems.length} items imported from Excel.`);
-          toast.success(`${newItems.length} ${t("itemsAddedSuccessfully")}`);
-        } else {
-          toast.error(t("noValidExcelData"));
+          toast.success(`${newItems.length} ürün eklendi`);
         }
-      } catch (error) {
-        Logger.error("Excel import error:", error);
-        toast.error(t("excelReadError"));
+      } catch (err) {
+        toast.error("Excel dosyası okunamadı");
       }
     };
     reader.readAsArrayBuffer(file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    e.target.value = "";
   };
-  const [recentProducts, setRecentProducts] = useState<any[]>(() => {
-    try {
-      const stored = localStorage.getItem('recentProducts');
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  });
-  const addToRecentProducts = (product: any) => {
-    setRecentProducts(prev => {
-      const filtered = prev.filter(p => p.id !== product.id);
-      const updated = [product, ...filtered].slice(0, 5);
-      localStorage.setItem('recentProducts', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const handleKeyDown = (e, index, field) => {
-    if (e.key === "Enter") {
-      e.target.blur();
-      return;
+  const handleKeyDown = useCallback((e, index, field) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const fields = ["name", "description", "quantity", "unit", "price", "taxRate", "discountRate"];
+      const currentFieldIndex = fields.indexOf(field);
+      if (e.shiftKey) {
+        if (currentFieldIndex > 0) {
+          const prevField = fields[currentFieldIndex - 1];
+          const prevEl = document.querySelector(`[data-row="${index}"][data-field="${prevField}"]`) as HTMLElement;
+          if (prevEl) prevEl.focus();
+        } else if (index > 0) {
+          const lastField = fields[fields.length - 1];
+          const prevEl = document.querySelector(`[data-row="${index - 1}"][data-field="${lastField}"]`) as HTMLElement;
+          if (prevEl) prevEl.focus();
+        }
+      } else {
+        if (currentFieldIndex < fields.length - 1) {
+          const nextField = fields[currentFieldIndex + 1];
+          const nextEl = document.querySelector(`[data-row="${index}"][data-field="${nextField}"]`) as HTMLElement;
+          if (nextEl) nextEl.focus();
+        } else if (index < items.length - 1) {
+          const nextEl = document.querySelector(`[data-row="${index + 1}"][data-field="name"]`) as HTMLElement;
+          if (nextEl) nextEl.focus();
+        }
+      }
     }
-    const fields = [
-      "name",
-      "description",
-      "quantity",
-      "unit",
-      "price",
-      "taxRate",
-      "discountRate",
+  }, [items.length]);
+  const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, index: -1 });
+  const handleContextMenu = useCallback((e, index) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, index });
+  }, []);
+  const contextMenuItems = useMemo(() => {
+    if (contextMenu.index < 0) return [];
+    return [
+      { icon: <Package size={13} />, label: "Ürün olarak kaydet", onClick: async () => {
+        const item = items[contextMenu.index];
+        if (!item?.name) { toast.error("Ürün adı gerekli"); return; }
+        try {
+          await db.add("products", { id: `prod-${Date.now()}`, name: item.name, description: item.description || "", price: parseFloat(item.price) || 0, taxRate: parseFloat(item.taxRate) || 20, unit: item.unit || "Adet", image: item.image || null, createdAt: new Date().toISOString() });
+          toast.success("Ürün kataloğa kaydedildi");
+        } catch (err) { Logger.error("Error saving product", err); }
+      }},
+      { icon: <AlertCircle size={13} />, label: "Doğrulama durumu", onClick: () => {
+        const item = items[contextMenu.index];
+        const errs = getRowErrors(item);
+        if (Object.keys(errs).length === 0) toast.success("Bu satırda hata yok");
+        else toast.error("Hatalar: " + Object.values(errs).join(", "));
+      }},
+      { separator: true, label: "", onClick: () => {} },
+      { icon: <Trash size={13} />, label: "Satırı sil", onClick: () => removeItem(contextMenu.index) },
     ];
-    const fieldIndex = fields.indexOf(field);
-    let nextRow = index;
-    let nextField = field;
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      if (fieldIndex < fields.length - 1) {
-        nextField = fields[fieldIndex + 1];
-      } else if (index < items.length - 1) {
-        nextRow = index + 1;
-        nextField = fields[0];
-      }
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      if (fieldIndex > 0) {
-        nextField = fields[fieldIndex - 1];
-      } else if (index > 0) {
-        nextRow = index - 1;
-        nextField = fields[fields.length - 1];
-      }
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (index < items.length - 1) nextRow = index + 1;
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (index > 0) nextRow = index - 1;
-    } else return;
-    const el = document.querySelector(
-      `[data-row="${nextRow}"][data-field="${nextField}"]`,
-    );
-    if (el) {
-      (el as HTMLElement).focus();
-      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA")
-        setTimeout(() => (el as HTMLInputElement).select(), 0);
-    }
-  };
+  }, [contextMenu.index, items, db, getRowErrors, removeItem]);
+  const formatItemCurrency = useCallback((amount) => formatCurrency(amount, currency), [currency]);
   return (
-    <div className="card">
-      {" "}
-      <div className="card-header">
-        {" "}
-        <div className="flex items-center gap-2.5">
-          {" "}
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-            {" "}
-            <Package size={16} className="text-[var(--color-primary)]" />{" "}
-          </div>{" "}
-          <span className="card-title">{t("itemsAndServices")}</span>{" "}
-        </div>{" "}
-        <div className="flex items-center gap-1.5">
-          {" "}
-          <div className="bg-[var(--color-bg-muted)] p-0.5 rounded-[var(--radius)] flex">
-            {" "}
-            <button
-              className={`p-1.5 rounded-[var(--radius-sm)] transition-all ${viewMode === "table" ? "bg-[var(--color-bg-card)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
-              onClick={() => setViewMode("table")}
-              title={t("tableView")}
-            >
-              {" "}
-              <Table size={15} />{" "}
-            </button>{" "}
-            <button
-              className={`p-1.5 rounded-[var(--radius-sm)] transition-all ${viewMode === "card" ? "bg-[var(--color-bg-card)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
-              onClick={() => setViewMode("card")}
-              title={t("galleryView")}
-            >
-              {" "}
-              <Grid3X3 size={15} />{" "}
-            </button>{" "}
-          </div>{" "}
-        </div>{" "}
-      </div>{" "}
-      <div className="card-body">
-        {" "}
-        <div className="relative mb-4" ref={searchRef}>
-          {" "}
-          <div className="relative">
-            {" "}
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none"
-            />{" "}
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setShowSearch(true)}
-              onBlur={() => setTimeout(() => setShowSearch(false), 200)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Ürün ara ve ekle... (en az 2 harf)"
-              className="form-control pl-9 pr-8 py-2 text-sm"
-            />{" "}
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSearchResults([]);
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              >
-                {" "}
-                <X size={14} />{" "}
-              </button>
-            )}{" "}
-          </div>{" "}
-          {showSearch && (
-            <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg max-h-60 overflow-y-auto">
-              {" "}
-              {searchResults.length > 0 ? (
-                <>
-                  {searchResults.map((product, idx) => (
-                    <button
-                      key={product.id || idx}
-                      onMouseDown={() => addProductFromSearch(product)}
-                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${idx === searchIndex ? "bg-[var(--color-primary-muted)] text-[var(--color-primary)]" : "text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"}`}
-                    >
-                      {" "}
-                      <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center flex-shrink-0">
-                        {" "}
-                        <Package
-                          size={14}
-                          className="text-[var(--color-primary)]"
-                        />{" "}
-                      </div>{" "}
-                      <div className="flex-1 min-w-0">
-                        {" "}
-                        <div className="font-medium truncate">
-                          {product.name}
-                        </div>{" "}
-                        {product.description && (
-                          <div className="text-xs text-[var(--color-text-muted)] truncate">
-                            {product.description}
-                          </div>
-                        )}{" "}
-                      </div>{" "}
-                      <div className="text-sm font-semibold text-[var(--color-text)] flex-shrink-0">
-                        {" "}
-                        {new Intl.NumberFormat("tr-TR", {
-                          style: "currency",
-                          currency,
-                        }).format(product.price || 0)}{" "}
-                      </div>{" "}
-                    </button>
-                  ))}
-                </>
-              ) : searchQuery.length < 2 && recentProducts.length > 0 ? (
-                <>
-                  <div className="px-3.5 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)]">
-                    Son Kullanılanlar
+            <Package size={16} className="text-[var(--color-primary)]" />
+          </div>
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
+            {t("items")} ({items.length})
+          </h3>
+          {hasErrors && (
+            <span className="flex items-center gap-1 text-xs text-[var(--color-error)]">
+              <AlertCircle size={12} /> Hatalar var
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {selectedItems.size > 0 && (
+            <div className="flex items-center gap-1.5 bg-[var(--color-primary-muted)] px-2 py-1 rounded-lg text-xs">
+              <span className="font-medium text-[var(--color-primary)]">{selectedItems.size} seçili</span>
+              <button onClick={moveSelectedUp} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Yukarı taşı"><ArrowUp size={12} /></button>
+              <button onClick={moveSelectedDown} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Aşağı taşı"><ArrowDown size={12} /></button>
+              <button onClick={duplicateSelected} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Çoğalt"><Package size={12} /></button>
+              <button onClick={deleteSelected} className="p-1 hover:bg-[var(--color-error-muted)] rounded text-[var(--color-error)]" title="Sil"><Trash size={12} /></button>
+              <button onClick={() => setSelectedItems(new Set())} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Seçimi kaldır"><X size={12} /></button>
+            </div>
+          )}
+          <div className="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden">
+            <button onClick={selectAll} className="p-1.5 hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]" title={selectedItems.size === items.length ? "Tüm seçimleri kaldır" : "Tümünü seç"}>
+              {selectedItems.size === items.length && items.length > 0 ? <CheckSquare size={14} /> : <Square size={14} />}
+            </button>
+          </div>
+          <div className="flex border border-[var(--color-border)] rounded-lg overflow-hidden">
+            <button onClick={() => setViewMode("table")} className={`p-1.5 ${viewMode === "table" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title="Tablo görünümü"><Table size={14} /></button>
+            <button onClick={() => setViewMode("card")} className={`p-1.5 ${viewMode === "card" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title="Kart görünümü"><Grid3X3 size={14} /></button>
+          </div>
+          <label className="btn btn-outline btn-sm cursor-pointer" title="Excel'den içe aktar">
+            <Upload size={13} /> Excel
+            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcelUpload} />
+          </label>
+          {onAddProduct && (
+            <button onClick={onAddProduct} className="btn btn-outline btn-sm" title="Ürün kataloğundan ekle">
+              <Package size={13} /> {t("addFromCatalog") || "Katalog"}
+            </button>
+          )}
+          <button onClick={addNewItem} className="btn btn-primary btn-sm">
+            <Plus size={13} /> {t("addItem")}
+          </button>
+        </div>
+      </div>
+      <div className="relative" ref={searchRef}>
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+          <input
+            type="text"
+            className="form-control pl-9"
+            placeholder="Ürün ara... (en az 2 karakter)"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
+            onFocus={() => searchQuery.length >= 2 && setShowSearch(true)}
+            onKeyDown={handleSearchKeyDown}
+          />
+          {searchQuery && (
+            <button onClick={() => { setSearchQuery(""); setShowSearch(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        {showSearch && searchQuery.length >= 2 && (
+          <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto">
+            {searchResults.length > 0 ? (
+              searchResults.map((product, idx) => (
+                <button key={product.id || idx} type="button"
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${idx === searchIndex ? "bg-[var(--color-primary-muted)] text-[var(--color-primary)]" : "text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"}`}
+                  onMouseDown={() => addProductFromSearch(product)}>
+                  <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {product.image ? <img src={product.image} alt="" className="w-full h-full object-cover" /> : <Package size={14} className="text-[var(--color-text-muted)]" />}
                   </div>
-                  {recentProducts.map((product, idx) => (
-                    <button
-                      key={product.id || idx}
-                      onMouseDown={() => addProductFromSearch(product)}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center flex-shrink-0">
-                        <Package size={14} className="text-[var(--color-text-muted)]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{product.name}</div>
-                      </div>
-                      <div className="text-sm font-semibold text-[var(--color-text)] flex-shrink-0">
-                        {new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(product.price || 0)}
-                      </div>
-                    </button>
-                  ))}
-                </>
-              ) : null}
-            </div>
-          )}{" "}
-        </div>{" "}
-        {hasErrors && items.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 mb-3 bg-[var(--color-error)]/10 border border-[var(--color-error)]/20 rounded-[var(--radius)] text-xs text-[var(--color-error)]">
-            <AlertCircle size={14} />
-            <span>Bazı satırlarda hatalı alanlar var. Lütfen kırmızı işaretli alanları düzeltin.</span>
-          </div>
-        )}
-        {selectedItems.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 px-3 py-2 mb-3 bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/20 rounded-[var(--radius)]">
-            <button
-              type="button"
-              onClick={toggleSelectAll}
-              className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-            >
-              {selectedItems.size === items.length ? <CheckSquare size={13} /> : <Square size={13} />}
-              <span>{selectedItems.size}/{items.length} seçili</span>
-            </button>
-            <div className="w-px h-4 bg-[var(--color-border)]" />
-            <button
-              type="button"
-              onClick={() => setConfirmDelete({ isOpen: true, onConfirm: deleteSelected })}
-              className="flex items-center gap-1.5 text-xs text-[var(--color-error)] hover:text-[var(--color-error)] font-medium transition-colors"
-            >
-              <Trash size={13} /> Seçili Kalemleri Sil
-            </button>
-          </div>
-        )}
-        {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed border-[var(--color-border)] rounded-[var(--radius-lg)] bg-[var(--color-bg-muted)]/30">
-            <div className="w-12 h-12 rounded-full bg-[var(--color-primary-muted)] flex items-center justify-center mb-3">
-              <Package size={24} className="text-[var(--color-primary)]" />
-            </div>
-            <h3 className="text-sm font-bold text-[var(--color-text)] mb-1">
-              {t("noItemsAdded")}
-            </h3>
-            <p className="text-xs text-[var(--color-text-muted)] max-w-[260px] mb-4">
-              {t("noItemsHint")}
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => addItem()}
-              >
-                <Plus size={14} /> {t("addFirstRow")}
-              </button>
-              {onAddProduct && (
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={onAddProduct}
-                >
-                  <Package size={14} /> {t("selectFromCatalog")}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{product.name}</div>
+                    {product.description && <div className="text-xs text-[var(--color-text-muted)] truncate">{product.description}</div>}
+                  </div>
+                  <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">{formatCurrency(product.price || 0, currency)}</span>
                 </button>
-              )}
-            </div>
-            <div className="mt-4 text-[10px] text-[var(--color-text-muted)]">
-              veya üstteki arama çubuğuna yazmaya başlayın
-            </div>
-          </div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            {" "}
-            {viewMode === "table" ? (
-              <div className="overflow-x-auto -mx-1">
-                {" "}
-                <table className="items-table w-full">
-                  {" "}
-                  <thead>
-                    {" "}
-                    <tr>
-                      <th className="w-6 px-1">
-                        <button
-                          type="button"
-                          onClick={toggleSelectAll}
-                          className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-                        >
-                          {selectedItems.size === items.length ? <CheckSquare size={12} /> : <Square size={12} />}
-                        </button>
-                      </th>
-                      <th className="w-8"></th>{" "}
-                      <th className="w-14 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
-                        {t("image")}
-                      </th>{" "}
-                      <th className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide min-w-[200px]">
-                        {t("productService")}
-                      </th>{" "}
-                      <th className="w-20 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide text-center">
-                        {t("quantity")}
-                      </th>{" "}
-                      <th className="w-24 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
-                        {t("unit")}
-                      </th>{" "}
-                      <th className="w-28 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide text-right">
-                        {t("unitPrice")}
-                      </th>{" "}
-                      <th className="w-16 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide text-center">
-                        KDV
-                      </th>{" "}
-                      <th className="w-16 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide text-center">
-                        İsk.
-                      </th>{" "}
-                      <th className="w-28 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide text-right">
-                        {t("total")}
-                      </th>{" "}
-                      <th className="w-10"></th>{" "}
-                    </tr>{" "}
-                  </thead>{" "}
-                  <SortableContext
-                    items={items.map((item) => item.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {" "}
-                    <tbody>
-                      {" "}
-                      {items.map((item, index) => (
-                        <SortableRow
-                          key={item.id || index}
-                          item={item}
-                          index={index}
-                          handleItemChange={handleItemChange}
-                          removeItem={removeItem}
-                          duplicateItem={duplicateItem}
-                          formatCurrency={formatCurrency}
-                          onKeyDown={handleKeyDown}
-                          t={t}
-                          getFieldClass={getFieldClass}
-                          handleRowBlur={handleRowBlur}
-                          rowErrors={getRowErrors(item)}
-                          selected={selectedItems.has(index)}
-                          toggleSelectItem={toggleSelectItem}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setContextMenu({ x: e.clientX, y: e.clientY, index });
-                          }}
-                        />
-                      ))}{" "}
-                    </tbody>{" "}
-                  </SortableContext>{" "}
-                </table>{" "}
-              </div>
+              ))
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3">
-                {" "}
-                <SortableContext
-                  items={items.map((item) => item.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {" "}
+              <div className="px-3.5 py-3 text-sm text-[var(--color-text-muted)]">Sonuç bulunamadı</div>
+            )}
+          </div>
+        )}
+      </div>
+      {recentProducts.length > 0 && items.length === 0 && (
+        <div className="text-xs text-[var(--color-text-muted)]">
+          <span className="font-medium">Son ürünler:</span>{" "}
+          {recentProducts.map((p, i) => (
+            <button key={p.id || i} onClick={() => addProductFromSearch(p)} className="hover:text-[var(--color-primary)] transition-colors">
+              {p.name}{i < recentProducts.length - 1 ? ", " : ""}
+            </button>
+          ))}
+        </div>
+      )}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          {viewMode === "table" ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                    <th className="w-6 px-1"></th>
+                    <th className="w-8"></th>
+                    <th className="w-16">{t("image")}</th>
+                    <th className="min-w-[200px]">{t("productName")}</th>
+                    <th className="w-20">{t("quantity")}</th>
+                    <th className="w-24">{t("unit")}</th>
+                    <th className="w-28">{t("unitPrice")}</th>
+                    <th className="w-16">{t("vatRate")}</th>
+                    <th className="w-16">{t("discountRate")}</th>
+                    <th className="w-28">{t("total")}</th>
+                    <th className="w-16"></th>
+                  </tr>
+                </thead>
+                <tbody>
                   {items.map((item, index) => (
-                    <SortableRowCard
-                      key={item.id || index}
+                    <SortableRow
+                      key={item.id}
                       item={item}
                       index={index}
                       handleItemChange={handleItemChange}
                       removeItem={removeItem}
                       duplicateItem={duplicateItem}
-                      formatCurrency={formatCurrency}
+                      formatCurrency={formatItemCurrency}
+                      onKeyDown={handleKeyDown}
                       t={t}
                       getFieldClass={getFieldClass}
                       handleRowBlur={handleRowBlur}
                       rowErrors={getRowErrors(item)}
                       selected={selectedItems.has(index)}
                       toggleSelectItem={toggleSelectItem}
+                      onContextMenu={(e) => handleContextMenu(e, index)}
                     />
-                  ))}{" "}
-                </SortableContext>{" "}
-              </div>
-            )}{" "}
-          </DndContext>
-        )}{" "}
-                {items.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 mt-3 pt-3 border-t border-[var(--color-border)]">
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => { addItem(true); }}
-              title="En üste ekle (Shift+Enter)"
-            >
-              <Plus size={14} /> {t("addRow")}
-            </button>
-            <div className="flex gap-2 sm:ml-auto">
-              {onAddProduct && (
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={onAddProduct}
-                >
-                  <Package size={14} /> {t("selectFromCatalog")}
-                </button>
-              )}
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload size={14} /> Excel
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleExcelUpload}
-                accept=".xlsx, .xls"
-                style={{ display: "none" }}
-                title={t("selectExcelFile")}
-              />
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        )} {" "}
-      </div>{" "}
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
-          items={[
-            { icon: <Copy size={13} />, label: 'Çoğalt', onClick: () => duplicateItem(contextMenu.index) },
-            { icon: <ArrowUp size={13} />, label: 'Yukarı Taşı', onClick: () => moveItem(contextMenu.index, contextMenu.index - 1) },
-            { icon: <ArrowDown size={13} />, label: 'Aşağı Taşı', onClick: () => moveItem(contextMenu.index, contextMenu.index + 1) },
-            { separator: true },
-            { icon: <Trash size={13} />, label: 'Sil', onClick: () => removeItem(contextMenu.index) },
-          ]}
-        />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {items.map((item, index) => (
+                <SortableRowCard
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  handleItemChange={handleItemChange}
+                  removeItem={removeItem}
+                  duplicateItem={duplicateItem}
+                  formatCurrency={formatItemCurrency}
+                  t={t}
+                  getFieldClass={getFieldClass}
+                  handleRowBlur={handleRowBlur}
+                  rowErrors={getRowErrors(item)}
+                  selected={selectedItems.has(index)}
+                  toggleSelectItem={toggleSelectItem}
+                />
+              ))}
+            </div>
+          )}
+        </SortableContext>
+      </DndContext>
+      {items.length === 0 && (
+        <div className="text-center py-12 text-[var(--color-text-muted)]">
+          <Package size={40} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">{t("noItems")}</p>
+          <p className="text-xs mt-1">Excel'den içe aktarın veya ürün ekleyin</p>
+        </div>
       )}
-      <ConfirmDialog
-        isOpen={confirmDelete.isOpen}
-        title="Kalemleri Sil"
-        message={`${selectedItems.size} adet kalemi silmek istediğinize emin misiniz?`}
-        onConfirm={() => { confirmDelete.onConfirm(); setConfirmDelete({ isOpen: false, onConfirm: () => {} }); }}
-        onCancel={() => setConfirmDelete({ isOpen: false, onConfirm: () => {} })}
-        variant="danger"
+      <ContextMenu
+        x={contextMenu.x}
+        y={contextMenu.y}
+        items={contextMenuItems}
+        onClose={() => setContextMenu({ x: 0, y: 0, index: -1 })}
       />
     </div>
   );
 };
 export default ItemsTable;
-
-
-
-
-

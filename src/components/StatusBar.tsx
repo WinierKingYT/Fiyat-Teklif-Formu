@@ -29,7 +29,7 @@ const StatusBar = () => {
       taxRate: 20,
       discountRate: 0,
       total: 0,
-      image: null,
+      image: undefined,
     };
     setItems([...items, newItem]);
   };
@@ -85,7 +85,7 @@ const StatusBar = () => {
           </button>
         </div>
         <button
-          onClick={saveQuote}
+          onClick={() => saveQuote()}
           disabled={isSaving}
           className="status-action-btn status-save-btn"
         >

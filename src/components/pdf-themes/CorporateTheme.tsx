@@ -22,17 +22,6 @@ const CorporateTheme = ({
     currentLocale,
     hasLineItemDiscounts
 }) => {
-    const getAdjustedFontSize = (size) => {
-        const factor = 0.9;
-        if (!size || size === 'inherit') return '0.85em';
-        if (typeof size === 'number') return `${size * factor}px`;
-        if (typeof size === 'string') {
-            if (size.endsWith('px')) return `${parseFloat(size) * factor}px`;
-            if (size.endsWith('rem') || size.endsWith('em')) return `calc(${size} * ${factor})`;
-        }
-        return '0.85em';
-    };
-
     const corporateStyles = useMemo(() => `
         .corporate-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', 'Roboto', sans-serif"};
