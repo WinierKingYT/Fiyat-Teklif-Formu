@@ -6,15 +6,6 @@ import CustomerInfoForm from './components/CustomerInfoForm';
 import CompanyInfoForm from './components/CompanyInfoForm';
 import ItemsTable from './components/ItemsTable';
 import SummarySection from './components/SummarySection';
-import CustomerSelectModal from './components/CustomerSelectModal';
-import ProductSelectModal from './components/ProductSelectModal';
-import SavedQuotesModal from './components/SavedQuotesModal';
-import AnalyticsModal from './components/AnalyticsModal';
-
-import Settings from './components/Settings';
-import HistoryList from './components/HistoryList';
-import TermsAndNotes from './components/TermsAndNotes';
-import BankInfoForm from './components/BankInfoForm';
 import ConfirmDialog from './components/ConfirmDialog';
 import CollapsiblePanel from './components/CollapsiblePanel';
 import { QuoteProvider, useQuote } from './context/QuoteContext';
@@ -28,6 +19,14 @@ import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import { useTranslation } from './hooks/useTranslation';
 import { Toaster, toast } from 'react-hot-toast';
 
+const Settings = lazy(() => import('./components/Settings'));
+const HistoryList = lazy(() => import('./components/HistoryList'));
+const TermsAndNotes = lazy(() => import('./components/TermsAndNotes'));
+const BankInfoForm = lazy(() => import('./components/BankInfoForm'));
+const CustomerSelectModal = lazy(() => import('./components/CustomerSelectModal'));
+const ProductSelectModal = lazy(() => import('./components/ProductSelectModal'));
+const SavedQuotesModal = lazy(() => import('./components/SavedQuotesModal'));
+const AnalyticsModal = lazy(() => import('./components/AnalyticsModal'));
 const CustomerManagerModal = lazy(() => import('./components/CustomerManagerModal'));
 const ProductManagerModal = lazy(() => import('./components/ProductManagerModal'));
 const TemplateManagerModal = lazy(() => import('./components/TemplateManagerModal'));
@@ -277,25 +276,31 @@ const QuoteBuilder = ({
         onCancel={() => setConfirmReset(false)}
         variant="danger"
       />
-      <CustomerSelectModal
-        isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        onSelect={handleCustomerSelect}
-        onCreateNew={onOpenCustomerManager}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <CustomerSelectModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          onSelect={handleCustomerSelect}
+          onCreateNew={onOpenCustomerManager}
+        />
+      </Suspense>
 
-      <ProductSelectModal
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
-        onSelect={handleProductSelect}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <ProductSelectModal
+          isOpen={isProductModalOpen}
+          onClose={() => setIsProductModalOpen(false)}
+          onSelect={handleProductSelect}
+        />
+      </Suspense>
 
-      <SavedQuotesModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
-        onLoadQuote={handleLoadQuote}
-        onNewQuote={handleNewQuote}
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <SavedQuotesModal
+          isOpen={isHistoryModalOpen}
+          onClose={() => setIsHistoryModalOpen(false)}
+          onLoadQuote={handleLoadQuote}
+          onNewQuote={handleNewQuote}
+        />
+      </Suspense>
     </div>
   );
 };
@@ -366,8 +371,8 @@ function App() {
               />
             </div>
           )}
-          {currentView === 'history' && <div className="page-enter" key="history"><HistoryList onNavigate={setCurrentView} /></div>}
-          {currentView === 'settings' && <div className="page-enter" key="settings"><Settings /></div>}
+          {currentView === 'history' && <div className="page-enter" key="history"><Suspense fallback={<ModalLoadingFallback />}><HistoryList onNavigate={setCurrentView} /></Suspense></div>}
+          {currentView === 'settings' && <div className="page-enter" key="settings"><Suspense fallback={<ModalLoadingFallback />}><Settings /></Suspense></div>}
         </Layout>
 
         <Suspense fallback={<ModalLoadingFallback />}>
@@ -412,10 +417,12 @@ function App() {
           />
         </Suspense>
 
-        <AnalyticsModal
-          isOpen={isAnalyticsModalOpen}
-          onClose={() => setIsAnalyticsModalOpen(false)}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <AnalyticsModal
+            isOpen={isAnalyticsModalOpen}
+            onClose={() => setIsAnalyticsModalOpen(false)}
+          />
+        </Suspense>
 
         <Toaster
           position="top-right"

@@ -1,3 +1,4 @@
+import React from 'react';
 import { z } from 'zod';
 
 // ─── Quote Item ─────────────────────────────────────────────────────────────
@@ -209,7 +210,7 @@ export interface PdfLayoutItem {
 }
 
 // ─── Company Defaults ───────────────────────────────────────────────────────
-export interface CompanyDefaults extends CompanyData {}
+export type CompanyDefaults = CompanyData;
 
 // ─── Confirm State ──────────────────────────────────────────────────────────
 export interface ConfirmState {

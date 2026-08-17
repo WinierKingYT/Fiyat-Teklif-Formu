@@ -8,6 +8,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { sanitizeInput, sanitizeObject } from '../utils/sanitize';
 import { getLocalDateString, getLocalDateTimeString } from '../utils/dateUtils';
 import { calculateQuoteTotals } from '../utils/calculations';
+import { deepEqual } from '../utils/deepEqual';
 import ConfirmDialog from '../components/ConfirmDialog';
 import {
     type QuoteData, type CustomerData, type CompanyData, type BankData,
@@ -307,7 +308,7 @@ export const QuoteProvider = ({ children }: { children: React.ReactNode }) => {
             return;
         }
         const currentHistoryState = activeTab.history[activeTab.historyIndex];
-        if (JSON.stringify(activeTab.data) !== JSON.stringify(currentHistoryState)) {
+        if (!deepEqual(activeTab.data, currentHistoryState)) {
             if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
             historyTimeoutRef.current = setTimeout(() => {
                 setTabs(prev => prev.map(t => {

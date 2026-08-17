@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { evaluateMathExpression } from "../../utils/smartCalc";
 import { calculateLineTotal } from "../../utils/calculations";
+import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from "./shared";
 
 const SortableRow = memo(
   ({
@@ -38,15 +39,7 @@ const SortableRow = memo(
       position: "relative",
       zIndex: isDragging ? 999 : "auto",
     };
-    const handleImageUpload = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () =>
-          handleItemChange(index, "image", reader.result);
-        reader.readAsDataURL(file);
-      }
-    };
+    const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => handleImageUploadFn(e, index, handleItemChange);
     const handleCalc = (field, value) => {
       const calculatedValue = evaluateMathExpression(value);
       if (calculatedValue !== value)
@@ -89,6 +82,8 @@ const SortableRow = memo(
           <div
             className="w-10 h-10 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center cursor-pointer overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-muted)] transition-all"
             onClick={() => fileInputRef.current?.click()}
+            role="button"
+            aria-label="Ürün görseli yükle"
           >
             {" "}
             {item.image ? (
@@ -103,7 +98,7 @@ const SortableRow = memo(
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handleImageUpload}
+              onChange={handleImage}
               accept="image/*"
               className="hidden"
             />{" "}
@@ -166,16 +161,11 @@ const SortableRow = memo(
             data-row={index}
             data-field="unit"
             autoComplete="off"
+            aria-label="Birim"
           >
-            {" "}
-            <option value="Adet">{t("unitPiece")}</option>{" "}
-            <option value="Saat">{t("unitHour")}</option>{" "}
-            <option value="Gün">{t("unitDay")}</option>{" "}
-            <option value="Ay">{t("unitMonth")}</option>{" "}
-            <option value="Kg">{t("unitKg")}</option>{" "}
-            <option value="Mt">{t("unitMeter")}</option>{" "}
-            <option value="M2">{t("unitM2")}</option>{" "}
-            <option value="Kutu">{t("unitBox")}</option>{" "}
+            {UNIT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+            ))}
           </select>{" "}
         </td>{" "}
         <td className="w-28">

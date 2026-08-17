@@ -3,6 +3,7 @@ import { GripVertical, ImageIcon, Trash, Copy, CheckSquare, Square } from "lucid
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { calculateLineTotal } from "../../utils/calculations";
+import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from "./shared";
 
 const SortableRowCard = memo(
   ({ item, index, handleItemChange, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem }: any) => {
@@ -22,15 +23,7 @@ const SortableRowCard = memo(
       position: "relative",
       zIndex: isDragging ? 999 : "auto",
     };
-    const handleImageUpload = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () =>
-          handleItemChange(index, "image", reader.result);
-        reader.readAsDataURL(file);
-      }
-    };
+    const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => handleImageUploadFn(e, index, handleItemChange);
     return (
       <div
         ref={setNodeRef}
@@ -51,6 +44,8 @@ const SortableRowCard = memo(
           <div
             className="w-16 h-16 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center cursor-pointer overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors flex-shrink-0"
             onClick={() => fileInputRef.current?.click()}
+            role="button"
+            aria-label="Ürün görseli yükle"
           >
             {" "}
             {item.image ? (
@@ -65,7 +60,7 @@ const SortableRowCard = memo(
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handleImageUpload}
+              onChange={handleImage}
               accept="image/*"
               className="hidden"
             />{" "}
@@ -117,16 +112,11 @@ const SortableRowCard = memo(
                 onChange={(e) =>
                   handleItemChange(index, "unit", e.target.value)
                 }
+                aria-label="Birim"
               >
-                {" "}
-                <option value="Adet">{t("unitPiece")}</option>{" "}
-                <option value="Saat">{t("unitHour")}</option>{" "}
-                <option value="Gün">{t("unitDay")}</option>{" "}
-                <option value="Ay">{t("unitMonth")}</option>{" "}
-                <option value="Kg">{t("unitKg")}</option>{" "}
-                <option value="Mt">{t("unitMeter")}</option>{" "}
-                <option value="M2">{t("unitM2")}</option>{" "}
-                <option value="Kutu">{t("unitBox")}</option>{" "}
+                {UNIT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+                ))}
               </select>{" "}
             </div>{" "}
           </div>{" "}
