@@ -13,6 +13,15 @@ const PopupEditor = ({ isOpen, onClose, onSave, initialValue, title, type = 'tex
         }
     }, [isOpen, type]);
 
+    useEffect(() => {
+        if (!isOpen) return;
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [isOpen, onClose]);
+
     const handleSubmit = (e) => { e.preventDefault(); onSave(value); onClose(); };
     if (!isOpen) return null;
 
@@ -20,12 +29,12 @@ const PopupEditor = ({ isOpen, onClose, onSave, initialValue, title, type = 'tex
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-[var(--color-bg-card)] rounded-[var(--radius-lg)] shadow-lg w-full max-w-md border border-[var(--color-border)] animate-scaleIn">
+            <div role="dialog" aria-modal="true" aria-label={title} className="bg-[var(--color-bg-card)] rounded-[var(--radius-lg)] shadow-lg w-full max-w-md border border-[var(--color-border)] animate-scaleIn">
                 <div className="flex justify-between items-center p-4 border-b border-[var(--color-border)]">
                     <h3 className="font-semibold text-[var(--color-text)] flex items-center gap-2 text-sm">
                         {title}
                     </h3>
-                    <button onClick={onClose} className="p-1 rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors">
+                    <button type="button" onClick={onClose} className="p-1 rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors" aria-label="Kapat">
                         <X size={18} />
                     </button>
                 </div>

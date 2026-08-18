@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { Save, Download, Plus, FileSpreadsheet } from 'lucide-react';
-import { useQuote } from '../context/QuoteContext';
+import { useQuoteData, useSaveStatus } from '../context/QuoteContext';
 import { useUI } from '../context/UIContext';
 import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
@@ -8,9 +8,10 @@ import { exportQuoteToExcel } from '../utils/excelExporter';
 import { calculateQuoteTotals } from '../utils/calculations';
 
 const StatusBar = () => {
-  const { items, quoteData, companyData, customerData, discount, saveStatus, saveQuote, setItems } = useQuote();
+  const { items, quoteData, companyData, customerData, bankData, discount, saveQuote, setItems } = useQuoteData();
+  const saveStatus = useSaveStatus();
   const { isLivePreviewMode, setIsLivePreviewMode } = useUI();
-  const { t } = useTranslation();
+  const { t } = useTranslation(quoteData?.language);
 
   const itemCount = items?.length || 0;
   const calc = useMemo(() => calculateQuoteTotals(items || [], discount || {}, { currency: quoteData?.currency || 'TRY' }), [items, discount, quoteData?.currency]);
@@ -38,10 +39,12 @@ const StatusBar = () => {
     try {
       const calc = calculateQuoteTotals(items || [], discount || {}, { currency: quoteData?.currency || 'TRY' });
       const fullQuoteData = {
-        quoteData: quoteData || {},
-        customerData: customerData || {},
-        companyData: companyData || {},
-        items: calc.items,
+        ...quoteData,
+        customer: customerData || {},
+        company: companyData || {},
+        bankData: bankData || {},
+        terms: quoteData?.terms,
+        notes: quoteData?.notes,
         subTotal: calc.subtotal,
         taxAmount: calc.taxTotal,
         grandTotal: calc.grandTotal,
@@ -49,9 +52,9 @@ const StatusBar = () => {
         discount: discount
       };
       await exportQuoteToExcel(fullQuoteData, calc.items);
-      toast.success('Excel dosyası indirildi');
+      toast.success(t('excelDownloaded'));
     } catch (error) {
-      toast.error('Excel oluşturulurken hata oluştu');
+      toast.error(t('excelError'));
     }
   };
 
@@ -64,9 +67,9 @@ const StatusBar = () => {
         {saveStatus?.status && (
           <span className={`status-item status-${saveStatus.status}`} aria-live="polite" aria-atomic="true">
             <span className="status-dot" />
-            {saveStatus.status === 'saving' ? 'Kaydediliyor...'
-              : saveStatus.status === 'saved' ? 'Kaydedildi'
-              : saveStatus.status === 'error' ? 'Hata' : ''}
+            {saveStatus.status === 'saving' ? t('savingStatus')
+              : saveStatus.status === 'saved' ? t('savedStatus')
+              : saveStatus.status === 'error' ? t('error') : ''}
           </span>
         )}
       </div>
@@ -77,14 +80,14 @@ const StatusBar = () => {
       </div>
       <div className="status-bar-right">
         <div className="status-bar-mobile-actions mobile-only">
-          <button onClick={handleAddItem} className="status-action-btn status-pdf-btn" title="Kalem Ekle">
+          <button type="button" onClick={handleAddItem} className="status-action-btn status-pdf-btn" title={t('addItemBtn')}>
             <Plus size={14} />
           </button>
-          <button onClick={handleExcelExport} className="status-action-btn status-pdf-btn" title="Excel">
+          <button type="button" onClick={handleExcelExport} className="status-action-btn status-pdf-btn" title="Excel">
             <FileSpreadsheet size={14} />
           </button>
         </div>
-        <button
+        <button type="button"
           onClick={() => saveQuote()}
           disabled={isSaving}
           className="status-action-btn status-save-btn"
@@ -92,7 +95,7 @@ const StatusBar = () => {
           <Save size={14} />
           <span className="desktop-only">{t('saveQuote')}</span>
         </button>
-        <button
+        <button type="button"
           onClick={() => setIsLivePreviewMode(!isLivePreviewMode)}
           className={`status-action-btn ${isLivePreviewMode ? 'status-pdf-btn-active' : 'status-pdf-btn'}`}
         >

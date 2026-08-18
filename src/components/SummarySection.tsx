@@ -1,10 +1,12 @@
-import React from 'react';
+﻿import React from 'react';
 import { useMemo, useState, useEffect } from 'react';
 import { Calculator, Percent, Receipt, RefreshCw } from 'lucide-react';
 import { calculateQuoteTotals, formatCurrency } from '../utils/calculations';
 import { getExchangeRates, CURRENCIES } from '../utils/exchangeRates';
+import { useTranslation } from '../hooks/useTranslation';
 
-const SummarySection = React.memo(({ items, discount = { type: 'percentage', value: 0 }, onDiscountChange, currency = 'TRY' }: any) => {
+const SummarySection = React.memo(({ items, discount = { type: 'percentage', value: 0 }, onDiscountChange, currency = 'TRY', language = 'tr' }: any) => {
+    const { t } = useTranslation(language);
     const calc = useMemo(() => calculateQuoteTotals(items, discount, { currency }), [items, discount, currency]);
 
     const [rates, setRates] = useState(null);
@@ -45,19 +47,19 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                     <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
                         <Calculator size={16} className="text-[var(--color-primary)]" />
                     </div>
-                    <span className="card-title">Özet</span>
+                    <span className="card-title">{t('summary')}</span>
                 </div>
             </div>
             <div className="card-body">
                 <div className="space-y-2.5">
                     <div className="flex items-center justify-between py-1.5">
-                        <span className="text-sm text-[var(--color-text-secondary)]">Ara Toplam</span>
+                        <span className="text-sm text-[var(--color-text-secondary)]">{t('subtotal')}</span>
                         <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.subtotal)}</span>
                     </div>
 
                     {calc.lineDiscountTotal > 0 && (
                         <div className="flex items-center justify-between py-1.5">
-                            <span className="text-sm text-[var(--color-text-secondary)]">Satır İskontosu</span>
+                            <span className="text-sm text-[var(--color-text-secondary)]">{t('lineDiscount')}</span>
                             <span className="text-sm font-semibold text-[var(--color-error)]">-{formatCurrency(calc.lineDiscountTotal)}</span>
                         </div>
                     )}
@@ -65,14 +67,14 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                     <div className="border-t border-dashed border-[var(--color-border)] my-1.5"></div>
 
                     <div className="flex items-center justify-between py-1.5">
-                        <span className="text-sm font-semibold text-[var(--color-text)]">Net Toplam</span>
+                        <span className="text-sm font-semibold text-[var(--color-text)]">{t('netTotal')}</span>
                         <span className="text-sm font-bold text-[var(--color-text)]">{formatCurrency(calc.netTotal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between py-1.5">
                         <div className="flex items-center gap-2">
                             <Percent size={14} className="text-[var(--color-text-muted)]" />
-                            <span className="text-sm text-[var(--color-text-secondary)]">Genel İskonto</span>
+                            <span className="text-sm text-[var(--color-text-secondary)]">{t('generalDiscount')}</span>
                             <div className="flex items-center gap-1">
                                 <select
                                     className="form-control py-1 px-2 text-xs w-16"
@@ -80,7 +82,7 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                                     onChange={handleDiscountTypeChange}
                                 >
                                     <option value="percentage">%</option>
-                                    <option value="fixed">Tutar</option>
+                                    <option value="fixed">{t('amount')}</option>
                                 </select>
                                 <input
                                     type="number"
@@ -89,7 +91,7 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                                     step={discount.type === 'percentage' ? "1" : "0.01"}
                                     value={discount.value}
                                     onChange={handleDiscountValueChange}
-                                    aria-label="Genel İskonto"
+                                    aria-label={t('generalDiscount')}
                                 />
                             </div>
                         </div>
@@ -102,11 +104,11 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                         <>
                             <div className="flex items-center gap-1.5 mb-1.5">
                                 <Receipt size={13} className="text-[var(--color-text-muted)]" />
-                                <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">KDV Dökümü</span>
+                                <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">{t('vatBreakdown')}</span>
                             </div>
                             {Object.entries(calc.taxBreakdown).map(([rate, amount]) => (
                                 <div className="flex items-center justify-between py-1" key={rate}>
-                                    <span className="text-sm text-[var(--color-text-secondary)] ml-4">KDV %{rate}</span>
+                                    <span className="text-sm text-[var(--color-text-secondary)] ml-4">{t('vatRateDisplay').replace('{rate}', rate)}</span>
                                     <span className="text-sm text-[var(--color-text)]">{formatCurrency(amount)}</span>
                                 </div>
                             ))}
@@ -114,21 +116,21 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                     )}
 
                     <div className="flex items-center justify-between py-1.5">
-                        <span className="text-sm text-[var(--color-text-secondary)]">Toplam KDV</span>
+                        <span className="text-sm text-[var(--color-text-secondary)]">{t('totalVat')}</span>
                         <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal)}</span>
                     </div>
 
                     <div className="border-t-2 border-[var(--color-primary)]/20 my-2"></div>
 
                     <div className="flex items-center justify-between py-2">
-                        <span className="text-base font-bold text-[var(--color-text)]">Genel Toplam</span>
+                        <span className="text-base font-bold text-[var(--color-text)]">{t('grandTotal')}</span>
                         <span className="text-lg font-extrabold text-[var(--color-primary)]">{formatCurrency(calc.grandTotal)}</span>
                     </div>
 
                     {showConversion && convertedAmount !== null && currency !== targetCurrency && (
                         <div className="flex items-center justify-between py-1.5 border-t border-[var(--color-border)] mt-1">
                             <span className="text-xs text-[var(--color-text-muted)]">
-                                ~{targetCurrency} Karşılığı
+                                {t('currencyEquivalent').replace('{currency}', targetCurrency)}
                             </span>
                             <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
                                 {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: targetCurrency }).format(convertedAmount)}
@@ -136,12 +138,12 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                         </div>
                     )}
 
-                    <button
+                    <button type="button"
                         onClick={() => setShowConversion(!showConversion)}
                         className="flex items-center gap-1.5 text-xs text-[var(--color-info)] hover:text-[var(--color-info)]/80 mt-2 transition-colors"
                     >
                         <RefreshCw size={12} />
-                        {showConversion ? 'Kur Çeviricisini Gizle' : 'Kur Çeviricisini Göster'}
+                        {showConversion ? t('hideConverter') : t('showConverter')}
                     </button>
                     {showConversion && (
                         <select

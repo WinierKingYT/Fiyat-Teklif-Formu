@@ -20,14 +20,40 @@ const CorporateTheme = ({
     totalTax,
     total,
     currentLocale,
-    hasLineItemDiscounts
+    hasLineItemDiscounts,
+    onEdit,
+    activeLayout
 }) => {
+    // Helper for editable fields
+    const layoutMap = useMemo(() => {
+        const map = {};
+        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
+        return map;
+    }, [activeLayout]);
+    const showSection = (id) => layoutMap[id] !== false;
+
+    const renderEditable = (value, fieldKey, type = 'text', className = '') => {
+        if (!onEdit) return <span className={className}>{value}</span>;
+
+        return (
+            <span
+                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(fieldKey, value, type);
+                }}
+                title={t.clickToEdit}
+            >
+                {value || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
+            </span>
+        );
+    };
     const corporateStyles = useMemo(() => `
         .corporate-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', 'Roboto', sans-serif"};
             line-height: ${config.bodyLineHeight || '1.5'};
             color: ${config.globalFontColor || '#1f2937'};
-            background: white;
+            background: var(--pdf-page-bg, #fff);
             font-size: ${config.fontSize || 11}px;
             position: relative;
         }
@@ -243,6 +269,31 @@ const CorporateTheme = ({
             font-weight: 600;
             text-transform: uppercase;
         }
+
+        .corporate-table thead {
+            background: ${config.tableHeaderBg || 'transparent'};
+        }
+
+        ${config.tableStriped ? `
+        .corporate-table tbody tr:nth-child(even) td {
+            background: ${config.tableStripedColor || '#f8fafc'};
+        }
+        ` : ''}
+
+        .corporate-table td {
+            height: ${config.tableRowHeight || 0}px;
+        }
+
+        ${config.tableShowVerticalLines ? `
+        .corporate-table th,
+        .corporate-table td {
+            border-left: 1px solid ${config.tableBorderColor || '#e2e8f0'};
+        }
+        .corporate-table th:first-child,
+        .corporate-table td:first-child {
+            border-left: none;
+        }
+        ` : ''}
     `, [color, config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
@@ -341,7 +392,7 @@ const CorporateTheme = ({
                     )}
 
                     {/* Header */}
-                    {pageIndex === 0 ? (
+                    {showSection('header') && (pageIndex === 0 ? (
                         <div className="corporate-header">
                             <div className="corporate-header-left">
                                 {config.showLogo && companyData.logo && (
@@ -349,11 +400,11 @@ const CorporateTheme = ({
                                         <img src={companyData.logo} alt="Logo" />
                                     </div>
                                 )}
-                                <div style={{ fontSize: config.headerTitleFontSize || '1.2em', fontWeight: config.headerTitleFontWeight || '700', color: '#111827' }}>{companyData.name}</div>
+                                <div style={{ fontSize: config.headerTitleFontSize || '1.2em', fontWeight: config.headerTitleFontWeight || '700', color: '#111827' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 <div style={{ fontSize: config.headerInfoFontSize || '0.9em', color: '#6b7280' }}>{companyData.website}</div>
                             </div>
                             <div className="corporate-title-box">
-                                <div className="corporate-title">{config.title}</div>
+                                <div className="corporate-title">{renderEditable(config.title, 'quoteTitle')}</div>
                                 <div className="corporate-meta">
                                     <div><strong>{t.quoteNo}:</strong> {quoteData.number}</div>
                                     <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
@@ -368,26 +419,26 @@ const CorporateTheme = ({
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             </div>
                         </div>
-                    )}
+                    ))}
 
                     {/* Info Grid - Only Page 1 */}
-                    {pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && (
                         <div className="corporate-grid">
                             <div className="corporate-card">
                                 <div className="corporate-card-title">{t.customer}</div>
-                                <div style={{ fontWeight: '700', fontSize: '1.1em', marginBottom: '0.5rem', color: '#1f2937' }}>{customerData.company}</div>
+                                <div style={{ fontWeight: '700', fontSize: '1.1em', marginBottom: '0.5rem', color: '#1f2937' }}>{renderEditable(customerData.company, 'customerCompany')}</div>
                                 <div className="corporate-info-row">
                                     <div className="corporate-info-label">{t.authorized}:</div>
-                                    <div className="corporate-info-value">{customerData.name}</div>
+                                    <div className="corporate-info-value">{renderEditable(customerData.name, 'customerName')}</div>
                                 </div>
                                 <div className="corporate-info-row">
                                     <div className="corporate-info-label">{t.phone}:</div>
-                                    <div className="corporate-info-value">{customerData.phone}</div>
+                                    <div className="corporate-info-value">{renderEditable(customerData.phone, 'customerPhone')}</div>
                                 </div>
                                 {customerData.email && (
                                     <div className="corporate-info-row">
                                         <div className="corporate-info-label">{t.email}:</div>
-                                        <div className="corporate-info-value">{customerData.email}</div>
+                                        <div className="corporate-info-value">{renderEditable(customerData.email, 'customerEmail')}</div>
                                     </div>
                                 )}
                                 {customerData.address && (
@@ -399,7 +450,7 @@ const CorporateTheme = ({
                             </div>
                             <div className="corporate-card">
                                 <div className="corporate-card-title">{t.company}</div>
-                                <div style={{ fontWeight: '700', fontSize: '1.1em', marginBottom: '0.5rem', color: '#1f2937' }}>{companyData.name}</div>
+                                <div style={{ fontWeight: '700', fontSize: '1.1em', marginBottom: '0.5rem', color: '#1f2937' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 <div className="corporate-info-row">
                                     <div className="corporate-info-label">{t.authorized}:</div>
                                     <div className="corporate-info-value">{companyData.authorized}</div>
@@ -421,9 +472,11 @@ const CorporateTheme = ({
                     )}
 
                     {/* Items */}
+                    {showSection('items') && (
                     <div style={{ flex: 1 }}>
                         {renderTable(chunk, pageIndex * itemsPerPage)}
                     </div>
+                    )}
 
                     {/* Summary & Footer - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
@@ -442,10 +495,10 @@ const CorporateTheme = ({
                                                 </div>
                                             </div>
                                         )}
-                                        {config.showNotes && quoteData.notes && (
+                                        {showSection('notes') && config.showNotes && quoteData.notes && (
                                             <div style={{ marginTop: '1.5rem' }}>
                                                 <div style={{ fontWeight: '700', color: '#4b5563', marginBottom: '0.25rem', fontSize: '0.9em' }}>{t.notes}</div>
-                                                <div style={{ fontSize: '0.85em', color: '#6b7280', fontStyle: 'italic' }}>{quoteData.notes}</div>
+                                                <div style={{ fontSize: '0.85em', color: '#6b7280', fontStyle: 'italic' }}>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
                                             </div>
                                         )}
                                     </div>
@@ -475,7 +528,7 @@ const CorporateTheme = ({
                             )}
 
                             {/* Signatures */}
-                            {config.showSignatures && (
+                            {showSection('signatures') && config.showSignatures && (
                                 <div className="corporate-signatures">
                                     <div className="corporate-sig-box">
                                         <div className="corporate-sig-area">
@@ -485,7 +538,7 @@ const CorporateTheme = ({
                                                 <img src={companyData.signature} alt="" style={{ maxHeight: '100%', maxWidth: '100%' }} />
                                             ) : null}
                                         </div>
-                                        <div className="corporate-sig-label">İmza</div>
+                                        <div className="corporate-sig-label">{t.signature}</div>
                                     </div>
                                     <div className="corporate-sig-box">
                                         <div className="corporate-sig-area">
@@ -493,23 +546,25 @@ const CorporateTheme = ({
                                                 <img src={companyData.stamp} alt="" style={{ maxHeight: '100%', maxWidth: '100%' }} />
                                             )}
                                         </div>
-                                        <div className="corporate-sig-label">Firma Kaşesi</div>
+                                        <div className="corporate-sig-label">{t.companyStamp}</div>
                                     </div>
                                 </div>
                             )}
 
                             {/* Footer - Only Last Page */}
+                            {showSection('footer') && (
                             <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: config.footerFontSize || '0.85em', fontWeight: config.footerFontWeight || 'normal', color: '#4b5563' }}>
                                 <div style={{ marginBottom: '0.25rem' }}>{companyData.address}</div>
                                 <div style={{ marginBottom: '0.5rem' }}>
                                     {companyData.phone} | {companyData.email} | {companyData.website}
                                 </div>
                                 <div style={{ marginTop: '1rem' }}>
-                                    <div style={{ marginBottom: '0.25rem' }}>Teşekkür Ederiz</div>
-                                    <div style={{ marginBottom: '0.25rem' }}>Saygılarımızla, {companyData.name}</div>
+                                    <div style={{ marginBottom: '0.25rem' }}>{t.thankYou}</div>
+                                    <div style={{ marginBottom: '0.25rem' }}>{t.regards}, {companyData.name}</div>
                                     <div style={{ fontWeight: '700', color: color }}>{companyData.name} - {config.title}</div>
                                 </div>
                             </div>
+                            )}
                         </div>
                     )}
                 </div>

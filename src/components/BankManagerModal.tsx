@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
@@ -6,8 +6,10 @@ import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Plus, Trash, Edit, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
+import { useTranslation } from '../hooks/useTranslation';
 
-const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
+const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }) => {
+    const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const [banks, setBanks] = useState<any[]>([]);
     const [editingBank, setEditingBank] = useState<any>(null);
@@ -32,7 +34,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
             setBanks(result);
         } catch (error) {
             Logger.error('Error loading banks:', error);
-            toast.error('Bankalar yüklenirken hata oluştu');
+            toast.error(t('bankLoadError'));
         }
     };
 
@@ -46,10 +48,10 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
         try {
             if (editingBank) {
                 await db.put('bankInfo', { ...formData, id: editingBank.id });
-                toast.success('Banka güncellendi');
+                toast.success(t('bankUpdated'));
             } else {
                 await db.add('bankInfo', formData);
-                toast.success('Banka eklendi');
+                toast.success(t('bankAdded'));
             }
             setFormData({
                 bankName: '',
@@ -62,7 +64,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
             loadBanks();
         } catch (error) {
             Logger.error('Error saving bank:', error);
-            toast.error('Banka kaydedilirken hata oluştu');
+            toast.error(t('bankSaveError'));
         }
     };
 
@@ -72,7 +74,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
     };
 
     const handleDelete = async (id) => {
-        setConfirmDialog({ isOpen: true, title: 'Bankayı Sil', message: 'Bu bankayı silmek istediğinizden emin misiniz?', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('bankInfo', id); toast.success('Banka silindi'); loadBanks(); } catch (error) { Logger.error('Error deleting bank:', error); toast.error('Banka silinirken hata oluştu'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('deleteBank'), message: t('deleteBankConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('bankInfo', id); toast.success(t('bankDeleted')); loadBanks(); } catch (error) { Logger.error('Error deleting bank:', error); toast.error(t('bankDeleteError')); } }, variant: 'danger' });
     };
 
     const handleSelect = (bank) => {
@@ -94,17 +96,17 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Banka Yönetimi" size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('bankManagement')} size="xl">
             <div className="flex flex-col md:flex-row gap-6 h-[70vh]">
 
                 {/* Left: List */}
                 <div className="w-full md:w-1/2 flex flex-col border-r border-[var(--color-border)] pr-4">
                     <div className="flex justify-between items-center mb-4">
-                        <h4 className="text-lg font-semibold text-[var(--color-text)]">Kayıtlı Bankalar</h4>
-                        <button
+                        <h4 className="text-lg font-semibold text-[var(--color-text)]">{t('savedBanks')}</h4>
+                        <button type="button"
                             className="btn btn-primary btn-sm"
                             onClick={handleCancelEdit}
-                            title="Yeni Banka Ekle"
+                            title={t('addNewBank')}
                         >
                             <Plus size={16} /> Yeni
                         </button>
@@ -113,7 +115,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
                         {banks.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] rounded-lg">
-                                <p>Henüz kayıtlı banka bulunmuyor.</p>
+                                <p>{t('noBanksYet')}</p>
                             </div>
                         ) : (
                             banks.map(bank => (
@@ -133,14 +135,18 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                                         </div>
                                         <div className="flex gap-2 ml-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                             <button
+                                                type="button"
                                                 className="p-2 text-[var(--color-info)] hover:bg-[var(--color-primary-muted)] rounded-full transition-colors"
                                                 onClick={(e) => { e.stopPropagation(); handleEdit(bank); }}
+                                                aria-label={`${t('editBank')}: ${bank.bankName || ''}`}
                                             >
                                                 <Edit size={16} />
                                             </button>
                                             <button
+                                                type="button"
                                                 className="p-2 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors"
                                                 onClick={(e) => { e.stopPropagation(); handleDelete(bank.id); }}
+                                                aria-label={`${t('deleteBank')}: ${bank.bankName || ''}`}
                                             >
                                                 <Trash size={16} />
                                             </button>
@@ -156,18 +162,18 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                 <div className="w-full md:w-1/2 pl-2 overflow-y-auto custom-scrollbar">
                     <div className="flex justify-between items-center mb-4">
                         <h4 className="text-lg font-semibold text-[var(--color-text)]">
-                            {editingBank ? 'Bankayı Düzenle' : 'Yeni Banka Ekle'}
+                            {editingBank ? t('editBank') : t('addNewBank')}
                         </h4>
                         {editingBank && (
-                            <button className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
-                                Vazgeç
+                            <button type="button" className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
+                                {t('cancelEdit')}
                             </button>
                         )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-3">
                         <div>
-                            <label className="form-label">Banka Adı</label>
+                            <label className="form-label">{t('bankName')}</label>
                             <input
                                 type="text"
                                 className="form-control"
@@ -178,7 +184,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                             />
                         </div>
                         <div>
-                            <label className="form-label">Şube</label>
+                            <label className="form-label">{t('branch')}</label>
                             <input
                                 type="text"
                                 className="form-control"
@@ -188,7 +194,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                             />
                         </div>
                         <div>
-                            <label className="form-label">Hesap No</label>
+                            <label className="form-label">{t('accountNumber')}</label>
                             <input
                                 type="text"
                                 className="form-control"
@@ -198,7 +204,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                             />
                         </div>
                         <div>
-                            <label className="form-label">IBAN</label>
+                            <label className="form-label">{t('iban')}</label>
                             <input
                                 type="text"
                                 className="form-control"
@@ -209,7 +215,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                             />
                         </div>
                         <div>
-                            <label className="form-label">Hesap Sahibi</label>
+                            <label className="form-label">{t('accountHolder')}</label>
                             <input
                                 type="text"
                                 className="form-control"
@@ -222,7 +228,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect }) => {
                         <div className="flex gap-2 pt-2">
                             <button type="submit" className="btn btn-primary w-full">
                                 {editingBank ? <Save size={16} /> : <Plus size={16} />}
-                                {editingBank ? 'Değişiklikleri Kaydet' : 'Bankayı Ekle'}
+                                {editingBank ? t('saveChanges') : t('addBank')}
                             </button>
                         </div>
                     </form>

@@ -1,7 +1,7 @@
-import React from "react";
+﻿import React from "react";
 import { useState, useEffect } from "react";
 import { useIndexedDB } from "../hooks/useIndexedDB";
-import { useQuote } from "../context/QuoteContext";
+import { useQuoteData, usePdfConfig } from "../context/QuoteContext";
 import { useUI } from "../context/UIContext";
 import { useTranslation } from "../hooks/useTranslation";
 import { Settings2 } from "lucide-react";
@@ -11,8 +11,8 @@ import { GeneralSettings, CompanyDefaults, PdfLayoutSettings, WatermarkSettings 
 
 const Settings = () => {
   const { db } = useIndexedDB();
-  const { pdfLayout, setPdfLayout, pdfConfig, setPdfConfig, quoteData } =
-    useQuote();
+  const { pdfLayout, setPdfLayout, pdfConfig, setPdfConfig } = usePdfConfig();
+  const { quoteData } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
   const {
     viewMode,
@@ -91,10 +91,10 @@ const Settings = () => {
     try {
       await db.put("settings", { id: "global", ...settings });
       await db.put("company_defaults", { id: "default", ...companySettings });
-      toast.success("Ayarlar başarıyla kaydedildi!");
+      toast.success(t('settingsSaved'));
     } catch (error) {
       Logger.error("Error saving settings:", error);
-      toast.error("Ayarlar kaydedilirken bir hata oluştu.");
+      toast.error(t('settingsSaveError'));
     }
   };
 
@@ -105,15 +105,15 @@ const Settings = () => {
   if (loading)
     return (
       <div className="flex items-center justify-center p-12 text-[var(--color-text-muted)] text-sm">
-        Yükleniyor...
+        {t('loading')}
       </div>
     );
 
   const tabs = [
-    { id: "general", label: "Genel Ayarlar" },
-    { id: "company", label: "Varsayılan Bilgiler" },
-    { id: "pdf", label: "PDF Düzeni" },
-    { id: "watermark", label: "Filigran" },
+    { id: "general", label: t('generalSettings') },
+    { id: "company", label: t('companyDefaults') },
+    { id: "pdf", label: t('pdfLayout') },
+    { id: "watermark", label: t('watermarkTab') },
   ];
 
   return (
@@ -123,12 +123,12 @@ const Settings = () => {
           <Settings2 size={17} className="text-[var(--color-primary)]" />
         </div>
         <h1 className="text-xl font-bold text-[var(--color-text)]">
-          Uygulama Ayarları
+          {t('appSettings')}
         </h1>
       </div>
       <div className="tab-nav">
         {tabs.map((tab) => (
-          <button
+          <button type="button"
             key={tab.id}
             className={`tab-btn ${activeTab === tab.id ? "tab-btn-active" : ""}`}
             onClick={() => setActiveTab(tab.id)}

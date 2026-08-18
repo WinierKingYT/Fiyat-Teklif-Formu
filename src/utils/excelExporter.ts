@@ -1,81 +1,143 @@
 import Logger from './logger';
+import { translations } from './translations';
+import type { CustomerData, CompanyData, BankData, Discount } from '../context/quote/types';
 
+export interface ExportItem {
+    name?: string;
+    description?: string;
+    quantity?: number | string;
+    unit?: string;
+    price?: number | string;
+    discountRate?: number | string;
+    lineDiscountRate?: number | string;
+    taxRate?: number | string;
+    netTotal?: number | string;
+}
+
+export interface ExportQuoteData {
+    date?: string;
+    number?: string;
+    currency?: string;
+    language?: string;
+    customer?: Partial<CustomerData>;
+    company?: Partial<CompanyData>;
+    bankData?: Partial<BankData>;
+    terms?: string;
+    notes?: string;
+    subTotal?: number;
+    taxAmount?: number;
+    grandTotal?: number;
+    globalDiscountAmount?: number;
+    discount?: Discount;
+}
+
+const LOCALE_MAP: Record<string, string> = { tr: 'tr-TR', en: 'en-US', de: 'de-DE' };
+const FALLBACK_LOCALE = 'tr-TR';
 const COL_WIDTHS = [30, 30, 10, 10, 15, 10, 10, 15];
 
-function safe(val: any, fallback = '') {
+const getLocale = (language?: string) => LOCALE_MAP[language || 'tr'] || FALLBACK_LOCALE;
+
+const getT = (language?: string) => (translations[(language || 'tr') as keyof typeof translations] || translations.tr);
+
+function safe(val: unknown, fallback = '') {
     return val != null ? val : fallback;
 }
 
-function toLocale(val: any) {
+function toLocale(val: unknown, locale: string = FALLBACK_LOCALE) {
     if (val == null) return '';
-    return typeof val === 'number' ? val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(val);
+    return typeof val === 'number' ? val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(val);
 }
 
-export const exportQuoteToExcel = async (quoteData: any, items: any[]) => {
+const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], locale: string): any[][] => {
+    const t = getT(quoteData?.language);
+    const rows: any[][] = [];
+    const c = quoteData?.customer || {};
+    const comp = quoteData?.company || {};
+    const bank = quoteData?.bankData || {};
+
+    rows.push([t.quoteTitle]);
+    rows.push([]);
+    rows.push([`${t.date}:`, safe(quoteData?.date, new Date().toLocaleDateString(locale))]);
+    rows.push([`${t.quoteNo}:`, safe(quoteData?.number, '-')]);
+    rows.push([]);
+
+    rows.push([t.customer, '', t.company]);
+    rows.push([safe(c.name, '-'), '', safe(comp.name, '-')]);
+    rows.push([safe(c.company), '', safe(comp.email)]);
+    rows.push([safe(c.email), '', safe(comp.phone)]);
+    rows.push([safe(c.phone), '', safe(comp.website)]);
+    rows.push([safe(c.address), '', safe(comp.address)]);
+    rows.push([safe(c.taxOffice), '', `${t.authorized}: ${safe(comp.authorized)}`]);
+    rows.push([]);
+
+    rows.push([t.bankInfo]);
+    rows.push([`${t.bank}:`, safe(bank.bankName), `${t.branch}:`, safe(bank.branch)]);
+    rows.push([`${t.accountNo}:`, safe(bank.accountNumber), `${t.iban}:`, safe(bank.iban)]);
+    rows.push([`${t.accountHolder}:`, safe(bank.accountHolder)]);
+    rows.push([]);
+
+    rows.push([t.item, t.description, t.quantity, t.unit, t.unitPrice, t.discount, t.vat, t.total]);
+
+    (items || []).forEach(item => {
+        const discountRate = Number(item.discountRate ?? item.lineDiscountRate ?? 0);
+        const taxRate = Number(item.taxRate ?? 0);
+        rows.push([
+            safe(item.name),
+            safe(item.description),
+            safe(item.quantity),
+            safe(item.unit),
+            safe(item.price),
+            discountRate > 0 ? `%${discountRate}` : '',
+            taxRate > 0 ? `%${taxRate}` : '',
+            toLocale(item.netTotal != null ? item.netTotal : Number(item.quantity) * Number(item.price), locale)
+        ]);
+    });
+
+    rows.push([]);
+    rows.push(['', '', '', '', '', '', t.subtotal, toLocale(quoteData?.subTotal, locale)]);
+    const discountValue = quoteData?.discount?.value ?? 0;
+    if (discountValue > 0) {
+        const discountLabel = quoteData?.discount?.type === 'percentage'
+            ? `${t.discount} (%${discountValue})`
+            : t.discount;
+        rows.push(['', '', '', '', '', '', discountLabel, toLocale(quoteData?.globalDiscountAmount, locale)]);
+    }
+    rows.push(['', '', '', '', '', '', `${t.total} ${t.vat}`, toLocale(quoteData?.taxAmount, locale)]);
+    rows.push(['', '', '', '', '', '', t.generalTotal, toLocale(quoteData?.grandTotal, locale)]);
+    rows.push([]);
+
+    if (quoteData?.terms) {
+        rows.push([t.terms]);
+        rows.push([quoteData.terms]);
+        rows.push([]);
+    }
+    if (quoteData?.notes) {
+        rows.push([t.notes]);
+        rows.push([quoteData.notes]);
+        rows.push([]);
+    }
+
+    return rows;
+};
+
+const buildFileName = (quoteData: ExportQuoteData, ext: string) => {
+    const t = getT(quoteData?.language);
+    const customerName = quoteData?.customer?.name || 'Musteri';
+    const slug = (t.quote || 'teklif').toLowerCase();
+    return `${slug}_${customerName}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+};
+
+export const exportQuoteToExcel = async (quoteData: ExportQuoteData, items: ExportItem[]) => {
     try {
         const XLSX = await import('xlsx').then(m => m.default || m);
-        const rows: any[] = [];
-
-        rows.push(['FİYAT TEKLİFİ']);
-        rows.push([]);
-        rows.push(['Tarih:', safe(quoteData?.date, new Date().toLocaleDateString('tr-TR'))]);
-        rows.push(['Teklif No:', safe(quoteData?.number, '-')]);
-        rows.push([]);
-
-        rows.push(['MÜŞTERİ BİLGİLERİ', '', 'FİRMA BİLGİLERİ']);
-        rows.push([
-            safe(quoteData?.customer?.name, '-'),
-            '',
-            safe(quoteData?.company?.name, '-')
-        ]);
-        rows.push([
-            safe(quoteData?.customer?.company),
-            '',
-            safe(quoteData?.company?.email)
-        ]);
-        rows.push([
-            safe(quoteData?.customer?.email),
-            '',
-            safe(quoteData?.company?.phone)
-        ]);
-        rows.push([]);
-        rows.push([]);
-
-        rows.push(['Ürün/Hizmet', 'Açıklama', 'Miktar', 'Birim', 'Birim Fiyat', 'İskonto %', 'KDV %', 'Toplam']);
-
-        (items || []).forEach(item => {
-            rows.push([
-                safe(item.name),
-                safe(item.description),
-                safe(item.quantity),
-                safe(item.unit),
-                safe(item.price),
-                (item.discountRate || item.lineDiscountRate) > 0 ? `${item.discountRate || item.lineDiscountRate}%` : '',
-                item.taxRate > 0 ? `%${item.taxRate}` : '',
-                toLocale(item.netTotal || (item.quantity * item.price))
-            ]);
-        });
-
-        rows.push([]);
-
-        rows.push(['', '', '', '', '', '', 'Ara Toplam:', toLocale(quoteData?.subTotal)]);
-        if (quoteData?.discount?.value > 0) {
-            const discountLabel = quoteData.discount.type === 'percentage'
-                ? `Genel İskonto (%${quoteData.discount.value})`
-                : 'Genel İskonto';
-            rows.push(['', '', '', '', '', '', discountLabel, toLocale(quoteData?.globalDiscountAmount)]);
-        }
-        rows.push(['', '', '', '', '', '', 'Toplam KDV:', toLocale(quoteData?.taxAmount)]);
-        rows.push(['', '', '', '', '', '', 'GENEL TOPLAM:', toLocale(quoteData?.grandTotal)]);
+        const locale = getLocale(quoteData?.language);
+        const rows = buildRows(quoteData, items, locale);
 
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(rows);
         ws['!cols'] = COL_WIDTHS.map(w => ({ wch: w }));
-        XLSX.utils.book_append_sheet(wb, ws, 'Teklif');
-
-        const customerName = quoteData?.customer?.name || 'Musteri';
-        const fileName = `Teklif_${customerName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        XLSX.writeFile(wb, fileName);
+        XLSX.utils.book_append_sheet(wb, ws, getT(quoteData?.language).quote);
+        XLSX.writeFile(wb, buildFileName(quoteData, 'xlsx'));
 
         return true;
     } catch (error: any) {
@@ -84,8 +146,9 @@ export const exportQuoteToExcel = async (quoteData: any, items: any[]) => {
     }
 };
 
-export const exportQuoteToCSV = (quoteData: any, items: any[]) => {
+export const exportQuoteToCSV = (quoteData: ExportQuoteData, items: ExportItem[]) => {
     try {
+        const locale = getLocale(quoteData?.language);
         const lines: any[] = [];
         const csvSep = ';';
 
@@ -98,62 +161,14 @@ export const exportQuoteToCSV = (quoteData: any, items: any[]) => {
 
         const row = (...cells: any[]) => lines.push(cells.map(esc).join(csvSep));
 
-        row('FİYAT TEKLİFİ');
-        row('');
-        row('Tarih:', quoteData?.date || new Date().toLocaleDateString('tr-TR'));
-        row('Teklif No:', quoteData?.number || '-');
-        row('');
-        row('MÜŞTERİ BİLGİLERİ', '', 'FİRMA BİLGİLERİ');
-        row(
-            quoteData?.customer?.name || '-',
-            '',
-            quoteData?.company?.name || '-'
-        );
-        row(
-            quoteData?.customer?.company || '',
-            '',
-            quoteData?.company?.email || ''
-        );
-        row(
-            quoteData?.customer?.email || '',
-            '',
-            quoteData?.company?.phone || ''
-        );
-        row('');
-        row('');
-        row('Ürün/Hizmet', 'Açıklama', 'Miktar', 'Birim', 'Birim Fiyat', 'İskonto %', 'KDV %', 'Toplam');
-
-        (items || []).forEach(item => {
-            row(
-                item.name || '',
-                item.description || '',
-                item.quantity || 0,
-                item.unit || '',
-                item.price || 0,
-                (item.discountRate || item.lineDiscountRate) > 0 ? `${item.discountRate || item.lineDiscountRate}%` : '',
-                item.taxRate > 0 ? `%${item.taxRate}` : '',
-                toLocale(item.netTotal || (item.quantity * item.price))
-            );
-        });
-
-        row('');
-        row('', '', '', '', '', '', 'Ara Toplam:', toLocale(quoteData?.subTotal));
-        if (quoteData?.discount?.value > 0) {
-            const discountLabel = quoteData.discount.type === 'percentage'
-                ? `Genel İskonto (%${quoteData.discount.value})`
-                : 'Genel İskonto';
-            row('', '', '', '', '', '', discountLabel, toLocale(quoteData?.globalDiscountAmount));
-        }
-        row('', '', '', '', '', '', 'Toplam KDV:', toLocale(quoteData?.taxAmount));
-        row('', '', '', '', '', '', 'GENEL TOPLAM:', toLocale(quoteData?.grandTotal));
+        buildRows(quoteData, items, locale).forEach(r => row(...r));
 
         const BOM = '\uFEFF';
         const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const customerName = quoteData?.customer?.name || 'Musteri';
-        a.download = `Teklif_${customerName}_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = buildFileName(quoteData, 'csv');
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

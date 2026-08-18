@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useDialogBehavior } from '../hooks/useDialogBehavior';
@@ -57,14 +57,14 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) =>
                 }}
                 role="dialog"
                 aria-modal="true"
-                aria-label={title}
+                aria-labelledby="modal-title"
             >
                 {mobile && <div className="modal-drag-handle" />}
-                <div className={`flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : 'sm:px-5 sm:py-4'}`}>
-                    <h2 className="text-sm sm:text-base font-semibold text-[var(--color-text)] flex items-center gap-2 truncate pr-2">
+                <div className={`flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : 'sm:px-5 sm:py-5'}`}>
+                    <h2 id="modal-title" className="text-sm sm:text-base font-semibold text-[var(--color-text)] flex items-center gap-2 truncate pr-2">
                         {title}
                     </h2>
-                    <button
+                    <button type="button"
                         onClick={handleClose}
                         className="p-2 rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text)] transition-colors shrink-0"
                         aria-label="Kapat"

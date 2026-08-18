@@ -6,6 +6,8 @@ import ClassicTheme from './pdf-themes/ClassicTheme';
 import ProTheme from './pdf-themes/ProTheme';
 import MinimalTheme from './pdf-themes/MinimalTheme';
 import CorporateTheme from './pdf-themes/CorporateTheme';
+import BoldTheme from './pdf-themes/BoldTheme';
+import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '../context/quote/types';
 
 // Helper functions defined outside component to avoid recreation
 const formatDate = (dateString, locale = 'tr-TR') => {
@@ -13,7 +15,23 @@ const formatDate = (dateString, locale = 'tr-TR') => {
     return new Date(dateString).toLocaleDateString(locale);
 };
 
-const PrintableQuote = ({
+interface PrintableQuoteProps {
+    id?: string;
+    theme?: string;
+    color?: string;
+    quoteData?: QuoteData;
+    customerData?: CustomerData;
+    companyData?: CompanyData;
+    bankData?: BankData;
+    items?: QuoteItem[];
+    discount?: Discount;
+    config?: PdfConfig;
+    layout?: PdfLayoutItem[];
+    signature?: string | null;
+    onEdit?: (field: string, value: any) => void;
+}
+
+const PrintableQuote = React.memo(({
     id,
     theme = 'modern',
     color = '#000000',
@@ -27,13 +45,13 @@ const PrintableQuote = ({
     layout,
     signature,
     onEdit
-}) => {
+}: PrintableQuoteProps) => {
     const quoteData = useMemo(() => _quoteData || {}, [_quoteData]);
     const customerData = useMemo(() => _customerData || {}, [_customerData]);
     const companyData = useMemo(() => _companyData || {}, [_companyData]);
     const bankData = useMemo(() => _bankData || {}, [_bankData]);
     const items = useMemo(() => _items || [], [_items]);
-    const discount = useMemo(() => _discount || {}, [_discount]);
+    const discount = useMemo(() => (_discount || {}) as Discount, [_discount]);
 
     const language = quoteData.language || 'tr';
     const t = translations[language] || translations['tr'];
@@ -74,8 +92,6 @@ const PrintableQuote = ({
         showTableImages: false,
         showTableUnit: true,
         showTableTax: true,
-        showQRCode: false,
-        qrCodeUrl: '',
         showWatermark: false,
         watermarkText: 'TASLAK',
         watermarkOpacity: 0.1,
@@ -190,6 +206,12 @@ const PrintableQuote = ({
         enableShadows: undefined,
         shadowIntensity: undefined,
 
+        // --- Logo & Pages ---
+        logoStyle: undefined,
+        logoMaxHeight: undefined,
+        showPageNumbers: undefined,
+        pageBgPattern: undefined,
+
         ...(_config || {})
     }), [_config]);
 
@@ -207,13 +229,22 @@ const PrintableQuote = ({
                         config.fontFamily === 'Lato' ? "'Lato', sans-serif" :
                             config.fontFamily === 'Montserrat' ? "'Montserrat', sans-serif" :
                                 "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-            fontSize: config.fontSize === 'small' ? '12px' : config.fontSize === 'large' ? '16px' : '14px',
+            fontSize: typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize === 'small' ? '12px' : config.fontSize === 'large' ? '16px' : '14px'),
             padding: config.margins === 'compact' ? '20px' : config.margins === 'wide' ? '60px' : '40px',
-            backgroundColor: 'white',
+            backgroundColor: config.pageBackgroundColor || 'white',
+            backgroundImage: config.pageBgPattern === 'dots'
+                ? 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.30) 1px, transparent 0)'
+                : config.pageBgPattern === 'grid'
+                    ? 'linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)'
+                    : config.pageBgPattern === 'gradient'
+                        ? `linear-gradient(160deg, ${config.color}14 0%, transparent 45%)`
+                        : 'none',
+            backgroundSize: config.pageBgPattern === 'dots' ? '16px 16px' : config.pageBgPattern === 'grid' ? '24px 24px' : 'auto',
             color: '#000000',
             position: 'relative',
-            boxSizing: 'border-box'
-        };
+            boxSizing: 'border-box',
+            '--pdf-page-bg': config.pageBackgroundColor || '#ffffff'
+        } as React.CSSProperties;
 
         return baseStyles;
     };
@@ -232,13 +263,13 @@ const PrintableQuote = ({
     ];
 
     const activeLayout = useMemo(() => {
-        return [...(layout || defaultLayout)].sort((a, b) => a.order - b.order);
+        return [...(layout || defaultLayout)].sort((a, b) => (a as any).order - (b as any).order);
     }, [layout]);
 
 
 
     const hasLineItemDiscounts = useMemo(() => {
-        return items.some(item => item.discountRate > 0);
+        return items.some(item => (item.discountRate || 0) > 0);
     }, [items]);
 
     const commonProps = {
@@ -269,23 +300,28 @@ const PrintableQuote = ({
     }
 
     if (theme === 'classic') {
-        return <ClassicTheme {...commonProps} />;
+        return <ClassicTheme {...commonProps} activeLayout={activeLayout} />;
     }
 
     if (theme === 'minimal') {
-        return <MinimalTheme {...commonProps} />;
+        return <MinimalTheme {...commonProps} activeLayout={activeLayout} />;
     }
 
     if (theme === 'corporate') {
-        return <CorporateTheme {...commonProps} />;
+        return <CorporateTheme {...commonProps} activeLayout={activeLayout} />;
     }
 
     if (theme === 'pro') {
-        return <ProTheme {...commonProps} discount={discount} />;
+        return <ProTheme {...commonProps} discount={discount} activeLayout={activeLayout} />;
+    }
+
+    if (theme === 'bold') {
+        return <BoldTheme {...commonProps} activeLayout={activeLayout} />;
     }
 
     // Fallback to modern if theme not found
     return <ModernTheme {...commonProps} activeLayout={activeLayout} />;
-};
+});
+PrintableQuote.displayName = 'PrintableQuote';
 
 export default PrintableQuote;

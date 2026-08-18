@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+﻿import React, { useRef, useEffect, useState } from "react";
 
 interface ContextMenuItem {
   icon?: React.ReactNode;
@@ -51,7 +51,7 @@ const ContextMenu = ({ x, y, items: menuItems, onClose }: ContextMenuProps) => {
         item.separator ? (
           <div key={i} role="separator" className="h-px bg-[var(--color-border)] my-1" />
         ) : (
-          <button
+          <button type="button"
             key={i}
             role="menuitem"
             className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-left text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"

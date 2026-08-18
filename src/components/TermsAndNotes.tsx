@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
 import { ScrollText, FileText, Truck, Shield, StickyNote, ChevronDown, ChevronUp, Plus } from 'lucide-react';
-import { useQuote } from '../context/QuoteContext';
+import { useQuoteData } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 
 const fields = [
@@ -12,7 +12,7 @@ const fields = [
 ];
 
 const TermsAndNotes = ({ data, onChange }) => {
-    const { quoteData } = useQuote();
+    const { quoteData } = useQuoteData();
     const { t } = useTranslation(quoteData?.language);
     const [showAll, setShowAll] = useState(false);
 

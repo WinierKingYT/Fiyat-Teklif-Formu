@@ -1,9 +1,9 @@
-import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuote } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+﻿import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuoteData } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
 
 const HistoryList = ({ onNavigate }) => {
     const { db, isReady } = useIndexedDB();
-    const { currentQuoteId, setCurrentQuoteId, loadQuote } = useQuote();
-    const { t } = useTranslation();
+    const { currentQuoteId, setCurrentQuoteId, loadQuote, quoteData } = useQuoteData();
+    const { t } = useTranslation(quoteData?.language);
     const [quotes, setQuotes] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ const HistoryList = ({ onNavigate }) => {
         if (e) e.stopPropagation();
         const isSingle = !Array.isArray(id);
         const ids = Array.isArray(id) ? id : [id];
-        setConfirmDialog({ isOpen: true, title: isSingle ? 'Teklifi Sil' : 'Teklifleri Sil', message: isSingle ? 'Bu teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)' : `${ids.length} teklifi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const deleteId of ids) { const quoteToDelete = quotes.find(q => q.id === deleteId); if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: deleteId, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', deleteId); if (currentQuoteId === deleteId) setCurrentQuoteId(null); } toast.success(`${ids.length} teklif geri dönüşüm kutusuna taşındı`); setSelectedIds(new Set()); setSelectAll(false); loadQuotes(); } catch (error) { Logger.error('Error deleting quotes:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: isSingle ? t('deleteQuote') : t('deleteQuote'), message: isSingle ? t('deleteQuoteConfirm') : t('deleteQuotesConfirm').replace('{count}', String(ids.length)), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const deleteId of ids) { const quoteToDelete = quotes.find(q => q.id === deleteId); if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: deleteId, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', deleteId); if (currentQuoteId === deleteId) setCurrentQuoteId(null); } toast.success(t('quotesMovedToBin').replace('{count}', String(ids.length))); setSelectedIds(new Set()); setSelectAll(false); loadQuotes(); } catch (error) { Logger.error('Error deleting quotes:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
     };
 
     const handleLoad = (quote) => {
@@ -43,7 +43,7 @@ const HistoryList = ({ onNavigate }) => {
             onNavigate('builder');
         } catch (error) {
             Logger.error('Error loading quote:', error);
-            toast.error('Teklif yüklenirken hata oluştu');
+            toast.error(t('quoteLoadError'));
         }
     };
 
@@ -79,6 +79,7 @@ const HistoryList = ({ onNavigate }) => {
                     ...quote.quoteData,
                     customer: quote.customerData,
                     company: quote.companyData,
+                    bankData: quote.bankData,
                     items: calc.items,
                     subTotal: calc.subtotal,
                     taxAmount: calc.taxTotal,
@@ -90,7 +91,7 @@ const HistoryList = ({ onNavigate }) => {
                 else exportQuoteToCSV(fullData, calc.items);
             }, i * 300);
         });
-        toast.success(`${selected.length} teklif dışa aktarılıyor...`);
+        toast.success(t('exportingQuotes').replace('{count}', String(selected.length)));
     };
 
     const handleBatchPrint = () => {
@@ -111,17 +112,17 @@ const HistoryList = ({ onNavigate }) => {
                     <style>body{font-family:sans-serif;padding:10mm;color:#333}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}th{background:#f5f5f5}.total{font-weight:700;font-size:1.1em}</style>
                     </head><body>
                     <h1>${quote.quoteData?.title || 'Fiyat Teklifi'}</h1>
-                    <p><strong>Teklif No:</strong> ${quote.quoteData?.number || '-'} | <strong>Tarih:</strong> ${quote.quoteData?.date || '-'}</p>
-                    <p><strong>Müşteri:</strong> ${quote.customerData?.name || '-'} ${quote.customerData?.company ? `(${quote.customerData.company})` : ''}</p>
-                    <hr/><table><thead><tr><th>Ürün/Hizmet</th><th>Miktar</th><th>Birim</th><th>Birim Fiyat</th><th>Toplam</th></tr></thead><tbody>${rows}</tbody></table>
-                    <hr/><p class="total">Genel Toplam: ${calc.grandTotal.toLocaleString('tr-TR', { style: 'currency', currency: quote.quoteData?.currency || 'TRY' })}</p>
+                    <p><strong>${t('quoteNumber')}:</strong> ${quote.quoteData?.number || '-'} | <strong>${t('quoteDate')}:</strong> ${quote.quoteData?.date || '-'}</p>
+                    <p><strong>${t('customer')}:</strong> ${quote.customerData?.name || '-'} ${quote.customerData?.company ? `(${quote.customerData.company})` : ''}</p>
+                    <hr/><table><thead><tr><th>${t('itemsAndServices')}</th><th>${t('quantity')}</th><th>${t('unit')}</th><th>${t('unitPrice')}</th><th>${t('total')}</th></tr></thead><tbody>${rows}</tbody></table>
+                    <hr/><p class="total">${t('grandTotal')}: ${calc.grandTotal.toLocaleString('tr-TR', { style: 'currency', currency: quote.quoteData?.currency || 'TRY' })}</p>
                     <script>window.onload=function(){window.print();window.close()};<\/script>
                     </body></html>
                 `);
                 win.document.close();
             }, i * 500);
         });
-        toast.success(`${selected.length} teklif yazdırılıyor...`);
+        toast.success(t('printingQuotes').replace('{count}', String(selected.length)));
     };
 
     const debouncedSearch = useDebounce(searchTerm, 250);
@@ -146,7 +147,6 @@ const HistoryList = ({ onNavigate }) => {
         setPage(newPage);
     }, []);
 
-    // Reset page on search
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch]);
@@ -155,68 +155,68 @@ const HistoryList = ({ onNavigate }) => {
         <div className="flex flex-col h-full bg-[var(--color-bg-page)]">
             {/* Header */}
             <div className="flex items-center gap-3 p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-card)]">
-                <button
+                <button type="button"
                     onClick={() => onNavigate('builder')}
                     className="p-2 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-                    title="Geri Dön"
+                    title={t('goBack')}
                 >
                     <ArrowLeft size={20} />
                 </button>
-                <h2 className="text-lg font-semibold text-[var(--color-text)]">Tekliflerim</h2>
+                <h2 className="text-lg font-semibold text-[var(--color-text)]">{t('myQuotesList')}</h2>
             </div>
 
             {/* Toolbar */}
             <div className="flex items-center gap-3 p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-card)]">
-                <button className="btn btn-primary flex items-center gap-2 px-4 py-2" onClick={handleNewQuote}>
+                <button type="button" className="btn btn-primary flex items-center gap-2 px-4 py-2" onClick={handleNewQuote}>
                     <PlusCircle size={18} />
-                    <span>Yeni Teklif</span>
+                    <span>{t('newQuoteBtn')}</span>
                 </button>
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
                     <input
                         type="text"
                         className="form-control pl-9 w-full"
-                        placeholder="Teklif no, başlık veya müşteri ara..."
+                        placeholder={t('searchQuotes')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <span className="text-sm text-[var(--color-text-muted)]">{quotes.length} teklif</span>
+                <span className="text-sm text-[var(--color-text-muted)]">{quotes.length} {t('quotesCount')}</span>
             </div>
 
             {/* Batch Action Bar */}
             {selectedIds.size > 0 && (
                 <div className="flex items-center gap-3 px-4 py-2 bg-[var(--color-primary-muted)] border-b border-[var(--color-border)]">
                     <CheckSquare size={18} className="text-[var(--color-info)]" />
-                    <span className="text-sm font-medium text-[var(--color-text)]">{selectedIds.size} seçili</span>
+                    <span className="text-sm font-medium text-[var(--color-text)]">{selectedIds.size} {t('selectedCount')}</span>
                     <div className="flex gap-2 ml-auto">
-                        <button
+                        <button type="button"
                             onClick={() => handleBatchExport('excel')}
                             className="btn btn-sm btn-outline flex items-center gap-1.5"
                         >
                             <Download size={14} />
-                            Excel'e Aktar
+                            {t('exportToExcel')}
                         </button>
-                        <button
+                        <button type="button"
                             onClick={() => handleBatchExport('csv')}
                             className="btn btn-sm btn-outline flex items-center gap-1.5"
                         >
                             <Download size={14} />
-                            CSV'ye Aktar
+                            {t('exportToCSV')}
                         </button>
-                        <button
+                        <button type="button"
                             onClick={handleBatchPrint}
                             className="btn btn-sm btn-outline flex items-center gap-1.5"
                         >
                             <FileText size={14} />
-                            Yazdır
+                            {t('printBtn')}
                         </button>
-                        <button
+                        <button type="button"
                             onClick={() => handleDelete([...selectedIds] as any)}
                             className="btn btn-sm btn-danger flex items-center gap-1.5"
                         >
                             <Trash2 size={14} />
-                            Seçilenleri Sil
+                            {t('deleteSelected')}
                         </button>
                     </div>
                 </div>
@@ -231,12 +231,12 @@ const HistoryList = ({ onNavigate }) => {
                 ) : filteredQuotes.length === 0 ? (
                     <EmptyState
                         icon={<FileText size={32} />}
-                        title={searchTerm ? 'Sonuç bulunamadı' : 'Henüz kayıtlı teklif yok'}
-                        text={searchTerm ? 'Farklı bir arama terimi deneyin.' : 'Yeni bir teklif oluşturarak başlayın.'}
+                        title={searchTerm ? t('noQuotesFound') : t('noSavedQuotes')}
+                        text={searchTerm ? t('tryDifferentSearch') : t('creatingNewQuote')}
                         action={
                             !searchTerm && (
-                                <button className="btn btn-primary" onClick={handleNewQuote}>
-                                    <PlusCircle size={16} /> Yeni Teklif Oluştur
+                                <button type="button" className="btn btn-primary" onClick={handleNewQuote}>
+                                    <PlusCircle size={16} /> {t('createNewQuoteAction')}
                                 </button>
                             )
                         }
@@ -254,10 +254,10 @@ const HistoryList = ({ onNavigate }) => {
                                             className="form-checkbox"
                                         />
                                     </th>
-                                    <th className="p-3 font-medium">Tarih</th>
-                                    <th className="p-3 font-medium">Teklif No</th>
-                                    <th className="p-3 font-medium">Müşteri</th>
-                                    <th className="p-3 font-medium">Tutar</th>
+                                    <th className="p-3 font-medium">{t('quoteDate')}</th>
+                                    <th className="p-3 font-medium">{t('quoteNumber')}</th>
+                                    <th className="p-3 font-medium">{t('customerLabel')}</th>
+                                    <th className="p-3 font-medium">{t('amountQuote')}</th>
                                     <th className="p-3 font-medium w-24"></th>
                                 </tr>
                             </thead>
@@ -294,10 +294,10 @@ const HistoryList = ({ onNavigate }) => {
                                             <td className="p-3 font-mono text-[var(--color-text)]">{formatCurrency(calc.grandTotal, quoteCurrency)}</td>
                                             <td className="p-3 text-right">
                                                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                                    <button className="btn btn-sm btn-outline p-1" title="Görüntüle/Yükle" onClick={() => handleLoad(quote)}>
+                                                    <button type="button" className="btn btn-sm btn-outline p-1" title={t('viewLoad')} onClick={() => handleLoad(quote)}>
                                                         <Eye size={16} />
                                                     </button>
-                                                    <button className="btn btn-sm btn-danger p-1" title="Sil" onClick={(e) => handleDelete(quote.id, e)}>
+                                                    <button type="button" className="btn btn-sm btn-danger p-1" title={t('deleteQuoteAction')} onClick={(e) => handleDelete(quote.id, e)}>
                                                         <Trash size={16} />
                                                     </button>
                                                 </div>

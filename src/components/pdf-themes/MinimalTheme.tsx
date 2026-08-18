@@ -19,13 +19,39 @@ const MinimalTheme = ({
     totalTax,
     total,
     currentLocale,
-    hasLineItemDiscounts
+    hasLineItemDiscounts,
+    onEdit,
+    activeLayout
 }) => {
+    // Helper for editable fields
+    const layoutMap = useMemo(() => {
+        const map = {};
+        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
+        return map;
+    }, [activeLayout]);
+    const showSection = (id) => layoutMap[id] !== false;
+
+    const renderEditable = (value, fieldKey, type = 'text', className = '') => {
+        if (!onEdit) return <span className={className}>{value}</span>;
+
+        return (
+            <span
+                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(fieldKey, value, type);
+                }}
+                title={t.clickToEdit}
+            >
+                {value || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
+            </span>
+        );
+    };
     const minimalStyles = useMemo(() => `
         .minimal-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif"};
             color: ${config.globalFontColor || '#000'} !important;
-            background: #fff !important;
+            background: var(--pdf-page-bg, #fff) !important;
             line-height: ${config.bodyLineHeight || '1.3'};
             font-size: ${config.fontSize || 11}px;
         }
@@ -86,6 +112,21 @@ const MinimalTheme = ({
         ${config.tableStriped ? `
         .minimal-table tr:nth-child(even) {
             background: ${config.tableStripedColor || '#f9fafb'};
+        }
+        ` : ''}
+
+        .minimal-table td {
+            height: ${config.tableRowHeight || 0}px;
+        }
+
+        ${config.tableShowVerticalLines ? `
+        .minimal-table th,
+        .minimal-table td {
+            border-left: 1px solid ${config.tableBorderColor || '#e5e7eb'};
+        }
+        .minimal-table th:first-child,
+        .minimal-table td:first-child {
+            border-left: none;
         }
         ` : ''}
     `, [config]);
@@ -180,20 +221,20 @@ const MinimalTheme = ({
                     )}
 
                     {/* Header Section */}
-                    {pageIndex === 0 ? (
+                    {showSection('header') && (pageIndex === 0 ? (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                                 {config.showLogo && companyData.logo ? (
                                     <img src={companyData.logo} alt="Logo" style={{ height: '35px', objectFit: 'contain', marginBottom: '0.5rem', alignSelf: 'flex-start' }} />
                                 ) : (
-                                    <div style={{ fontSize: config.headerTitleFontSize || '1.25rem', fontWeight: config.headerTitleFontWeight || '700', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>{companyData.name}</div>
+                                    <div style={{ fontSize: config.headerTitleFontSize || '1.25rem', fontWeight: config.headerTitleFontWeight || '700', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 )}
                                 <div style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>{companyData.address}</div>
                                 <div style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>{companyData.phone} &bull; {companyData.email}</div>
                                 <div style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>{companyData.website}</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: config.titleFontSize || '1.5rem', fontWeight: config.titleFontWeight || '300', lineHeight: '1', marginBottom: '0.25rem' }}>{config.title}</div>
+                                <div style={{ fontSize: config.titleFontSize || '1.5rem', fontWeight: config.titleFontWeight || '300', lineHeight: '1', marginBottom: '0.25rem' }}>{renderEditable(config.title, 'quoteTitle')}</div>
                                 <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>#{quoteData.number}</div>
                                 <div style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem' }}>
@@ -214,26 +255,26 @@ const MinimalTheme = ({
                             <span>{companyData.name} - {config.title}</span>
                             <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                         </div>
-                    )}
+                    ))}
 
                     {/* Info Grid - Only Page 1 */}
-                    {pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
                             <div>
                                 <div className="minimal-header" style={{ fontSize: config.customerTitleFontSize, fontWeight: config.customerTitleFontWeight }}>{t.customer}</div>
-                                <div style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.2rem' }}>{customerData.company}</div>
-                                <div style={{ fontSize: '0.85rem', color: '#374151' }}>{customerData.name}</div>
+                                <div style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.2rem' }}>{renderEditable(customerData.company, 'customerCompany')}</div>
+                                <div style={{ fontSize: '0.85rem', color: '#374151' }}>{renderEditable(customerData.name, 'customerName')}</div>
                                 <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.2rem' }}>
-                                    <div>{customerData.phone}</div>
-                                    <div>{customerData.email}</div>
+                                    <div>{renderEditable(customerData.phone, 'customerPhone')}</div>
+                                    <div>{renderEditable(customerData.email, 'customerEmail')}</div>
                                 </div>
                             </div>
                             <div>
                                 <div className="minimal-header">{t.details}</div>
-                                <div style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.2rem' }}>{config.title}</div>
+                                <div style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.2rem' }}>{renderEditable(config.title, 'quoteTitle')}</div>
                                 {config.showNotes && quoteData.notes && (
                                     <div style={{ fontSize: '0.85rem', color: '#6b7280', fontStyle: 'italic', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
-                                        {quoteData.notes}
+                                        {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                     </div>
                                 )}
                             </div>
@@ -242,7 +283,7 @@ const MinimalTheme = ({
 
                     {/* Items Table */}
                     <div style={{ flex: 1 }}>
-                        {renderTable(chunk, pageIndex * itemsPerPage)}
+                        {showSection('items') && renderTable(chunk, pageIndex * itemsPerPage)}
                     </div>
 
                     {/* Totals Section & Footer - Only Last Page */}
@@ -287,7 +328,7 @@ const MinimalTheme = ({
                                     )}
                                 </div>
 
-                                {config.showSignatures && (
+                                {showSection('signatures') && config.showSignatures && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem' }}>
                                         <div style={{ flex: 1, borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '70px' }}>
                                             {signature && <img src={signature} alt="" style={{ maxHeight: '50px', objectFit: 'contain', alignSelf: 'center', marginBottom: 'auto' }} />}
@@ -302,10 +343,10 @@ const MinimalTheme = ({
                             </div>
 
                             {/* Terms */}
-                            {config.showTerms && (
+                            {showSection('notes') && config.showTerms && (
                                 <div style={{ marginTop: '1.5rem', fontSize: '0.75rem', color: '#6b7280', whiteSpace: 'pre-wrap' }}>
-                                    {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {quoteData.deliveryTerms}</div>}
-                                    {quoteData.terms && <div><strong>{t.payment}:</strong> {quoteData.terms}</div>}
+                                    {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                    {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                 </div>
                             )}
 
@@ -317,17 +358,19 @@ const MinimalTheme = ({
                             )}
 
                             {/* Footer - Only Last Page */}
+                            {showSection('footer') && (
                             <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #f3f4f6', textAlign: 'center', fontSize: config.footerFontSize || '0.75rem', fontWeight: config.footerFontWeight || 'normal', color: '#6b7280' }}>
                                 <div style={{ marginBottom: '0.2rem' }}>{companyData.address}</div>
                                 <div style={{ marginBottom: '0.4rem' }}>
                                     {companyData.phone} | {companyData.email} | {companyData.website}
                                 </div>
                                 <div style={{ marginTop: '0.8rem' }}>
-                                    <div style={{ marginBottom: '0.2rem' }}>Teşekkür Ederiz</div>
-                                    <div style={{ marginBottom: '0.2rem' }}>Saygılarımızla, {companyData.name}</div>
+                                    <div style={{ marginBottom: '0.2rem' }}>{t.thankYou}</div>
+                                    <div style={{ marginBottom: '0.2rem' }}>{t.regards}, {companyData.name}</div>
                                     <div style={{ fontWeight: '600', color: '#000' }}>{companyData.name} - {config.title}</div>
                                 </div>
                             </div>
+                            )}
                         </div>
                     )}
                 </div>

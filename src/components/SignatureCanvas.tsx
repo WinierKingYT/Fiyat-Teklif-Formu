@@ -206,9 +206,11 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
                 </label>
                 <div className="flex gap-2">
                     <button
+                        type="button"
                         onClick={clearCanvas}
                         className="p-1 text-[var(--color-error)] hover:bg-[var(--color-bg-hover)] rounded transition-colors"
                         title="Temizle"
+                        aria-label="Temizle"
                     >
                         <Eraser size={16} />
                     </button>
@@ -218,6 +220,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
                             type="file"
                             accept="image/*"
                             className="hidden"
+                            aria-label="Resim Yükle"
                             onChange={handleImageUpload}
                         />
                     </label>
@@ -253,6 +256,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
                     value={lineWidth}
                     onChange={(e) => setLineWidth(parseFloat(e.target.value))}
                     className="w-24 h-1 bg-[var(--color-bg-muted)] rounded-lg appearance-none cursor-pointer"
+                    aria-label="Kalem Kalınlığı"
                 />
             </div>
         </div>

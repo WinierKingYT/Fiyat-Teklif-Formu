@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import SignatureCanvas from './SignatureCanvas';
 import ConfirmDialog from './ConfirmDialog';
-import { useQuote } from '../context/QuoteContext';
+import { useQuoteData, useCompanyDefaults } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
 import { InputField, TextAreaField } from './ui';
@@ -34,7 +34,8 @@ interface CompanyInfoFormProps {
 
 const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { saveCompanyDefaults, quoteData } = useQuote();
+  const { quoteData } = useQuoteData();
+  const { companyDefaults, saveCompanyDefaults } = useCompanyDefaults();
   const { t } = useTranslation(quoteData?.language);
   const [showDetails, setShowDetails] = useState(false);
   const [confirmClear, setConfirmClear] = useState<{ field: string; isOpen: boolean }>({ field: '', isOpen: false });

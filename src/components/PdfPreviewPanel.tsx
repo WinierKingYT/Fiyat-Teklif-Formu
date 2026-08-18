@@ -1,17 +1,18 @@
 ﻿import React from 'react';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, QrCode, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, FileText, PenTool, Layers, Edit2, Zap, ZapOff, RefreshCcw, Power, PowerOff, Printer, Share2, Settings2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, FileText, PenTool, Layers, Edit2, Zap, ZapOff, RefreshCcw, Power, PowerOff, Printer, Share2, Settings2, Ruler, AlertTriangle } from 'lucide-react';
 import { calculateQuoteTotals } from '../utils/calculations';
-import { generatePDF, printQuote, PAGE_SIZE_OPTIONS, QUALITY_OPTIONS } from '../utils/pdfGenerator';
+import { generatePDF, printQuote, loadPdfFonts, getPdfMetadata, PAGE_SIZE_OPTIONS, QUALITY_OPTIONS, type PageSize, type PdfQuality } from '../utils/pdfGenerator';
 import { shareQuote } from '../utils/emailService';
 import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter';
 import PrintableQuote from './PrintableQuoteV2';
 import PopupEditor from './PopupEditor';
-import { useQuote } from '../context/QuoteContext';
+import { useQuoteData, usePdfConfig } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
 import useDebounce from '../hooks/useDebounce';
+import { deepEqual } from '../utils/deepEqual';
 import PdfSectionsTab from './pdf-tabs/PdfSectionsTab';
 
 const PdfPreviewPanel = React.memo(() => {
@@ -22,13 +23,11 @@ const PdfPreviewPanel = React.memo(() => {
         companyData,
         bankData,
         discount,
-        pdfLayout,
-        pdfConfig,
-        setPdfConfig,
         updateQuoteData,
         updateCustomerData,
         updateCompanyData
-    } = useQuote();
+    } = useQuoteData();
+    const { pdfLayout, pdfConfig, setPdfConfig } = usePdfConfig();
     const { t } = useTranslation(quoteData?.language);
 
     const [activeTab, setActiveTab] = useState('sections');
@@ -38,14 +37,21 @@ const PdfPreviewPanel = React.memo(() => {
     const [performanceMode, setPerformanceMode] = useState(false);
     const [manualRefreshMode, setManualRefreshMode] = useState(false);
     const [renderedConfig, setRenderedConfig] = useState(pdfConfig);
-    const [pageSize, setPageSize] = useState('a4');
-    const [quality, setQuality] = useState('high');
+    const [pageSize, setPageSize] = useState<PageSize>('a4');
+    const [quality, setQuality] = useState<PdfQuality>('high');
     const [showControls, setShowControls] = useState(window.innerWidth > 900);
     const [zoomLevel, setZoomLevel] = useState(0.7);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStage, setGenerationStage] = useState('');
     const [estimatedPages, setEstimatedPages] = useState(1);
+    const [pageCount, setPageCount] = useState(1);
+    const [activePage, setActivePage] = useState(1);
     const contentRef = useRef<any>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const thumbnailsRef = useRef<HTMLDivElement>(null);
+    const marginGuidesRef = useRef<HTMLDivElement>(null);
+    const [showMarginGuides, setShowMarginGuides] = useState(false);
+    const [overflowPages, setOverflowPages] = useState<number[]>([]);
 
 
     // Estimate page count from content height
@@ -68,6 +74,165 @@ const PdfPreviewPanel = React.memo(() => {
     // In Performance Mode, use longer debounce (1500ms), otherwise 300ms
     const debouncedPdfConfig = useDebounce(pdfConfig, performanceMode ? 1500 : 300);
 
+    // Real page count from rendered .pdf-page blocks
+    useEffect(() => {
+        const el = contentRef.current;
+        if (!el) return;
+        const count = el.querySelectorAll('.pdf-page').length;
+        setPageCount(Math.max(1, count));
+    }, [renderedConfig, items.length, pdfConfig.theme, pdfConfig.color]);
+
+    // Track active page while scrolling
+    useEffect(() => {
+        const el = contentRef.current;
+        const root = scrollRef.current;
+        if (!el || !root) return;
+        const pages = el.querySelectorAll('.pdf-page');
+        if (!pages.length) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visible = entries.filter((e) => e.isIntersecting);
+                if (visible.length > 0) {
+                    const topEntry = visible.reduce((a, b) =>
+                        a.boundingClientRect.top <= b.boundingClientRect.top ? a : b
+                    );
+                    const idx = Array.prototype.indexOf.call(pages, topEntry.target);
+                    if (idx >= 0) setActivePage(idx + 1);
+                }
+            },
+            { root, threshold: 0.2 }
+        );
+        pages.forEach((p) => observer.observe(p));
+        return () => observer.disconnect();
+    }, [pageCount, renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, zoomLevel]);
+
+    const scrollToPage = useCallback((n: number) => {
+        const pages = contentRef.current?.querySelectorAll('.pdf-page');
+        const page = pages?.[n - 1] as HTMLElement | undefined;
+        if (page) {
+            page.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setActivePage(n);
+        }
+    }, []);
+
+    // Detect pages whose content overflows the page height
+    useEffect(() => {
+        const el = contentRef.current;
+        if (!el) return;
+        const pages = el.querySelectorAll('.pdf-page');
+        const overflow: number[] = [];
+        pages.forEach((p, i) => {
+            const pageEl = p as HTMLElement;
+            if (pageEl.scrollHeight > pageEl.clientHeight + 2) overflow.push(i + 1);
+        });
+        setOverflowPages(overflow);
+    }, [renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, pdfConfig.tableRowHeight]);
+
+    // Margin guide overlay (preview only, not included in PDF output)
+    useEffect(() => {
+        const overlay = marginGuidesRef.current;
+        const src = contentRef.current;
+        if (!overlay || !src) return;
+        overlay.innerHTML = '';
+        if (!showMarginGuides) return;
+        const pages = src.querySelectorAll('.pdf-page');
+        if (!pages.length) return;
+        const marginMm = pdfConfig.margins === 'compact' ? 5 : pdfConfig.margins === 'wide' ? 15 : 10;
+        const first = pages[0] as HTMLElement;
+        const pageWidth = first.offsetWidth || 794;
+        const pxPerMm = pageWidth / 210;
+        const marginPx = marginMm * pxPerMm;
+        pages.forEach((page) => {
+            const el = page as HTMLElement;
+            const guide = document.createElement('div');
+            guide.style.cssText = `position:absolute;left:${marginPx}px;top:${el.offsetTop + marginPx}px;width:${pageWidth - marginPx * 2}px;height:${el.offsetHeight - marginPx * 2}px;border:1px dashed var(--color-info);opacity:0.55;pointer-events:none;border-radius:2px;`;
+            overlay.appendChild(guide);
+        });
+    }, [showMarginGuides, pageCount, renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins]);
+
+    const PDF_PRESETS = useMemo(() => [
+        {
+            id: 'corporate',
+            labelKey: 'presetCorporate',
+            config: {
+                theme: 'corporate', color: '#1e3a8a', globalFontFamily: 'Georgia, serif',
+                titleFontFamily: 'Georgia, serif', fontSize: 11, margins: 'normal',
+                tableHeaderBg: '#1e3a8a', tableRowHeight: 35, showTableImages: true, showWatermark: false
+            }
+        },
+        {
+            id: 'minimal',
+            labelKey: 'presetMinimal',
+            config: {
+                theme: 'minimal', color: '#111827', globalFontFamily: 'Inter',
+                fontSize: 12, margins: 'wide', tableHeaderBg: 'transparent',
+                tableRowHeight: 32, showTableImages: false, showWatermark: false
+            }
+        },
+        {
+            id: 'economy',
+            labelKey: 'presetEconomy',
+            config: {
+                theme: 'classic', color: '#000000', globalFontFamily: "'Times New Roman', Times, serif",
+                titleFontFamily: "'Times New Roman', Times, serif", fontSize: 10, margins: 'compact',
+                tableRowHeight: 28, tableCellPadding: '4px', showTableImages: false, showWatermark: false
+            }
+        },
+        {
+            id: 'modern',
+            labelKey: 'presetModern',
+            config: {
+                theme: 'modern', color: '#2563eb', globalFontFamily: 'Inter',
+                fontSize: 12, margins: 'normal', tableHeaderBg: '#f1f5f9',
+                tableRowHeight: 35, showTableImages: true, showWatermark: false
+            }
+        }
+    ], []);
+
+    const applyPreset = useCallback((preset: { config: Record<string, any> }) => {
+        setPdfConfig(prev => ({ ...prev, ...preset.config }));
+        toast.success(t('presetApplied'));
+    }, [setPdfConfig, t]);
+
+    // Build scaled thumbnail clones of each page
+    const debouncedItems = useDebounce(items, 500);
+    useEffect(() => {
+        const container = thumbnailsRef.current;
+        const src = contentRef.current;
+        if (!container || !src) return;
+        const pages = src.querySelectorAll('.pdf-page');
+        if (!pages.length) return;
+        container.innerHTML = '';
+        const pageWidth = (pages[0] as HTMLElement).offsetWidth || 794;
+        const thumbWidth = 56;
+        const scale = thumbWidth / pageWidth;
+        const thumbHeight = Math.round(pageWidth * (297 / 210) * scale);
+        pages.forEach((page, i) => {
+            const box = document.createElement('div');
+            box.className = 'relative overflow-hidden rounded border border-[var(--color-border)] bg-white shrink-0 cursor-pointer transition-all hover:ring-2 hover:ring-[var(--color-info)]';
+            box.style.width = `${thumbWidth}px`;
+            box.style.height = `${thumbHeight}px`;
+            box.title = `${t('page')} ${i + 1}`;
+            box.setAttribute('aria-label', `${t('page')} ${i + 1}`);
+            const clone = page.cloneNode(true) as HTMLElement;
+            clone.style.position = 'absolute';
+            clone.style.top = '0';
+            clone.style.left = '0';
+            clone.style.width = `${pageWidth}px`;
+            clone.style.transform = `scale(${scale})`;
+            clone.style.transformOrigin = 'top left';
+            clone.style.pointerEvents = 'none';
+            clone.style.margin = '0';
+            box.appendChild(clone);
+            const label = document.createElement('div');
+            label.className = 'absolute bottom-0 inset-x-0 text-center text-[9px] font-semibold text-white bg-black/60 py-0.5';
+            label.textContent = String(i + 1);
+            box.appendChild(label);
+            box.addEventListener('click', () => scrollToPage(i + 1));
+            container.appendChild(box);
+        });
+    }, [pageCount, renderedConfig, debouncedItems, pdfConfig.theme, pdfConfig.color, scrollToPage, t]);
+
     // Effect to handle config updates based on mode
     useEffect(() => {
         if (!manualRefreshMode) {
@@ -77,15 +242,24 @@ const PdfPreviewPanel = React.memo(() => {
 
     const handleManualRefresh = () => {
         setRenderedConfig(pdfConfig);
-        toast.success('Önizleme güncellendi');
+        toast.success(t('previewUpdated'));
     };
 
     // Check if there are pending changes in Manual Mode
-    const hasPendingChanges = manualRefreshMode && JSON.stringify(renderedConfig) !== JSON.stringify(pdfConfig);
+    const hasPendingChanges = useMemo(
+        () => manualRefreshMode && !deepEqual(renderedConfig, pdfConfig),
+        [manualRefreshMode, renderedConfig, pdfConfig]
+    );
 
     // Popup Editor State
     const [isEditorOpen, setIsEditorOpen] = useState(false);
-    const [editConfig, setEditConfig] = useState({
+    const [editConfig, setEditConfig] = useState<{
+        title: string;
+        initialValue: string;
+        onSave: (value: string) => void;
+        type: string;
+        options: any[];
+    }>({
         title: '',
         initialValue: '',
         onSave: () => { },
@@ -93,7 +267,7 @@ const PdfPreviewPanel = React.memo(() => {
         options: []
     });
 
-    const openEditor = (title, initialValue, onSave, type = 'text', options = []) => {
+    const openEditor = useCallback((title, initialValue, onSave, type = 'text', options = []) => {
         setEditConfig({
             title,
             initialValue,
@@ -102,7 +276,74 @@ const PdfPreviewPanel = React.memo(() => {
             options
         });
         setIsEditorOpen(true);
+    }, []);
+
+    const fieldLabels = {
+        quoteTitle: t('documentTitle'),
+        companyName: t('company'),
+        customerCompany: t('customerCompany'),
+        customerName: t('authorized'),
+        customerPhone: t('phone'),
+        customerEmail: t('email'),
+        date: t('date'),
+        validUntil: t('validUntil'),
+        notes: t('notes'),
+        terms: t('terms'),
+        deliveryTerms: t('deliveryTerms')
     };
+
+    const handleConfigChange = useCallback((key, value) => {
+        setPdfConfig(prev => ({ ...prev, [key]: value }));
+    }, [setPdfConfig]);
+
+    const handleFieldEdit = useCallback((fieldKey, value, type = 'text') => {
+        setEditConfig({
+            title: fieldLabels[fieldKey] || fieldKey,
+            initialValue: value,
+            onSave: (newValue) => {
+                switch (fieldKey) {
+                    case 'quoteTitle':
+                        handleConfigChange('title', newValue);
+                        break;
+                    case 'companyName':
+                        updateCompanyData('name', newValue);
+                        break;
+                    case 'customerCompany':
+                        updateCustomerData('company', newValue);
+                        break;
+                    case 'customerName':
+                        updateCustomerData('name', newValue);
+                        break;
+                    case 'customerPhone':
+                        updateCustomerData('phone', newValue);
+                        break;
+                    case 'customerEmail':
+                        updateCustomerData('email', newValue);
+                        break;
+                    case 'date':
+                        updateQuoteData('date', newValue);
+                        break;
+                    case 'validUntil':
+                        updateQuoteData('validUntil', newValue);
+                        break;
+                    case 'notes':
+                        updateQuoteData('notes', newValue);
+                        break;
+                    case 'terms':
+                        updateQuoteData('warrantyTerms', newValue);
+                        break;
+                    case 'deliveryTerms':
+                        updateQuoteData('deliveryTerms', newValue);
+                        break;
+                    default:
+                        break;
+                }
+            },
+            type,
+            options: []
+        });
+        setIsEditorOpen(true);
+    }, [quoteData, customerData, companyData, updateQuoteData, updateCustomerData, updateCompanyData, handleConfigChange, fieldLabels]);
 
     // Load templates from localStorage on mount
     useEffect(() => {
@@ -127,41 +368,78 @@ const PdfPreviewPanel = React.memo(() => {
         setSavedTemplates(updatedTemplates);
         localStorage.setItem('pdfTemplates', JSON.stringify(updatedTemplates));
         setTemplateName('');
-        toast.success('Şablon kaydedildi');
+        toast.success(t('templateSaved'));
     }, [templateName, pdfConfig, savedTemplates]);
 
     const loadTemplate = useCallback((template) => {
         setPdfConfig(template.config);
-        toast.success('Şablon yüklendi');
+        toast.success(t('templateLoaded'));
     }, [setPdfConfig]);
 
     const deleteTemplate = useCallback((id) => {
         const updatedTemplates = savedTemplates.filter(t => t.id !== id);
         setSavedTemplates(updatedTemplates);
         localStorage.setItem('pdfTemplates', JSON.stringify(updatedTemplates));
-        toast.success('Şablon silindi');
+        toast.success(t('templateDeleted'));
     }, [savedTemplates]);
 
-    const handleConfigChange = useCallback((key, value) => {
-        setPdfConfig(prev => ({ ...prev, [key]: value }));
-    }, [setPdfConfig]);
+    const sanitizeFileNamePart = useCallback((value: string) => {
+        const trMap: Record<string, string> = {
+            'ı': 'i', 'İ': 'I', 'ş': 's', 'Ş': 'S', 'ğ': 'g', 'Ğ': 'G',
+            'ü': 'u', 'Ü': 'U', 'ö': 'o', 'Ö': 'O', 'ç': 'c', 'Ç': 'C'
+        };
+        return value
+            .split('')
+            .map(ch => trMap[ch] || ch)
+            .join('')
+            .normalize('NFKD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\w\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '_')
+            .slice(0, 40);
+    }, []);
+
+    const buildPdfFilename = useCallback(() => {
+        const meta = getPdfMetadata(quoteData.language || 'tr');
+        const slug = meta.filename.replace(/\.pdf$/i, '');
+        const customerPart = sanitizeFileNamePart(customerData.name || 'Musteri');
+        const numberPart = quoteData.number || t('draft');
+        const datePart = new Date().toISOString().slice(0, 10);
+        return `${slug}_${customerPart}_${numberPart}_${datePart}.pdf`;
+    }, [quoteData.language, quoteData.number, customerData.name, sanitizeFileNamePart, t]);
+
+    const generationStageLabels: Record<string, string> = {
+        fonts: t('pdfPreparing'),
+        images: t('pdfProcessingImages'),
+        render: t('pagesProcessing'),
+        save: t('pdfSaving'),
+        done: t('pdfSaving')
+    };
 
     const handleDownload = async () => {
         setIsGenerating(true);
-        setGenerationStage('PDF hazırlanıyor...');
+        setGenerationStage(t('pdfPreparing'));
         try {
-            const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
+            const filename = buildPdfFilename();
             await new Promise(resolve => setTimeout(resolve, 100));
-            setGenerationStage('Sayfalar işleniyor...');
-            await generatePDF('printable-quote-container-panel', filename, {
+            const result = await generatePDF('printable-quote-container-panel', filename, {
                 theme: pdfConfig.theme,
                 color: pdfConfig.color,
                 pageSize,
                 quality,
                 orientation: pdfConfig.pageOrientation || 'portrait',
-                margin: pdfConfig.margins === 'compact' ? 5 : pdfConfig.margins === 'wide' ? 15 : 10
+                margin: pdfConfig.margins === 'compact' ? 5 : pdfConfig.margins === 'wide' ? 15 : 10,
+                title: pdfConfig.title,
+                author: companyData.name || 'TeklifApp',
+                language: quoteData.language || 'tr',
+                fontFamilies: [pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily],
+                backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
+                onStage: (stage) => setGenerationStage(generationStageLabels[stage] || t('pdfPreparing'))
             });
-            setGenerationStage('PDF kaydediliyor...');
+            if (result) {
+                toast.success(t('pdfDownloaded').replace('{size}', result.sizeText).replace('{time}', result.elapsedText));
+            }
         } finally {
             setIsGenerating(false);
             setGenerationStage('');
@@ -169,15 +447,20 @@ const PdfPreviewPanel = React.memo(() => {
     };
 
     const handlePrint = () => {
-        printQuote('printable-quote-container-panel');
+        printQuote('printable-quote-container-panel', {
+            language: quoteData.language || 'tr',
+            backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
+            pageSize,
+            orientation: pdfConfig.pageOrientation || 'portrait'
+        });
     };
 
     const handleShare = async () => {
         try {
             const element = document.getElementById('printable-quote-container-panel');
-            if (!element) { toast.error('PDF Alanı bulunamadı'); return; }
+            if (!element) { toast.error(t('pdfAreaNotFound')); return; }
             const { default: html2pdf } = await import('html2pdf.js');
-            await document.fonts.ready;
+            await loadPdfFonts([pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily]);
             const isLandscape = pdfConfig.pageOrientation === 'landscape';
             const shareFormat = pageSize === 'a4' && !isLandscape ? 'a4' : isLandscape ? 'a4' : pageSize;
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
@@ -189,7 +472,7 @@ const PdfPreviewPanel = React.memo(() => {
                     scale: qual,
                     useCORS: true,
                     allowTaint: true,
-                    backgroundColor: '#ffffff',
+                    backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
                     imageTimeout: 0,
                     letterRendering: quality !== 'draft'
                 },
@@ -197,15 +480,19 @@ const PdfPreviewPanel = React.memo(() => {
                     unit: 'mm',
                     format: shareFormat,
                     orientation: shareOrientation,
-                    compress: true
+                    compress: true,
+                    properties: {
+                        title: pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
+                        author: companyData.name || 'TeklifApp'
+                    }
                 } as any
             }).from(element).outputPdf('blob');
-            const filename = `Teklif_${quoteData.number || 'Taslak'}.pdf`;
+            const filename = buildPdfFilename();
             await shareQuote(pdfBlob, filename);
-            toast.success('Paylaşım başarılı');
+            toast.success(t('shareSuccess'));
         } catch (error) {
             if ((error as any).message !== 'Share cancelled') {
-                toast.error('Paylaşım yapılamadı: ' + (error as any).message);
+                toast.error(t('shareFailed') + (error as any).message);
             }
         }
     };
@@ -218,6 +505,7 @@ const PdfPreviewPanel = React.memo(() => {
                 ...quoteData,
                 customer: customerData,
                 company: companyData,
+                bankData: bankData,
                 items: calc.items,
                 subTotal: calc.subtotal,
                 taxAmount: calc.taxTotal,
@@ -233,9 +521,9 @@ const PdfPreviewPanel = React.memo(() => {
         try {
             const { fullQuoteData, calculatedItems } = buildExportData();
             await exportQuoteToExcel(fullQuoteData, calculatedItems);
-            toast.success('Excel dosyası indirildi');
+            toast.success(t('excelDownloaded'));
         } catch (error) {
-            toast.error('Excel oluşturulurken hata oluştu');
+            toast.error(t('excelError'));
         }
     };
 
@@ -243,9 +531,9 @@ const PdfPreviewPanel = React.memo(() => {
         try {
             const { fullQuoteData, calculatedItems } = buildExportData();
             exportQuoteToCSV(fullQuoteData, calculatedItems);
-            toast.success('CSV dosyası indirildi');
+            toast.success(t('csvDownloaded'));
         } catch (error) {
-            toast.error('CSV oluşturulurken hata oluştu');
+            toast.error(t('csvError'));
         }
     };
 
@@ -270,7 +558,7 @@ const PdfPreviewPanel = React.memo(() => {
                     {t('livePreview')}
                 </h3>
                 <div className="flex items-center gap-1">
-                    <button
+                    <button type="button"
                         onClick={handleExcelExport}
                         className="flex items-center gap-1.5 p-2 text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
                         title={t('downloadExcel')}
@@ -278,7 +566,7 @@ const PdfPreviewPanel = React.memo(() => {
                         <FileSpreadsheet size={18} />
                         <span className="hidden sm:inline text-xs">{t('downloadExcel')}</span>
                     </button>
-                    <button
+                    <button type="button"
                         onClick={handlePrint}
                         className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
                         title={t('print')}
@@ -286,15 +574,15 @@ const PdfPreviewPanel = React.memo(() => {
                         <Printer size={18} />
                         <span className="hidden sm:inline text-xs">{t('print')}</span>
                     </button>
-                    <button
+                    <button type="button"
                         onClick={handleShare}
                         className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-info)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-                        title="Paylaş"
+                        title={t('share')}
                     >
                         <Share2 size={18} />
-                        <span className="hidden sm:inline text-xs">Paylaş</span>
+                        <span className="hidden sm:inline text-xs">{t('share')}</span>
                     </button>
-                    <button
+                    <button type="button"
                         onClick={handleCsvExport}
                         className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
                         title={t('downloadCSV')}
@@ -302,7 +590,7 @@ const PdfPreviewPanel = React.memo(() => {
                         <FileText size={18} />
                         <span className="hidden sm:inline text-xs">{t('downloadCSV')}</span>
                     </button>
-                    <button
+                    <button type="button"
                         onClick={handleDownload}
                         disabled={isGenerating}
                         className={`flex items-center gap-2 px-4 py-2 text-white rounded-[var(--radius)] shadow hover:shadow-[var(--shadow-lg)] transition-all font-semibold ${isGenerating ? 'bg-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-info)] hover:opacity-90'}`}
@@ -313,12 +601,12 @@ const PdfPreviewPanel = React.memo(() => {
                         ) : (
                             <FileDown size={18} />
                         )}
-                        <span>{isGenerating ? 'Oluşturuluyor...' : t('downloadPdf')}</span>
+                        <span>{isGenerating ? t('generating') : t('downloadPdf')}</span>
                     </button>
-                    <button
+                    <button type="button"
                         onClick={() => setShowControls(!showControls)}
                         className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors md:hidden"
-                        title={showControls ? 'Kontrolleri Gizle' : 'Kontrolleri Göster'}
+                        title={showControls ? t('hideControls') : t('showControls')}
                     >
                         <Settings2 size={18} />
                     </button>
@@ -331,7 +619,7 @@ const PdfPreviewPanel = React.memo(() => {
                     {/* Tabs */}
                     <div className="flex overflow-x-auto border-b border-[var(--color-border)] scrollbar-hide">
                         {tabs.map(tab => (
-                            <button
+                            <button type="button"
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex-1 min-w-[60px] flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium transition-colors border-b-2 ${activeTab === tab.id ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]/50' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
@@ -359,7 +647,7 @@ const PdfPreviewPanel = React.memo(() => {
                                             placeholder={t('templateName')}
                                             className="flex-1 px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         />
-                                        <button
+                                        <button type="button"
                                             onClick={saveTemplate}
                                             disabled={!templateName.trim()}
                                             className="px-2 py-1.5 bg-[var(--color-info)] text-white text-xs rounded hover:opacity-90 disabled:opacity-50"
@@ -369,12 +657,12 @@ const PdfPreviewPanel = React.memo(() => {
                                     </div>
                                     {savedTemplates.length > 0 && (
                                         <div className="space-y-1">
-                                            {savedTemplates.map(t => (
-                                                <div key={t.id} className="flex items-center justify-between text-xs bg-[var(--color-bg-muted)] p-1.5 rounded">
-                                                    <span className="truncate flex-1">{t.name}</span>
+                                            {savedTemplates.map(tmpl => (
+                                                <div key={tmpl.id} className="flex items-center justify-between text-xs bg-[var(--color-bg-muted)] p-1.5 rounded">
+                                                    <span className="truncate flex-1">{tmpl.name}</span>
                                                     <div className="flex gap-1">
-                                                        <button onClick={() => loadTemplate(t)} className="text-[var(--color-info)] hover:text-[var(--color-info)]"><LayoutTemplate size={12} /></button>
-                                                        <button onClick={() => deleteTemplate(t.id)} className="text-[var(--color-error)] hover:text-[var(--color-error)]"><Trash2 size={12} /></button>
+                                                        <button type="button" onClick={() => loadTemplate(tmpl)} className="text-[var(--color-info)] hover:text-[var(--color-info)]" aria-label={`${t('loadTemplate')}: ${tmpl.name}`}><LayoutTemplate size={12} /></button>
+                                                        <button type="button" onClick={() => deleteTemplate(tmpl.id)} className="text-[var(--color-error)] hover:text-[var(--color-error)]" aria-label={`${t('deleteTemplate')}: ${tmpl.name}`}><Trash2 size={12} /></button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -384,16 +672,17 @@ const PdfPreviewPanel = React.memo(() => {
 
                                 {/* Theme Selection */}
                                 <div className="space-y-2 mb-4">
-                                    <label className="text-xs font-medium text-[var(--color-text)]">Tasarım</label>
+                                    <label className="text-xs font-medium text-[var(--color-text)]">{t('design')}</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
                                             { id: 'modern', name: 'Modern' },
                                             { id: 'classic', name: 'Klasik' },
                                             { id: 'minimal', name: 'Minimal' },
                                             { id: 'corporate', name: 'Kurumsal' },
-                                            { id: 'pro', name: 'Premium (Pro)' }
+                                            { id: 'pro', name: 'Premium (Pro)' },
+                                            { id: 'bold', name: 'Bold' }
                                         ].map((t) => (
-                                            <button
+                                            <button type="button"
                                                 key={t.id}
                                                 onClick={() => handleConfigChange('theme', t.id)}
                                                 className={`px-2 py-1.5 text-xs rounded border transition-all ${pdfConfig.theme === t.id ? 'bg-[var(--color-primary-muted)] border-[var(--color-info)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-muted)]'}`}
@@ -404,9 +693,25 @@ const PdfPreviewPanel = React.memo(() => {
                                     </div>
                                 </div>
 
+                                {/* Quick Presets */}
+                                <div className="mt-3">
+                                    <label className="text-xs font-medium text-[var(--color-text)]">{t('presets')}</label>
+                                    <div className="grid grid-cols-2 gap-2 mt-1.5">
+                                        {PDF_PRESETS.map((p) => (
+                                            <button type="button"
+                                                key={p.id}
+                                                onClick={() => applyPreset(p)}
+                                                className="px-2 py-1.5 text-xs rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-muted)] hover:border-[var(--color-info)] transition-all"
+                                            >
+                                                {t(p.labelKey)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 {/* Main Color */}
                                 <div>
-                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Ana Renk</label>
+                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('primaryColor')}</label>
                                     <div className="flex gap-2 items-center">
                                         <input
                                             type="color"
@@ -418,13 +723,27 @@ const PdfPreviewPanel = React.memo(() => {
                                     </div>
                                 </div>
 
+                                {/* Page Background Color */}
+                                <div className="mt-3">
+                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageBackground')}</label>
+                                    <div className="flex gap-2 items-center">
+                                        <input
+                                            type="color"
+                                            value={pdfConfig.pageBackgroundColor || '#ffffff'}
+                                            onChange={(e) => handleConfigChange('pageBackgroundColor', e.target.value)}
+                                            className="w-8 h-8 p-0 border-0 rounded cursor-pointer"
+                                        />
+                                        <span className="text-xs text-[var(--color-text-muted)] uppercase">{pdfConfig.pageBackgroundColor || '#ffffff'}</span>
+                                    </div>
+                                </div>
+
                                 {/* Page Size & Quality */}
                                 <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--color-border)] mt-4">
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Sayfa Boyutu</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageSize')}</label>
                                         <select
                                             value={pageSize}
-                                            onChange={(e) => setPageSize(e.target.value)}
+                                            onChange={(e) => setPageSize(e.target.value as PageSize)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
                                             {PAGE_SIZE_OPTIONS.map(opt => (
@@ -433,29 +752,29 @@ const PdfPreviewPanel = React.memo(() => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Yön</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('orientation')}</label>
                                         <div className="grid grid-cols-2 gap-1">
-                                            <button
+                                            <button type="button"
                                                 onClick={() => handleConfigChange('pageOrientation', 'portrait')}
                                                 className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.pageOrientation === 'portrait' ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
                                             >
-                                                Dikey
+                                                {t('portrait')}
                                             </button>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => handleConfigChange('pageOrientation', 'landscape')}
                                                 className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.pageOrientation === 'landscape' ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
                                             >
-                                                Yatay
+                                                {t('landscape')}
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kalite</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('quality')}</label>
                                         <select
                                             value={quality}
-                                            onChange={(e) => setQuality(e.target.value)}
+                                            onChange={(e) => setQuality(e.target.value as PdfQuality)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
                                             {QUALITY_OPTIONS.map(opt => (
@@ -472,9 +791,9 @@ const PdfPreviewPanel = React.memo(() => {
                             <div className="space-y-4">
                                 {/* Font Families */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Yazı Tipleri</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('fontFamilies')}</h4>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Genel Yaz Tipi</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('generalFont')}</label>
                                         <select
                                             value={pdfConfig.globalFontFamily || 'Inter'}
                                             onChange={(e) => handleConfigChange('globalFontFamily', e.target.value)}
@@ -490,28 +809,28 @@ const PdfPreviewPanel = React.memo(() => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Başlık Yaz Tipi</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('titleFont')}</label>
                                         <select
                                             value={pdfConfig.titleFontFamily || ''}
                                             onChange={(e) => handleConfigChange('titleFontFamily', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="">Genel ile Ayn</option>
+                                            <option value="">{t('sameAsGeneral')}</option>
                                             <option value="'Inter', sans-serif">Modern (Inter)</option>
                                             <option value="'Montserrat', sans-serif">Geometrik (Montserrat)</option>
                                             <option value="'Playfair Display', serif">Zarif (Playfair)</option>
-                                            <option value="'Oswald', sans-serif">Gl (Oswald)</option>
+                                            <option value="'Oswald', sans-serif">{t('strong')} (Oswald)</option>
                                             <option value="'Roboto Slab', serif">Robotik (Roboto Slab)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Etiket Yaz Tipi (Temel)</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('labelFont')}</label>
                                         <select
                                             value={pdfConfig.labelFontFamily || ''}
                                             onChange={(e) => handleConfigChange('labelFontFamily', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="">Genel ile Ayn</option>
+                                            <option value="">{t('sameAsGeneral')}</option>
                                             <option value="'Inter', sans-serif">Modern (Inter)</option>
                                             <option value="'Roboto', sans-serif">Standart (Roboto)</option>
                                             <option value="'Open Sans', sans-serif">Okunaklı (Open Sans)</option>
@@ -519,13 +838,13 @@ const PdfPreviewPanel = React.memo(() => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">İçerik Yaz Tipi (Girdiiniz)</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('contentFont')}</label>
                                         <select
                                             value={pdfConfig.bodyFontFamily || ''}
                                             onChange={(e) => handleConfigChange('bodyFontFamily', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="">Genel ile Ayn</option>
+                                            <option value="">{t('sameAsGeneral')}</option>
                                             <option value="'Inter', sans-serif">Modern (Inter)</option>
                                             <option value="'Roboto', sans-serif">Standart (Roboto)</option>
                                             <option value="'Open Sans', sans-serif">Okunaklı (Open Sans)</option>
@@ -539,7 +858,7 @@ const PdfPreviewPanel = React.memo(() => {
 
                         {/* SECTIONS TAB (Granular Typography) */}
                         {activeTab === 'sections' && (
-                            <PdfSectionsTab pdfConfig={pdfConfig} handleConfigChange={handleConfigChange} />
+                            <PdfSectionsTab pdfConfig={pdfConfig} handleConfigChange={handleConfigChange} t={t} />
                         )}
 
                         {/* LAYOUT TAB */}
@@ -547,16 +866,16 @@ const PdfPreviewPanel = React.memo(() => {
                             <div className="space-y-4">
                                 {/* Spacing */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Boşluklar</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('spacing')}</h4>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Sayfa Kenar Boluu</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageMargin')}</label>
                                         <div className="grid grid-cols-3 gap-2">
                                             {[
                                                 { val: 'compact', label: 'Dar' },
                                                 { val: 'normal', label: 'Normal' },
                                                 { val: 'wide', label: 'Geni' }
                                             ].map(opt => (
-                                                <button
+                                                <button type="button"
                                                     key={opt.val}
                                                     onClick={() => handleConfigChange('margins', opt.val)}
                                                     className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.margins === opt.val ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
@@ -568,7 +887,7 @@ const PdfPreviewPanel = React.memo(() => {
                                     </div>
                                     <div>
                                         <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                            <span>Blm Aral</span>
+                                            <span>{t('sectionSpacing')}</span>
                                             <span className="text-[var(--color-text-muted)]">{pdfConfig.sectionSpacing || '1rem'}</span>
                                         </label>
                                         <select
@@ -576,20 +895,20 @@ const PdfPreviewPanel = React.memo(() => {
                                             onChange={(e) => handleConfigChange('sectionSpacing', e.target.value)}
                                             className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         >
-                                            <option value="0.5rem">SKüçük (0.5rem)</option>
+                                            <option value="0.5rem">{t('small')} (0.5rem)</option>
                                             <option value="1rem">Normal (1rem)</option>
-                                            <option value="1.5rem">Geni (1.5rem)</option>
-                                            <option value="2rem">ok Geni (2rem)</option>
+                                            <option value="1.5rem">{t('wide')} (1.5rem)</option>
+                                            <option value="2rem">{t('veryWide')} (2rem)</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 {/* Shapes */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Şekiller</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('shapes')}</h4>
                                     <div>
                                         <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                            <span>Köşe Yuvarlaklığı</span>
+                                            <span>{t('borderRadius')}</span>
                                             <span className="text-[var(--color-text-muted)]">{pdfConfig.borderRadius || 6}px</span>
                                         </label>
                                         <input
@@ -603,14 +922,14 @@ const PdfPreviewPanel = React.memo(() => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Logo Pozisyonu</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('logoPosition')}</label>
                                         <div className="flex bg-[var(--color-bg-muted)] rounded p-1">
                                             {[
                                                 { val: 'left', icon: AlignLeft },
                                                 { val: 'center', icon: AlignCenter },
                                                 { val: 'right', icon: AlignRight }
                                             ].map(opt => (
-                                                <button
+                                                <button type="button"
                                                     key={opt.val}
                                                     onClick={() => handleConfigChange('logoPosition', opt.val)}
                                                     className={`flex-1 py-1 flex justify-center rounded transition-colors ${pdfConfig.logoPosition === opt.val ? 'bg-[var(--color-bg-card)] shadow text-[var(--color-info)]' : 'text-[var(--color-text-muted)]'}`}
@@ -622,14 +941,14 @@ const PdfPreviewPanel = React.memo(() => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kenarlk Stili</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('borderStyle')}</label>
                                         <div className="grid grid-cols-3 gap-2">
                                             {[
-                                                { val: 'solid', label: 'Düz' },
-                                                { val: 'dashed', label: 'Kesik' },
-                                                { val: 'dotted', label: 'Noktalı' }
+                                                { val: 'solid', label: t('solid') },
+                                                { val: 'dashed', label: t('dashed') },
+                                                { val: 'dotted', label: t('dotted') }
                                             ].map(opt => (
-                                                <button
+                                                <button type="button"
                                                     key={opt.val}
                                                     onClick={() => handleConfigChange('boxBorderStyle', opt.val)}
                                                     className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.boxBorderStyle === opt.val ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
@@ -642,9 +961,9 @@ const PdfPreviewPanel = React.memo(() => {
 
                                     {/* Density */}
                                     <div className="space-y-3">
-                                        <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Yoğunluk</h4>
+                                        <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('density')}</h4>
                                         <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">Kompakt Mod (SKüçük)</span>
+                                            <span className="text-[var(--color-text)]">{t('compactMode')} ({t('small')})</span>
                                             <input
                                                 type="checkbox"
                                                 checked={pdfConfig.tableDensity === 'compact'}
@@ -661,12 +980,12 @@ const PdfPreviewPanel = React.memo(() => {
                         {activeTab === 'content' && (
                             <div className="space-y-2">
                                 {[
-                                    { key: 'showLogo', label: 'Firma Logosu' },
+                                    { key: 'showLogo', label: t('companyLogo') },
                                     { key: 'showBankInfo', label: t('bankInfo') },
-                                    { key: 'showSignatures', label: 'İmza ve Kaşe Alanı' },
-                                    { key: 'showTerms', label: 'Koullar' },
+                                    { key: 'showSignatures', label: t('signatureStampArea') },
+                                    { key: 'showTerms', label: t('terms') },
                                     { key: 'showNotes', label: t('notes') },
-                                    { key: 'showSummary', label: 'Fiyat zeti' }
+                                    { key: 'showSummary', label: t('priceSummary') }
                                 ].map((item) => (
                                     <label key={item.key} className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
                                         <span className="text-[var(--color-text)]">{item.label}</span>
@@ -681,14 +1000,14 @@ const PdfPreviewPanel = React.memo(() => {
 
                                 <div className="pt-3 border-t border-[var(--color-border)] mt-3">
                                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">
-                                        Belge Başlığı
+                                        {t('documentTitle')}
                                     </label>
                                     <input
                                         type="text"
                                         value={pdfConfig.title}
                                         onChange={(e) => handleConfigChange('title', e.target.value)}
                                         className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        placeholder="Örn: FİYAT TEKLİFİ"
+                                        placeholder={t('titlePlaceholder')}
                                     />
                                 </div>
                             </div>
@@ -699,12 +1018,12 @@ const PdfPreviewPanel = React.memo(() => {
                             <div className="space-y-4">
                                 {/* Table Style Options */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Tablo Stili</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('tableStyle')}</h4>
 
                                     {/* Header Colors */}
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Başlık Arkaplan</label>
+                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('headerBackground')}</label>
                                             <div className="flex gap-2 items-center">
                                                 <input
                                                     type="color"
@@ -715,7 +1034,7 @@ const PdfPreviewPanel = React.memo(() => {
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Başlık Yazısı</label>
+                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('headerText')}</label>
                                             <div className="flex gap-2 items-center">
                                                 <input
                                                     type="color"
@@ -729,7 +1048,7 @@ const PdfPreviewPanel = React.memo(() => {
 
                                     {/* Border Color */}
                                     <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">Kenarlk Rengi</label>
+                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('borderColor')}</label>
                                         <div className="flex gap-2 items-center">
                                             <input
                                                 type="color"
@@ -743,7 +1062,7 @@ const PdfPreviewPanel = React.memo(() => {
                                     {/* Toggles */}
                                     <div className="space-y-2 pt-2">
                                         <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">Çizgili Satırlar</span>
+                                            <span className="text-[var(--color-text)]">{t('stripedRows')}</span>
                                             <input
                                                 type="checkbox"
                                                 checked={pdfConfig.tableStriped}
@@ -752,7 +1071,7 @@ const PdfPreviewPanel = React.memo(() => {
                                             />
                                         </label>
                                         <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">Dikey Çizgiler</span>
+                                            <span className="text-[var(--color-text)]">{t('verticalLines')}</span>
                                             <input
                                                 type="checkbox"
                                                 checked={pdfConfig.tableShowVerticalLines}
@@ -765,12 +1084,12 @@ const PdfPreviewPanel = React.memo(() => {
 
                                 {/* Column Visibility */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Sütunlar</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('columns')}</h4>
                                     <div className="space-y-1">
                                         {[
-                                            { key: 'showTableImages', label: 'Ürün Görselleri' },
-                                            { key: 'showTableUnit', label: 'Birim Sütunu' },
-                                            { key: 'showTableTax', label: 'KDV Sütunu' }
+                                            { key: 'showTableImages', label: t('productImages') },
+                                            { key: 'showTableUnit', label: t('unitColumn') },
+                                            { key: 'showTableTax', label: t('vatColumn') }
                                         ].map((item) => (
                                             <label key={item.key} className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
                                                 <span className="text-[var(--color-text)]">{item.label}</span>
@@ -788,7 +1107,7 @@ const PdfPreviewPanel = React.memo(() => {
                                 {/* Row Height */}
                                 <div>
                                     <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                        <span>Satır Yüksekliği</span>
+                                        <span>{t('rowHeight')}</span>
                                         <span className="text-[var(--color-text-muted)]">{pdfConfig.tableRowHeight}px</span>
                                     </label>
                                     <input
@@ -809,10 +1128,10 @@ const PdfPreviewPanel = React.memo(() => {
                         {activeTab === 'texts' && (
                             <div className="space-y-4">
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Tablo Başlıklar</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('tableHeaders')}</h4>
                                     <div className="space-y-2">
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">rn Bal</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('itemHeader')}</label>
                                             <input
                                                 type="text"
                                                 value={pdfConfig.textItem || ''}
@@ -822,7 +1141,7 @@ const PdfPreviewPanel = React.memo(() => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Aklama Bal</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('descriptionHeader')}</label>
                                             <input
                                                 type="text"
                                                 value={pdfConfig.textDescription || ''}
@@ -833,7 +1152,7 @@ const PdfPreviewPanel = React.memo(() => {
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Birim Bal</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('unitHeader')}</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textUnit || ''}
@@ -843,7 +1162,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Miktar Bal</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('quantityHeader')}</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textQuantity || ''}
@@ -855,7 +1174,7 @@ const PdfPreviewPanel = React.memo(() => {
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Fiyat Bal</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('priceHeader')}</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textUnitPrice || ''}
@@ -865,7 +1184,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">KDV Bal</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('vatHeader')}</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.textVat || ''}
@@ -876,7 +1195,7 @@ const PdfPreviewPanel = React.memo(() => {
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Toplam Bal</label>
+                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('totalHeader')}</label>
                                             <input
                                                 type="text"
                                                 value={pdfConfig.textTotal || ''}
@@ -895,9 +1214,9 @@ const PdfPreviewPanel = React.memo(() => {
                             <div className="space-y-4">
                                 {/* Visual Effects */}
                                 <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">Görsel Efektler</h4>
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('visualEffects')}</h4>
                                     <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                        <span className="text-[var(--color-text)]">Gölgelendirme</span>
+                                        <span className="text-[var(--color-text)]">{t('shadow')}</span>
                                         <input
                                             type="checkbox"
                                             checked={pdfConfig.enableShadows}
@@ -911,7 +1230,7 @@ const PdfPreviewPanel = React.memo(() => {
                                 <div className="space-y-3">
                                     <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1 flex items-center gap-2">
                                         <Zap size={14} className={performanceMode ? "text-[var(--color-warning)]" : ""} />
-                                        Performans Ayarları
+                                        {t('performanceSettings')}
                                     </h4>
                                     <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
                                         <div className="flex flex-col">
@@ -920,7 +1239,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                 {t('performanceMode')}
                                             </span>
                                             <span className="text-[10px] text-[var(--color-text-muted)]">
-                                                nÖÖnizlemeyi gecikmeli yenileyerek Performans artırır.
+                                                {t('performanceDesc')}
                                             </span>
                                         </div>
                                         <input
@@ -934,10 +1253,10 @@ const PdfPreviewPanel = React.memo(() => {
                                         <div className="flex flex-col">
                                             <span className="text-[var(--color-text)] font-medium flex items-center gap-2">
                                                 <RefreshCcw size={12} />
-                                                Manuel Yenileme
+                                                {t('manualRefresh')}
                                             </span>
                                             <span className="text-[10px] text-[var(--color-text-muted)]">
-                                                Değişiklikleri anında görmek için ÖnÖÖnizlemeyi manuel yenileyin.
+                                                {t('manualRefreshDesc')}
                                             </span>
                                         </div>
                                         <input
@@ -949,32 +1268,10 @@ const PdfPreviewPanel = React.memo(() => {
                                     </label>
                                 </div>
 
-                                {/* QR Code */}
-                                <div>
-                                    <label className="flex items-center justify-between mb-2 text-xs font-medium text-[var(--color-text)]">
-                                        <span>QR Kod</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={pdfConfig.showQRCode}
-                                            onChange={(e) => handleConfigChange('showQRCode', e.target.checked)}
-                                            className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
-                                        />
-                                    </label>
-                                    {pdfConfig.showQRCode && (
-                                        <input
-                                            type="text"
-                                            value={pdfConfig.qrCodeUrl}
-                                            onChange={(e) => handleConfigChange('qrCodeUrl', e.target.value)}
-                                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                            placeholder="URL (Bosa site adresi)"
-                                        />
-                                    )}
-                                </div>
-
                                 {/* Watermark */}
                                 <div>
                                     <label className="flex items-center justify-between mb-2 text-xs font-medium text-[var(--color-text)]">
-                                        <span>Filigran</span>
+                                        <span>{t('watermark')}</span>
                                         <input
                                             type="checkbox"
                                             checked={pdfConfig.showWatermark}
@@ -985,19 +1282,19 @@ const PdfPreviewPanel = React.memo(() => {
                                     {pdfConfig.showWatermark && (
                                         <div className="space-y-3 pl-2 border-l-2 border-[var(--color-border)] mt-2">
                                             <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Metin</label>
+                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('watermarkText')}</label>
                                                 <input
                                                     type="text"
                                                     value={pdfConfig.watermarkText}
                                                     onChange={(e) => handleConfigChange('watermarkText', e.target.value)}
                                                     className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                                    placeholder="Metin"
+                                                    placeholder={t('watermarkText')}
                                                 />
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Renk</label>
+                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('color')}</label>
                                                     <div className="flex gap-2 items-center">
                                                         <input
                                                             type="color"
@@ -1008,7 +1305,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Boyut ({pdfConfig.watermarkFontSize || 120}px)</label>
+                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('size')} ({pdfConfig.watermarkFontSize || 120}px)</label>
                                                     <input
                                                         type="range"
                                                         min="40"
@@ -1023,7 +1320,7 @@ const PdfPreviewPanel = React.memo(() => {
 
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Opaklık ({pdfConfig.watermarkOpacity || 0.1})</label>
+                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('opacity')} ({pdfConfig.watermarkOpacity || 0.1})</label>
                                                     <input
                                                         type="range"
                                                         min="0.05"
@@ -1035,7 +1332,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">Döndürme ({pdfConfig.watermarkRotation || -45})</label>
+                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('rotation')} ({pdfConfig.watermarkRotation || -45})</label>
                                                     <input
                                                         type="range"
                                                         min="-90"
@@ -1070,18 +1367,18 @@ const PdfPreviewPanel = React.memo(() => {
                         {/* SIGNATURE TAB */}
                         {activeTab === 'signature' && (
                             <div className="space-y-4">
-                                <h4 className="font-semibold text-xs text-[var(--color-text)]">Dijital İmza</h4>
+                                <h4 className="font-semibold text-xs text-[var(--color-text)]">{t('digitalSignature')}</h4>
 
                                 {signature ? (
                                     <div className="space-y-2">
                                         <div className="border border-[var(--color-border)] rounded p-4 bg-[var(--color-bg-card)] flex justify-center items-center h-32">
                                             <img src={signature} alt="Signature" className="max-h-full max-w-full object-contain" />
                                         </div>
-                                        <button
+                                        <button type="button"
                                             onClick={() => setSignature(null)}
                                             className="w-full py-2 text-xs text-[var(--color-error)] hover:text-[var(--color-error)] font-medium border border-[var(--color-border)] hover:border-[var(--color-error)] rounded bg-[var(--color-error)]/10 hover:bg-[var(--color-error)]/10 transition-colors"
                                         >
-                                            İmzayı Kaldır
+                                            {t('removeSignature')}
                                         </button>
                                     </div>
                                 ) : (
@@ -1125,7 +1422,7 @@ const PdfPreviewPanel = React.memo(() => {
                                     </div>
                                 )}
                                 <p className="text-[10px] text-[var(--color-text-muted)]">
-                                    Yüklenen İmza PDF'e eklenecektir. Arkaplan şeffaf PNG öönerilir.
+                                    {t('signatureUploadHint')}
                                 </p>
                             </div>
                         )}
@@ -1137,7 +1434,7 @@ const PdfPreviewPanel = React.memo(() => {
                     <div className={`absolute top-4 right-4 z-10 flex items-center gap-1.5 p-1.5 rounded-[var(--radius)] shadow border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] font-medium ${performanceMode ? 'bg-[var(--color-bg-card)]' : 'bg-[var(--color-bg-card)]/80 backdrop-blur'}`}>
                         <span>{pageSize.toUpperCase()}</span>
                         <span className="text-[var(--color-border)]">|</span>
-                        <span>{pdfConfig.pageOrientation === 'landscape' ? 'Yatay' : 'Dikey'}</span>
+                        <span>{pdfConfig.pageOrientation === 'landscape' ? t('landscape') : t('portrait')}</span>
                         <span className="text-[var(--color-border)]">|</span>
                         <span className="flex items-center gap-1">
                             <FileDown size={10} />
@@ -1148,7 +1445,7 @@ const PdfPreviewPanel = React.memo(() => {
                     {/* Manual Refresh Button Overlay */}
                     {manualRefreshMode && hasPendingChanges && (
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-                            <button
+                            <button type="button"
                                 onClick={handleManualRefresh}
                                 className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-full shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-lg)] transition-all animate-bounce"
                             >
@@ -1158,9 +1455,25 @@ const PdfPreviewPanel = React.memo(() => {
                         </div>
                     )}
 
-                    <div className="flex-1 overflow-auto custom-scrollbar p-8 flex justify-center items-start">
-                        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)]" style={{ transform: `scale(${zoomLevel})`, imageRendering: zoomLevel < 0.5 ? 'auto' : 'crisp-edges' } as any}>
+                    {/* Overflow Warning */}
+                    {overflowPages.length > 0 && (
+                        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-2 bg-amber-500/90 text-white text-xs rounded-lg shadow-[var(--shadow-lg)]">
+                            <AlertTriangle size={14} />
+                            <span>{t('pdfOverflowWarning').replace('{pages}', overflowPages.join(', '))}</span>
+                        </div>
+                    )}
+
+                    <div className="flex-1 overflow-auto custom-scrollbar p-8 flex justify-center items-start" ref={scrollRef}>
+                        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)] relative" style={{ transform: `scale(${zoomLevel})`, imageRendering: zoomLevel < 0.5 ? 'auto' : 'crisp-edges' } as any}>
                             <div ref={contentRef} className="relative">
+                                <style>{`
+                                    #printable-quote-container-panel .pdf-page {
+                                        margin-bottom: 28px;
+                                    }
+                                    #printable-quote-container-panel .pdf-page:last-child {
+                                        margin-bottom: 0;
+                                    }
+                                `}</style>
                 <PrintableQuote
                     id="printable-quote-container-panel"
                     theme={pdfConfig.theme}
@@ -1173,37 +1486,17 @@ const PdfPreviewPanel = React.memo(() => {
                     discount={discount}
                     layout={pdfLayout}
                     signature={signature}
-                    onEdit={() => {}}
+                    onEdit={handleFieldEdit}
                     config={renderedConfig}
                 />
-                                {/* Page break indicators */}
-                                {estimatedPages > 1 && (
-                                    <div className="absolute inset-x-0 bottom-0 pointer-events-none">
-                                        {Array.from({ length: estimatedPages - 1 }, (_, i) => (
-                                            <div
-                                                key={i}
-                                                className="absolute left-0 right-0 flex items-center gap-2"
-                                                style={{
-                                                    top: `${((i + 1) / estimatedPages) * 100}%`,
-                                                    transform: 'translateY(-50%)'
-                                                }}
-                                            >
-                                                <hr className="flex-1 border-t-2 border-dashed border-[var(--color-border)]" />
-                                                <span className="text-[10px] text-[var(--color-text-muted)] bg-[var(--color-bg-card)] px-1.5 py-0.5 rounded whitespace-nowrap">
-                                                    {t('page')} {i + 2}
-                                                </span>
-                                                <hr className="flex-1 border-t-2 border-dashed border-[var(--color-border)]" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
+                            <div ref={marginGuidesRef} className="absolute inset-0 z-[5] pointer-events-none"></div>
                         </div>
                     </div>
                     {/* Zoom Slider */}
                     <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--color-border)] bg-[var(--color-bg-muted)] flex-wrap">
                         <div className="flex items-center gap-1">
-                            <button onClick={() => setZoomLevel(z => Math.max(0.3, z - 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label="Uzaklaştır">−</button>
+                            <button type="button" onClick={() => setZoomLevel(z => Math.max(0.3, z - 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label={t('zoomOut')}>−</button>
                             <input
                                 type="range"
                                 min="0.3"
@@ -1212,32 +1505,66 @@ const PdfPreviewPanel = React.memo(() => {
                                 value={zoomLevel}
                                 onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
                                 className="w-20 h-1 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                aria-label="Yakınlaştırma"
+                                aria-label={t('zoomSlider')}
                             />
-                            <button onClick={() => setZoomLevel(z => Math.min(2, z + 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label="Yaklaştır">+</button>
+                            <button type="button" onClick={() => setZoomLevel(z => Math.min(2, z + 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label={t('zoomIn')}>+</button>
                             <span className="text-xs text-[var(--color-text-muted)] w-10 text-right tabular-nums">{Math.round(zoomLevel * 100)}%</span>
                         </div>
-                        <button
+                        <button type="button"
                             onClick={() => setZoomLevel(0.7)}
                             className={`px-1.5 py-0.5 text-[10px] rounded border transition-colors ${zoomLevel === 0.7 ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}`}
-                            title="Varsayılan yakınlaştırma"
+                            title={t('defaultZoom')}
                         >
                             %70
                         </button>
                         <button
+                            type="button"
+                            onClick={() => setShowMarginGuides(v => !v)}
+                            aria-pressed={showMarginGuides}
+                            title={t('marginGuides')}
+                            className={`px-1.5 py-0.5 text-[10px] rounded border transition-colors ${showMarginGuides ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}`}
+                        >
+                            <Ruler size={10} />
+                        </button>
+                        <button type="button"
                             onClick={() => setZoomLevel(1)}
                             className={`px-1.5 py-0.5 text-[10px] rounded border transition-colors ${zoomLevel === 1 ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}`}
-                            title="Gerçek boyut"
+                            title={t('actualSize')}
                         >
                             %100
                         </button>
                         {isGenerating && (
                             <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-info)] ml-auto bg-[var(--color-primary-muted)]/30 px-1.5 py-0.5 rounded whitespace-nowrap">
                                 <div className="animate-spin rounded-full h-2.5 w-2.5 border-2 border-[var(--color-border)] border-t-[var(--color-info)]"></div>
-                                <span>{generationStage || 'PDF oluşturuluyor...'}</span>
+                                <span>{generationStage || t('pdfGenerating')}</span>
                             </div>
                         )}
                     </div>
+                    {/* Page Navigation + Thumbnails */}
+                    {pageCount > 1 && (
+                        <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--color-border)] bg-[var(--color-bg-muted)] flex-wrap">
+                            <button
+                                type="button"
+                                onClick={() => scrollToPage(Math.max(1, activePage - 1))}
+                                disabled={activePage <= 1}
+                                className="px-2 py-1 text-[10px] rounded border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                                &lt; {t('previousPage')}
+                            </button>
+                            <span className="text-xs text-[var(--color-text-muted)] tabular-nums whitespace-nowrap">
+                                {t('page')} {activePage} / {pageCount}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => scrollToPage(Math.min(pageCount, activePage + 1))}
+                                disabled={activePage >= pageCount}
+                                className="px-2 py-1 text-[10px] rounded border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {t('nextPage')} &gt;
+                            </button>
+                            <div ref={thumbnailsRef} className="flex gap-1.5 overflow-x-auto custom-scrollbar py-0.5 ml-auto"></div>
+                        </div>
+                    )}
                 </div>
             </div>
 

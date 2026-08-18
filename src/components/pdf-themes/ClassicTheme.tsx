@@ -19,14 +19,41 @@ const ClassicTheme = ({
     totalTax,
     total,
     currentLocale,
-    hasLineItemDiscounts
+    hasLineItemDiscounts,
+    onEdit,
+    activeLayout
 }) => {
+    // Helper for editable fields
+    const layoutMap = useMemo(() => {
+        const map = {};
+        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
+        return map;
+    }, [activeLayout]);
+    const showSection = (id) => layoutMap[id] !== false;
+
+    const renderEditable = (value, fieldKey, type = 'text', className = '') => {
+        if (!onEdit) return <span className={className}>{value}</span>;
+
+        return (
+            <span
+                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(fieldKey, value, type);
+                }}
+                title={t.clickToEdit}
+            >
+                {value || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
+            </span>
+        );
+    };
+
     const classicStyles = useMemo(() => `
         .classic-theme-container {
             font-family: ${config.globalFontFamily || "'Times New Roman', Times, serif"};
             line-height: ${config.bodyLineHeight || '1.15'};
             color: ${config.globalFontColor || '#000'};
-            background: #fff !important;
+            background: var(--pdf-page-bg, #fff) !important;
             font-size: ${config.fontSize || 11}px;
         }
 
@@ -60,6 +87,21 @@ const ClassicTheme = ({
         ${config.tableStriped ? `
         .classic-table tr:nth-child(even) {
             background: ${config.tableStripedColor || '#f9f9f9'};
+        }
+        ` : ''}
+
+        .classic-table td {
+            height: ${config.tableRowHeight || 0}px;
+        }
+
+        ${config.tableShowVerticalLines ? `
+        .classic-table th,
+        .classic-table td {
+            border-left: 1px solid ${config.tableBorderColor || '#ccc'};
+        }
+        .classic-table th:first-child,
+        .classic-table td:first-child {
+            border-left: none;
         }
         ` : ''}
 
@@ -160,7 +202,7 @@ const ClassicTheme = ({
                     )}
 
                     {/* Header Section - Grid Layout */}
-                    {pageIndex === 0 ? (
+                    {showSection('header') && (pageIndex === 0 ? (
                         <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr 180px', border: '1px solid #000', marginBottom: '8px' }}>
                             {/* Logo Area */}
                             <div style={{ borderRight: '1px solid #000', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -173,7 +215,7 @@ const ClassicTheme = ({
 
                             {/* Company Info */}
                             <div style={{ borderRight: '1px solid #000', padding: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                                <div style={{ fontSize: config.headerTitleFontSize || '14pt', fontWeight: config.headerTitleFontWeight || 'bold', textTransform: 'uppercase' }}>{companyData.name}</div>
+                                <div style={{ fontSize: config.headerTitleFontSize || '14pt', fontWeight: config.headerTitleFontWeight || 'bold', textTransform: 'uppercase' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 <div style={{ fontSize: config.headerInfoFontSize || '9pt', marginTop: '4px' }}>{companyData.address}</div>
                                 <div style={{ fontSize: config.headerInfoFontSize || '9pt' }}>{companyData.phone} | {companyData.email}</div>
                                 <div style={{ fontSize: config.headerInfoFontSize || '9pt' }}>{companyData.website}</div>
@@ -210,10 +252,10 @@ const ClassicTheme = ({
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             </div>
                         </div>
-                    )}
+                    ))}
 
                     {/* Customer & Details Section - Only Page 1 */}
-                    {pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                             {/* Customer Box */}
                             <div style={{ border: '1px solid #000' }}>
@@ -221,18 +263,18 @@ const ClassicTheme = ({
                                     {t.customer} / {t.to}
                                 </div>
                                 <div style={{ padding: '8px' }}>
-                                    <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '10pt' }}>{customerData.company}</div>
+                                    <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '10pt' }}>{renderEditable(customerData.company, 'customerCompany')}</div>
                                     <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
                                         <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.authorized}: </span>
-                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{customerData.name}</span>
+                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.name, 'customerName')}</span>
                                     </div>
                                     <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
                                         <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.phone}: </span>
-                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{customerData.phone}</span>
+                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.phone, 'customerPhone')}</span>
                                     </div>
                                     <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
                                         <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.email}: </span>
-                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{customerData.email}</span>
+                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.email, 'customerEmail')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -243,10 +285,10 @@ const ClassicTheme = ({
                                     {t.details}
                                 </div>
                                 <div style={{ padding: '8px' }}>
-                                    <div style={{ fontWeight: config.titleFontWeight || 'bold', fontSize: config.titleFontSize || '10pt', fontFamily: config.titleFontFamily || 'inherit' }}>{config.title}</div>
+                                    <div style={{ fontWeight: config.titleFontWeight || 'bold', fontSize: config.titleFontSize || '10pt', fontFamily: config.titleFontFamily || 'inherit' }}>{renderEditable(config.title, 'quoteTitle')}</div>
                                     {config.showNotes && quoteData.notes && (
                                         <div style={{ marginTop: '4px', fontSize: '8.5pt', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
-                                            {quoteData.notes}
+                                            {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                         </div>
                                     )}
                                 </div>
@@ -255,9 +297,11 @@ const ClassicTheme = ({
                     )}
 
                     {/* Items Table */}
+                    {showSection('items') && (
                     <div style={{ flex: 1 }}>
                         {renderTable(chunk, pageIndex * itemsPerPage)}
                     </div>
+                    )}
 
                     {/* Totals & Notes - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
@@ -277,13 +321,13 @@ const ClassicTheme = ({
                                             </div>
                                         </div>
                                     )}
-                                    {config.showTerms && (
+                                    {showSection('notes') && config.showTerms && (
                                         <div style={{ border: '1px solid #000' }}>
                                             <div style={{ background: '#e0e0e0', padding: '3px 6px', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8.5pt' }}>
                                                 {t.deliveryConditions}
                                             </div>
                                             <div style={{ padding: '6px', fontSize: '8.5pt', whiteSpace: 'pre-wrap' }}>
-                                                {quoteData.deliveryTerms}
+                                                {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}
                                             </div>
                                         </div>
                                     )}
@@ -321,7 +365,7 @@ const ClassicTheme = ({
                             </div>
 
                             {/* Signatures */}
-                            {config.showSignatures && (
+                            {showSection('signatures') && config.showSignatures && (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px', pageBreakInside: 'avoid' }}>
                                     <div style={{ border: '1px solid #000', height: '100px', position: 'relative' }}>
                                         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#e0e0e0', padding: '3px', textAlign: 'center', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8.5pt' }}>
@@ -358,17 +402,19 @@ const ClassicTheme = ({
                             )}
 
                             {/* Footer - Only Last Page */}
+                            {showSection('footer') && (
                             <div className="footer" style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ccc', textAlign: 'center', color: config.footerColor || '#444' }}>
                                 <div style={{ marginBottom: '3px' }}>{companyData.address}</div>
                                 <div style={{ marginBottom: '5px' }}>
                                     {companyData.phone} | {companyData.email} | {companyData.website}
                                 </div>
                                 <div style={{ marginTop: '10px' }}>
-                                    <div style={{ marginBottom: '3px' }}>Teşekkür Ederiz</div>
-                                    <div style={{ marginBottom: '3px' }}>Saygılarımızla, {companyData.name}</div>
+                                    <div style={{ marginBottom: '3px' }}>{t.thankYou}</div>
+                                    <div style={{ marginBottom: '3px' }}>{t.regards}, {companyData.name}</div>
                                     <div style={{ fontWeight: 'bold', color: '#000' }}>{companyData.name} - {config.title}</div>
                                 </div>
                             </div>
+                            )}
                         </div>
                     )}
                 </div>

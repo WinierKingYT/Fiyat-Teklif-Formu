@@ -1,16 +1,8 @@
-import React from "react";
+﻿import React from "react";
 import { Save, Settings2, Check } from "lucide-react";
+import { useTranslation } from "../../hooks/useTranslation";
+import { useQuoteData } from "../../context/QuoteContext";
 
-const appColors = [
-  { id: "blue", name: "Okyanus Mavisi", color: "#2563eb" },
-  { id: "emerald", name: "Zümrüt Yeşili", color: "#10b981" },
-  { id: "violet", name: "Asil Mor", color: "#8b5cf6" },
-  { id: "amber", name: "Gün Batımı", color: "#f59e0b" },
-  { id: "rose", name: "Gül Kurusu", color: "#f43f5e" },
-  { id: "slate", name: "Kurumsal Gri", color: "#475569" },
-];
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SetterFn = (value: any) => void;
 
 interface GeneralSettingsProps {
@@ -41,6 +33,16 @@ const GeneralSettings = ({
   appColor, setAppColor,
   onSave,
 }: GeneralSettingsProps) => {
+  const { quoteData } = useQuoteData();
+  const { t } = useTranslation(quoteData?.language);
+  const appColors = [
+    { id: "blue", name: t('oceanBlue'), color: "#2563eb" },
+    { id: "emerald", name: t('emeraldGreen'), color: "#10b981" },
+    { id: "violet", name: t('royalPurple'), color: "#8b5cf6" },
+    { id: "amber", name: t('sunset'), color: "#f59e0b" },
+    { id: "rose", name: t('rosePink'), color: "#f43f5e" },
+    { id: "slate", name: t('corporateGray'), color: "#475569" },
+  ];
   return (
     <div className="card">
       <div className="card-header">
@@ -48,15 +50,15 @@ const GeneralSettings = ({
           <div className="w-6 h-6 rounded-[var(--radius-sm)] bg-[var(--color-primary-muted)] flex items-center justify-center">
             <Settings2 size={13} className="text-[var(--color-primary)]" />
           </div>
-          <span className="card-title">Görünüm Ayarları</span>
+          <span className="card-title">{t('appearanceSettings')}</span>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={onSave}>
-          <Save size={14} /> Ayarları Kaydet
+        <button type="button" className="btn btn-primary btn-sm" onClick={onSave}>
+          <Save size={14} /> {t('saveSettings')}
         </button>
       </div>
       <div className="card-body space-y-6">
         <div className="form-group">
-          <label className="form-label">Tema Modu</label>
+          <label className="form-label">{t('themeMode')}</label>
           <div className="flex gap-3">
             {["light", "dark"].map((mode) => (
               <label
@@ -73,12 +75,10 @@ const GeneralSettings = ({
                 />
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-[var(--color-text)] capitalize">
-                    {mode} Mod
+                    {mode === "light" ? t('lightMode') : t('darkMode')}
                   </span>
                   <span className="text-xs text-[var(--color-text-muted)]">
-                    {mode === "light"
-                      ? "Standart beyaz görünüm"
-                      : "Göz yormayan koyu görünüm"}
+                    {mode === "light" ? t('lightDesc') : t('darkDesc')}
                   </span>
                 </div>
               </label>
@@ -86,10 +86,10 @@ const GeneralSettings = ({
           </div>
         </div>
         <div className="form-group">
-          <label className="form-label">Uygulama Rengi</label>
+          <label className="form-label">{t('appColor')}</label>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
             {appColors.map((color) => (
-              <button
+              <button type="button"
                 key={color.id}
                 onClick={() => setAppColor(color.id as 'blue' | 'purple' | 'green' | 'red' | 'orange')}
                 className={`flex items-center gap-3 p-2.5 rounded-[var(--radius)] border transition-all ${appColor === color.id ? "bg-[var(--color-primary-muted)] border-[var(--color-primary)]" : "bg-[var(--color-bg-card)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]"}`}
@@ -110,11 +110,11 @@ const GeneralSettings = ({
           </div>
         </div>
         <div className="form-group">
-          <label className="form-label">Arayüz Tasarımı</label>
+          <label className="form-label">{t('interfaceDesign')}</label>
           <div className="flex gap-3">
             {[
-              { id: "modern", label: "Modern Dashboard", desc: "Yeni, cam efektli ve panelli görünüm" },
-              { id: "classic", label: "Klasik Görünüm", desc: "Basit, tek sütunlu standart görünüm" },
+              { id: "modern", label: t('modernDashboard'), desc: t('modernDashboardDesc') },
+              { id: "classic", label: t('classicView'), desc: t('classicViewDesc') },
             ].map((layout) => (
               <label
                 key={layout.id}
@@ -141,11 +141,11 @@ const GeneralSettings = ({
           </div>
         </div>
         <div className="form-group">
-          <label className="form-label">Cihaz Görünümü</label>
+          <label className="form-label">{t('deviceView')}</label>
           <div className="flex gap-3">
             {[
-              { id: "desktop", label: "Bilgisayar (Masaüstü)", desc: "Geniş ekran görünümü" },
-              { id: "mobile", label: "Mobil", desc: "Dar ekran görünümü" },
+              { id: "desktop", label: t('desktop'), desc: t('desktopDesc') },
+              { id: "mobile", label: t('mobile'), desc: t('mobileDesc') },
             ].map((mode) => (
               <label
                 key={mode.id}
@@ -172,7 +172,7 @@ const GeneralSettings = ({
           </div>
         </div>
         <div className="form-group">
-          <label className="form-label">Performans</label>
+          <label className="form-label">{t('performance')}</label>
           <label className="flex items-center gap-3 p-3 border border-[var(--color-border)] rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer">
             <div className="form-switch">
               <input
@@ -184,17 +184,16 @@ const GeneralSettings = ({
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-[var(--color-text)]">
-                Performans Modu (Hafif Mod)
+                {t('performanceModeLabel')}
               </span>
               <span className="text-xs text-[var(--color-text-muted)]">
-                Daha hızlı çalışması için animasyonları ve geçiş
-                efektlerini kapatır. Eski cihazlar için önerilir.
+                {t('performanceModeDesc')}
               </span>
             </div>
           </label>
         </div>
         <div className="form-group">
-          <label className="form-label">Görünüm Yoğunluğu</label>
+          <label className="form-label">{t('viewDensity')}</label>
           <label className="flex items-center gap-3 p-3 border border-[var(--color-border)] rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer">
             <div className="form-switch">
               <input
@@ -206,27 +205,26 @@ const GeneralSettings = ({
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-[var(--color-text)]">
-                Kompakt Mod (Sıkışık Görünüm)
+                {t('compactModeLabel')}
               </span>
               <span className="text-xs text-[var(--color-text-muted)]">
-                Daha fazla veriyi ekrana sığdırmak için boşlukları
-                azaltır.
+                {t('compactModeDesc')}
               </span>
             </div>
           </label>
         </div>
         <div className="form-group">
-          <label className="form-label">Uygulama Yazı Boyutu</label>
+          <label className="form-label">{t('appFontSize')}</label>
           <div className="p-4 border border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--color-bg-muted)]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-[var(--color-text-muted)]">
-                Küçük
+                {t('small')}
               </span>
               <span className="text-sm font-bold text-[var(--color-primary)]">
                 {appFontSize}px
               </span>
               <span className="text-xs font-medium text-[var(--color-text-muted)]">
-                Büyük
+                {t('large')}
               </span>
             </div>
             <input
@@ -238,7 +236,7 @@ const GeneralSettings = ({
               onChange={(e) => setAppFontSize(parseInt(e.target.value))}
             />
             <p className="text-xs text-[var(--color-text-muted)] mt-2 text-center">
-              Uygulama genelindeki metin boyutunu ayarlar.
+              {t('fontSizeDesc')}
             </p>
           </div>
         </div>

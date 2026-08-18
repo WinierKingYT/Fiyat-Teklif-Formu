@@ -34,20 +34,28 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import Logger from "../utils/logger";
-import { useQuote } from "../context/QuoteContext";
+import { useQuoteData } from "../context/QuoteContext";
+import type { QuoteItem } from "../context/quote/types";
 import { useTranslation } from "../hooks/useTranslation";
 import { sanitizeInput } from "../utils/sanitize";
 import { evaluateMathExpression } from "../utils/smartCalc";
 import { formatCurrency } from "../utils/calculations";
 import toast from "react-hot-toast";
 
+interface ItemsTableProps {
+  items: QuoteItem[];
+  onItemsChange: (items: QuoteItem[] | ((prev: QuoteItem[]) => QuoteItem[])) => void;
+  currency?: string;
+  onAddProduct?: () => void;
+}
+
 const ItemsTable = ({
   items,
   onItemsChange,
   currency = "TRY",
   onAddProduct,
-}) => {
-  const { quoteData, db } = useQuote();
+}: ItemsTableProps) => {
+  const { quoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
   const fileInputRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
@@ -62,13 +70,13 @@ const ItemsTable = ({
 
   const getRowErrors = useCallback((item: any) => {
     const errs: Record<string, string> = {};
-    if (!item.name) errs.name = 'Ürün adı gerekli';
+    if (!item.name) errs.name = t('productNameRequired');
     if (!item.quantity || parseFloat(item.quantity) <= 0) errs.quantity = 'Miktar > 0 olmalı';
     if (item.price === undefined || item.price === '' || parseFloat(item.price) < 0) errs.price = 'Geçersiz fiyat';
     const tax = parseFloat(item.taxRate);
     if (isNaN(tax) || tax < 0 || tax > 100) errs.taxRate = 'KDV 0-100 arası';
     return errs;
-  }, []);
+  }, [t]);
 
   const handleRowBlur = useCallback((itemId: string, field: string) => {
     setTouchedRows(prev => ({
@@ -83,6 +91,12 @@ const ItemsTable = ({
     if (rowTouched?.[field] && rowErrors[field]) return 'form-control field-error text-sm';
     return 'form-control text-sm';
   }, [touchedRows, getRowErrors]);
+
+  const allRowErrors = useMemo(() => {
+    const map = new Map<string, Record<string, string>>();
+    for (const item of items) map.set(item.id, getRowErrors(item));
+    return map;
+  }, [items, getRowErrors]);
 
   const hasErrors = useMemo(() => {
     return items.some((item: any) => Object.keys(getRowErrors(item)).length > 0);
@@ -109,40 +123,6 @@ const ItemsTable = ({
     }, 250);
     return () => clearTimeout(timer);
   }, [searchQuery, db]);
-  const addProductFromSearch = useCallback((product) => {
-    const newItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: product.name,
-      description: product.description || "",
-      quantity: 1,
-      unit: product.unit || "Adet",
-      price: product.price || 0,
-      taxRate: product.taxRate || 20,
-      discountRate: 0,
-      total: product.price || 0,
-      image: product.image,
-    };
-    onItemsChange([...items, newItem]);
-    addToRecentProducts(product);
-    setSearchQuery("");
-    setSearchResults([]);
-    searchRef.current?.focus();
-  }, [items, onItemsChange]);
-  const handleSearchKeyDown = (e) => {
-    if (!searchResults.length) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSearchIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSearchIndex((prev) => Math.max(prev - 1, 0));
-    } else if (e.key === "Enter" && searchIndex >= 0) {
-      e.preventDefault();
-      addProductFromSearch(searchResults[searchIndex]);
-    } else if (e.key === "Escape") {
-      setShowSearch(false);
-    }
-  };
   const [recentProducts, setRecentProducts] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem("recentProducts");
@@ -159,6 +139,40 @@ const ItemsTable = ({
       return updated;
     });
   }, []);
+  const addProductFromSearch = useCallback((product) => {
+    const newItem = {
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: product.name,
+      description: product.description || "",
+      quantity: 1,
+      unit: product.unit || "Adet",
+      price: product.price || 0,
+      taxRate: product.taxRate || 20,
+      discountRate: 0,
+      total: product.price || 0,
+      image: product.image,
+    };
+    onItemsChange(prev => [...prev, newItem]);
+    addToRecentProducts(product);
+    setSearchQuery("");
+    setSearchResults([]);
+    searchRef.current?.focus();
+  }, [onItemsChange, addToRecentProducts]);
+  const handleSearchKeyDown = (e) => {
+    if (!searchResults.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSearchIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSearchIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === "Enter" && searchIndex >= 0) {
+      e.preventDefault();
+      addProductFromSearch(searchResults[searchIndex]);
+    } else if (e.key === "Escape") {
+      setShowSearch(false);
+    }
+  };
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const toggleSelectItem = useCallback((index: number) => {
     setSelectedItems((prev) => {
@@ -176,74 +190,83 @@ const ItemsTable = ({
     }
   }, [items, selectedItems.size]);
   const deleteSelected = useCallback(() => {
-    const newItems = items.filter((_, i) => !selectedItems.has(i));
-    onItemsChange(newItems);
+    onItemsChange(prev => prev.filter((_, i) => !selectedItems.has(i)));
     setSelectedItems(new Set());
-  }, [selectedItems, items, onItemsChange]);
+  }, [selectedItems, onItemsChange]);
   const duplicateSelected = useCallback(() => {
-    const newItems = [...items];
-    const duplicates = Array.from(selectedItems)
-      .sort((a, b) => b - a)
-      .map((i) => ({
-        ...newItems[i],
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      }));
-    const result = [...newItems, ...duplicates];
-    onItemsChange(result);
+    onItemsChange(prev => {
+      const duplicates = Array.from(selectedItems)
+        .sort((a, b) => b - a)
+        .map((i) => ({
+          ...(prev[i] as QuoteItem),
+          id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        }));
+      return [...prev, ...duplicates];
+    });
     setSelectedItems(new Set());
-  }, [selectedItems, items, onItemsChange]);
+  }, [selectedItems, onItemsChange]);
   const moveSelectedUp = useCallback(() => {
     if (selectedItems.size === 0) return;
-    const newItems = [...items];
-    const indices = Array.from(selectedItems).sort((a, b) => a - b);
-    if (indices[0] === 0) return;
-    for (const i of indices) {
-      [newItems[i - 1], newItems[i]] = [newItems[i], newItems[i - 1]];
-    }
-    onItemsChange(newItems);
-    setSelectedItems(new Set(indices.map((i) => i - 1)));
-  }, [selectedItems, items, onItemsChange]);
+    onItemsChange(prev => {
+      const newItems = [...prev];
+      const indices = Array.from(selectedItems).sort((a, b) => a - b);
+      if (indices[0] === 0) return prev;
+      for (const i of indices) {
+        [newItems[i - 1], newItems[i]] = [newItems[i], newItems[i - 1]];
+      }
+      return newItems;
+    });
+    setSelectedItems(new Set(Array.from(selectedItems).map((i) => i - 1)));
+  }, [selectedItems, onItemsChange]);
   const moveSelectedDown = useCallback(() => {
     if (selectedItems.size === 0) return;
-    const newItems = [...items];
-    const indices = Array.from(selectedItems).sort((a, b) => b - a);
-    if (indices[0] === items.length - 1) return;
-    for (const i of indices) {
-      [newItems[i], newItems[i + 1]] = [newItems[i + 1], newItems[i]];
-    }
-    onItemsChange(newItems);
-    setSelectedItems(new Set(indices.map((i) => i + 1)));
-  }, [selectedItems, items, onItemsChange]);
+    onItemsChange(prev => {
+      const newItems = [...prev];
+      const indices = Array.from(selectedItems).sort((a, b) => b - a);
+      if (indices[0] === prev.length - 1) return prev;
+      for (const i of indices) {
+        [newItems[i], newItems[i + 1]] = [newItems[i + 1], newItems[i]];
+      }
+      return newItems;
+    });
+    setSelectedItems(new Set(Array.from(selectedItems).map((i) => i + 1)));
+  }, [selectedItems, onItemsChange]);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: "", message: "", onConfirm: () => {} });
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const handleItemChange = useCallback((index, field, value) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    onItemsChange(newItems);
-  }, [items, onItemsChange]);
+    onItemsChange(prev => {
+      const newItems = [...prev];
+      newItems[index] = { ...newItems[index], [field]: value };
+      return newItems;
+    });
+  }, [onItemsChange]);
   const removeItem = useCallback((index) => {
-    onItemsChange(items.filter((_, i) => i !== index));
-  }, [items, onItemsChange]);
+    onItemsChange(prev => prev.filter((_, i) => i !== index));
+  }, [onItemsChange]);
   const duplicateItem = useCallback((index) => {
-    const duplicate = {
-      ...items[index],
-      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    };
-    const newItems = [...items];
-    newItems.splice(index + 1, 0, duplicate);
-    onItemsChange(newItems);
-  }, [items, onItemsChange]);
+    onItemsChange(prev => {
+      const duplicate = {
+        ...prev[index],
+        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      };
+      const newItems = [...prev];
+      newItems.splice(index + 1, 0, duplicate);
+      return newItems;
+    });
+  }, [onItemsChange]);
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
-      const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
-      onItemsChange(arrayMove(items, oldIndex, newIndex));
+      onItemsChange(prev => {
+        const oldIndex = prev.findIndex((item) => item.id === active.id);
+        const newIndex = prev.findIndex((item) => item.id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
     }
-  }, [items, onItemsChange]);
+  }, [onItemsChange]);
   const addNewItem = useCallback(() => {
     const newItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -255,10 +278,10 @@ const ItemsTable = ({
       taxRate: 20,
       discountRate: 0,
       total: 0,
-      image: null,
+      image: undefined,
     };
-    onItemsChange([...items, newItem]);
-  }, [items, onItemsChange]);
+    onItemsChange(prev => [...prev, newItem]);
+  }, [onItemsChange]);
   const handleExcelUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -289,11 +312,11 @@ const ItemsTable = ({
           });
         }
         if (newItems.length > 0) {
-          onItemsChange([...items, ...newItems]);
-          toast.success(`${newItems.length} ürün eklendi`);
+          onItemsChange(prev => [...prev, ...newItems]);
+          toast.success(t('excelItemsAdded').replace('{count}', String(newItems.length)));
         }
       } catch (err) {
-        toast.error("Excel dosyası okunamadı");
+        toast.error(t('excelReadErrorItems'));
       }
     };
     reader.readAsArrayBuffer(file);
@@ -334,24 +357,24 @@ const ItemsTable = ({
   const contextMenuItems = useMemo(() => {
     if (contextMenu.index < 0) return [];
     return [
-      { icon: <Package size={13} />, label: "Ürün olarak kaydet", onClick: async () => {
+      { icon: <Package size={13} />, label: t('saveAsProduct'), onClick: async () => {
         const item = items[contextMenu.index];
-        if (!item?.name) { toast.error("Ürün adı gerekli"); return; }
+        if (!item?.name) { toast.error(t('productNameRequired')); return; }
         try {
-          await db.add("products", { id: `prod-${Date.now()}`, name: item.name, description: item.description || "", price: parseFloat(item.price) || 0, taxRate: parseFloat(item.taxRate) || 20, unit: item.unit || "Adet", image: item.image || null, createdAt: new Date().toISOString() });
-          toast.success("Ürün kataloğa kaydedildi");
+          await db.add("products", { id: `prod-${Date.now()}`, name: item.name, description: item.description || "", price: parseFloat(String(item.price)) || 0, taxRate: parseFloat(String(item.taxRate)) || 20, unit: item.unit || "Adet", image: item.image || null, createdAt: new Date().toISOString() });
+          toast.success(t('productSavedToCatalog'));
         } catch (err) { Logger.error("Error saving product", err); }
       }},
-      { icon: <AlertCircle size={13} />, label: "Doğrulama durumu", onClick: () => {
+      { icon: <AlertCircle size={13} />, label: t('validationStatus'), onClick: () => {
         const item = items[contextMenu.index];
         const errs = getRowErrors(item);
-        if (Object.keys(errs).length === 0) toast.success("Bu satırda hata yok");
-        else toast.error("Hatalar: " + Object.values(errs).join(", "));
+        if (Object.keys(errs).length === 0) toast.success(t('noRowErrors'));
+        else toast.error(t('rowErrors').replace('{errors}', Object.values(errs).join(", ")));
       }},
       { separator: true, label: "", onClick: () => {} },
-      { icon: <Trash size={13} />, label: "Satırı sil", onClick: () => removeItem(contextMenu.index) },
+      { icon: <Trash size={13} />, label: t('deleteRow'), onClick: () => removeItem(contextMenu.index) },
     ];
-  }, [contextMenu.index, items, db, getRowErrors, removeItem]);
+  }, [contextMenu.index, items, db, getRowErrors, removeItem, t]);
   const formatItemCurrency = useCallback((amount) => formatCurrency(amount, currency), [currency]);
   return (
     <div className="space-y-3">
@@ -365,40 +388,40 @@ const ItemsTable = ({
           </h3>
           {hasErrors && (
             <span className="flex items-center gap-1 text-xs text-[var(--color-error)]">
-              <AlertCircle size={12} /> Hatalar var
+              <AlertCircle size={12} /> {t('errorsExist')}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {selectedItems.size > 0 && (
             <div className="flex items-center gap-1.5 bg-[var(--color-primary-muted)] px-2 py-1 rounded-lg text-xs">
-              <span className="font-medium text-[var(--color-primary)]">{selectedItems.size} seçili</span>
-              <button onClick={moveSelectedUp} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Yukarı taşı"><ArrowUp size={12} /></button>
-              <button onClick={moveSelectedDown} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Aşağı taşı"><ArrowDown size={12} /></button>
-              <button onClick={duplicateSelected} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Çoğalt"><Package size={12} /></button>
-              <button onClick={deleteSelected} className="p-1 hover:bg-[var(--color-error-muted)] rounded text-[var(--color-error)]" title="Sil"><Trash size={12} /></button>
-              <button onClick={() => setSelectedItems(new Set())} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title="Seçimi kaldır"><X size={12} /></button>
+              <span className="font-medium text-[var(--color-primary)]">{selectedItems.size} {t('selected')}</span>
+              <button type="button" onClick={moveSelectedUp} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveUp')} aria-label={t('moveUp')}><ArrowUp size={12} /></button>
+              <button type="button" onClick={moveSelectedDown} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveDown')} aria-label={t('moveDown')}><ArrowDown size={12} /></button>
+              <button type="button" onClick={duplicateSelected} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('duplicateRow')} aria-label={t('duplicateRow')}><Package size={12} /></button>
+              <button type="button" onClick={deleteSelected} className="p-1 hover:bg-[var(--color-error-muted)] rounded text-[var(--color-error)]" title={t('delete')} aria-label={t('delete')}><Trash size={12} /></button>
+              <button type="button" onClick={() => setSelectedItems(new Set())} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('clearSelection')} aria-label={t('clearSelection')}><X size={12} /></button>
             </div>
           )}
           <div className="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden">
-            <button onClick={selectAll} className="p-1.5 hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]" title={selectedItems.size === items.length ? "Tüm seçimleri kaldır" : "Tümünü seç"}>
+            <button type="button" onClick={selectAll} className="p-1.5 hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]" title={selectedItems.size === items.length ? t('deselectAll') : t('selectAllItems')} aria-label={selectedItems.size === items.length ? t('deselectAll') : t('selectAllItems')}>
               {selectedItems.size === items.length && items.length > 0 ? <CheckSquare size={14} /> : <Square size={14} />}
             </button>
           </div>
           <div className="flex border border-[var(--color-border)] rounded-lg overflow-hidden">
-            <button onClick={() => setViewMode("table")} className={`p-1.5 ${viewMode === "table" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title="Tablo görünümü"><Table size={14} /></button>
-            <button onClick={() => setViewMode("card")} className={`p-1.5 ${viewMode === "card" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title="Kart görünümü"><Grid3X3 size={14} /></button>
+            <button type="button" onClick={() => setViewMode("table")} className={`p-1.5 ${viewMode === "table" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title={t('tableViewMode')} aria-label={t('tableViewMode')}><Table size={14} /></button>
+            <button type="button" onClick={() => setViewMode("card")} className={`p-1.5 ${viewMode === "card" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title={t('cardViewMode')} aria-label={t('cardViewMode')}><Grid3X3 size={14} /></button>
           </div>
-          <label className="btn btn-outline btn-sm cursor-pointer" title="Excel'den içe aktar">
+          <label className="btn btn-outline btn-sm cursor-pointer" title={t('importFromExcel')}>
             <Upload size={13} /> Excel
             <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcelUpload} />
           </label>
           {onAddProduct && (
-            <button onClick={onAddProduct} className="btn btn-outline btn-sm" title="Ürün kataloğundan ekle">
-              <Package size={13} /> {t("addFromCatalog") || "Katalog"}
+            <button type="button" onClick={onAddProduct} className="btn btn-outline btn-sm" title={t('addFromCatalogItems')}>
+              <Package size={13} /> {t('addFromCatalogItems')}
             </button>
           )}
-          <button onClick={addNewItem} className="btn btn-primary btn-sm">
+          <button type="button" onClick={addNewItem} className="btn btn-primary btn-sm">
             <Plus size={13} /> {t("addItem")}
           </button>
         </div>
@@ -409,14 +432,15 @@ const ItemsTable = ({
           <input
             type="text"
             className="form-control pl-9"
-            placeholder="Ürün ara... (en az 2 karakter)"
+            placeholder={t('searchProducts')}
+            aria-label={t('searchProducts')}
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
             onFocus={() => searchQuery.length >= 2 && setShowSearch(true)}
             onKeyDown={handleSearchKeyDown}
           />
           {searchQuery && (
-            <button onClick={() => { setSearchQuery(""); setShowSearch(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+            <button type="button" onClick={() => { setSearchQuery(""); setShowSearch(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label={t('clearSearch')}>
               <X size={14} />
             </button>
           )}
@@ -439,16 +463,16 @@ const ItemsTable = ({
                 </button>
               ))
             ) : (
-              <div className="px-3.5 py-3 text-sm text-[var(--color-text-muted)]">Sonuç bulunamadı</div>
+              <div className="px-3.5 py-3 text-sm text-[var(--color-text-muted)]">{t('noResultsFound')}</div>
             )}
           </div>
         )}
       </div>
       {recentProducts.length > 0 && items.length === 0 && (
         <div className="text-xs text-[var(--color-text-muted)]">
-          <span className="font-medium">Son ürünler:</span>{" "}
+          <span className="font-medium">{t('recentProducts')}</span>{" "}
           {recentProducts.map((p, i) => (
-            <button key={p.id || i} onClick={() => addProductFromSearch(p)} className="hover:text-[var(--color-primary)] transition-colors">
+            <button type="button" key={p.id || i} onClick={() => addProductFromSearch(p)} className="hover:text-[var(--color-primary)] transition-colors">
               {p.name}{i < recentProducts.length - 1 ? ", " : ""}
             </button>
           ))}
@@ -488,7 +512,7 @@ const ItemsTable = ({
                       t={t}
                       getFieldClass={getFieldClass}
                       handleRowBlur={handleRowBlur}
-                      rowErrors={getRowErrors(item)}
+                      rowErrors={allRowErrors.get(item.id)}
                       selected={selectedItems.has(index)}
                       toggleSelectItem={toggleSelectItem}
                       onContextMenu={(e) => handleContextMenu(e, index)}
@@ -511,7 +535,7 @@ const ItemsTable = ({
                   t={t}
                   getFieldClass={getFieldClass}
                   handleRowBlur={handleRowBlur}
-                  rowErrors={getRowErrors(item)}
+                  rowErrors={allRowErrors.get(item.id)}
                   selected={selectedItems.has(index)}
                   toggleSelectItem={toggleSelectItem}
                 />
@@ -524,7 +548,7 @@ const ItemsTable = ({
         <div className="text-center py-12 text-[var(--color-text-muted)]">
           <Package size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">{t("noItems")}</p>
-          <p className="text-xs mt-1">Excel'den içe aktarın veya ürün ekleyin</p>
+          <p className="text-xs mt-1">{t('noItemsHintItems')}</p>
         </div>
       )}
       <ContextMenu
@@ -536,4 +560,4 @@ const ItemsTable = ({
     </div>
   );
 };
-export default ItemsTable;
+export default React.memo(ItemsTable);

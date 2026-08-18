@@ -71,6 +71,7 @@ const SortableRowCard = memo(
               type="text"
               className={getFieldClass(item.id, "name", item) + " mb-1.5 font-semibold"}
               placeholder={t("productName")}
+              aria-label={t("productName")}
               value={item.name}
               onChange={(e) => handleItemChange(index, "name", e.target.value)}
               onBlur={() => handleRowBlur(item.id, "name")}
@@ -79,6 +80,7 @@ const SortableRowCard = memo(
             <textarea
               className="form-control text-xs resize-none"
               placeholder={t("description")}
+              aria-label={t("description")}
               rows={2}
               value={item.description}
               onChange={(e) =>
@@ -91,12 +93,13 @@ const SortableRowCard = memo(
           {" "}
           <div>
             {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
+            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-qty-${index}`}>
               {t("quantity")}
             </label>{" "}
             <div className="flex gap-1">
               {" "}
           <input
+                id={`card-qty-${index}`}
                 type="text"
                 className={(getFieldClass(item.id, "quantity", item)) + " flex-1"}
                 value={item.quantity}
@@ -122,10 +125,11 @@ const SortableRowCard = memo(
           </div>{" "}
           <div>
             {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
+            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-price-${index}`}>
               {t("unitPrice")}
             </label>{" "}
             <input
+              id={`card-price-${index}`}
               type="text"
               className={getFieldClass(item.id, "price", item)}
               value={item.price}
@@ -139,10 +143,11 @@ const SortableRowCard = memo(
           {" "}
           <div>
             {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
+            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-tax-${index}`}>
               {t("vatRate")}
             </label>{" "}
             <input
+              id={`card-tax-${index}`}
               type="text"
               className={getFieldClass(item.id, "taxRate", item)}
               value={item.taxRate}
@@ -155,10 +160,11 @@ const SortableRowCard = memo(
           </div>{" "}
           <div>
             {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block">
+            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-disc-${index}`}>
               {t("discountRate")}
             </label>{" "}
             <input
+              id={`card-disc-${index}`}
               type="text"
               className="form-control text-sm"
               value={item.discountRate || 0}
@@ -185,7 +191,9 @@ const SortableRowCard = memo(
             type="button"
             onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
             className={`p-1.5 rounded-lg transition-colors ${selected ? 'text-[var(--color-primary)] bg-[var(--color-primary-muted)]' : 'text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100'}`}
-            title={selected ? 'Seçimi kaldır' : 'Seç'}
+            title={selected ? t('selectItem') + ' (seçili)' : t('selectItem')}
+            aria-label={selected ? t('selectItem') + ' (seçili)' : t('selectItem')}
+            aria-pressed={selected}
           >
             {selected ? <CheckSquare size={14} /> : <Square size={14} />}
           </button>
@@ -193,7 +201,8 @@ const SortableRowCard = memo(
             type="button"
             className="btn btn-ghost btn-sm p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={() => duplicateItem(index)}
-            title="Çoğalt"
+            title={t('duplicateItem')}
+            aria-label={t('duplicateItem')}
           >
             <Copy size={14} />
           </button>

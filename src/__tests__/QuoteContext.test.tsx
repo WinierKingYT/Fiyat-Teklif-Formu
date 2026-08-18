@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, renderHook } from '@testing-library/react';
 import { screen, waitFor } from '@testing-library/dom';
@@ -45,8 +45,8 @@ const TestComponent = () => {
             <div data-testid="tab-count">{tabs.length}</div>
             <div data-testid="quote-title">{tabs.find(t => t.id === activeTabId)?.title}</div>
             <div data-testid="quote-date">{activeTab?.data?.quoteData?.date}</div>
-            <button onClick={addTab}>Add Tab</button>
-            <button onClick={() => updateQuoteData('validUntilDays', '20')}>Update Days</button>
+            <button type="button" onClick={addTab}>Add Tab</button>
+            <button type="button" onClick={() => updateQuoteData('validUntilDays', '20')}>Update Days</button>
         </div>
     );
 };

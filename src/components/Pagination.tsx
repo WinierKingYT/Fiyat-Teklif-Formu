@@ -22,7 +22,7 @@ const Pagination = React.memo(({ currentPage, totalPages, totalItems, pageSize, 
                 {startItem}-{endItem} / {totalItems}
             </span>
             <div className="flex items-center gap-1">
-                <button
+                <button type="button"
                     className="p-1.5 rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-30 disabled:cursor-not-allowed text-[var(--color-text-muted)]"
                     disabled={currentPage <= 1}
                     onClick={() => onPageChange(currentPage - 1)}
@@ -32,7 +32,7 @@ const Pagination = React.memo(({ currentPage, totalPages, totalItems, pageSize, 
                 </button>
                 {showPageNumbers && totalPages <= 7 ? (
                     Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
+                        <button type="button"
                             key={page}
                             className={`w-7 h-7 rounded text-xs font-medium transition-colors ${page === currentPage
                                 ? 'bg-[var(--color-primary)] text-white'
@@ -46,7 +46,7 @@ const Pagination = React.memo(({ currentPage, totalPages, totalItems, pageSize, 
                 ) : showPageNumbers ? (
                     <>
                         {[1, 2, totalPages - 1, totalPages].filter((p, i, a) => a.indexOf(p) === i).map(page => (
-                            <button
+                            <button type="button"
                                 key={page}
                                 className={`w-7 h-7 rounded text-xs font-medium transition-colors ${page === currentPage
                                     ? 'bg-[var(--color-primary)] text-white'
@@ -62,7 +62,7 @@ const Pagination = React.memo(({ currentPage, totalPages, totalItems, pageSize, 
                         )}
                     </>
                 ) : null}
-                <button
+                <button type="button"
                     className="p-1.5 rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-30 disabled:cursor-not-allowed text-[var(--color-text-muted)]"
                     disabled={currentPage >= totalPages}
                     onClick={() => onPageChange(currentPage + 1)}

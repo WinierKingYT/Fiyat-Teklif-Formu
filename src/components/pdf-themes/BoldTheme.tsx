@@ -1,12 +1,11 @@
 import React from 'react';
 import { useMemo } from 'react';
 
-const ModernTheme = ({
+const BoldTheme = ({
     id,
     containerStyles,
     config,
     color,
-    activeLayout,
     companyData,
     quoteData,
     customerData,
@@ -22,7 +21,8 @@ const ModernTheme = ({
     total,
     currentLocale,
     hasLineItemDiscounts,
-    onEdit
+    onEdit,
+    activeLayout
 }) => {
     // Helper for editable fields
     const layoutMap = useMemo(() => {
@@ -49,103 +49,102 @@ const ModernTheme = ({
         );
     };
 
-    const modernStyles = useMemo(() => `
-        .modern-theme-container {
+    const boldStyles = useMemo(() => `
+        .bold-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
             line-height: ${config.bodyLineHeight || '1.4'};
             color: #000000 !important;
             background: var(--pdf-page-bg, #ffffff) !important;
             font-size: ${config.fontSize || 12}px;
             position: relative;
-            overflow: hidden;
-            border-radius: ${config.borderRadius || 6}px;
-            box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .modern-theme-container::before {
+        .bold-theme-container::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: ${color};
+            height: 12px;
+            background: linear-gradient(90deg, ${color} 0%, ${color} 70%, #000000 70%, #000000 100%);
         }
 
-        .modern-theme-container, .modern-theme-container * {
+        .bold-theme-container, .bold-theme-container * {
             box-sizing: border-box;
         }
-        
+
         /* HEADER */
-        .modern-theme-container .pdf-header {
+        .bold-theme-container .pdf-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 2em;
-            padding-bottom: 0;
+            padding-bottom: 1.2em;
+            border-bottom: 4px solid ${color};
             position: relative;
-            padding-top: 1em;
+            padding-top: 2.2em;
         }
-        
-        .modern-theme-container .header-left {
+
+        .bold-theme-container .header-left {
             flex: 1;
             padding-right: 2em;
             display: flex;
-            flex-direction: row; /* Changed to row for side-by-side logo */
+            flex-direction: row;
             align-items: center;
             gap: 1.5em;
         }
 
-        .modern-theme-container .company-logo {
+        .bold-theme-container .company-logo {
             flex-shrink: 0;
         }
 
-        .modern-theme-container .company-logo img {
-            max-height: 80px;
-            max-width: 150px;
+        .bold-theme-container .company-logo img {
+            max-height: 90px;
+            max-width: 160px;
             object-fit: contain;
         }
 
-        .modern-theme-container .company-info {
+        .bold-theme-container .company-info {
             flex: 1;
-            min-width: 0; /* Prevents flex item from overflowing */
+            min-width: 0;
         }
-        
-        .modern-theme-container .header-right {
-            flex: 0 0 300px;
+
+        .bold-theme-container .header-right {
+            flex: 0 0 320px;
             padding-left: 1.5em;
             text-align: right;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: flex-end;
-            border-left: 3px solid ${color}; /* Thick vertical line */
-            border-radius: 2px 0 0 2px;
         }
-        
-        .modern-theme-container .company-name {
-            word-wrap: break-word; /* Ensure long names wrap */
-            font-size: ${config.headerTitleFontSize || '1.4em'};
-            font-weight: ${config.headerTitleFontWeight || '800'};
+
+        .bold-theme-container .company-name {
+            word-wrap: break-word;
+            font-size: ${config.headerTitleFontSize || '1.5em'};
+            font-weight: ${config.headerTitleFontWeight || '900'};
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
         }
-        
-        .modern-theme-container .company-address {
+
+        .bold-theme-container .company-address {
             font-size: ${config.headerInfoFontSize || '0.8em'};
             color: #4b5563;
             line-height: 1.3;
         }
 
-        .modern-theme-container .quote-title {
+        .bold-theme-container .quote-title {
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: ${config.titleFontSize || '1.4em'};
-            font-weight: ${config.titleFontWeight || '800'};
+            letter-spacing: 0.08em;
+            font-size: ${config.titleFontSize || '1.6em'};
+            font-weight: ${config.titleFontWeight || '900'};
             font-family: ${config.titleFontFamily || 'inherit'};
+            color: ${color};
         }
-        
-        .modern-theme-container .quote-meta-grid {
+
+        .bold-theme-container .quote-meta-grid {
             display: grid;
             grid-template-columns: auto auto;
             gap: 0.5em 1em;
@@ -153,150 +152,116 @@ const ModernTheme = ({
             color: #4b5563;
         }
 
-        .modern-theme-container .quote-meta-label {
+        .bold-theme-container .quote-meta-label {
             color: #6b7280;
-            font-weight: ${config.quoteMetaLabelFontWeight || '500'};
+            font-weight: ${config.quoteMetaLabelFontWeight || '600'};
+            text-transform: uppercase;
+            font-size: 0.85em;
         }
 
-        .modern-theme-container .quote-meta-value {
-            font-weight: ${config.quoteMetaValueFontWeight || '600'};
+        .bold-theme-container .quote-meta-value {
+            font-weight: ${config.quoteMetaValueFontWeight || '800'};
             color: #000;
             font-size: ${config.quoteMetaValueFontSize || 'inherit'};
         }
-        
+
         /* CUSTOMER SECTION */
-        .modern-theme-container .customer-section {
+        .bold-theme-container .customer-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5em;
             margin-bottom: 2em;
         }
-        
-        .modern-theme-container .customer-box {
+
+        .bold-theme-container .customer-box {
             background: #f8fafc !important;
-            border-radius: 8px;
+            border-left: 6px solid ${color};
+            border-radius: 0 8px 8px 0;
             padding: 1.25em;
-            border: 1px solid #e2e8f0;
+            border-top: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        
-        .modern-theme-container .section-title {
+
+        .bold-theme-container .section-title {
             text-transform: uppercase;
-            font-size: ${config.customerTitleFontSize || '0.9em'};
-            font-weight: ${config.customerTitleFontWeight || '700'};
+            font-size: ${config.customerTitleFontSize || '0.85em'};
+            font-weight: ${config.customerTitleFontWeight || '800'};
+            letter-spacing: 0.06em;
+            color: ${color};
+            margin-bottom: 0.75em;
         }
 
-        /* Force light theme for PDF container - Stronger Selector */
-        [data-theme="dark"] .modern-theme-container,
-        .modern-theme-container {
+        [data-theme="dark"] .bold-theme-container,
+        .bold-theme-container {
             background-color: var(--pdf-page-bg, #ffffff) !important;
             color: #000000 !important;
         }
 
-        [data-theme="dark"] .modern-theme-container *,
-        .modern-theme-container * {
+        [data-theme="dark"] .bold-theme-container *,
+        .bold-theme-container * {
             border-color: #e2e8f0 !important;
         }
 
-        [data-theme="dark"] .modern-theme-container .customer-box,
-        [data-theme="dark"] .modern-theme-container .bottom-section,
-        .modern-theme-container .customer-box,
-        .modern-theme-container .bottom-section {
-            background-color: #f8fafc !important;
-            color: #000000 !important;
-            border: 1px solid #e2e8f0 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container .company-name,
-        [data-theme="dark"] .modern-theme-container .quote-title,
-        [data-theme="dark"] .modern-theme-container .section-title,
-        .modern-theme-container .company-name,
-        .modern-theme-container .quote-title,
-        .modern-theme-container .section-title {
-            color: ${color} !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container .quote-meta-value,
-        [data-theme="dark"] .modern-theme-container .info-value strong,
-        [data-theme="dark"] .modern-theme-container .summary-row,
-        .modern-theme-container .quote-meta-value,
-        .modern-theme-container .info-value strong,
-        .modern-theme-container .summary-row {
-            color: #000000 !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container .header-right,
-        .modern-theme-container .header-right {
-            border-left-color: ${color} !important;
-        }
-        
-        /* Ensure summary row text is dark */
-        .modern-theme-container .summary-row span {
-            color: #000000 !important;
-        }
-        .modern-theme-container .summary-row.discount span {
-            color: #ef4444 !important;
-        }
-        
-        .modern-theme-container .info-grid {
+        .bold-theme-container .info-grid {
             display: grid;
             gap: 0.5em;
         }
-        
-        .modern-theme-container .info-line {
+
+        .bold-theme-container .info-line {
             display: grid;
             grid-template-columns: 80px 1fr;
             font-size: 0.8em;
             align-items: baseline;
         }
-        
-        .modern-theme-container .info-label {
+
+        .bold-theme-container .info-label {
             color: #64748b;
-            font-weight: ${config.customerLabelFontWeight || '500'};
+            font-weight: ${config.customerLabelFontWeight || '600'};
             font-size: ${config.customerLabelFontSize || 'inherit'};
+            text-transform: uppercase;
+            font-size: 0.75em;
+            letter-spacing: 0.04em;
         }
-        
-        .modern-theme-container .info-value {
+
+        .bold-theme-container .info-value {
             color: #1e293b;
-            font-weight: ${config.customerValueFontWeight || '500'};
+            font-weight: ${config.customerValueFontWeight || '600'};
             font-size: ${config.customerValueFontSize || 'inherit'};
         }
-        
+
         /* TABLE */
-        .modern-theme-container .pdf-items-table {
+        .bold-theme-container .pdf-items-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
             margin-bottom: 2em;
+            border: 2px solid ${color};
+            border-radius: 8px;
+            overflow: hidden;
         }
-        
-        .modern-theme-container .pdf-items-table th {
+
+        .bold-theme-container .pdf-items-table thead {
+            background: ${color} !important;
+        }
+
+        .bold-theme-container .pdf-items-table th {
             padding: 0.75em 0.5em;
             text-align: left;
-            font-weight: ${config.tableHeaderFontWeight || '700'};
-            color: #94a3b8; /* Lighter gray for headers */
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '1.15em')} !important;
+            font-weight: ${config.tableHeaderFontWeight || '800'};
+            color: #ffffff !important;
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.9em')} !important;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            border-bottom: 1px solid ${config.tableBorderColor || '#e2e8f0'};
-        }
-        .modern-theme-container .pdf-items-table thead th:first-child { border-top-left-radius: 8px; }
-        .modern-theme-container .pdf-items-table thead th:last-child { border-top-right-radius: 8px; }
-        .modern-theme-container .pdf-items-table tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }
-        .modern-theme-container .pdf-items-table tbody tr:last-child td:last-child { border-bottom-right-radius: 8px; }
-        
-        .modern-theme-container .pdf-items-table thead {
-            background: ${config.tableHeaderBg || 'transparent'};
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        
-        .modern-theme-container .pdf-items-table td {
-            padding: 1em 0.5em;
-            border-bottom: 1px solid ${config.tableBorderColor || '#f1f5f9'};
+
+        .bold-theme-container .pdf-items-table td {
+            padding: 0.9em 0.5em;
+            border-bottom: 2px solid ${config.tableBorderColor || '#e2e8f0'};
             vertical-align: middle;
             font-size: ${config.tableBodyFontSize || 'inherit'};
             font-weight: ${config.tableBodyFontWeight || 'normal'};
@@ -304,21 +269,25 @@ const ModernTheme = ({
         }
 
         ${config.tableStriped ? `
-        .modern-theme-container .pdf-items-table tbody tr:nth-child(even) td {
+        .bold-theme-container .pdf-items-table tbody tr:nth-child(even) td {
             background: ${config.tableStripedColor || '#f8fafc'};
         }` : ''}
 
         ${config.tableShowVerticalLines ? `
-        .modern-theme-container .pdf-items-table th,
-        .modern-theme-container .pdf-items-table td {
-            border-left: 1px solid ${config.tableBorderColor || '#e2e8f0'};
+        .bold-theme-container .pdf-items-table th,
+        .bold-theme-container .pdf-items-table td {
+            border-left: 2px solid ${config.tableBorderColor || '#e2e8f0'};
         }
-        .modern-theme-container .pdf-items-table th:first-child,
-        .modern-theme-container .pdf-items-table td:first-child {
+        .bold-theme-container .pdf-items-table th:first-child,
+        .bold-theme-container .pdf-items-table td:first-child {
             border-left: none;
         }` : ''}
 
-        .modern-theme-container .item-image {
+        .bold-theme-container .pdf-items-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .bold-theme-container .item-image {
             width: 48px;
             height: 48px;
             border-radius: 6px;
@@ -329,114 +298,127 @@ const ModernTheme = ({
             overflow: hidden;
             background: #fff;
         }
-        
-        .modern-theme-container .item-image img {
+
+        .bold-theme-container .item-image img {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        .modern-theme-container .item-name {
-            font-weight: 600;
+        .bold-theme-container .item-name {
+            font-weight: 800;
             color: ${color};
-            font-size: 1.2em;
+            font-size: 1.1em;
             margin-bottom: 0.25em;
         }
 
-        .modern-theme-container .item-desc {
+        .bold-theme-container .item-desc {
             font-size: 1em !important;
             color: #64748b;
             line-height: 1.4;
         }
 
-        .modern-theme-container .item-value {
-            font-weight: 600;
+        .bold-theme-container .item-value {
+            font-weight: 700;
             color: ${color};
             font-size: 0.85em;
         }
 
-        /* SUMMARY & BANK SECTION - COMBINED CONTAINER */
-        .modern-theme-container .bottom-section {
+        /* SUMMARY & BANK SECTION */
+        .bold-theme-container .bottom-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 2em;
             margin-bottom: 2em;
-            background: #f8fafc !important; /* Shared background */
+            background: #f8fafc !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            border: 1px solid #e2e8f0;
+            border: 2px solid #e2e8f0;
             border-radius: 8px;
             padding: 1.5em;
         }
 
-        .modern-theme-container .summary-section {
-            /* No individual background */
-        }
-
-        .modern-theme-container .bank-section {
-            /* No individual background */
-        }
-
-        .modern-theme-container .summary-row {
-            padding: 0.5em 0;
+        .bold-theme-container .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.55em 0;
             font-size: ${config.summaryLabelFontSize || '0.85em'};
-            font-weight: ${config.summaryLabelFontWeight || 'normal'};
+            font-weight: ${config.summaryLabelFontWeight || '500'};
             color: #475569;
+            border-bottom: 1px dashed #cbd5e1;
         }
 
-        .modern-theme-container .summary-row.discount {
+        .bold-theme-container .summary-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .bold-theme-container .summary-row.discount span:last-child {
             color: #ef4444;
+            font-weight: 700;
         }
 
-        .modern-theme-container .summary-row.grand-total {
+        .bold-theme-container .grand-total {
             margin-top: 1em;
-            padding-top: 1em;
-            border-top: 1px solid #e2e8f0;
-            align-items: center;
-            font-size: ${config.summaryTotalFontSize || '1.1em'};
+            background: ${color};
+            color: #ffffff !important;
+            border-radius: 6px;
+            padding: 0.75em 1em !important;
+            border: none !important;
+            font-size: ${config.summaryTotalFontSize || '1.05em'};
+            font-weight: ${config.summaryTotalFontWeight || '800'};
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .modern-theme-container .bank-list {
+        .bold-theme-container .grand-total span {
+            color: #ffffff !important;
+        }
+
+        .bold-theme-container .bank-list {
             font-size: 0.8em;
             color: #475569;
-            line-height: 1.6;
+            line-height: 1.8;
         }
 
-        .modern-theme-container .bank-row {
+        .bold-theme-container .bank-row {
             display: grid;
-            grid-template-columns: 80px 1fr;
+            grid-template-columns: 90px 1fr;
             margin-bottom: 0.25em;
         }
 
         /* TERMS & NOTES */
-        .modern-theme-container .notes-section {
+        .bold-theme-container .notes-section {
             margin-bottom: 2em;
         }
 
-        .modern-theme-container .notes-title {
+        .bold-theme-container .notes-title {
             font-size: 0.8em;
-            font-weight: 700;
+            font-weight: 800;
             color: ${color};
             margin-bottom: 0.5em;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .modern-theme-container .notes-content {
+        .bold-theme-container .notes-content {
             font-size: 0.8em;
             color: #475569;
             line-height: 1.5;
         }
 
-        .modern-theme-container .terms-box {
+        .bold-theme-container .terms-box {
             background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-left: 6px solid ${color};
+            border-radius: 0 8px 8px 0;
+            border-top: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
             padding: 1em;
             margin-bottom: 2em;
         }
 
         /* SIGNATURES */
-        .modern-theme-container .signatures-grid {
+        .bold-theme-container .signatures-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 4em;
@@ -444,36 +426,33 @@ const ModernTheme = ({
             margin-bottom: 2em;
         }
 
-        .modern-theme-container .signature-col {
+        .bold-theme-container .signature-col {
             text-align: center;
         }
 
-        .modern-theme-container .signature-line {
-            border-bottom: 1px solid #cbd5e1;
+        .bold-theme-container .signature-line {
+            border-bottom: 3px solid #475569;
             height: 60px;
             margin-bottom: 0.5em;
         }
 
-        .modern-theme-container .signature-label {
+        .bold-theme-container .signature-label {
             font-size: 0.8em;
-            font-weight: 600;
-            color: #64748b;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         /* FOOTER */
-        .modern-theme-container .pdf-footer {
+        .bold-theme-container .pdf-footer {
             text-align: center;
-            padding-top: 2em;
-            border-top: 1px solid #e2e8f0;
+            padding-top: 1.5em;
+            border-top: 4px solid ${color};
             margin-top: auto;
         }
 
-            margin-bottom: 0.5em;
-            font-size: ${config.footerFontSize ? `calc(${config.footerFontSize} * 1.2)` : '0.9rem'};
-            font-weight: ${config.footerFontWeight || '700'};
-        }
-
-        .modern-theme-container .footer-info {
+        .bold-theme-container .footer-info {
             display: flex;
             justify-content: center;
             gap: 1.5rem;
@@ -482,10 +461,17 @@ const ModernTheme = ({
             color: #64748b;
         }
 
-        .modern-theme-container .footer-item {
+        .bold-theme-container .footer-item {
             display: flex;
             align-items: center;
             gap: 0.4rem;
+        }
+
+        .bold-theme-container .custom-footer {
+            margin-top: 0.5em;
+            font-size: 0.75em;
+            color: #64748b;
+            text-align: center;
         }
 
         /* COMPACT MODES */
@@ -493,7 +479,7 @@ const ModernTheme = ({
         .pdf-compact-mode .pdf-items-table td {
             padding: 0.5rem 0.25rem;
         }
-        
+
         .pdf-compact-mode .item-image {
             width: 32px;
             height: 32px;
@@ -531,7 +517,7 @@ const ModernTheme = ({
             <tbody>
                 {tableItems.map((item, index) => (
                     <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', color: '#64748b' }}>{startIndex + index + 1}</td>
+                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: '700' }}>{startIndex + index + 1}</td>
                         {config.showTableImages && (
                             <td>
                                 <div className="item-image">
@@ -548,11 +534,11 @@ const ModernTheme = ({
                             <div className="item-desc">{item.description}</div>
                         </td>
                         {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center' }}>{item.unit}</td>}
-                        <td className="item-quantity" style={{ textAlign: 'center' }}>{item.quantity}</td>
+                        <td className="item-quantity" style={{ textAlign: 'center', fontWeight: '600' }}>{item.quantity}</td>
                         <td className="item-price" style={{ textAlign: 'right' }}>{formatCurrency(item.price)}</td>
                         {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#ef4444' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
                         {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center' }}>%{item.taxRate}</td>}
-                        <td className="item-total" style={{ textAlign: 'right' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        <td className="item-total" style={{ textAlign: 'right', fontWeight: '700' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -560,8 +546,8 @@ const ModernTheme = ({
     );
 
     return (
-        <div id={id} className="modern-theme-container w-full max-w-[210mm] mx-auto" style={containerStyles}>
-            <style>{modernStyles}</style>
+        <div id={id} className="bold-theme-container w-full max-w-[210mm] mx-auto" style={containerStyles}>
+            <style>{boldStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
@@ -600,33 +586,34 @@ const ModernTheme = ({
                         <div className="pdf-header">
                             <div className="header-left">
                                 {config.showLogo && companyData.logo && (
-                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.4rem' }}>
-                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 50}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
+                                    <div className="company-logo">
+                                        <img src={companyData.logo} alt="Logo" />
                                     </div>
                                 )}
                                 <div className="company-info">
                                     <div className="company-name">{renderEditable(companyData.name, 'companyName')}</div>
                                     <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>
-                                        <div className="header-info-grid">
-                                            <div className="header-info-line">
-                                                <span>{companyData.address}</span>
-                                            </div>
-                                        </div>
+                                        <div>{companyData.address}</div>
+                                        <div style={{ marginTop: '0.25em' }}>{companyData.phone}{companyData.email ? ` • ${companyData.email}` : ''}</div>
                                     </div>
                                 </div>
                             </div>
                             <div className="header-right">
                                 <div className="quote-title">{renderEditable(config.title, 'quoteTitle')}</div>
-                                <div className="quote-meta" style={{ fontSize: config.quoteMetaLabelFontSize || '0.8rem', color: '#4b5563', marginTop: '0.5rem' }}>
-                                    <div>{t.date}: {formatDate(quoteData.date, currentLocale)} &nbsp; {t.validUntil}: {formatDate(quoteData.validUntil, currentLocale)} &nbsp; <strong>#{quoteData.number}</strong></div>
+                                <div className="quote-meta" style={{ fontSize: config.quoteMetaLabelFontSize || '0.8rem', color: '#4b5563', marginTop: '0.6rem' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                        <span><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</span>
+                                        <span><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</span>
+                                        <span><strong>#</strong>{quoteData.number}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `1px solid ${color}` }}>
+                        <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `3px solid ${color}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.8em', color: '#666' }}>
-                                <span>{companyData.name} - {config.title}</span>
-                                <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                <span><strong>{companyData.name}</strong> - {config.title}</span>
+                                <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             </div>
                         </div>
                     ))}
@@ -634,10 +621,8 @@ const ModernTheme = ({
                     {/* Customer Section - Only Page 1 */}
                     {showSection('customer') && pageIndex === 0 && (
                         <div className="customer-section">
-                            <div className="customer-box" style={{ backgroundColor: '#f8fafc', color: '#000000', border: '1px solid #e2e8f0', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                <div className="section-title">
-                                    <i className="fas fa-bookmark"></i> {t.company}
-                                </div>
+                            <div className="customer-box" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                <div className="section-title">{t.company}</div>
                                 <div className="info-grid">
                                     <div className="info-line">
                                         <span className="info-label">{t.company}:</span>
@@ -649,10 +634,8 @@ const ModernTheme = ({
                                     </div>
                                 </div>
                             </div>
-                            <div className="customer-box" style={{ backgroundColor: '#f8fafc', color: '#000000', border: '1px solid #e2e8f0', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                <div className="section-title">
-                                    <i className="fas fa-user"></i> {t.customer}
-                                </div>
+                            <div className="customer-box" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                <div className="section-title">{t.customer}</div>
                                 <div className="info-grid">
                                     <div className="info-line">
                                         <span className="info-label">{t.company}:</span>
@@ -686,48 +669,44 @@ const ModernTheme = ({
                     {pageIndex === itemChunks.length - 1 && (
                         <div style={{ marginTop: 'auto' }}>
                             {(config.showSummary || config.showBankInfo) && (
-                                <div className="bottom-section" style={{ backgroundColor: '#f8fafc', color: '#000000', border: '1px solid #e2e8f0', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                    <div className="summary-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
-                                        <div className="section-title" style={{ marginBottom: '1rem', borderBottom: 'none', paddingBottom: '0', color: '#0f172a' }}>
-                                            <i className="fas fa-list-alt" style={{ color: '#000000' }}></i> {t.summary}
-                                        </div>
-                                        <div className="summary-row" style={{ color: '#475569' }}>
-                                            <span style={{ color: '#475569' }}>{t.subtotal}:</span>
-                                            <span style={{ fontWeight: config.summaryValueFontWeight || '600', fontSize: config.summaryValueFontSize || 'inherit', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
+                                <div className="bottom-section" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                    <div className="summary-section">
+                                        <div className="section-title" style={{ marginBottom: '1rem' }}>{t.summary}</div>
+                                        <div className="summary-row">
+                                            <span>{t.subtotal}:</span>
+                                            <span style={{ fontWeight: config.summaryValueFontWeight || '600', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div className="summary-row" style={{ color: '#ef4444' }}>
-                                                <span style={{ color: '#ef4444' }}>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
-                                                <span style={{ color: '#ef4444' }}>-{formatCurrency(discountAmount)}</span>
+                                            <div className="summary-row discount">
+                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
+                                                <span>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
-                                            <div className="summary-row" style={{ color: '#475569' }}>
-                                                <span style={{ color: '#475569' }}>{t.vat} (%20):</span>
-                                                <span style={{ color: '#475569' }}>{formatCurrency(totalTax)}</span>
+                                            <div className="summary-row">
+                                                <span>{t.vat} (%20):</span>
+                                                <span>{formatCurrency(totalTax)}</span>
                                             </div>
                                         )}
-                                        <div className="summary-row" style={{ color: '#475569' }}>
-                                            <span style={{ color: '#475569' }}>{t.total} {t.vat}:</span>
-                                            <span style={{ color: '#475569' }}>{formatCurrency(totalTax)}</span>
+                                        <div className="summary-row">
+                                            <span>{t.total} {t.vat}:</span>
+                                            <span>{formatCurrency(totalTax)}</span>
                                         </div>
-                                        <div className="summary-row grand-total" style={{ borderTop: 'none', marginTop: '0.5rem', paddingTop: '0.5rem', color: '#0f172a' }}>
-                                            <span style={{ color: '#0f172a' }}>{t.generalTotal}:</span>
-                                            <span style={{ color: '#0f172a', fontSize: 'inherit' }}>{formatCurrency(total)}</span>
+                                        <div className="summary-row grand-total">
+                                            <span>{t.generalTotal}:</span>
+                                            <span style={{ fontSize: 'inherit', fontWeight: 'inherit' }}>{formatCurrency(total)}</span>
                                         </div>
                                     </div>
-                                    <div className="bank-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
+                                    <div className="bank-section">
                                         {config.showBankInfo && (
                                             <div className="bank-info">
-                                                <div className="section-title" style={{ marginBottom: '1rem', borderBottom: 'none', paddingBottom: '0', textTransform: 'uppercase', color: '#0f172a' }}>
-                                                    {t.bankInfo}
-                                                </div>
-                                                <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: '1.8' }}>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.bank}:</strong> <span style={{ color: '#475569' }}>{bankData.bankName}</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.branch}:</strong> <span style={{ color: '#475569' }}>{bankData.branch}</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.accountNo}:</strong> <span style={{ color: '#475569' }}>-</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.iban}:</strong> <span style={{ color: '#475569' }}>{bankData.iban}</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.accountHolder}:</strong> <span style={{ color: '#475569' }}>{bankData.accountHolder}</span></div>
+                                                <div className="section-title" style={{ marginBottom: '1rem' }}>{t.bankInfo}</div>
+                                                <div className="bank-list">
+                                                    <div className="bank-row"><strong>{t.bank}:</strong> <span>{bankData.bankName}</span></div>
+                                                    <div className="bank-row"><strong>{t.branch}:</strong> <span>{bankData.branch}</span></div>
+                                                    <div className="bank-row"><strong>{t.accountNo}:</strong> <span>-</span></div>
+                                                    <div className="bank-row"><strong>{t.iban}:</strong> <span>{bankData.iban}</span></div>
+                                                    <div className="bank-row"><strong>{t.accountHolder}:</strong> <span>{bankData.accountHolder}</span></div>
                                                 </div>
                                             </div>
                                         )}
@@ -757,7 +736,7 @@ const ModernTheme = ({
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="signatures-grid" style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem' }}>
+                                <div className="signatures-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem' }}>
                                     <div className="signature-col" style={{ textAlign: 'center' }}>
                                         <div className="signature-line" style={{
                                             height: 'auto',
@@ -765,8 +744,7 @@ const ModernTheme = ({
                                             display: 'flex',
                                             alignItems: 'flex-end',
                                             justifyContent: 'center',
-                                            paddingBottom: '5px',
-                                            borderBottom: '1px solid #cbd5e1'
+                                            paddingBottom: '5px'
                                         }}>
                                             {(signature || companyData.signature) && (
                                                 <img
@@ -780,7 +758,7 @@ const ModernTheme = ({
                                                 />
                                             )}
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.5rem', fontWeight: '600', color: '#0f172a' }}>
+                                        <div className="signature-label" style={{ paddingTop: '0.5rem' }}>
                                             {t.signature}
                                         </div>
                                     </div>
@@ -791,8 +769,7 @@ const ModernTheme = ({
                                             display: 'flex',
                                             alignItems: 'flex-end',
                                             justifyContent: 'center',
-                                            paddingBottom: '5px',
-                                            borderBottom: '1px solid #cbd5e1'
+                                            paddingBottom: '5px'
                                         }}>
                                             {companyData.stamp && (
                                                 <img
@@ -807,7 +784,7 @@ const ModernTheme = ({
                                                 />
                                             )}
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.5rem', fontWeight: '600', color: '#0f172a' }}>
+                                        <div className="signature-label" style={{ paddingTop: '0.5rem' }}>
                                             {t.companyStamp}
                                         </div>
                                     </div>
@@ -819,9 +796,6 @@ const ModernTheme = ({
                     {/* Footer - Only Last Page */}
                     {showSection('footer') && pageIndex === itemChunks.length - 1 && (
                         <div className="pdf-footer">
-                            <div className="footer-company" style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                                {companyData.address}
-                            </div>
                             <div className="footer-info" style={{ marginBottom: '0.5rem' }}>
                                 <div className="footer-item">
                                     <i className="fas fa-phone"></i> {companyData.phone}
@@ -834,9 +808,8 @@ const ModernTheme = ({
                                 </div>
                             </div>
                             <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '1rem' }}>
-                                <div style={{ marginBottom: '0.25rem' }}>{t.thankYou}</div>
+                                <div style={{ marginBottom: '0.25rem', fontWeight: '700', color: color }}>{t.thankYou}</div>
                                 <div style={{ marginBottom: '0.25rem' }}>{t.regards}, {companyData.name}</div>
-                                <div style={{ fontWeight: '600', color: color }}>{companyData.name} - {config.title}</div>
                             </div>
                         </div>
                     )}
@@ -845,15 +818,10 @@ const ModernTheme = ({
                             {config.customFooter}
                         </div>
                     )}
-                    {config.showPageNumbers && (
-                        <div className="pdf-page-number" style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.65rem', color: '#94a3b8' }}>
-                            {t.page} {pageIndex + 1} / {itemChunks.length}
-                        </div>
-                    )}
                 </div>
             ))}
         </div>
     );
 };
 
-export default ModernTheme;
+export default BoldTheme;

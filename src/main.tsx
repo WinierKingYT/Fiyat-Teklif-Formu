@@ -15,7 +15,7 @@ const updateSW = registerSW({
     toast((t) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <span style={{ fontSize: '14px' }}>Yeni güncelleme mevcut</span>
-        <button
+        <button type="button"
           onClick={() => { toast.dismiss(t.id); updateSW(true); }}
           style={{
             background: 'var(--color-primary, #7C3AED)',

@@ -9,8 +9,10 @@ import { Trash2, Edit, Plus, Search, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
 import { getLocalDateString } from '../utils/dateUtils';
+import { useTranslation } from '../hooks/useTranslation';
 
-const CustomerManagerModal = ({ isOpen, onClose }) => {
+const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
+    const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const [customers, setCustomers] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +22,6 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
 
-    // Form State
     const [formData, setFormData] = useState({
         name: '',
         company: '',
@@ -51,11 +52,10 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
         e.preventDefault();
 
         if (!formData.name && !formData.company) {
-            toast.error('Lütfen en azından İsim veya Şirket adı girin.');
+            toast.error(t('enterNameOrCompany'));
             return;
         }
 
-        // Duplicate Check
         if (!isEditing) {
             const isDuplicate = customers.some(c =>
                 (formData.company && c.company && c.company.trim().toLowerCase() === formData.company.trim().toLowerCase()) ||
@@ -63,7 +63,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
             );
 
             if (isDuplicate) {
-                setConfirmDialog({ isOpen: true, title: 'Mükerrer Müşteri', message: 'Bu isimde veya e-postada bir müşteri zaten kayıtlı. Yine de kaydetmek istiyor musunuz?', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performSave(); }, variant: 'warning' });
+                setConfirmDialog({ isOpen: true, title: t('duplicateCustomer'), message: t('duplicateCustomerConfirm'), onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performSave(); }, variant: 'warning' });
                 return;
             }
         }
@@ -75,16 +75,16 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
         try {
             if (isEditing && currentCustomer) {
                 await db.put('customers', { ...formData, id: currentCustomer.id });
-                toast.success('Müşteri güncellendi');
+                toast.success(t('customerUpdated'));
             } else {
                 await db.add('customers', { ...formData, id: Date.now() });
-                toast.success('Müşteri eklendi');
+                toast.success(t('customerAdded'));
             }
             loadCustomers();
             resetForm();
         } catch (error) {
             Logger.error(error);
-            toast.error('Bir hata oluştu');
+            toast.error(t('customerSaveError'));
         }
     };
 
@@ -103,8 +103,8 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleDelete = async (id) => {
-        setConfirmDialog({ isOpen: true, title: 'Müşteriyi Sil', message: 'Bu müşteriyi silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { const customerToDelete = customers.find(c => c.id === id); if (customerToDelete) { await db.add('recycle_bin', { ...customerToDelete, originalStore: 'customers', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('customers', id); toast.success('Müşteri geri dönüşüm kutusuna taşındı'); loadCustomers(); } } catch (error) { Logger.error(error);
-                toast.error('Silinirken hata oluştu'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('deleteCustomer'), message: t('deleteCustomerConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { const customerToDelete = customers.find(c => c.id === id); if (customerToDelete) { await db.add('recycle_bin', { ...customerToDelete, originalStore: 'customers', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('customers', id); toast.success(t('customerMovedToBin')); loadCustomers(); } } catch (error) { Logger.error(error);
+                toast.error(t('customerDeleteError')); } }, variant: 'danger' });
     };
 
     const resetForm = () => {
@@ -132,7 +132,6 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
         setPage(newPage);
     }, []);
 
-    // Reset page on search
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch]);
@@ -152,10 +151,10 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            toast.success('Müşteriler dışa aktarıldı');
+            toast.success(t('customersExported'));
         } catch (error) {
             Logger.error('Export error:', error);
-            toast.error('Dışa aktarma hatası');
+            toast.error(t('exportError'));
         }
     };
 
@@ -167,7 +166,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
         reader.onload = async (e) => {
             try {
                 const importedCustomers = JSON.parse((e.target as any).result);
-                if (!Array.isArray(importedCustomers)) throw new Error('Geçersiz format');
+                if (!Array.isArray(importedCustomers)) throw new Error('Invalid format');
 
                 let count = 0;
                 for (const customer of importedCustomers) {
@@ -176,18 +175,18 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                         count++;
                     }
                 }
-                toast.success(`${count} müşteri içe aktarıldı`);
+                toast.success(t('customersImported').replace('{count}', String(count)));
                 loadCustomers();
             } catch (error) {
                 Logger.error('Import error:', error);
-                toast.error('İçe aktarma hatası: Geçersiz dosya formatı');
+                toast.error(t('importErrorInvalid'));
             }
         };
         reader.readAsText(file);
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Müşteri Yönetimi" size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('customerManagement')} size="xl">
             <div className="flex flex-col md:flex-row gap-6 h-[70vh]">
 
                 {/* Left: List */}
@@ -198,25 +197,25 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                             <input
                                 type="text"
                                 className="form-control pl-10"
-                                placeholder="Müşteri Ara..."
+                                placeholder={t('searchCustomers')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <button
+                        <button type="button"
                             className="btn btn-primary whitespace-nowrap"
                             onClick={resetForm}
-                            title="Yeni Müşteri Ekle"
+                            title={t('addNewCustomer')}
                         >
                             <Plus size={18} /> Yeni
                         </button>
                     </div>
 
                     <div className="flex gap-2 mb-4">
-                        <button className="btn btn-outline btn-sm flex-1" onClick={handleExport}>
+                        <button type="button" className="btn btn-outline btn-sm flex-1" onClick={handleExport}>
                             <Download size={14} /> Dışa Aktar
                         </button>
-                        <button className="btn btn-outline btn-sm flex-1" onClick={() => document.getElementById('importCustomerInput')?.click()}>
+                        <button type="button" className="btn btn-outline btn-sm flex-1" onClick={() => document.getElementById('importCustomerInput')?.click()}>
                             <Upload size={14} /> İçe Aktar
                         </button>
                         <input
@@ -231,7 +230,7 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                         {filteredCustomers.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)]">
-                                <p>Müşteri bulunamadı.</p>
+                                <p>{t('noCustomersFound')}</p>
                             </div>
                         ) : (
                             paginatedCustomers.map(customer => (
@@ -249,8 +248,10 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                                     </div>
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
+                                            type="button"
                                             className="p-2 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors"
                                             onClick={(e) => { e.stopPropagation(); handleDelete(customer.id); }}
+                                            aria-label={`${t('deleteCustomer')}: ${customer.name || customer.company || ''}`}
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -274,52 +275,52 @@ const CustomerManagerModal = ({ isOpen, onClose }) => {
                 <div className="w-full md:w-1/2 pl-2 overflow-y-auto custom-scrollbar">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                            {isEditing ? 'Müşteriyi Düzenle' : 'Yeni Müşteri Ekle'}
+                            {isEditing ? t('editCustomer') : t('addNewCustomer')}
                         </h3>
                         {isEditing && (
-                            <button className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
-                                Vazgeç
+                            <button type="button" className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
+                                {t('cancelEdit')}
                             </button>
                         )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="form-group">
-                            <label className="form-label" htmlFor="customerCompany">Firma Adı</label>
-                            <input type="text" className="form-control" id="customerCompany" name="company" value={formData.company} onChange={handleInputChange} autoComplete="off" />
+                            <label className="form-label" htmlFor="mgr-customerCompany">{t('companyName')}</label>
+                            <input type="text" className="form-control" id="mgr-customerCompany" name="company" value={formData.company} onChange={handleInputChange} autoComplete="off" />
                         </div>
                         <div className="form-group">
-                            <label className="form-label" htmlFor="customerName">Yetkili Kişi</label>
-                            <input type="text" className="form-control" id="customerName" name="name" value={formData.name} onChange={handleInputChange} autoComplete="off" />
+                            <label className="form-label" htmlFor="mgr-customerName">{t('authorizedDealer')}</label>
+                            <input type="text" className="form-control" id="mgr-customerName" name="name" value={formData.name} onChange={handleInputChange} autoComplete="off" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="form-group">
-                                <label className="form-label" htmlFor="customerPhone">Telefon</label>
-                                <input type="tel" className="form-control" id="customerPhone" name="phone" value={formData.phone} onChange={handleInputChange} autoComplete="off" />
+                                <label className="form-label" htmlFor="mgr-customerPhone">{t('phone')}</label>
+                                <input type="tel" className="form-control" id="mgr-customerPhone" name="phone" value={formData.phone} onChange={handleInputChange} autoComplete="off" />
                             </div>
                             <div className="form-group">
-                                <label className="form-label" htmlFor="customerEmail">E-posta</label>
-                                <input type="email" className="form-control" id="customerEmail" name="email" value={formData.email} onChange={handleInputChange} autoComplete="off" />
+                                <label className="form-label" htmlFor="mgr-customerEmail">{t('email')}</label>
+                                <input type="email" className="form-control" id="mgr-customerEmail" name="email" value={formData.email} onChange={handleInputChange} autoComplete="off" />
                             </div>
                         </div>
                         <div className="form-group">
-                            <label className="form-label" htmlFor="customerAddress">Adres</label>
-                            <textarea className="form-control" id="customerAddress" rows={2} name="address" value={formData.address} onChange={handleInputChange} autoComplete="off"></textarea>
+                            <label className="form-label" htmlFor="mgr-customerAddress">{t('address')}</label>
+                            <textarea className="form-control" id="mgr-customerAddress" rows={2} name="address" value={formData.address} onChange={handleInputChange} autoComplete="off"></textarea>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="form-group">
-                                <label className="form-label" htmlFor="customerTaxOffice">Vergi Dairesi</label>
+                                <label className="form-label" htmlFor="customerTaxOffice">{t('taxOffice')}</label>
                                 <input type="text" className="form-control" id="customerTaxOffice" name="taxOffice" value={formData.taxOffice} onChange={handleInputChange} autoComplete="off" />
                             </div>
                             <div className="form-group">
-                                <label className="form-label" htmlFor="customerTaxNo">Vergi No</label>
+                                <label className="form-label" htmlFor="customerTaxNo">{t('taxNo')}</label>
                                 <input type="text" className="form-control" id="customerTaxNo" name="taxNo" value={formData.taxNo} onChange={handleInputChange} autoComplete="off" />
                             </div>
                         </div>
 
                         <div className="flex justify-end gap-2 pt-4">
                             <button type="submit" className="btn btn-primary w-full">
-                                {isEditing ? 'Değişiklikleri Kaydet' : 'Müşteriyi Ekle'}
+                                {isEditing ? t('saveChanges') : t('addCustomer')}
                             </button>
                         </div>
                     </form>

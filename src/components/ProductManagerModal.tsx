@@ -288,7 +288,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                 const text = await file.text();
                 importedProducts = JSON.parse(text);
             } else if (file.name.match(/\.(xlsx|xls|csv)$/)) {
-                importedProducts = (await parseExcelFile(file)) as any[];
+                importedProducts = await parseExcelFile(file);
             } else {
                 toast.error(t('error'), { id: 'import-loading' });
                 return;
@@ -342,14 +342,14 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                 />
                             </div>
                             <div className="flex bg-[var(--color-bg-muted)] rounded-lg p-1 border border-[var(--color-border)]">
-                                <button
+                                <button type="button"
                                     className={`p-2 rounded ${viewMode === 'list' ? 'bg-[var(--color-bg-card)] shadow-sm' : 'text-[var(--color-text-muted)]'}`}
                                     onClick={() => setViewMode('list')}
                                     title={t('tableView')}
                                 >
                                     <List size={18} />
                                 </button>
-                                <button
+                                <button type="button"
                                     className={`p-2 rounded ${viewMode === 'grid' ? 'bg-[var(--color-bg-card)] shadow-sm' : 'text-[var(--color-text-muted)]'}`}
                                     onClick={() => setViewMode('grid')}
                                     title={t('galleryView')}
@@ -363,7 +363,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                     <Upload size={18} />
                                     <input type="file" className="hidden" accept=".json, .xlsx, .xls, .csv" onChange={handleImport} />
                                 </label>
-                                <button
+                                <button type="button"
                                     className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                                     onClick={handleExport}
                                     title={t('exportExcel')}
@@ -375,14 +375,14 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
 
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                                <button
+                                <button type="button"
                                     className={`px-3 py-1 text-sm rounded-full whitespace-nowrap transition-colors ${selectedCategory === 'Tümü' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`}
                                     onClick={() => setSelectedCategory('Tümü')}
                                 >
                                     Tümü
                                 </button>
                                 {categories.map(cat => (
-                                    <button
+                                    <button type="button"
                                         key={cat}
                                         className={`px-3 py-1 text-sm rounded-full whitespace-nowrap transition-colors ${selectedCategory === cat ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`}
                                         onClick={() => setSelectedCategory(cat)}
@@ -399,7 +399,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                 <span className="text-sm text-[var(--color-error)] font-medium px-2">
                                     {selectedProducts.size} ürün seçildi
                                 </span>
-                                <button
+                                <button type="button"
                                     className="btn btn-sm btn-danger flex items-center gap-1"
                                     onClick={handleBulkDelete}
                                 >
@@ -420,7 +420,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                 {viewMode === 'list' ? (
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                                            <button onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]">
+                                            <button type="button" onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]" aria-label={t('selectAllProducts')}>
                                                 {selectedProducts.size === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
                                             </button>
                                             <span className="flex-1">{t('productName')}</span>
@@ -437,9 +437,9 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                                 onClick={() => handleEdit(product)}
                                             >
                                                 <div className="flex items-center gap-3 flex-1">
-                                                    <div onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }} className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+                                                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }} className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]" aria-label={`${t('selectItem')}: ${product.name}`} aria-pressed={selectedProducts.has(product.id)}>
                                                         {selectedProducts.has(product.id) ? <CheckSquare size={18} /> : <Square size={18} />}
-                                                    </div>
+                                                    </button>
                                                     {product.image ? (
                                                         <img src={product.image} alt={product.name} className="w-10 h-10 object-cover rounded" />
                                                     ) : (
@@ -455,8 +455,10 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                                 <div className="flex items-center gap-4">
                                                     <div className="font-semibold text-[var(--color-text)]">{product.price} ₺</div>
                                                     <button
+                                                        type="button"
                                                         className="p-2 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors md:opacity-0 md:group-hover:opacity-100"
                                                         onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }}
+                                                        aria-label={`${t('deleteProduct')}: ${product.name}`}
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
@@ -483,15 +485,17 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                                             <ImageIcon size={32} />
                                                         </div>
                                                     )}
-                                                    <div className="absolute top-2 left-2" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }}>
+                                                    <button type="button" className="absolute top-2 left-2" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }} aria-label={`${t('selectItem')}: ${product.name}`} aria-pressed={selectedProducts.has(product.id)}>
                                                         <div className={`bg-[var(--color-bg-card)] rounded p-1 ${selectedProducts.has(product.id) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>
                                                             {selectedProducts.has(product.id) ? <CheckSquare size={18} /> : <Square size={18} />}
                                                         </div>
-                                                    </div>
+                                                    </button>
                                                     <div className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                         <button
+                                                            type="button"
                                                             className="p-1.5 bg-[var(--color-bg-card)] text-[var(--color-error)] hover:text-[var(--color-error)] rounded shadow-sm"
                                                             onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }}
+                                                            aria-label={`${t('deleteProduct')}: ${product.name}`}
                                                         >
                                                             <Trash2 size={16} />
                                                         </button>
@@ -528,11 +532,11 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                         </h3>
                         <div className="flex gap-2">
                             {isEditing ? (
-                                <button className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
+                                <button type="button" className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
                                     {t('cancel')}
                                 </button>
                             ) : (
-                                <button
+                                <button type="button"
                                     className="btn btn-sm btn-ghost text-[var(--color-primary)]"
                                     onClick={resetForm}
                                     title="Formu Temizle"
@@ -660,6 +664,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                                             type="button"
                                             className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
                                             onClick={() => setFormData(prev => ({ ...prev, image: null }))}
+                                            aria-label={t('removeImage')}
                                         >
                                             <Trash2 size={16} />
                                         </button>

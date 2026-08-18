@@ -1,14 +1,17 @@
 import React from "react";
 import { Settings2 } from "lucide-react";
 import { PdfConfig } from "../../context/quote/types";
+import { useTranslation } from "../../hooks/useTranslation";
+import { useQuoteData } from "../../context/QuoteContext";
 
 interface WatermarkSettingsProps {
   pdfConfig: PdfConfig;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setPdfConfig: (config: any) => void;
 }
 
 const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) => {
+  const { quoteData } = useQuoteData();
+  const { t } = useTranslation(quoteData?.language);
   return (
     <div className="card">
       <div className="card-header">
@@ -16,22 +19,21 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
           <div className="w-6 h-6 rounded-[var(--radius-sm)] bg-[var(--color-primary-muted)] flex items-center justify-center">
             <Settings2 size={13} className="text-[var(--color-primary)]" />
           </div>
-          <span className="card-title">Filigran Ayarları</span>
+          <span className="card-title">{t('watermarkSettings')}</span>
         </div>
       </div>
       <div className="card-body">
         <p className="text-sm text-[var(--color-text-muted)] mb-5">
-          PDF çıktılarına eklenecek filigranı buradan
-          özelleştirebilirsiniz.
+          {t('watermarkSettingsDesc')}
         </p>
         <div className="space-y-5">
           <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--color-bg-muted)]">
             <div>
               <h4 className="text-sm font-medium text-[var(--color-text)]">
-                Filigran Göster
+                {t('showWatermarkLabel')}
               </h4>
               <p className="text-xs text-[var(--color-text-muted)]">
-                PDF sayfalarının arka planında filigran görüntülenir.
+                {t('showWatermarkDesc')}
               </p>
             </div>
             <div className="form-switch">
@@ -51,7 +53,7 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
           {pdfConfig.showWatermark && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">Filigran Metni</label>
+                <label className="form-label">{t('watermarkTextLabel')}</label>
                 <input
                   type="text"
                   className="form-control"
@@ -62,11 +64,11 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
                       watermarkText: e.target.value,
                     })
                   }
-                  placeholder="Örn: TASLAK"
+                  placeholder={t('watermarkPlaceholder')}
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Renk</label>
+                <label className="form-label">{t('watermarkColorLabel')}</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
@@ -86,7 +88,7 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
               <div className="form-group">
                 <div className="flex justify-between mb-2">
                   <label className="form-label">
-                    Opaklık (Saydamlık)
+                    {t('watermarkOpacityLabel')}
                   </label>
                   <span className="text-sm font-bold text-[var(--color-primary)]">
                     %{Math.round(pdfConfig.watermarkOpacity * 100)}
@@ -109,7 +111,7 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
               <div className="form-group">
                 <div className="flex justify-between mb-2">
                   <label className="form-label">
-                    Döndürme Açısı
+                    {t('watermarkRotationLabel')}
                   </label>
                   <span className="text-sm font-bold text-[var(--color-primary)]">
                     {pdfConfig.watermarkRotation}°
@@ -130,7 +132,7 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Yazı Boyutu (px)</label>
+                <label className="form-label">{t('watermarkFontSizeLabel')}</label>
                 <input
                   type="number"
                   className="form-control"

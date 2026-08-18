@@ -1,5 +1,7 @@
 import React from "react";
 import { GripVertical } from "lucide-react";
+import { useTranslation } from "../../hooks/useTranslation";
+import { useQuoteData } from "../../context/QuoteContext";
 import {
   DndContext,
   closestCenter,
@@ -70,6 +72,8 @@ interface PdfLayoutSettingsProps {
 }
 
 const PdfLayoutSettings = ({ pdfLayout, setPdfLayout }: PdfLayoutSettingsProps) => {
+  const { quoteData } = useQuoteData();
+  const { t } = useTranslation(quoteData?.language);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -104,14 +108,12 @@ const PdfLayoutSettings = ({ pdfLayout, setPdfLayout }: PdfLayoutSettingsProps) 
           <div className="w-6 h-6 rounded-[var(--radius-sm)] bg-[var(--color-primary-muted)] flex items-center justify-center">
             <GripVertical size={13} className="text-[var(--color-primary)]" />
           </div>
-          <span className="card-title">PDF Bölüm Sıralaması</span>
+          <span className="card-title">{t('pdfSectionOrder')}</span>
         </div>
       </div>
       <div className="card-body">
         <p className="text-sm text-[var(--color-text-muted)] mb-4">
-          PDF çıktısında bölümlerin sırasını değiştirmek için
-          sürükleyip bırakın. Görünmesini istemediğiniz bölümleri
-          kapatabilirsiniz.
+          {t('pdfSectionOrderDesc')}
         </p>
         <DndContext
           sensors={sensors}

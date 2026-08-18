@@ -6,8 +6,10 @@ import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Trash2, RefreshCw, Search, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
+import { useTranslation } from '../hooks/useTranslation';
 
-const RecycleBinModal = ({ isOpen, onClose }) => {
+const RecycleBinModal = ({ isOpen, onClose, language = 'tr' }) => {
+    const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const [deletedItems, setDeletedItems] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -25,7 +27,7 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
             setDeletedItems(items as any);
         } catch (error) {
             Logger.error('Error loading recycle bin:', error);
-            toast.error('Geri dönüşüm kutusu yüklenemedi');
+            toast.error(t('binLoadError'));
         }
     };
 
@@ -34,20 +36,20 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
             await db.delete('recycle_bin', item.id);
             const { id, originalStore, deletedAt, originalId, ...originalData } = item;
             await db.put(originalStore, { ...originalData, id: originalId });
-            toast.success('Öğe geri yüklendi');
+            toast.success(t('itemRestored'));
             loadDeletedItems();
         } catch (error) {
             Logger.error('Restore error:', error);
-            toast.error('Geri yükleme başarısız');
+            toast.error(t('restoreError'));
         }
     };
 
     const handlePermanentDelete = async (id) => {
-        setConfirmDialog({ isOpen: true, title: 'Kalıcı Sil', message: 'Bu öğeyi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('recycle_bin', id); toast.success('Öğe kalıcı olarak silindi'); loadDeletedItems(); } catch (error) { Logger.error('Delete error:', error); toast.error('Silme işlemi başarısız'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('permanentDeleteTitle'), message: t('permanentDeleteConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('recycle_bin', id); toast.success(t('itemPermanentlyDeleted')); loadDeletedItems(); } catch (error) { Logger.error('Delete error:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
     };
 
     const handleEmptyBin = async () => {
-        setConfirmDialog({ isOpen: true, title: 'Çöp Kutusunu Boşalt', message: 'Geri dönüşüm kutusunu boşaltmak istediğinize emin misiniz? Tüm öğeler kalıcı olarak silinecek.', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.clear('recycle_bin'); toast.success('Geri dönüşüm kutusu boşaltıldı'); loadDeletedItems(); } catch (error) { Logger.error('Empty bin error:', error); toast.error('İşlem başarısız'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('emptyBin'), message: t('emptyBinConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.clear('recycle_bin'); toast.success(t('binEmptied')); loadDeletedItems(); } catch (error) { Logger.error('Empty bin error:', error); toast.error(t('emptyBinFailed')); } }, variant: 'danger' });
     };
 
     const filteredItems = deletedItems.filter(item => {
@@ -65,21 +67,21 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Geri Dönüşüm Kutusu" size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('recycleBinTitle')} size="lg">
             <div className="flex flex-col h-[70vh]">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
                     <div className="flex gap-2">
-                        <button className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('all')}>Tümü</button>
-                        <button className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'customers' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('customers')}>Müşteriler</button>
-                        <button className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'products' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('products')}>Ürünler</button>
+                        <button type="button" className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('all')}>{t('all')}</button>
+                        <button type="button" className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'customers' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('customers')}>{t('customers')}</button>
+                        <button type="button" className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'products' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('products')}>{t('products')}</button>
                     </div>
                     <div className="flex gap-2 w-full md:w-auto">
                         <div className="relative flex-1 md:w-64">
                             <Search className="absolute left-3 top-2.5 text-[var(--color-text-muted)]" size={18} />
-                            <input type="text" className="form-control pl-10" placeholder="Ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            <input type="text" className="form-control pl-10" placeholder={t('search')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
                         {deletedItems.length > 0 && (
-                            <button className="btn btn-danger whitespace-nowrap" onClick={handleEmptyBin}>
+                            <button type="button" className="btn btn-danger whitespace-nowrap" onClick={handleEmptyBin}>
                                 <Trash2 size={18} /> Boşalt
                             </button>
                         )}
@@ -90,7 +92,7 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
                     {filteredItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)]">
                             <Trash2 size={48} className="mb-2 opacity-20" />
-                            <p>Geri dönüşüm kutusu boş</p>
+                            <p>{t('recycleBinEmpty')}</p>
                         </div>
                     ) : (
                         <div className="space-y-2">
@@ -99,19 +101,19 @@ const RecycleBinModal = ({ isOpen, onClose }) => {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className={`text-xs px-2 py-0.5 rounded-full ${item.originalStore === 'customers' ? 'bg-[var(--color-primary-muted)] text-[var(--color-primary)]' : 'bg-[var(--color-primary-muted)] text-[var(--color-primary)]'}`}>
-                                                {item.originalStore === 'customers' ? 'Müşteri' : 'Ürün'}
+                                                {item.originalStore === 'customers' ? t('customers') : t('products')}
                                             </span>
-                                            <span className="text-xs text-[var(--color-text-muted)]">Silinme: {formatDate(item.deletedAt)}</span>
+                                            <span className="text-xs text-[var(--color-text-muted)]">{t('deletedAt').replace('{date}', formatDate(item.deletedAt))}</span>
                                         </div>
-                                        <div className="font-medium text-[var(--color-text)]">{item.name || item.company || 'İsimsiz Öğe'}</div>
+                                        <div className="font-medium text-[var(--color-text)]">{item.name || item.company || t('unnamedItem')}</div>
                                         {item.originalStore === 'products' && <div className="text-sm text-[var(--color-text-muted)]">{item.price} ₺</div>}
                                         {item.originalStore === 'customers' && <div className="text-sm text-[var(--color-text-muted)]">{item.company}</div>}
                                     </div>
                                     <div className="flex gap-2">
-                                        <button className="p-2 text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-full transition-colors" onClick={() => handleRestore(item)} title="Geri Yükle">
+                                        <button type="button" className="p-2 text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-full transition-colors" onClick={() => handleRestore(item)} title={t('restoreItem')}>
                                             <RefreshCw size={18} />
                                         </button>
-                                        <button className="p-2 text-[var(--color-error)] hover:bg-[var(--color-bg-hover)] rounded-full transition-colors" onClick={() => handlePermanentDelete(item.id)} title="Kalıcı Olarak Sil">
+                                        <button type="button" className="p-2 text-[var(--color-error)] hover:bg-[var(--color-bg-hover)] rounded-full transition-colors" onClick={() => handlePermanentDelete(item.id)} title={t('permanentDelete')}>
                                             <Trash2 size={18} />
                                         </button>
                                     </div>

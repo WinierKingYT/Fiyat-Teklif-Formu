@@ -65,7 +65,7 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
                         <input type="text" className="form-control pl-9" placeholder="Müşteri veya firma ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
-                    <button className="btn btn-primary whitespace-nowrap" onClick={() => { onClose(); onCreateNew?.(); }}>
+                    <button type="button" className="btn btn-primary whitespace-nowrap" onClick={() => { onClose(); onCreateNew?.(); }}>
                         <Plus size={16} /> Yeni Müşteri
                     </button>
                 </div>
@@ -98,7 +98,7 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }) => {
                                         <td className="p-3 text-[var(--color-text)]">{customer.company}</td>
                                         <td className="p-3 text-[var(--color-text-muted)]">{customer.email}</td>
                                         <td className="p-3 text-right">
-                                            <button className="btn btn-sm btn-outline" onClick={() => { onSelect(customer); onClose(); }}>
+                                            <button type="button" className="btn btn-sm btn-outline" onClick={() => { onSelect(customer); onClose(); }}>
                                                 Seç
                                             </button>
                                         </td>

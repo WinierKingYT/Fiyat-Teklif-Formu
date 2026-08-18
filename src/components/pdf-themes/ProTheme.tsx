@@ -22,15 +22,41 @@ const ProTheme = ({
     totalTax,
     total,
     currentLocale,
-    hasLineItemDiscounts
+    hasLineItemDiscounts,
+    onEdit,
+    activeLayout
 }) => {
+    // Helper for editable fields
+    const layoutMap = useMemo(() => {
+        const map = {};
+        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
+        return map;
+    }, [activeLayout]);
+    const showSection = (id) => layoutMap[id] !== false;
+
+    const renderEditable = (value, fieldKey, type = 'text', className = '') => {
+        if (!onEdit) return <span className={className}>{value}</span>;
+
+        return (
+            <span
+                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(fieldKey, value, type);
+                }}
+                title={t.clickToEdit}
+            >
+                {value || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
+            </span>
+        );
+    };
     const proStyles = useMemo(() => `
         .pro-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
             line-height: ${config.bodyLineHeight || '1.4'};
             color: ${config.globalFontColor || '#1e293b'};
             font-size: ${config.fontSize || 12}px;
-            background-color: #ffffff !important;
+            background-color: var(--pdf-page-bg, #ffffff) !important;
             position: relative;
         }
 
@@ -389,6 +415,27 @@ const ProTheme = ({
             color: #64748b;
             font-weight: 500;
         }
+
+        ${config.tableStriped ? `
+        .pro-theme-container .pdf-items-table tbody tr:nth-child(even) td {
+            background: ${config.tableStripedColor || '#f8fafc'};
+        }
+        ` : ''}
+
+        .pro-theme-container .pdf-items-table td {
+            height: ${config.tableRowHeight || 0}px;
+        }
+
+        ${config.tableShowVerticalLines ? `
+        .pro-theme-container .pdf-items-table th,
+        .pro-theme-container .pdf-items-table td {
+            border-left: 1px solid ${config.tableBorderColor || '#e2e8f0'};
+        }
+        .pro-theme-container .pdf-items-table th:first-child,
+        .pro-theme-container .pdf-items-table td:first-child {
+            border-left: none;
+        }
+        ` : ''}
     `, [color, config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
@@ -489,7 +536,7 @@ const ProTheme = ({
                     )}
 
                     {/* Header */}
-                    {pageIndex === 0 ? (
+                    {showSection('header') && (pageIndex === 0 ? (
                         <div className="pdf-header">
                             <div className="header-left">
                                 {config.showLogo && companyData.logo && (
@@ -498,11 +545,11 @@ const ProTheme = ({
                                     </div>
                                 )}
                                 <div className="company-info">
-                                    <div className="company-name">{companyData.name}</div>
+                                    <div className="company-name">{renderEditable(companyData.name, 'companyName')}</div>
                                 </div>
                             </div>
                             <div className="quote-info">
-                                <div className="quote-title">{config.title}</div>
+                                <div className="quote-title">{renderEditable(config.title, 'quoteTitle')}</div>
                                 <div className="quote-meta">
                                     <div className="quote-number">#{quoteData.number}</div>
                                     <div>{formatDate(quoteData.date, currentLocale)}</div>
@@ -517,10 +564,10 @@ const ProTheme = ({
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             </div>
                         </div>
-                    )}
+                    ))}
 
                     {/* Customer Section - Only Page 1 */}
-                    {pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && (
                         <div className="customer-section">
                             <div className="customer-box">
                                 <div className="section-title">
@@ -529,15 +576,15 @@ const ProTheme = ({
                                 <div className="info-grid">
                                     <div className="info-line">
                                         <span className="info-label">{t.company}:</span>
-                                        <span className="info-value"><strong>{customerData.company}</strong></span>
+                                        <span className="info-value"><strong>{renderEditable(customerData.company, 'customerCompany')}</strong></span>
                                     </div>
                                     <div className="info-line">
                                         <span className="info-label">{t.authorized}:</span>
-                                        <span className="info-value">{customerData.name}</span>
+                                        <span className="info-value">{renderEditable(customerData.name, 'customerName')}</span>
                                     </div>
                                     <div className="info-line">
                                         <span className="info-label">{t.phone}:</span>
-                                        <span className="info-value">{customerData.phone}</span>
+                                        <span className="info-value">{renderEditable(customerData.phone, 'customerPhone')}</span>
                                     </div>
 
                                 </div>
@@ -549,7 +596,7 @@ const ProTheme = ({
                                 <div className="info-grid">
                                     <div className="info-line">
                                         <span className="info-label">{t.company}:</span>
-                                        <span className="info-value"><strong>{companyData.name}</strong></span>
+                                        <span className="info-value"><strong>{renderEditable(companyData.name, 'companyName')}</strong></span>
                                     </div>
                                     <div className="info-line">
                                         <span className="info-label">{t.authorized}:</span>
@@ -561,9 +608,11 @@ const ProTheme = ({
                     )}
 
                     {/* Items Table */}
+                    {showSection('items') && (
                     <div style={{ flex: 1 }}>
                         {renderTable(chunk, pageIndex * itemsPerPage)}
                     </div>
+                    )}
 
                     {/* Summary, Signatures, Terms - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
@@ -586,10 +635,10 @@ const ProTheme = ({
                                                 </div>
                                             </div>
                                         )}
-                                        {config.showNotes && quoteData.notes && (
+                                        {showSection('notes') && config.showNotes && quoteData.notes && (
                                             <div style={{ marginTop: '1rem' }}>
                                                 <h3>{t.notes}</h3>
-                                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{quoteData.notes}</div>
+                                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
                                             </div>
                                         )}
                                     </div>
@@ -617,44 +666,44 @@ const ProTheme = ({
                             )}
 
                             {/* Signatures */}
-                            {config.showSignatures && (
+                            {showSection('signatures') && config.showSignatures && (
                                 <div className="signature-section">
                                     <div className="signature-box">
                                         <div className="signature-area">
                                             {signature ? (
-                                                <img src={signature} alt="Dijital İmza" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                                                <img src={signature} alt={t.digitalSignature} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                                             ) : companyData.signature ? (
-                                                <img src={companyData.signature} alt="İmza" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                                                <img src={companyData.signature} alt={t.signature} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                                             ) : (
                                                 <span style={{ color: '#cbd5e1', fontSize: '0.7rem' }}>{t.signature}</span>
                                             )}
                                         </div>
-                                        <div className="signature-label">İmza</div>
+                                        <div className="signature-label">{t.signature}</div>
                                     </div>
                                     <div className="signature-box">
                                         <div className="stamp-area" style={companyData.stamp ? { border: 'none', background: 'transparent' } : {}}>
                                             {companyData.stamp ? (
-                                                <img src={companyData.stamp} alt="Kaşe" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                                                <img src={companyData.stamp} alt={t.stamp} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                                             ) : (
                                                 <span style={{ color: '#cbd5e1', fontSize: '0.7rem' }}>{t.stamp} / {t.signature}</span>
                                             )}
                                         </div>
-                                        <div className="signature-label">Firma Kaşesi</div>
+                                        <div className="signature-label">{t.companyStamp}</div>
                                     </div>
                                 </div>
                             )}
 
                             {/* Terms */}
-                            {config.showTerms && (
+                            {showSection('notes') && config.showTerms && (
                                 <div className="terms-section">
                                     <div className="terms-grid">
                                         <div className="term-card">
                                             <h3>{t.deliveryConditions}</h3>
-                                            <div className="term-content">{quoteData.deliveryTerms}</div>
+                                            <div className="term-content">{renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>
                                         </div>
                                         <div className="term-card">
                                             <h3>{t.warrantyConditions}</h3>
-                                            <div className="term-content">{quoteData.warrantyTerms}</div>
+                                            <div className="term-content">{renderEditable(quoteData.warrantyTerms, 'terms', 'textarea')}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -663,7 +712,7 @@ const ProTheme = ({
                     )}
 
                     {/* Footer - Only Last Page */}
-                    {pageIndex === itemChunks.length - 1 && (
+                    {showSection('footer') && pageIndex === itemChunks.length - 1 && (
                         <div className="pdf-footer">
                             <div className="footer-contact">
                                 <div>{companyData.address}</div>
@@ -671,8 +720,8 @@ const ProTheme = ({
                                 <div>{companyData.website}</div>
                             </div>
                             <div className="footer-thanks">
-                                <div className="thanks-text">Teşekkür Ederiz</div>
-                                <div>Saygılarımızla, {companyData.name}</div>
+                                <div className="thanks-text">{t.thankYou}</div>
+                                <div>{t.regards}, {companyData.name}</div>
                                 <div style={{ fontWeight: '700', color: color, marginTop: '0.25rem' }}>{companyData.name} - {config.title}</div>
                             </div>
                         </div>

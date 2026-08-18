@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, Plus } from 'lucide-react';
-import { useQuote } from '../context/QuoteContext';
+import { useQuoteData } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { InputField, TextAreaField } from './ui';
 import Logger from '../utils/logger';
@@ -28,7 +28,7 @@ interface CustomerInfoFormProps {
 }
 
 const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onSelectCustomer }) => {
-  const { quoteData, db } = useQuote();
+  const { quoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);

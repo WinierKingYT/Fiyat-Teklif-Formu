@@ -7,6 +7,7 @@ import { Database, Download, Upload, Trash, RefreshCw, AlertTriangle } from 'luc
 import toast from 'react-hot-toast';
 import { getLocalDateString } from '../utils/dateUtils';
 import Logger from '../utils/logger';
+import { useTranslation } from '../hooks/useTranslation';
 
 const BACKUP_SCHEMA_VERSION = 3;
 
@@ -18,7 +19,8 @@ const ALL_STORES = [
 
 const EXCLUDED_IMPORT_STORES = ['previewData', 'formState'];
 
-const DatabaseManagerModal = ({ isOpen, onClose }) => {
+const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
+    const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const [stats, setStats] = useState({
         customers: 0,
@@ -64,7 +66,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
 
     const handleClearData = async () => {
         if (clearConfirmText !== 'TÜM VERİLERİ SİL') {
-            toast.error('Lütfen onay metnini doğru yazın: TÜM VERİLERİ SİL');
+            toast.error(t('clearDataWrongText'));
             return;
         }
 
@@ -79,7 +81,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
             .map(([store, count]) => `${store}: ${count} kayıt`)
             .join(', ');
 
-        setConfirmDialog({ isOpen: true, title: 'Tüm Verileri Sil', message: `Bu işlem tüm verileri kalıcı olarak silecek: ${summary}. Devam etmek istediğinize emin misiniz?`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {}))); toast.success('Tüm veriler temizlendi'); setClearConfirmText(''); loadStats(); } catch (error) { Logger.error('Error clearing data:', error); toast.error('Veriler temizlenirken hata oluştu'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('deleteAllData'), message: t('deleteAllDataConfirm').replace('{summary}', summary), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {}))); toast.success(t('allDataCleared')); setClearConfirmText(''); loadStats(); } catch (error) { Logger.error('Error clearing data:', error); toast.error(t('clearDataError')); } }, variant: 'danger' });
     };
 
     const handleExport = async () => {
@@ -119,10 +121,10 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             setShowExportWarning(false);
-            toast.success('Yedek dosyası indirildi (tüm veriler)');
+            toast.success(t('backupDownloadedAll'));
         } catch (error) {
             Logger.error('Error exporting data:', error);
-            toast.error('Dışa aktarma hatası');
+            toast.error(t('backupExportError'));
         }
     };
 
@@ -147,7 +149,7 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
         if (!file) return;
 
         if (file.size > 50 * 1024 * 1024) {
-            toast.error('Dosya çok büyük (maksimum 50 MB)');
+            toast.error(t('fileTooLarge'));
             e.target.value = '';
             return;
         }
@@ -160,7 +162,6 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
 
                 validateBackup(data);
 
-                // Atomic import: first validate all stores, then execute
                 const allOperations: any[] = [];
 
                 for (const [store, items] of Object.entries(data.stores)) {
@@ -184,7 +185,6 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                     }
                 }
 
-                // Execute atomically
                 for (const op of allOperations) {
                     if (op.action === 'clear') {
                         await (db).clear(op.store);
@@ -199,12 +199,12 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                     }
                 }
 
-                toast.success('Veriler başarıyla içe aktarıldı');
+                toast.success(t('dataImported'));
                 loadStats();
-                toast('Yedek dosyasını güvenli bir yerde saklayın. Dosya müşteri, banka ve ticari veriler içerir.', { duration: 5000, icon: '⚠️' });
+                toast(t('backupWarning'), { duration: 5000, icon: '⚠️' });
             } catch (error) {
                 Logger.error('Error importing data:', error);
-                toast.error((error as any).message || 'İçe aktarma hatası: Geçersiz dosya formatı');
+                toast.error((error as any).message || t('importErrorInvalid'));
             } finally {
                 setImportFile(null);
             }
@@ -213,29 +213,29 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Veritabanı Yönetimi" size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('dbManagement')} size="lg">
             <div className="space-y-6">
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="bg-[var(--color-bg-muted)] p-4 rounded-[var(--radius)] text-center border border-[var(--color-border)]">
                         <div className="text-2xl font-bold text-[var(--color-info)]">{stats.customers}</div>
-                        <div className="text-sm text-[var(--color-text-muted)]">Müşteriler</div>
+                        <div className="text-sm text-[var(--color-text-muted)]">{t('customers')}</div>
                     </div>
                     <div className="bg-[var(--color-bg-muted)] p-4 rounded-[var(--radius)] text-center border border-[var(--color-border)]">
                         <div className="text-2xl font-bold text-[var(--color-success)]">{stats.products}</div>
-                        <div className="text-sm text-[var(--color-text-muted)]">Ürünler</div>
+                        <div className="text-sm text-[var(--color-text-muted)]">{t('products')}</div>
                     </div>
                     <div className="bg-[var(--color-bg-muted)] p-4 rounded-[var(--radius)] text-center border border-[var(--color-border)]">
                         <div className="text-2xl font-bold text-[var(--color-text)]">{stats.quotes}</div>
-                        <div className="text-sm text-[var(--color-text-muted)]">Teklifler</div>
+                        <div className="text-sm text-[var(--color-text-muted)]">{t('quotes')}</div>
                     </div>
                     <div className="bg-[var(--color-bg-muted)] p-4 rounded-[var(--radius)] text-center border border-[var(--color-border)]">
                         <div className="text-2xl font-bold text-[var(--color-warning)]">{stats.templates}</div>
-                        <div className="text-sm text-[var(--color-text-muted)]">Şablonlar</div>
+                        <div className="text-sm text-[var(--color-text-muted)]">{t('templates')}</div>
                     </div>
                     <div className="bg-[var(--color-bg-muted)] p-4 rounded-[var(--radius)] text-center border border-[var(--color-border)]">
                         <div className="text-2xl font-bold text-[var(--color-info)]">{stats.banks}</div>
-                        <div className="text-sm text-[var(--color-text-muted)]">Bankalar</div>
+                        <div className="text-sm text-[var(--color-text-muted)]">{t('banks')}</div>
                     </div>
                 </div>
 
@@ -245,27 +245,25 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                         <div className="flex items-start gap-3">
                             <AlertTriangle className="text-[var(--color-warning)] shrink-0 mt-0.5" size={20} />
                             <div>
-                                <p className="font-semibold text-[var(--color-warning)]">Güvenlik Uyarısı</p>
+                                <p className="font-semibold text-[var(--color-warning)]">{t('securityWarning')}</p>
                                 <p className="text-sm text-[var(--color-warning)] mt-1">
-                                    Yedek dosyası müşteri adları, telefon, e-posta, adres, IBAN, banka bilgileri,
-                                    ticari fiyatlar ve firma imza/kaşe bilgileri içerebilir.
-                                    Dosyayı güvenli olmayan ortamlarda paylaşmayın.
+                                    {t('securityWarningText')}
                                 </p>
                             </div>
                         </div>
                         <div className="flex gap-2 justify-end">
-                            <button className="btn btn-sm btn-ghost" onClick={() => setShowExportWarning(false)}>Vazgeç</button>
-                            <button className="btn btn-sm btn-primary" onClick={handleExport}>Anladım, Dışa Aktar</button>
+                            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setShowExportWarning(false)}>{t('cancelExport')}</button>
+                            <button type="button" className="btn btn-sm btn-primary" onClick={handleExport}>{t('understoodExport')}</button>
                         </div>
                     </div>
                 )}
 
                 {/* Actions */}
                 <div className="border-t border-[var(--color-border)] pt-6">
-                    <h4 className="text-lg font-semibold mb-4 text-[var(--color-text)]">Veri İşlemleri</h4>
+                    <h4 className="text-lg font-semibold mb-4 text-[var(--color-text)]">{t('dataOperations')}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button className="btn btn-outline flex items-center justify-center gap-2" onClick={handleExport}>
-                            <Download size={18} /> Tüm Veriyi Dışa Aktar
+                        <button type="button" className="btn btn-outline flex items-center justify-center gap-2" onClick={handleExport}>
+                            <Download size={18} /> {t('exportAllData')}
                         </button>
                         <div className="relative">
                             <input
@@ -275,23 +273,23 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                                 accept=".json"
                                 onChange={handleImport}
                             />
-                            <button
+                            <button type="button"
                                 className="btn btn-outline w-full flex items-center justify-center gap-2"
                                 onClick={() => document.getElementById('dbImport')?.click()}
                             >
-                                <Upload size={18} /> Veri İçe Aktar
+                                <Upload size={18} /> {t('importData')}
                             </button>
                         </div>
 
                         {/* Import Mode Selection */}
                         <div className="md:col-span-2 flex flex-wrap gap-2 items-center text-sm">
-                            <span className="text-[var(--color-text-muted)]">İçe Aktarma Modu:</span>
+                            <span className="text-[var(--color-text-muted)]">{t('importMode')}</span>
                             {[
-                                { value: 'replace', label: 'Tamamen Değiştir' },
-                                { value: 'merge', label: 'Birleştir' },
-                                { value: 'missing', label: 'Sadece Eksikleri Ekle' }
+                                { value: 'replace', label: t('replaceMode') },
+                                { value: 'merge', label: t('mergeMode') },
+                                { value: 'missing', label: t('missingMode') }
                             ].map(option => (
-                                <button
+                                <button type="button"
                                     key={option.value}
                                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                                         importMode === option.value
@@ -305,24 +303,24 @@ const DatabaseManagerModal = ({ isOpen, onClose }) => {
                             ))}
                         </div>
 
-                        <button className="btn btn-outline flex items-center justify-center gap-2" onClick={loadStats}>
-                            <RefreshCw size={18} /> İstatistikleri Yenile
+                        <button type="button" className="btn btn-outline flex items-center justify-center gap-2" onClick={loadStats}>
+                            <RefreshCw size={18} /> {t('refreshStats')}
                         </button>
-                        <button className="btn btn-danger flex items-center justify-center gap-2" onClick={handleClearData}>
-                            <Trash size={18} /> Tüm Veriyi Temizle
+                        <button type="button" className="btn btn-danger flex items-center justify-center gap-2" onClick={handleClearData}>
+                            <Trash size={18} /> {t('clearAllData')}
                         </button>
                     </div>
 
                     {/* Clear Confirmation Input */}
                     <div className="mt-4 p-3 bg-[var(--color-error)]/10 border border-[var(--color-border)] rounded-lg">
                         <label className="text-xs font-medium text-[var(--color-error)]">
-                            Tüm verileri silmek için aşağıya <strong>TÜM VERİLERİ SİL</strong> yazın:
+                            {t('clearDataHint')}
                         </label>
                         <div className="flex gap-2 mt-1">
                             <input
                                 type="text"
                                 className="form-control text-sm flex-1"
-                                placeholder="TÜM VERİLERİ SİL"
+                                placeholder={t('clearDataConfirm')}
                                 value={clearConfirmText}
                                 onChange={(e) => setClearConfirmText(e.target.value)}
                             />

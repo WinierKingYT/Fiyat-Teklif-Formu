@@ -58,6 +58,8 @@ const SortableRow = memo(
             type="button"
             onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
             className={`p-0.5 rounded transition-colors ${selected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] opacity-0 group-hover:opacity-60'}`}
+            aria-label={selected ? t('selectItem') + ' (seçili)' : t('selectItem')}
+            aria-pressed={selected}
           >
             {selected ? <CheckSquare size={13} /> : <Square size={13} />}
           </button>
@@ -110,6 +112,7 @@ const SortableRow = memo(
             type="text"
             className={getFieldClass(item.id, "name", item) + " mb-1"}
             placeholder={t("productName")}
+            aria-label={t("productName")}
             value={item.name}
             onChange={(e) => handleItemChange(index, "name", e.target.value)}
             onBlur={() => handleRowBlur(item.id, "name")}
@@ -122,6 +125,7 @@ const SortableRow = memo(
           <textarea
             className={getFieldClass(item.id, "description", item) + " resize-none"}
             placeholder={t("description")}
+            aria-label={t("description")}
             rows={2}
             value={item.description}
             onChange={(e) =>
@@ -139,6 +143,7 @@ const SortableRow = memo(
           <input
             type="text"
             className={getFieldClass(item.id, "quantity", item) + " text-center"}
+            aria-label={t("quantity")}
             value={item.quantity}
             onChange={(e) =>
               handleItemChange(index, "quantity", e.target.value)
@@ -173,6 +178,7 @@ const SortableRow = memo(
           <input
             type="text"
             className={getFieldClass(item.id, "price", item) + " text-right"}
+            aria-label={t("unitPrice")}
             value={item.price}
             onChange={(e) => handleItemChange(index, "price", e.target.value)}
             onBlur={(e) => { handleRowBlur(item.id, "price"); handleCalc("price", e.target.value); }}
@@ -188,6 +194,7 @@ const SortableRow = memo(
           <input
             type="text"
             className={getFieldClass(item.id, "taxRate", item) + " text-center"}
+            aria-label={t("vat")}
             value={item.taxRate}
             onChange={(e) => handleItemChange(index, "taxRate", e.target.value)}
             onBlur={(e) => { handleRowBlur(item.id, "taxRate"); handleCalc("taxRate", e.target.value); }}
@@ -203,6 +210,7 @@ const SortableRow = memo(
           <input
             type="text"
             className="form-control text-sm text-center"
+            aria-label={t("discount")}
             value={item.discountRate || 0}
             onChange={(e) =>
               handleItemChange(index, "discountRate", e.target.value)
@@ -227,6 +235,7 @@ const SortableRow = memo(
               className="btn btn-ghost btn-sm p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => duplicateItem(index)}
               title="Çoğalt"
+              aria-label={t('duplicateItem')}
             >
               <Copy size={13} />
             </button>
@@ -234,6 +243,8 @@ const SortableRow = memo(
               type="button"
               className="btn btn-ghost btn-sm p-1 text-[var(--color-text-muted)] hover:text-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => removeItem(index)}
+              title={t('deleteItem')}
+              aria-label={t('deleteItem')}
             >
               <Trash size={13} />
             </button>

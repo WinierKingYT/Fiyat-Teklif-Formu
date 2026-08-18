@@ -6,14 +6,16 @@ import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Trash2, Save, FileInput, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
-import { useQuote } from '../context/QuoteContext';
+import { useQuoteData } from '../context/QuoteContext';
+import { useTranslation } from '../hooks/useTranslation';
 
-const TemplateManagerModal = ({ isOpen, onClose }) => {
+const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
+    const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const {
         quoteData, customerData, companyData, items, discount,
         updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscount
-    } = useQuote();
+    } = useQuoteData();
 
     const [templates, setTemplates] = useState<any[]>([]);
     const [templateName, setTemplateName] = useState('');
@@ -29,26 +31,26 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleSaveTemplate = async () => {
-        if (!templateName.trim()) { toast.error('Lütfen şablon adı girin.'); return; }
+        if (!templateName.trim()) { toast.error(t('enterTemplateName')); return; }
         const template = { id: Date.now(), name: templateName, createdAt: new Date().toISOString(), data: { quoteData, customerData, companyData, items, discount } };
         try {
             await db.add('templates', template);
-            toast.success('Şablon kaydedildi');
+            toast.success(t('templateSaved'));
             setTemplateName('');
             loadTemplates();
         } catch (error) {
             Logger.error(error);
-            toast.error('Şablon kaydedilirken hata oluştu');
+            toast.error(t('templateSaveError'));
         }
     };
 
     const handleLoadTemplate = (template) => {
-        setConfirmDialog({ isOpen: true, title: 'Şablon Yükle', message: `"${template.name}" şablonunu yüklemek istediğinize emin misiniz? Mevcut veriler silinecektir.`, onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const { data } = template; if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v)); if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v)); if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v)); if (data.items) setItems(data.items); if (data.discount) setDiscount(data.discount); else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate }); toast.success('Şablon başarıyla yüklendi'); onClose(); }, variant: 'warning' });
+        setConfirmDialog({ isOpen: true, title: t('loadTemplateTitle'), message: t('loadTemplateConfirm').replace('{name}', template.name), onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const { data } = template; if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v)); if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v)); if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v)); if (data.items) setItems(data.items); if (data.discount) setDiscount(data.discount); else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate }); toast.success(t('templateLoaded')); onClose(); }, variant: 'warning' });
     };
 
     const handleDeleteTemplate = async (id) => {
-        setConfirmDialog({ isOpen: true, title: 'Şablonu Sil', message: 'Bu şablonu silmek istediğinize emin misiniz?', onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('templates', id); toast.success('Şablon silindi'); loadTemplates(); } catch (error) { Logger.error(error);
-                toast.error('Silinirken hata oluştu'); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('deleteTemplateTitle'), message: t('deleteTemplateConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('templates', id); toast.success(t('templateDeleted')); loadTemplates(); } catch (error) { Logger.error(error);
+                toast.error(t('templateDeleteError')); } }, variant: 'danger' });
     };
 
     const handleExportTemplate = (template) => {
@@ -62,10 +64,10 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            toast.success('Şablon dışa aktarıldı');
+            toast.success(t('templateExported'));
         } catch (error) {
             Logger.error('Export error:', error);
-            toast.error('Dışa aktarma hatası');
+            toast.error(t('templateExportError'));
         }
     };
 
@@ -76,37 +78,37 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
         reader.onload = async (e) => {
             try {
                 const importedTemplate = JSON.parse((e.target as any).result);
-                if (!importedTemplate.data || !importedTemplate.name) throw new Error('Geçersiz şablon formatı');
+                if (!importedTemplate.data || !importedTemplate.name) throw new Error('Invalid template format');
                 const newTemplate = { ...importedTemplate, id: Date.now(), name: `${importedTemplate.name} (İçe Aktarıldı)` };
                 await db.add('templates', newTemplate);
-                toast.success('Şablon içe aktarıldı');
+                toast.success(t('templateImported'));
                 loadTemplates();
             } catch (error) {
                 Logger.error('Import error:', error);
-                toast.error('İçe aktarma hatası: Geçersiz dosya');
+                toast.error(t('templateImportError'));
             }
         };
         reader.readAsText(file);
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Şablon Yönetimi" size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('templateManagement')} size="lg">
             <div className="space-y-6">
                 <div className="bg-[var(--color-bg-muted)] p-4 rounded-[var(--radius)] border border-[var(--color-border)]">
                     <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2 flex items-center gap-2">
-                        <Save size={16} className="text-[var(--color-primary)]" /> Mevcut Teklifi Şablon Olarak Kaydet
+                        <Save size={16} className="text-[var(--color-primary)]" /> {t('saveAsTemplate')}
                     </h3>
                     <div className="flex gap-2">
-                        <input type="text" className="form-control" placeholder="Şablon Adı (Örn: Standart Web Tasarım Teklifi)" value={templateName} onChange={(e) => setTemplateName(e.target.value)} autoComplete="off" />
-                        <button className="btn btn-primary whitespace-nowrap" onClick={handleSaveTemplate}>Kaydet</button>
+                        <input type="text" className="form-control" placeholder={t('templateNamePlaceholder')} value={templateName} onChange={(e) => setTemplateName(e.target.value)} autoComplete="off" />
+                        <button type="button" className="btn btn-primary whitespace-nowrap" onClick={handleSaveTemplate}>{t('save')}</button>
                     </div>
                 </div>
 
                 <div>
                     <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-sm font-semibold text-[var(--color-text)]">Kayıtlı Şablonlar</h3>
+                        <h3 className="text-sm font-semibold text-[var(--color-text)]">{t('savedTemplates')}</h3>
                         <div className="flex gap-2">
-                            <button className="btn btn-sm btn-outline" onClick={() => document.getElementById('importTemplateInput')?.click()} title="Şablon İçe Aktar">
+                            <button type="button" className="btn btn-sm btn-outline" onClick={() => document.getElementById('importTemplateInput')?.click()} title={t('importTemplate')}>
                                 <Upload size={14} /> İçe Aktar
                             </button>
                             <input type="file" id="importTemplateInput" accept=".json" style={{ display: 'none' }} onChange={handleImportTemplate} />
@@ -115,7 +117,7 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
                     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
                         {templates.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-8 text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] rounded-[var(--radius)]">
-                                <p>Henüz kayıtlı şablon yok.</p>
+                                <p>{t('noTemplatesYet')}</p>
                             </div>
                         ) : (
                             templates.map(template => (
@@ -125,13 +127,13 @@ const TemplateManagerModal = ({ isOpen, onClose }) => {
                                         <div className="text-xs text-[var(--color-text-muted)]">{new Date(template.createdAt).toLocaleDateString('tr-TR')}</div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button className="btn btn-sm btn-outline" onClick={() => handleLoadTemplate(template)} title="Şablonu Yükle">
+                                        <button type="button" className="btn btn-sm btn-outline" onClick={() => handleLoadTemplate(template)} title={t('loadTemplate')}>
                                             <FileInput size={14} /> Yükle
                                         </button>
-                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTemplate(template.id)} title="Şablonu Sil">
+                                        <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDeleteTemplate(template.id)} title={t('deleteTemplate')}>
                                             <Trash2 size={14} />
                                         </button>
-                                        <button className="btn btn-sm btn-outline" onClick={() => handleExportTemplate(template)} title="Dışa Aktar">
+                                        <button type="button" className="btn btn-sm btn-outline" onClick={() => handleExportTemplate(template)} title={t('exportTemplate')}>
                                             <Download size={14} />
                                         </button>
                                     </div>

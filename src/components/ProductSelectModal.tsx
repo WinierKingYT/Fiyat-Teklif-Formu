@@ -131,7 +131,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
                             <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10">
                                 <tr>
                                     <th className="p-3 w-10">
-                                        <button onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]">
+                                        <button type="button" onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]">
                                             {selectedProducts.size === filteredProducts.length && filteredProducts.length > 0 ?
                                                 <CheckSquare size={18} className="text-[var(--color-primary)]" /> :
                                                 <Square size={18} className="text-[var(--color-text-muted)]" />
@@ -186,8 +186,8 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
                         {selectedProducts.size} ürün seçildi
                     </div>
                     <div className="flex gap-2">
-                        <button className="btn btn-outline" onClick={onClose}>İptal</button>
-                        <button className="btn btn-primary" onClick={handleAddSelected} disabled={selectedProducts.size === 0}>
+                        <button type="button" className="btn btn-outline" onClick={onClose}>İptal</button>
+                        <button type="button" className="btn btn-primary" onClick={handleAddSelected} disabled={selectedProducts.size === 0}>
                             <Plus size={16} /> Seçilenleri Ekle ({selectedProducts.size})
                         </button>
                     </div>

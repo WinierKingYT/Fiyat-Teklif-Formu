@@ -8,7 +8,7 @@ import ItemsTable from './components/ItemsTable';
 import SummarySection from './components/SummarySection';
 import ConfirmDialog from './components/ConfirmDialog';
 import CollapsiblePanel from './components/CollapsiblePanel';
-import { QuoteProvider, useQuote } from './context/QuoteContext';
+import { QuoteProvider, useQuoteData, useTab } from './context/QuoteContext';
 import { UIProvider, useUI } from './context/UIContext';
 import {
   FileText, Landmark, Undo2, Redo2, FlaskConical, ChevronDown,
@@ -43,7 +43,18 @@ const ModalLoadingFallback = () => (
   </div>
 );
 
-const QuoteBuilder = ({
+interface QuoteBuilderProps {
+  onNavigate: (view: string) => void;
+  onOpenProductManager: () => void;
+  onOpenCustomerManager: () => void;
+  onOpenTemplateManager: () => void;
+  onOpenDatabaseManager: () => void;
+  onOpenBankManager: () => void;
+  onOpenRecycleBin: () => void;
+  onOpenAnalytics: () => void;
+}
+
+const QuoteBuilder = React.memo(({
   onNavigate,
   onOpenProductManager,
   onOpenCustomerManager,
@@ -52,7 +63,7 @@ const QuoteBuilder = ({
   onOpenBankManager,
   onOpenRecycleBin,
   onOpenAnalytics,
-}) => {
+}: QuoteBuilderProps) => {
   const {
     quoteData, updateQuoteData,
     customerData, updateCustomerData,
@@ -61,13 +72,12 @@ const QuoteBuilder = ({
     discount, setDiscount,
     bankData, updateBankData,
     saveQuote,
-    undo, redo, canUndo, canRedo,
     currentQuoteId,
     loadQuote,
     fillTestData,
-    addTab,
     resetQuote
-  } = useQuote();
+  } = useQuoteData();
+  const { undo, redo, canUndo, canRedo, addTab } = useTab();
 
   const { setIsLivePreviewMode } = useUI();
   const { t } = useTranslation(quoteData?.language);
@@ -144,6 +154,7 @@ const QuoteBuilder = ({
             value={quoteData.title || ''}
             onChange={(e) => updateQuoteData('title', e.target.value)}
             placeholder="Teklif Başlığı"
+            aria-label="Teklif Başlığı"
             className="text-base sm:text-lg font-bold bg-transparent border-0 outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/30 min-w-[140px] sm:min-w-[160px] p-0"
           />
           <span className="text-[11px] text-[var(--color-text-muted)] whitespace-nowrap">{today}</span>
@@ -152,6 +163,7 @@ const QuoteBuilder = ({
           <select
             value={quoteData.currency || 'TRY'}
             onChange={(e) => updateQuoteData('currency', e.target.value)}
+            aria-label="Para Birimi"
             className="text-xs font-semibold bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded-[var(--radius)] px-2 py-1.5 text-[var(--color-text)] outline-none cursor-pointer"
           >
             <option value="TRY">₺ TRY</option>
@@ -160,18 +172,18 @@ const QuoteBuilder = ({
             <option value="GBP">£ GBP</option>
           </select>
           <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
-          <button onClick={undo} disabled={!canUndo} className="top-bar-btn" title="Geri Al (Ctrl+Z)" aria-label="Geri Al (Ctrl+Z)"><Undo2 size={15} /></button>
-          <button onClick={redo} disabled={!canRedo} className="top-bar-btn" title="İleri Al (Ctrl+Y)" aria-label="İleri Al (Ctrl+Y)"><Redo2 size={15} /></button>
+          <button type="button" onClick={undo} disabled={!canUndo} className="top-bar-btn" title="Geri Al (Ctrl+Z)" aria-label="Geri Al (Ctrl+Z)"><Undo2 size={15} /></button>
+          <button type="button" onClick={redo} disabled={!canRedo} className="top-bar-btn" title="İleri Al (Ctrl+Y)" aria-label="İleri Al (Ctrl+Y)"><Redo2 size={15} /></button>
           <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
-          <button onClick={() => saveQuote()} className="top-bar-btn" title="Kaydet (Ctrl+S)" aria-label="Kaydet (Ctrl+S)"><Save size={15} /></button>
-          <button onClick={handlePdfShortcut} className="top-bar-btn" title="PDF Önizleme (Ctrl+P)" aria-label="PDF Önizleme (Ctrl+P)"><FileText size={15} /></button>
-          <button onClick={handleNewQuote} className="top-bar-btn" title="Yeni Teklif (Ctrl+N)" aria-label="Yeni Teklif (Ctrl+N)"><Plus size={15} /></button>
+          <button type="button" onClick={() => saveQuote()} className="top-bar-btn" title="Kaydet (Ctrl+S)" aria-label="Kaydet (Ctrl+S)"><Save size={15} /></button>
+          <button type="button" onClick={handlePdfShortcut} className="top-bar-btn" title="PDF Önizleme (Ctrl+P)" aria-label="PDF Önizleme (Ctrl+P)"><FileText size={15} /></button>
+          <button type="button" onClick={handleNewQuote} className="top-bar-btn" title="Yeni Teklif (Ctrl+N)" aria-label="Yeni Teklif (Ctrl+N)"><Plus size={15} /></button>
           <div className="w-px h-4 bg-[var(--color-border)] mx-1 hidden sm:block" />
           <div className="relative group">
-            <button className="top-bar-btn" aria-label="Diğer İşlemler"><MoreHorizontal size={15} /></button>
+            <button type="button" className="top-bar-btn" aria-label="Diğer İşlemler"><MoreHorizontal size={15} /></button>
             <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-lg py-1 min-w-[160px] z-50 hidden group-hover:block">
-              <button onClick={fillTestData} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><FlaskConical size={13} /> Test Verisi Doldur</button>
-              <button onClick={() => setConfirmReset(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><LogOut size={13} /> Sıfırla</button>
+              <button type="button" onClick={fillTestData} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><FlaskConical size={13} /> Test Verisi Doldur</button>
+              <button type="button" onClick={() => setConfirmReset(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"><LogOut size={13} /> Sıfırla</button>
             </div>
           </div>
         </div>
@@ -303,10 +315,11 @@ const QuoteBuilder = ({
       </Suspense>
     </div>
   );
-};
+});
+QuoteBuilder.displayName = 'QuoteBuilder';
 
 function BankManagerModalWithSelect({ isOpen, onClose }) {
-  const { updateBankData } = useQuote();
+  const { updateBankData } = useQuoteData();
   const handleSelect = (bank) => {
     Object.entries(bank).forEach(([key, value]) => {
       if (key !== 'id') updateBankData(key, value);
@@ -343,31 +356,47 @@ function App() {
   const [isRecycleBinModalOpen, setIsRecycleBinModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
 
+  const openCustomerManager = useCallback(() => setIsCustomerManagerOpen(true), []);
+  const openProductManager = useCallback(() => setIsProductManagerOpen(true), []);
+  const openTemplateManager = useCallback(() => setIsTemplateManagerOpen(true), []);
+  const openDatabaseManager = useCallback(() => setIsDatabaseManagerOpen(true), []);
+  const openBankManager = useCallback(() => setIsBankManagerOpen(true), []);
+  const openRecycleBin = useCallback(() => setIsRecycleBinModalOpen(true), []);
+  const openAnalytics = useCallback(() => setIsAnalyticsModalOpen(true), []);
+
+  const closeCustomerManager = useCallback(() => setIsCustomerManagerOpen(false), []);
+  const closeProductManager = useCallback(() => setIsProductManagerOpen(false), []);
+  const closeTemplateManager = useCallback(() => setIsTemplateManagerOpen(false), []);
+  const closeDatabaseManager = useCallback(() => setIsDatabaseManagerOpen(false), []);
+  const closeBankManager = useCallback(() => setIsBankManagerOpen(false), []);
+  const closeRecycleBin = useCallback(() => setIsRecycleBinModalOpen(false), []);
+  const closeAnalytics = useCallback(() => setIsAnalyticsModalOpen(false), []);
+
   return (
     <QuoteProvider>
       <UIProvider>
         <Layout
           currentView={currentView}
           onNavigate={setCurrentView}
-          onOpenCustomerManager={() => setIsCustomerManagerOpen(true)}
-          onOpenProductManager={() => setIsProductManagerOpen(true)}
-          onOpenTemplateManager={() => setIsTemplateManagerOpen(true)}
-          onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
-          onOpenBankManager={() => setIsBankManagerOpen(true)}
-          onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
-          onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
+          onOpenCustomerManager={openCustomerManager}
+          onOpenProductManager={openProductManager}
+          onOpenTemplateManager={openTemplateManager}
+          onOpenDatabaseManager={openDatabaseManager}
+          onOpenBankManager={openBankManager}
+          onOpenRecycleBin={openRecycleBin}
+          onOpenAnalytics={openAnalytics}
         >
           {currentView === 'builder' && (
             <div className="page-enter" key="builder">
               <QuoteBuilder
                 onNavigate={setCurrentView}
-                onOpenProductManager={() => setIsProductManagerOpen(true)}
-                onOpenCustomerManager={() => setIsCustomerManagerOpen(true)}
-                onOpenTemplateManager={() => setIsTemplateManagerOpen(true)}
-                onOpenDatabaseManager={() => setIsDatabaseManagerOpen(true)}
-                onOpenBankManager={() => setIsBankManagerOpen(true)}
-                onOpenRecycleBin={() => setIsRecycleBinModalOpen(true)}
-                onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
+                onOpenProductManager={openProductManager}
+                onOpenCustomerManager={openCustomerManager}
+                onOpenTemplateManager={openTemplateManager}
+                onOpenDatabaseManager={openDatabaseManager}
+                onOpenBankManager={openBankManager}
+                onOpenRecycleBin={openRecycleBin}
+                onOpenAnalytics={openAnalytics}
               />
             </div>
           )}
@@ -378,49 +407,49 @@ function App() {
         <Suspense fallback={<ModalLoadingFallback />}>
           <CustomerManagerModal
             isOpen={isCustomerManagerOpen}
-            onClose={() => setIsCustomerManagerOpen(false)}
+            onClose={closeCustomerManager}
           />
         </Suspense>
 
         <Suspense fallback={<ModalLoadingFallback />}>
           <ProductManagerModal
             isOpen={isProductManagerOpen}
-            onClose={() => setIsProductManagerOpen(false)}
+            onClose={closeProductManager}
           />
         </Suspense>
 
         <Suspense fallback={<ModalLoadingFallback />}>
           <TemplateManagerModal
             isOpen={isTemplateManagerOpen}
-            onClose={() => setIsTemplateManagerOpen(false)}
+            onClose={closeTemplateManager}
           />
         </Suspense>
 
         <Suspense fallback={<ModalLoadingFallback />}>
           <DatabaseManagerModal
             isOpen={isDatabaseManagerOpen}
-            onClose={() => setIsDatabaseManagerOpen(false)}
+            onClose={closeDatabaseManager}
           />
         </Suspense>
 
         <Suspense fallback={<ModalLoadingFallback />}>
           <BankManagerModalWithSelect
             isOpen={isBankManagerOpen}
-            onClose={() => setIsBankManagerOpen(false)}
+            onClose={closeBankManager}
           />
         </Suspense>
 
         <Suspense fallback={<ModalLoadingFallback />}>
           <RecycleBinModal
             isOpen={isRecycleBinModalOpen}
-            onClose={() => setIsRecycleBinModalOpen(false)}
+            onClose={closeRecycleBin}
           />
         </Suspense>
 
         <Suspense fallback={<ModalLoadingFallback />}>
           <AnalyticsModal
             isOpen={isAnalyticsModalOpen}
-            onClose={() => setIsAnalyticsModalOpen(false)}
+            onClose={closeAnalytics}
           />
         </Suspense>
 

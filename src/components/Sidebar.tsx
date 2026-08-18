@@ -21,13 +21,28 @@ const managerItems = [
   { icon: TrendingUp, labelKey: 'analytics' },
 ];
 
-const Sidebar = ({
+interface SidebarProps {
+  currentView: string;
+  onNavigate: (view: string) => void;
+  onOpenCustomerManager: () => void;
+  onOpenProductManager: () => void;
+  onOpenTemplateManager: () => void;
+  onOpenDatabaseManager: () => void;
+  onOpenBankManager: () => void;
+  onOpenRecycleBin: () => void;
+  onOpenAnalytics: () => void;
+  onNewQuote: () => void;
+  isMobileOpen: boolean;
+  onMobileClose: () => void;
+}
+
+const Sidebar = React.memo(({
   currentView, onNavigate,
   onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
   onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin, onOpenAnalytics,
   onNewQuote,
   isMobileOpen, onMobileClose
-}) => {
+}: SidebarProps) => {
   const { t } = useTranslation();
 
   const handleNav = (id) => {
@@ -56,7 +71,7 @@ const Sidebar = ({
 
       <div className="sidebar-nav">
         {navItems.map(item => (
-          <button
+          <button type="button"
             key={item.id}
             onClick={() => handleNav(item.id)}
             className={`sidebar-nav-item ${currentView === item.id ? 'sidebar-nav-item-active' : ''}`}
@@ -72,7 +87,7 @@ const Sidebar = ({
       <div className="sidebar-nav">
         <div className="sidebar-section-label">Yönetim</div>
         {managerItems.map((item, i) => (
-          <button
+          <button type="button"
             key={i}
             onClick={handlers[i]}
             className="sidebar-nav-item"
@@ -86,7 +101,7 @@ const Sidebar = ({
       <div className="sidebar-spacer" />
 
       <div className="sidebar-nav">
-        <button
+        <button type="button"
           onClick={() => onNavigate('settings')}
           className={`sidebar-nav-item ${currentView === 'settings' ? 'sidebar-nav-item-active' : ''}`}
         >
@@ -120,14 +135,14 @@ const Sidebar = ({
                   <span className="sidebar-logo-version">v2.3</span>
                 </div>
               </div>
-              <button onClick={onMobileClose} className="sidebar-close-btn">
+              <button type="button" onClick={onMobileClose} className="sidebar-close-btn" aria-label={t('close')}>
                 <X size={20} />
               </button>
             </div>
             <div className="sidebar-mobile-body">
               <div className="sidebar-nav">
                 {navItems.map(item => (
-                  <button
+                  <button type="button"
                     key={item.id}
                     onClick={() => { handleNav(item.id); onMobileClose(); }}
                     className={`sidebar-nav-item ${currentView === item.id ? 'sidebar-nav-item-active' : ''}`}
@@ -140,7 +155,7 @@ const Sidebar = ({
               <div className="sidebar-divider" />
               <div className="sidebar-nav">
                 {managerItems.map((item, i) => (
-                  <button
+                  <button type="button"
                     key={i}
                     onClick={() => { handlers[i](); onMobileClose(); }}
                     className="sidebar-nav-item"
@@ -152,7 +167,7 @@ const Sidebar = ({
               </div>
               <div className="sidebar-divider" />
               <div className="sidebar-nav">
-                <button
+                <button type="button"
                   onClick={() => { onNavigate('settings'); onMobileClose(); }}
                   className="sidebar-nav-item"
                 >
@@ -166,6 +181,7 @@ const Sidebar = ({
       )}
     </>
   );
-};
+});
+Sidebar.displayName = 'Sidebar';
 
 export default Sidebar;

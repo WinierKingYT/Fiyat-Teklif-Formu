@@ -51,10 +51,10 @@ export const getDefaultPdfConfig = (): PdfConfig => ({
     tableHeaderFontSize: 14, tableRowHeight: 35, borderRadius: 6,
     tableHeaderBg: '#f1f5f9', margins: 'normal', pageOrientation: 'portrait',
     showTableImages: true, showTableUnit: true, showTableTax: true,
-    showQRCode: false, qrCodeUrl: '', showWatermark: false,
+    showWatermark: false,
     watermarkText: 'TASLAK', watermarkOpacity: 0.1, watermarkColor: '#000000',
     watermarkFontSize: 120, watermarkRotation: -45, customFooter: '',
-    logoPosition: 'left', theme: 'modern', color: '#000000',
+    logoPosition: 'left', logoStyle: 'square', logoMaxHeight: 50, showPageNumbers: true, pageBgPattern: 'none', theme: 'modern', color: '#000000',
     globalFontFamily: 'Inter', titleFontFamily: '', labelFontFamily: '', bodyFontFamily: '',
     headerTitleFontSize: '1rem', headerTitleFontWeight: '700', headerInfoFontSize: '0.7rem',
     customerTitleFontSize: '0.8rem', customerTitleFontWeight: '600',
@@ -66,7 +66,8 @@ export const getDefaultPdfConfig = (): PdfConfig => ({
     summaryLabelFontSize: '0.75rem', summaryLabelFontWeight: 'normal',
     summaryValueFontSize: 'inherit', summaryValueFontWeight: '500',
     summaryTotalFontSize: '0.9rem', summaryTotalFontWeight: '700',
-    footerFontSize: '0.7rem', footerFontWeight: 'normal', itemsPerPage: 14
+    footerFontSize: '0.7rem', footerFontWeight: 'normal', itemsPerPage: 14,
+    pageBackgroundColor: '#ffffff'
 });
 
 export const getDefaultPdfLayout = (): PdfLayoutItem[] => [

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Landmark, CreditCard, User, Building, Hash } from 'lucide-react';
-import { useQuote } from '../context/QuoteContext';
+import { useQuoteData } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { InputField } from './ui';
 
@@ -24,7 +24,7 @@ interface BankInfoFormProps {
 }
 
 const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpenManager }) => {
-  const { quoteData } = useQuote();
+  const { quoteData } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
 
   const {

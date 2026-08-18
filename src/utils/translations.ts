@@ -1,6 +1,7 @@
 export const translations = {
     tr: {
         quote: 'TEKLİF',
+        quoteTitle: 'FİYAT TEKLİFİ',
         quoteNo: 'Teklif No',
         date: 'Tarih',
         validUntil: 'Geçerlilik',
@@ -51,10 +52,17 @@ export const translations = {
         regards: 'Saygılarımızla',
         noImage: 'Görsel Yok',
         logo: 'LOGO',
-        companyStamp: 'Firma Kaşesi'
+        companyStamp: 'Firma Kaşesi',
+        digitalSignature: 'Dijital İmza',
+        clickToEdit: 'Düzenlemek için tıklayın',
+        edit: 'Düzenle',
+        selectItem: 'Satırı seç',
+        duplicateItem: 'Çoğalt',
+        deleteItem: 'Satırı sil'
     },
     en: {
         quote: 'QUOTE',
+        quoteTitle: 'PRICE QUOTE',
         quoteNo: 'Quote No',
         date: 'Date',
         validUntil: 'Valid Until',
@@ -105,10 +113,17 @@ export const translations = {
         regards: 'Regards',
         noImage: 'No Image',
         logo: 'LOGO',
-        companyStamp: 'Company Stamp'
+        companyStamp: 'Company Stamp',
+        digitalSignature: 'Digital Signature',
+        clickToEdit: 'Click to edit',
+        edit: 'Edit',
+        selectItem: 'Select row',
+        duplicateItem: 'Duplicate',
+        deleteItem: 'Delete row'
     },
     de: {
         quote: 'ANGEBOT',
+        quoteTitle: 'PREISANGEBOT',
         quoteNo: 'Angebots-Nr.',
         date: 'Datum',
         validUntil: 'Gültig bis',
@@ -159,6 +174,12 @@ export const translations = {
         regards: 'Mit freundlichen Grüßen',
         noImage: 'Kein Bild',
         logo: 'LOGO',
-        companyStamp: 'Firmenstempel'
+        companyStamp: 'Firmenstempel',
+        digitalSignature: 'Digitale Unterschrift',
+        clickToEdit: 'Klicken zum Bearbeiten',
+        edit: 'Bearbeiten',
+        selectItem: 'Zeile auswählen',
+        duplicateItem: 'Duplizieren',
+        deleteItem: 'Zeile löschen'
     }
 };
