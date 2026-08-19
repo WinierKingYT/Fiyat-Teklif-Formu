@@ -256,18 +256,22 @@ const QuoteBuilder = React.memo(({
                 <Landmark size={12} />
               </button>
             }
-          >
-            <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
-          </CollapsiblePanel>
+            >
+              <Suspense fallback={<div className="text-sm text-[var(--color-text-muted)]">Yükleniyor...</div>}>
+                <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
+              </Suspense>
+            </CollapsiblePanel>
 
           {/* Şartlar & Notlar (collapsible) */}
           <CollapsiblePanel
             title={t('conditionsAndNotes')}
             icon={<StickyNote size={13} className="text-[var(--color-text-secondary)]" />}
             defaultCollapsed={rightCollapsed.terms}
-          >
-            <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
-          </CollapsiblePanel>
+            >
+              <Suspense fallback={<div className="text-sm text-[var(--color-text-muted)]">Yükleniyor...</div>}>
+                <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
+              </Suspense>
+            </CollapsiblePanel>
 
           {/* Teklif Detayları (collapsible) */}
           <CollapsiblePanel

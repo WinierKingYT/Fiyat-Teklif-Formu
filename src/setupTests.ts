@@ -1,21 +1,5 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest';
-import type { ReactNode } from 'react';
-
-// Global Mock for Recharts to prevent "loadAndTransform" errors
-vi.mock('recharts', () => ({
-    ResponsiveContainer: ({ children }: { children?: ReactNode }) => children, // Just return children or null, avoid JSX <div>
-    PieChart: () => null,
-    Pie: () => null,
-    Cell: () => null,
-    Tooltip: () => null,
-    Legend: () => null,
-    BarChart: () => null,
-    Bar: () => null,
-    XAxis: () => null,
-    YAxis: () => null,
-    CartesianGrid: () => null,
-}));
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
