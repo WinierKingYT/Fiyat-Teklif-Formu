@@ -1,16 +1,91 @@
-# React + Vite
+# Fiyat Teklif Formu (TeklifMaster Pro)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Hızlı ve kolay fiyat teklifi oluşturmanıza yarayan, tarayıcıda çalışan bir **React + TypeScript + Vite** uygulamasıdır. Verilerin tamamı **IndexedDB**'de yerel olarak saklanır; internet bağlantısı olmadan da çalışır (**PWA**). PDF ve Excel (XLSX/CSV) çıktısı üretir.
 
-Currently, two official plugins are available:
+## Özellikler
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Çok sekmeli teklif düzenleyici (yeni / kaydet / yükle / kopyala / sil / geri dönüşüm)
+- Müşteri, firma, banka bilgileri yönetimi ve ürün kataloğu
+- Vergi (KDV) ve indirim hesaplamaları, para birimi desteği ve döviz çevirici
+- **PDF çıktısı**: 6 tema (Modern, Klasik, Minimal, Kurumsal, Pro, Bold) ve kapsamlı görünüm/yerleşim/tipografi ayarları
+- Excel ve CSV içe / dışa aktarım
+- Veritabanı yedekleme / geri yükleme, verileri temizleme
+- Türkçe / İngilizce / Almanca arayüz (i18n)
+- PWA: çevrimdışı kullanım, otomatik güncelleme bildirimi
 
-## React Compiler
+## Teknolojiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React 19 + TypeScript** (strict)
+- **Vite 7** (build), **Vitest** (birim testleri), **Playwright** (E2E)
+- **Tailwind CSS 3** + özel CSS tasarım token'ları
+- **IndexedDB** (yerel depolama), `@dnd-kit` (sürükle-bırak tablo), `lucide-react` (ikonlar)
+- **html2pdf.js / html2canvas** (PDF), **xlsx** (Excel), **zod** (şema doğrulama)
 
-## Expanding the ESLint configuration
+## Başlangıç
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+npm run dev       # http://localhost:5173
+npm run build     # üretim derlemesi (dist/)
+npm run preview   # üretim derlemesini önizle
+```
+
+## Kalite Komutları
+
+```bash
+npm run typecheck    # tsc --noEmit (tip denetimi)
+npm run lint         # ESLint
+npm run test:run     # Vitest (birim testleri)
+npx playwright test  # E2E testler (önce dev sunucusu açık: npm run dev)
+```
+
+## Mimari
+
+Uygulama, teklif durumunu **odaklı context'lere** bölünmüş hâlde yönetir (`src/context/quote/`):
+
+| Context | Sorumluluk |
+|---------|-----------|
+| `DatabaseContext` | IndexedDB bağlantısı ve `db` erişimi |
+| `TabContext` | Sekmeler, aktif sekme, geri alma / ileri alma (undo-redo) ve geçmiş |
+| `QuoteDataContext` | Aktif sekmenin teklif/müşteri/firma/kalem/indirim/banka verileri; kaydet, yükle, sıfırla, yedekleme |
+| `PdfConfigContext` | PDF görünüm / yerleşim ayarları (localStorage ile kalıcı) |
+| `SaveStatusContext` | Otomatik kaydetme durumu (idle / saving / saved / error) |
+| `ConfirmContext` | Global onay penceresi |
+| `CompanyDefaultsContext` | Varsayılan firma bilgileri |
+| `QuoteContext` | Yukarıdakileri birleştiren üst sağlayıcı (`<QuoteProvider>`) ve eski kullanım için `useQuote()` |
+
+Bileşenler ihtiyaç duydukları context'i doğrudan tüketir (`useTab`, `useQuoteData`, `usePdfConfig`, ...) — böylece alakasız context değişimlerinde gereksiz yeniden render olmaz.
+
+## Veri Katmanı
+
+- `src/utils/indexedDBManager.ts` — IndexedDB bağlantısı, şema ve sürüm / migrasyon yönetimi
+- `src/hooks/useIndexedDB.ts` — `db` ve hazırlık durumunu context'e bağlar
+- Store'lar: `customers`, `products`, `quotes`, `templates`, `bankInfo`, `settings`
+- Yedekleme, tüm store'ları tek bir JSON dosyasına dışa aktarır / içe alır
+
+## PDF Temaları ve Ayarlar
+
+`src/components/pdf-themes/` altında 6 tema bulunur; hepsi `PdfConfig` içindeki ortak ayarları tutarlı şekilde uygular: bölüm aç/kapa, logo konumu/boyutu, filigran, sayfa numaraları, tablo başlığı / çizgi / zebra renkleri, tipografi (başlık / özet / alt bilgi), kenar boşlukları ve sayfa yönü, özel alt bilgi (`customFooter`) ve koşullar / notlar.
+
+Tema seçimi ve ayrıntılı ayarlar **PDF önizleme paneli**nden yapılır; ayarlar `localStorage`'a kaydedilir.
+
+## Klasör Yapısı
+
+```
+src/
+├── components/     # UI bileşenleri, modallar, PDF temaları, ayarlar sekmeleri
+├── context/        # Uygulama durumu (quote context'leri + UI)
+├── hooks/          # useIndexedDB, useDebounce, useTranslation, ...
+├── utils/          # hesap, PDF üretimi, Excel, IndexedDB, temalar, yardımcılar
+├── types/          # Tip tanımları (varlıklar, teklif, ayarlar)
+├── styles/         # CSS token'ları, bileşen ve animasyon stilleri
+└── __tests__/      # Vitest birim testleri
+```
+
+## Docker / Nginx
+
+Depoda hazır `Dockerfile`, `docker-compose.yml` ve `nginx.conf` (SPA yönlendirme, gzip, güvenlik başlıkları) bulunur. Build çıktısı (`dist/`) Nginx'e kopyalanır.
+
+## Lisans
+
+Özel proje — eğitim / şirket içi kullanım.

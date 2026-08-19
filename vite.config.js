@@ -62,6 +62,9 @@ export default defineConfig(({ command, mode }) => ({
   build: {
     target: 'es2020',
     sourcemap: mode === 'analyze' || mode === 'development',
+    // html2pdf.js bilinçli olarak büyüktür ve PdfPreviewPanel'de dinamik import
+    // ile ayrı bir chunk olarak yüklenir (ilk açılışı yavaşlatmaz).
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         manualChunks: {
