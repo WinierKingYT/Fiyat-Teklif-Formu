@@ -175,7 +175,7 @@ class CleanupService {
                 }
             } catch (err) {
                 // Store might not exist
-                Logger.warn('formState store not accessible:', (err as any).message);
+                Logger.warn('formState store not accessible:', (err as Error).message);
             }
 
             Logger.log(`Cleaned ${cleanedCount} orphaned data entries`);
@@ -315,7 +315,7 @@ class CleanupService {
             Logger.log('FullCleanup completed', results);
         } catch (error) {
             results.success = false;
-            results.errors.push((error as any).message);
+            results.errors.push((error as Error).message);
             Logger.error('Full cleanup failed', error);
         }
 

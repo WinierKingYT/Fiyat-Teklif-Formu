@@ -18,7 +18,7 @@ const bankInfoSchema = z.object({
 type BankInfoFormData = z.infer<typeof bankInfoSchema>;
 
 interface BankInfoFormProps {
-  data?: Record<string, any>;
+  data?: Record<string, string | undefined>;
   onChange: (name: string, value: any) => void;
   onOpenManager?: () => void;
 }
@@ -32,11 +32,11 @@ const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpen
   } = useForm<BankInfoFormData>({
     resolver: zodResolver(bankInfoSchema),
     defaultValues: {
-      bankName: (data as any).bankName || '',
-      branch: (data as any).branch || '',
-      accountNumber: (data as any).accountNumber || '',
-      iban: (data as any).iban || '',
-      accountHolder: (data as any).accountHolder || '',
+      bankName: data.bankName || '',
+      branch: data.branch || '',
+      accountNumber: data.accountNumber || '',
+      iban: data.iban || '',
+      accountHolder: data.accountHolder || '',
     },
     mode: 'onBlur',
   });

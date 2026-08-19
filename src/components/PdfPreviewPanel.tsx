@@ -14,6 +14,9 @@ import Logger from '../utils/logger';
 import useDebounce from '../hooks/useDebounce';
 import { deepEqual } from '../utils/deepEqual';
 import PdfSectionsTab from './pdf-tabs/PdfSectionsTab';
+import type html2pdfType from 'html2pdf.js';
+
+type Html2PdfOptions = NonNullable<Parameters<typeof html2pdfType>[1]>;
 
 const PdfPreviewPanel = React.memo(() => {
     const {
@@ -258,7 +261,7 @@ const PdfPreviewPanel = React.memo(() => {
         initialValue: string;
         onSave: (value: string) => void;
         type: string;
-        options: any[];
+        options: { value: string; label: string }[];
     }>({
         title: '',
         initialValue: '',
@@ -465,7 +468,7 @@ const PdfPreviewPanel = React.memo(() => {
             const shareFormat = pageSize === 'a4' && !isLandscape ? 'a4' : isLandscape ? 'a4' : pageSize;
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
             const qual = quality === 'draft' ? 2 : quality === 'normal' ? 3 : quality === 'high' ? 4 : quality === 'print' ? 5 : 6;
-            const pdfBlob = await html2pdf().set({
+            const shareOptions = {
                 margin: 0,
                 image: { type: 'png', quality: 1.0 },
                 html2canvas: {
@@ -485,14 +488,15 @@ const PdfPreviewPanel = React.memo(() => {
                         title: pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
                         author: companyData.name || 'TeklifApp'
                     }
-                } as any
-            }).from(element).outputPdf('blob');
+                }
+            } as Html2PdfOptions;
+            const pdfBlob = await html2pdf().set(shareOptions).from(element).outputPdf('blob');
             const filename = buildPdfFilename();
             await shareQuote(pdfBlob, filename);
             toast.success(t('shareSuccess'));
         } catch (error) {
-            if ((error as any).message !== 'Share cancelled') {
-                toast.error(t('shareFailed') + (error as any).message);
+            if ((error as Error).message !== 'Share cancelled') {
+                toast.error(t('shareFailed') + (error as Error).message);
             }
         }
     };
@@ -675,19 +679,22 @@ const PdfPreviewPanel = React.memo(() => {
                                     <label className="text-xs font-medium text-[var(--color-text)]">{t('design')}</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
-                                            { id: 'modern', name: 'Modern' },
-                                            { id: 'classic', name: 'Klasik' },
-                                            { id: 'minimal', name: 'Minimal' },
-                                            { id: 'corporate', name: 'Kurumsal' },
-                                            { id: 'pro', name: 'Premium (Pro)' },
-                                            { id: 'bold', name: 'Bold' }
+                                            { id: 'modern', name: 'Modern', thumb: (c: string) => (<div className="absolute inset-0"><div className="h-1.5 w-full" style={{ background: c }} /><div className="h-2 w-1/3 mt-1 ml-1 rounded-sm bg-slate-300" /><div className="h-1 w-1/2 mt-1 ml-1 rounded-sm bg-slate-200" /><div className="h-3 w-4/5 mt-2 ml-1 rounded-sm bg-slate-100" /></div>) },
+                                            { id: 'classic', name: 'Klasik', thumb: () => (<div className="absolute inset-1 border-2 border-slate-400 rounded-sm"><div className="h-1.5 w-3/4 mx-auto mt-1 bg-slate-400" /><div className="h-1 w-full mt-1 bg-slate-300" /><div className="h-1 w-full mt-1 bg-slate-300" /><div className="h-1 w-full mt-1 bg-slate-300" /></div>) },
+                                            { id: 'minimal', name: 'Minimal', thumb: () => (<div className="absolute inset-0"><div className="h-2 w-1/3 mt-1 ml-1 bg-slate-200" /><div className="h-1 w-1/4 mt-2 ml-1 bg-slate-100" /><div className="w-5/6 mx-auto mt-3 border-t border-slate-200" /><div className="h-1 w-3/4 mx-auto mt-2 bg-slate-100" /></div>) },
+                                            { id: 'corporate', name: 'Kurumsal', thumb: (c: string) => (<div className="absolute inset-0"><div className="h-3 w-full" style={{ background: c }} /><div className="h-2 w-2/3 mt-1 ml-1 rounded-sm bg-slate-200" /><div className="h-1 w-1/2 mt-1 ml-1 bg-slate-100" /><div className="h-3 w-4/5 mt-2 mx-auto rounded-sm bg-slate-100" /></div>) },
+                                            { id: 'pro', name: 'Premium (Pro)', thumb: (c: string) => (<div className="absolute inset-0 flex gap-1 p-1"><div className="w-1 h-full rounded-sm" style={{ background: c }} /><div className="flex-1"><div className="h-1.5 w-full rounded-sm bg-slate-200" /><div className="h-1.5 w-4/5 mt-1 rounded-sm bg-slate-100" /><div className="h-3 w-full mt-2 rounded-sm border border-slate-200" /></div></div>) },
+                                            { id: 'bold', name: 'Bold', thumb: (c: string) => (<div className="absolute inset-0"><div className="h-2.5 w-full" style={{ background: c }} /><div className="h-1 w-1/2 mt-1 ml-1 bg-slate-200" /><div className="h-4 w-11/12 mt-1 mx-auto border-2 rounded-sm" style={{ borderColor: c }} /></div>) }
                                         ].map((t) => (
                                             <button type="button"
                                                 key={t.id}
                                                 onClick={() => handleConfigChange('theme', t.id)}
-                                                className={`px-2 py-1.5 text-xs rounded border transition-all ${pdfConfig.theme === t.id ? 'bg-[var(--color-primary-muted)] border-[var(--color-info)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-muted)]'}`}
+                                                className={`flex flex-col items-start gap-1 p-1.5 rounded border transition-all ${pdfConfig.theme === t.id ? 'bg-[var(--color-primary-muted)] border-[var(--color-info)]' : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'}`}
                                             >
-                                                {t.name}
+                                                <div className="w-full aspect-[21/12] rounded overflow-hidden border border-[var(--color-border)] relative bg-white">
+                                                    {t.thumb(pdfConfig.color)}
+                                                </div>
+                                                <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{t.name}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -734,6 +741,59 @@ const PdfPreviewPanel = React.memo(() => {
                                             className="w-8 h-8 p-0 border-0 rounded cursor-pointer"
                                         />
                                         <span className="text-xs text-[var(--color-text-muted)] uppercase">{pdfConfig.pageBackgroundColor || '#ffffff'}</span>
+                                    </div>
+                                </div>
+
+                                {/* Page Background Pattern */}
+                                <div className="mt-3">
+                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageBgPattern')}</label>
+                                    <select
+                                        value={pdfConfig.pageBgPattern || 'none'}
+                                        onChange={(e) => handleConfigChange('pageBgPattern', e.target.value)}
+                                        className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                                    >
+                                        <option value="none">{t('patternNone')}</option>
+                                        <option value="dots">{t('patternDots')}</option>
+                                        <option value="grid">{t('patternGrid')}</option>
+                                        <option value="gradient">{t('patternGradient')}</option>
+                                    </select>
+                                </div>
+
+                                {/* Logo Appearance */}
+                                <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
+                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1.5">{t('logoAppearance')}</label>
+                                    <div className="grid grid-cols-3 gap-1 mb-2">
+                                        {(['left', 'center', 'right'] as const).map(pos => (
+                                            <button type="button"
+                                                key={pos}
+                                                onClick={() => handleConfigChange('logoPosition', pos)}
+                                                className={`py-1 text-[10px] border rounded transition-colors ${pdfConfig.logoPosition === pos ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
+                                            >
+                                                {t(`logoPos${pos.charAt(0).toUpperCase() + pos.slice(1)}`)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mb-2">
+                                        {(['square', 'rounded', 'circle'] as const).map(s => (
+                                            <button type="button"
+                                                key={s}
+                                                onClick={() => handleConfigChange('logoStyle', s)}
+                                                className={`py-1 text-[10px] border rounded transition-colors ${pdfConfig.logoStyle === s ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
+                                            >
+                                                {t(`logoStyle${s.charAt(0).toUpperCase() + s.slice(1)}`)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-[var(--color-text-muted)] mb-0.5">{t('logoMaxHeight')}: {pdfConfig.logoMaxHeight || 50}px</label>
+                                        <input
+                                            type="range"
+                                            min={20}
+                                            max={120}
+                                            value={pdfConfig.logoMaxHeight || 50}
+                                            onChange={(e) => handleConfigChange('logoMaxHeight', parseInt(e.target.value, 10))}
+                                            className="w-full accent-[var(--color-info)]"
+                                        />
                                     </div>
                                 </div>
 
@@ -1464,7 +1524,7 @@ const PdfPreviewPanel = React.memo(() => {
                     )}
 
                     <div className="flex-1 overflow-auto custom-scrollbar p-8 flex justify-center items-start" ref={scrollRef}>
-                        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)] relative" style={{ transform: `scale(${zoomLevel})`, imageRendering: zoomLevel < 0.5 ? 'auto' : 'crisp-edges' } as any}>
+                        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)] relative" style={{ transform: `scale(${zoomLevel})`, imageRendering: zoomLevel < 0.5 ? 'auto' : 'crisp-edges' } as React.CSSProperties}>
                             <div ref={contentRef} className="relative">
                                 <style>{`
                                     #printable-quote-container-panel .pdf-page {

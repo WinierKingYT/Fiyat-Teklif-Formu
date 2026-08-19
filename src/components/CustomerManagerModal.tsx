@@ -165,7 +165,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
-                const importedCustomers = JSON.parse((e.target as any).result);
+                const importedCustomers = JSON.parse((e.target as FileReader).result as string);
                 if (!Array.isArray(importedCustomers)) throw new Error('Invalid format');
 
                 let count = 0;

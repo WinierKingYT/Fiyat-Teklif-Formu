@@ -13,10 +13,21 @@ import ImageOptimizer from '../utils/imageOptimizer';
 import { parseExcelFile } from '../utils/excelParser';
 import Logger from '../utils/logger';
 
+interface Product {
+    id?: string;
+    name: string;
+    description?: string;
+    price: number;
+    unit?: string;
+    taxRate?: number;
+    category?: string;
+    image?: string | null;
+}
+
 const ProductManagerModal = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const { db } = useIndexedDB();
-    const [products, setProducts] = useState<any[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState(['Genel']);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
@@ -51,15 +62,15 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     }, [isOpen, db]);
 
     const loadProducts = async () => {
-        const allProducts = await db.getAll('products');
-        setProducts(allProducts as any[]);
+        const allProducts = await db.getAll<Product>('products');
+        setProducts(allProducts);
     };
 
     const loadCategories = async () => {
         try {
-            const storedCategories = await db.get('settings', 'product_categories');
-            if (storedCategories && (storedCategories as any).value) {
-                setCategories((storedCategories as any).value);
+            const storedCategories = await db.get<{ id?: string; key?: string; value: string[] }>('settings', 'product_categories');
+            if (storedCategories && storedCategories.value) {
+                setCategories(storedCategories.value);
             } else {
                 // Initialize default categories if not found
                 const defaults = ['Genel', 'Hizmet', 'Elektronik', 'Giyim'];
@@ -315,7 +326,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
             }
         } catch (error) {
             Logger.error('Import error:', error);
-            toast.error(`${t('error')}: ${(error as any).message}`, { id: 'import-loading' });
+            toast.error(`${t('error')}: ${(error as Error).message}`, { id: 'import-loading' });
         }
 
         e.target.value = '';

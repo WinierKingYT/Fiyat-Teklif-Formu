@@ -26,16 +26,16 @@ export const getInitialDiscount = (): Discount => ({
     type: 'percentage', value: 0
 });
 
-export const getInitialTabData = (companyDefaults: CompanyData | null = null): TabData => ({
+export const getInitialTabData = (companyDefaults: Partial<CompanyData> | null = null): TabData => ({
     quoteData: getInitialQuoteData(),
     customerData: getInitialCustomerData(),
-    companyData: companyDefaults || getInitialCompanyData(),
+    companyData: companyDefaults ? { ...getInitialCompanyData(), ...companyDefaults } : getInitialCompanyData(),
     items: getInitialItems(),
     discount: getInitialDiscount(),
     bankData: getInitialBankData()
 });
 
-export const getDefaultTabs = (companyDefaults: CompanyData | null = null): Tab[] => [{
+export const getDefaultTabs = (companyDefaults: Partial<CompanyData> | null = null): Tab[] => [{
     id: 'default-tab',
     title: 'Yeni Teklif',
     savedQuoteId: null,

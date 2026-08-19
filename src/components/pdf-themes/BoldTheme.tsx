@@ -587,9 +587,9 @@ const BoldTheme = ({
                     {showSection('header') && (pageIndex === 0 ? (
                         <div className="pdf-header">
                             <div className="header-left">
-                                {config.showLogo && companyData.logo && (
-                                    <div className="company-logo">
-                                        <img src={companyData.logo} alt="Logo" style={{ borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0', maxWidth: '100%', objectFit: 'contain' }} />
+{config.showLogo && companyData.logo && (
+                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.4rem' }}>
+                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 50}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
                                     </div>
                                 )}
                                 <div className="company-info">

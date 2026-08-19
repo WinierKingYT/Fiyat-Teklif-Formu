@@ -127,3 +127,6 @@ dev-dist/
 
 # Bundle analysis
 stats.html
+
+# Geçici cast tarama scripti
+_scan_casts.mjs

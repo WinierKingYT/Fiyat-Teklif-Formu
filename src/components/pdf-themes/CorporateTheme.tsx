@@ -368,7 +368,7 @@ const CorporateTheme = ({
             <style>{corporateStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
-                <div key={pageIndex} className="pdf-preview" style={{
+                <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
                     minHeight: containerStyles.pageMinHeight || '290mm',
                     padding: '0',
@@ -404,8 +404,8 @@ const CorporateTheme = ({
                         <div className="corporate-header">
                             <div className="corporate-header-left">
                                 {config.showLogo && companyData.logo && (
-                                    <div className="corporate-logo-box">
-                                        <img src={companyData.logo} alt="Logo" />
+                                    <div className="corporate-logo-box" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
+                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 50}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
                                     </div>
                                 )}
                                 <div style={{ fontSize: config.headerTitleFontSize || '1.2em', fontWeight: config.headerTitleFontWeight || '700', color: '#111827' }}>{renderEditable(companyData.name, 'companyName')}</div>

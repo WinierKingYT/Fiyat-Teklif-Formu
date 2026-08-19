@@ -77,7 +77,7 @@ const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
-                const importedTemplate = JSON.parse((e.target as any).result);
+                const importedTemplate = JSON.parse((e.target as FileReader).result as string);
                 if (!importedTemplate.data || !importedTemplate.name) throw new Error('Invalid template format');
                 const newTemplate = { ...importedTemplate, id: Date.now(), name: `${importedTemplate.name} (İçe Aktarıldı)` };
                 await db.add('templates', newTemplate);

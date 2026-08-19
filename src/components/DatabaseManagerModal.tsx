@@ -204,7 +204,7 @@ const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
                 toast(t('backupWarning'), { duration: 5000, icon: '⚠️' });
             } catch (error) {
                 Logger.error('Error importing data:', error);
-                toast.error((error as any).message || t('importErrorInvalid'));
+                toast.error((error as Error).message || t('importErrorInvalid'));
             } finally {
                 setImportFile(null);
             }

@@ -74,8 +74,9 @@ describe('getInitialTabData', () => {
 
   it('should use provided company defaults', () => {
     const customCompany = { name: 'Test A.Ş.' };
-    const data = getInitialTabData(customCompany as any);
+    const data = getInitialTabData(customCompany);
     expect(data.companyData.name).toBe('Test A.Ş.');
+    expect(data.companyData.phone).toBe('');
   });
 });
 
@@ -90,7 +91,7 @@ describe('getDefaultTabs', () => {
 
   it('should pass company defaults to tab data', () => {
     const customCompany = { name: 'Custom Co.' };
-    const tabs = getDefaultTabs(customCompany as any);
+    const tabs = getDefaultTabs(customCompany);
     expect(tabs[0].data.companyData.name).toBe('Custom Co.');
   });
 });

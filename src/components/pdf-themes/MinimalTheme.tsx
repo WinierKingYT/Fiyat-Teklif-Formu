@@ -190,7 +190,7 @@ const MinimalTheme = ({
             <style>{minimalStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
-                <div key={pageIndex} className="pdf-preview" style={{
+                <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
                     minHeight: containerStyles.pageMinHeight || '290mm',
                     padding: '0',

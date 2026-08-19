@@ -7,7 +7,7 @@ const HistoryList = ({ onNavigate }) => {
     const [quotes, setQuotes] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
-    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [selectAll, setSelectAll] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [page, setPage] = useState(1);
@@ -30,7 +30,7 @@ const HistoryList = ({ onNavigate }) => {
         }
     };
 
-    const handleDelete = async (id: any, e?: any) => {
+    const handleDelete = async (id: number | number[], e?: any) => {
         if (e) e.stopPropagation();
         const isSingle = !Array.isArray(id);
         const ids = Array.isArray(id) ? id : [id];
@@ -212,7 +212,7 @@ const HistoryList = ({ onNavigate }) => {
                             {t('printBtn')}
                         </button>
                         <button type="button"
-                            onClick={() => handleDelete([...selectedIds] as any)}
+                            onClick={() => handleDelete([...selectedIds])}
                             className="btn btn-sm btn-danger flex items-center gap-1.5"
                         >
                             <Trash2 size={14} />

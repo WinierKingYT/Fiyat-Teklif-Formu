@@ -58,16 +58,16 @@ const Settings = () => {
     const loadSettings = async () => {
       if (!db) return;
       try {
-        const savedSettings = await db.get("settings", "global");
+        const savedSettings = await db.get<Partial<typeof settings>>("settings", "global");
         if (savedSettings) {
-          setSettings((prev) => ({ ...prev, ...(savedSettings as any) }));
+          setSettings((prev) => ({ ...prev, ...savedSettings }));
         }
-        const savedCompanyDefaults = await db.get(
+        const savedCompanyDefaults = await db.get<Partial<typeof companySettings>>(
           "company_defaults",
           "default",
         );
         if (savedCompanyDefaults) {
-          setCompanySettings(savedCompanyDefaults as any);
+          setCompanySettings((prev) => ({ ...prev, ...savedCompanyDefaults }));
         }
         setLoading(false);
       } catch (error) {

@@ -263,7 +263,7 @@ const PrintableQuote = React.memo(({
     ];
 
     const activeLayout = useMemo(() => {
-        return [...(layout || defaultLayout)].sort((a, b) => (a as any).order - (b as any).order);
+        return [...(layout || defaultLayout)].sort((a, b) => ((a as { order?: number }).order || 0) - ((b as { order?: number }).order || 0));
     }, [layout]);
 
 

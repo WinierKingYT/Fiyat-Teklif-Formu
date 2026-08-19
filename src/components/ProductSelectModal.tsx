@@ -9,9 +9,18 @@ import Logger from '../utils/logger';
 import Skeleton from './Skeleton';
 import EmptyState from './EmptyState';
 
+interface SelectableProduct {
+    id?: string;
+    name: string;
+    price: number;
+    unit?: string;
+    category?: string;
+    image?: string | null;
+}
+
 const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const { db, isReady } = useIndexedDB();
-    const [products, setProducts] = useState<any[]>([]);
+    const [products, setProducts] = useState<SelectableProduct[]>([]);
     const [categories, setCategories] = useState(['Genel']);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
@@ -31,7 +40,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const loadProducts = async () => {
         setLoading(true);
         try {
-            const result = await (db).getAll('products');
+            const result = await (db).getAll<SelectableProduct>('products');
             setProducts(result);
         } catch (error) {
             Logger.error('Error loading products:', error);
@@ -42,8 +51,8 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
 
     const loadCategories = async () => {
         try {
-            const storedCategories = await (db).get('settings', 'product_categories');
-            if (storedCategories && (storedCategories as any).value) setCategories((storedCategories as any).value);
+            const storedCategories = await (db).get<{ id?: string; key?: string; value: string[] }>('settings', 'product_categories');
+            if (storedCategories && storedCategories.value) setCategories(storedCategories.value);
             else setCategories(['Genel', 'Hizmet', 'Elektronik', 'Giyim']);
         } catch (error) {
             Logger.error('Error loading categories:', error);

@@ -2,7 +2,22 @@ import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { X, Save } from 'lucide-react';
 
-const PopupEditor = ({ isOpen, onClose, onSave, initialValue, title, type = 'text', options = [] as any[] }) => {
+interface OptionType {
+    value: string;
+    label: string;
+}
+
+interface PopupEditorProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (value: string) => void;
+    initialValue?: string;
+    title?: string;
+    type?: string;
+    options?: OptionType[];
+}
+
+const PopupEditor = ({ isOpen, onClose, onSave, initialValue, title, type = 'text', options = [] }: PopupEditorProps) => {
     const [value, setValue] = useState(initialValue || '');
     const inputRef = useRef<any>(null);
 

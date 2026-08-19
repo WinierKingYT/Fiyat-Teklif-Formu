@@ -626,7 +626,9 @@ const ModernTheme = ({
                         <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `1px solid ${color}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.8em', color: '#666' }}>
                                 <span>{companyData.name} - {config.title}</span>
-                                <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                {config.showPageNumbers !== false && (
+                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                )}
                             </div>
                         </div>
                     ))}

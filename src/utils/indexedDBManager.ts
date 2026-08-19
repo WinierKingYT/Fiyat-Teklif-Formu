@@ -51,7 +51,7 @@ class IndexedDBManager {
                 this.isConnectionOpen = true;
 
                 this.db.onerror = (event) => {
-                    Logger.error('Database error:', (event.target as any).error);
+                    Logger.error('Database error:', (event.target as { error?: DOMException | null }).error);
                 };
 
                 this.db.onclose = () => {
@@ -64,7 +64,7 @@ class IndexedDBManager {
 
             request.onupgradeneeded = (event) => {
                 Logger.log('Database upgrade başlatılıyor...');
-                this.handleUpgrade((event.target as any).result, event.oldVersion);
+                this.handleUpgrade((event.target as IDBOpenDBRequest).result, event.oldVersion);
             };
 
             request.onblocked = () => {
@@ -172,7 +172,7 @@ class IndexedDBManager {
         return this.db!;
     }
 
-    async get(storeName, key): Promise<any> {
+    async get<T = any>(storeName, key): Promise<T> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -219,7 +219,7 @@ class IndexedDBManager {
         });
     }
 
-    async getAll(storeName, indexName = null): Promise<any[]> {
+    async getAll<T = any>(storeName, indexName = null): Promise<T[]> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {

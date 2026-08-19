@@ -248,6 +248,15 @@ const PdfSectionsTab: React.FC<PdfSectionsTabProps> = ({ pdfConfig, handleConfig
             </select>
           </div>
         </div>
+        <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={pdfConfig.showPageNumbers !== false}
+            onChange={(e) => handleConfigChange('showPageNumbers', e.target.checked)}
+            className="accent-[var(--color-info)]"
+          />
+          {t('showPageNumbers')}
+        </label>
       </div>
     </div>
   );

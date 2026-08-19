@@ -116,7 +116,7 @@ class PerformanceMonitor {
                 totalSize += sizeBytes;
             } catch (error: any) {
                 Logger.error(`Error calculating size for ${storeName}:`, error);
-                sizes[storeName] = { error: (error as any).message, count: 0, sizeBytes: 0 };
+                sizes[storeName] = { error: (error as Error).message, count: 0, sizeBytes: 0 };
             }
         }
 

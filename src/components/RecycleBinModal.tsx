@@ -8,10 +8,23 @@ import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
 import { useTranslation } from '../hooks/useTranslation';
 
+interface DeletedItem {
+    id: string;
+    originalStore: string;
+    originalId?: string;
+    deletedAt: string;
+    deletedBy?: string;
+    data?: unknown;
+    name?: string;
+    company?: string;
+    price?: number;
+    [key: string]: unknown;
+}
+
 const RecycleBinModal = ({ isOpen, onClose, language = 'tr' }) => {
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
-    const [deletedItems, setDeletedItems] = useState<any[]>([]);
+    const [deletedItems, setDeletedItems] = useState<DeletedItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('all');
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
@@ -22,9 +35,9 @@ const RecycleBinModal = ({ isOpen, onClose, language = 'tr' }) => {
 
     const loadDeletedItems = async () => {
         try {
-            const items = await db.getAll('recycle_bin');
-            (items as any[]).sort((a: any, b: any) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
-            setDeletedItems(items as any);
+            const items = await db.getAll<DeletedItem>('recycle_bin');
+            items.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
+            setDeletedItems(items);
         } catch (error) {
             Logger.error('Error loading recycle bin:', error);
             toast.error(t('binLoadError'));

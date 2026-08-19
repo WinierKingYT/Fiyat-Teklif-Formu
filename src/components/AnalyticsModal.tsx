@@ -24,7 +24,7 @@ const AnalyticsModal = ({ isOpen, onClose }) => {
     useEffect(() => {
         if (isOpen && isReady) { calculateStats(); loadPerfMetrics(); }
         if (isOpen && window.performance) {
-            const nav = performance.getEntriesByType('navigation')[0] as any;
+            const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
             if (nav) {
                 setPerfMetrics({
                     pageLoad: Math.round(nav.loadEventEnd - nav.startTime),

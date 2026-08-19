@@ -238,6 +238,12 @@ const ProTheme = ({
             margin-bottom: 2em;
         }
 
+        .pro-theme-container .pdf-items-table thead th:first-child { border-top-left-radius: 10px; }
+        .pro-theme-container .pdf-items-table thead th:last-child { border-top-right-radius: 10px; }
+        .pro-theme-container .pdf-items-table tbody tr:last-child td:first-child { border-bottom-left-radius: 10px; }
+        .pro-theme-container .pdf-items-table tbody tr:last-child td:last-child { border-bottom-right-radius: 10px; }
+        .pro-theme-container .pdf-items-table tbody tr:last-child td { border-bottom: none; }
+
         .pro-theme-container .pdf-items-table th {
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : config.tableHeaderFontSize || '1.2em'} !important;
             font-weight: ${config.tableHeaderFontWeight || '700'} !important;
@@ -505,7 +511,7 @@ const ProTheme = ({
             <style>{proStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
-                <div key={pageIndex} className="pdf-preview" style={{
+                <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
                     minHeight: containerStyles.pageMinHeight || '290mm',
                     padding: '0',
@@ -541,8 +547,8 @@ const ProTheme = ({
                         <div className="pdf-header">
                             <div className="header-left">
                                 {config.showLogo && companyData.logo && (
-                                    <div className="company-logo">
-                                        <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
+                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
+                                        <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: `${config.logoMaxHeight || 50}px`, objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                     </div>
                                 )}
                                 <div className="company-info">

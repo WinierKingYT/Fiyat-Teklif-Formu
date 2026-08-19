@@ -192,7 +192,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
                     setHasSignature(true);
                     handleSave();
                 };
-                img.src = (event.target as any).result;
+                img.src = (event.target as FileReader).result as string;
             };
             reader.readAsDataURL(file);
         }

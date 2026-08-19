@@ -12,7 +12,7 @@ import { useSaveStatusSetter } from './SaveStatusContext';
 import {
     type QuoteData, type CustomerData, type CompanyData, type BankData,
     type QuoteItem, type Discount, type PdfConfig, type Quote, type SaveStatus,
-    type IndexedDBManager,
+    type IndexedDBManager, type TabData,
 } from './types';
 import {
     getInitialQuoteData, getInitialBankData,
@@ -304,7 +304,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const data = JSON.parse((event.target as any).result);
+                const data = JSON.parse((event.target as FileReader).result as string);
                 if (data.customers) await Promise.all(data.customers.map((item: any) => db.put('customers', item)));
                 if (data.products) await Promise.all(data.products.map((item: any) => db.put('products', item)));
                 if (data.quotes) await Promise.all(data.quotes.map((item: any) => db.put('quotes', item)));
@@ -331,7 +331,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         const confirmed = await showConfirm('Test Verileri', 'Test verileri mevcut verilerin üzerine yazılacak. Devam etmek istiyor musunuz?', 'warning');
         if (!confirmed) return;
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) return { ...tab, data: testData as any };
+            if (tab.id === activeTabId) return { ...tab, data: testData as TabData };
             return tab;
         }));
         toast.success('Test verileri eklendi');
