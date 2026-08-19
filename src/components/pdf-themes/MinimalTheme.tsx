@@ -54,6 +54,7 @@ const MinimalTheme = ({
             background: var(--pdf-page-bg, #fff) !important;
             line-height: ${config.bodyLineHeight || '1.3'};
             font-size: ${config.fontSize || 11}px;
+            box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
         }
 
         .minimal-header {
@@ -225,7 +226,7 @@ const MinimalTheme = ({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                                 {config.showLogo && companyData.logo ? (
-                                    <img src={companyData.logo} alt="Logo" style={{ height: '35px', objectFit: 'contain', marginBottom: '0.5rem', alignSelf: 'flex-start' }} />
+                                    <img src={companyData.logo} alt="Logo" style={{ height: `${config.logoMaxHeight || 35}px`, objectFit: 'contain', marginBottom: '0.5rem', alignSelf: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                 ) : (
                                     <div style={{ fontSize: config.headerTitleFontSize || '1.25rem', fontWeight: config.headerTitleFontWeight || '700', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 )}
@@ -234,7 +235,7 @@ const MinimalTheme = ({
                                 <div style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>{companyData.website}</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: config.titleFontSize || '1.5rem', fontWeight: config.titleFontWeight || '300', lineHeight: '1', marginBottom: '0.25rem' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ fontSize: config.titleFontSize || '1.5rem', fontWeight: config.titleFontWeight || '300', fontFamily: config.titleFontFamily || 'inherit', lineHeight: '1', marginBottom: '0.25rem' }}>{renderEditable(config.title, 'quoteTitle')}</div>
                                 <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>#{quoteData.number}</div>
                                 <div style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem' }}>
@@ -253,7 +254,9 @@ const MinimalTheme = ({
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem', fontSize: '0.8rem', color: '#9ca3af' }}>
                             <span>{companyData.name} - {config.title}</span>
-                            <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                            {config.showPageNumbers !== false && (
+                                <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                            )}
                         </div>
                     ))}
 
@@ -308,7 +311,7 @@ const MinimalTheme = ({
                                                 <span style={{ fontFamily: 'monospace' }}>{formatCurrency(totalTax)}</span>
                                             </div>
                                         )}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: '700', color: '#000' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: config.summaryTotalFontSize || '1.1rem', fontWeight: config.summaryTotalFontWeight || '700', color: '#000' }}>
                                             <span>{t.generalTotal}</span>
                                             <span style={{ fontFamily: 'monospace' }}>{formatCurrency(total)}</span>
                                         </div>
@@ -370,6 +373,13 @@ const MinimalTheme = ({
                                     <div style={{ fontWeight: '600', color: '#000' }}>{companyData.name} - {config.title}</div>
                                 </div>
                             </div>
+                            )}
+
+                            {/* Page Number */}
+                            {config.showPageNumbers && (
+                                <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.65rem', color: '#9ca3af' }}>
+                                    {t.page} {pageIndex + 1} / {itemChunks.length}
+                                </div>
                             )}
                         </div>
                     )}

@@ -53,10 +53,11 @@ const BoldTheme = ({
         .bold-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
             line-height: ${config.bodyLineHeight || '1.4'};
-            color: #000000 !important;
+            color: ${config.globalFontColor || '#000000'} !important;
             background: var(--pdf-page-bg, #ffffff) !important;
             font-size: ${config.fontSize || 12}px;
             position: relative;
+            box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -101,9 +102,10 @@ const BoldTheme = ({
         }
 
         .bold-theme-container .company-logo img {
-            max-height: 90px;
+            max-height: ${config.logoMaxHeight || 90}px;
             max-width: 160px;
             object-fit: contain;
+            border-radius: ${config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0'};
         }
 
         .bold-theme-container .company-info {
@@ -244,14 +246,14 @@ const BoldTheme = ({
         }
 
         .bold-theme-container .pdf-items-table thead {
-            background: ${color} !important;
+            background: ${config.tableHeaderBg || color} !important;
         }
 
         .bold-theme-container .pdf-items-table th {
-            padding: 0.75em 0.5em;
+            padding: ${config.tableHeaderPadding || '0.75em 0.5em'};
             text-align: left;
             font-weight: ${config.tableHeaderFontWeight || '800'};
-            color: #ffffff !important;
+            color: ${config.tableHeaderColor || '#ffffff'} !important;
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.9em')} !important;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -260,7 +262,7 @@ const BoldTheme = ({
         }
 
         .bold-theme-container .pdf-items-table td {
-            padding: 0.9em 0.5em;
+            padding: ${config.tableCellPadding || '0.9em 0.5em'};
             border-bottom: 2px solid ${config.tableBorderColor || '#e2e8f0'};
             vertical-align: middle;
             font-size: ${config.tableBodyFontSize || 'inherit'};
@@ -587,7 +589,7 @@ const BoldTheme = ({
                             <div className="header-left">
                                 {config.showLogo && companyData.logo && (
                                     <div className="company-logo">
-                                        <img src={companyData.logo} alt="Logo" />
+                                        <img src={companyData.logo} alt="Logo" style={{ borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0', maxWidth: '100%', objectFit: 'contain' }} />
                                     </div>
                                 )}
                                 <div className="company-info">
@@ -613,7 +615,9 @@ const BoldTheme = ({
                         <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `3px solid ${color}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.8em', color: '#666' }}>
                                 <span><strong>{companyData.name}</strong> - {config.title}</span>
-                                <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                {config.showPageNumbers !== false && (
+                                    <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -816,6 +820,13 @@ const BoldTheme = ({
                     {config.customFooter && (
                         <div className="custom-footer">
                             {config.customFooter}
+                        </div>
+                    )}
+
+                    {/* Page Number */}
+                    {config.showPageNumbers && (
+                        <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.65rem', color: '#94a3b8' }}>
+                            {t.page} {pageIndex + 1} / {itemChunks.length}
                         </div>
                     )}
                 </div>

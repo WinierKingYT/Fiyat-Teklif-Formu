@@ -12,6 +12,7 @@ import { useSaveStatusSetter } from './SaveStatusContext';
 import {
     type QuoteData, type CustomerData, type CompanyData, type BankData,
     type QuoteItem, type Discount, type PdfConfig, type Quote, type SaveStatus,
+    type IndexedDBManager,
 } from './types';
 import {
     getInitialQuoteData, getInitialBankData,
@@ -40,7 +41,7 @@ export interface QuoteDataContextValue {
     currentQuoteId: number | null;
     setCurrentQuoteId: (id: number | null) => void;
     validateQuote: (isFinal?: boolean) => string[];
-    db: any;
+    db: IndexedDBManager;
     isReady: boolean;
 }
 

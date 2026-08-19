@@ -132,7 +132,7 @@ class PerformanceMonitor {
      * Helper to get all records from a store using native API
      * @private
      */
-    _getAllRecordsNative(db: any, storeName: string) {
+    _getAllRecordsNative(db: IDBDatabase, storeName: string) {
         return new Promise((resolve, reject) => {
             try {
                 const tx = db.transaction(storeName, 'readonly');

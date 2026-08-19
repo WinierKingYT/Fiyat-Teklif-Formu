@@ -55,6 +55,7 @@ const ClassicTheme = ({
             color: ${config.globalFontColor || '#000'};
             background: var(--pdf-page-bg, #fff) !important;
             font-size: ${config.fontSize || 11}px;
+            box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
         }
 
         .classic-table {
@@ -205,9 +206,9 @@ const ClassicTheme = ({
                     {showSection('header') && (pageIndex === 0 ? (
                         <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr 180px', border: '1px solid #000', marginBottom: '8px' }}>
                             {/* Logo Area */}
-                            <div style={{ borderRight: '1px solid #000', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ borderRight: '1px solid #000', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
                                 {config.showLogo && companyData.logo ? (
-                                    <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '60px', objectFit: 'contain' }} />
+                                    <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: `${config.logoMaxHeight || 60}px`, objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                 ) : (
                                     <span style={{ fontSize: '12pt', fontWeight: 'bold' }}>{t.logo}</span>
                                 )}
@@ -249,7 +250,9 @@ const ClassicTheme = ({
                         <div style={{ borderBottom: '2px solid #000', marginBottom: '1rem', paddingBottom: '0.5rem' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8em', color: '#666' }}>
                                 <span>{companyData.name} - {config.title}</span>
-                                <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                {config.showPageNumbers !== false && (
+                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -414,6 +417,13 @@ const ClassicTheme = ({
                                     <div style={{ fontWeight: 'bold', color: '#000' }}>{companyData.name} - {config.title}</div>
                                 </div>
                             </div>
+                            )}
+
+                            {/* Page Number */}
+                            {config.showPageNumbers && (
+                                <div style={{ marginTop: '15px', textAlign: 'center', fontSize: '8pt', color: '#666' }}>
+                                    {t.page} {pageIndex + 1} / {itemChunks.length}
+                                </div>
                             )}
                         </div>
                     )}

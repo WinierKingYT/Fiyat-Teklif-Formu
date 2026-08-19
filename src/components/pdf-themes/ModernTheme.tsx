@@ -53,7 +53,7 @@ const ModernTheme = ({
         .modern-theme-container {
             font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
             line-height: ${config.bodyLineHeight || '1.4'};
-            color: #000000 !important;
+            color: ${config.globalFontColor || '#000000'} !important;
             background: var(--pdf-page-bg, #ffffff) !important;
             font-size: ${config.fontSize || 12}px;
             position: relative;
@@ -191,7 +191,7 @@ const ModernTheme = ({
         [data-theme="dark"] .modern-theme-container,
         .modern-theme-container {
             background-color: var(--pdf-page-bg, #ffffff) !important;
-            color: #000000 !important;
+            color: ${config.globalFontColor || '#000000'} !important;
         }
 
         [data-theme="dark"] .modern-theme-container *,
@@ -277,7 +277,7 @@ const ModernTheme = ({
             padding: 0.75em 0.5em;
             text-align: left;
             font-weight: ${config.tableHeaderFontWeight || '700'};
-            color: #94a3b8; /* Lighter gray for headers */
+            color: ${config.tableHeaderColor || '#94a3b8'}; /* Lighter gray for headers */
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '1.15em')} !important;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -295,7 +295,7 @@ const ModernTheme = ({
         }
         
         .modern-theme-container .pdf-items-table td {
-            padding: 1em 0.5em;
+            padding: ${config.tableCellPadding || '1em 0.5em'};
             border-bottom: 1px solid ${config.tableBorderColor || '#f1f5f9'};
             vertical-align: middle;
             font-size: ${config.tableBodyFontSize || 'inherit'};

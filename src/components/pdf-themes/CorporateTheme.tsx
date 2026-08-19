@@ -56,6 +56,7 @@ const CorporateTheme = ({
             background: var(--pdf-page-bg, #fff);
             font-size: ${config.fontSize || 11}px;
             position: relative;
+            box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
         }
 
         .corporate-header {
@@ -69,10 +70,10 @@ const CorporateTheme = ({
 
         .corporate-logo-box {
             width: 120px;
-            height: 45px;
+            height: ${config.logoMaxHeight || 45}px;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: ${config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start'};
             margin-bottom: 0.2rem;
         }
 
@@ -80,6 +81,7 @@ const CorporateTheme = ({
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
+            border-radius: ${config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0'};
         }
 
         .corporate-title-box {
@@ -106,6 +108,11 @@ const CorporateTheme = ({
 
         .corporate-meta strong {
             font-weight: ${config.quoteMetaLabelFontWeight || 'bold'};
+        }
+
+        .corporate-meta div {
+            font-size: ${config.quoteMetaValueFontSize || '0.9em'};
+            font-weight: ${config.quoteMetaValueFontWeight || '500'};
         }
 
         .corporate-grid {
@@ -153,9 +160,9 @@ const CorporateTheme = ({
         }
 
         .corporate-table th {
-            background: ${color};
-            color: white;
-            padding: 0.25rem 0.4rem;
+            background: ${config.tableHeaderBg || color};
+            color: ${config.tableHeaderColor || 'white'};
+            padding: ${config.tableHeaderPadding || '0.25rem 0.4rem'};
             text-align: left;
             font-weight: ${config.tableHeaderFontWeight || '600'};
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.7em')};
@@ -164,7 +171,7 @@ const CorporateTheme = ({
         }
 
         .corporate-table td {
-            padding: 0.25rem 0.4rem;
+            padding: ${config.tableCellPadding || '0.25rem 0.4rem'};
             border-bottom: 1px solid #e5e7eb;
             font-size: ${config.tableBodyFontSize || '0.75em'};
             font-weight: ${config.tableBodyFontWeight || 'normal'};
@@ -172,9 +179,10 @@ const CorporateTheme = ({
             vertical-align: middle;
         }
 
+        ${config.tableStriped ? `
         .corporate-table tr:nth-child(even) {
-            background-color: #f9fafb;
-        }
+            background-color: ${config.tableStripedColor || '#f9fafb'};
+        }` : ''}
 
         .corporate-item-image {
             width: 48px;
@@ -416,7 +424,9 @@ const CorporateTheme = ({
                         <div className="corporate-header" style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '1rem', paddingBottom: '0.5rem' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8em', color: '#9ca3af' }}>
                                 <span>{companyData.name} - {config.title}</span>
-                                <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                {config.showPageNumbers !== false && (
+                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -501,6 +511,13 @@ const CorporateTheme = ({
                                                 <div style={{ fontSize: '0.85em', color: '#6b7280', fontStyle: 'italic' }}>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
                                             </div>
                                         )}
+                                        {showSection('notes') && config.showTerms && (
+                                            <div style={{ marginTop: '1.5rem', fontSize: '0.85em', color: '#4b5563', lineHeight: '1.5' }}>
+                                                {quoteData.deliveryTerms && <div style={{ marginBottom: '0.25rem' }}><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms && <div style={{ marginBottom: '0.25rem' }}><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'terms', 'textarea')}</div>}
+                                                {quoteData.terms && <div style={{ marginBottom: '0.25rem' }}><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="corporate-totals-box">
                                         <div className="corporate-total-row">
@@ -564,6 +581,20 @@ const CorporateTheme = ({
                                     <div style={{ fontWeight: '700', color: color }}>{companyData.name} - {config.title}</div>
                                 </div>
                             </div>
+                            )}
+
+                            {/* Custom Footer */}
+                            {config.customFooter && (
+                                <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.75em', color: '#6b7280', borderTop: '1px solid #e5e7eb', paddingTop: '0.5rem' }}>
+                                    {config.customFooter}
+                                </div>
+                            )}
+
+                            {/* Page Number */}
+                            {config.showPageNumbers && (
+                                <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.65em', color: '#9ca3af' }}>
+                                    {t.page} {pageIndex + 1} / {itemChunks.length}
+                                </div>
                             )}
                         </div>
                     )}

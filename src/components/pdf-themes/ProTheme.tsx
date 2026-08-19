@@ -58,6 +58,7 @@ const ProTheme = ({
             font-size: ${config.fontSize || 12}px;
             background-color: var(--pdf-page-bg, #ffffff) !important;
             position: relative;
+            box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
         }
 
         .pro-theme-container::before {
@@ -88,12 +89,12 @@ const ProTheme = ({
 
         .pro-theme-container .company-logo {
             width: 120px;
-            height: 60px;
+            height: ${config.logoMaxHeight || 60}px;
             border: ${config.boxBorderWidth || '1px'} ${config.boxBorderStyle || 'solid'} ${config.boxBorderColor || '#e2e8f0'};
-            border-radius: ${config.borderRadius || 6}px;
+            border-radius: ${config.logoStyle === 'circle' ? '999px' : config.logoStyle === 'rounded' ? '8px' : (config.borderRadius || 6) + 'px'};
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: ${config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start'};
             background: #f8fafc;
             color: #000000;
             font-size: 0.6em;
@@ -240,8 +241,8 @@ const ProTheme = ({
         .pro-theme-container .pdf-items-table th {
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : config.tableHeaderFontSize || '1.2em'} !important;
             font-weight: ${config.tableHeaderFontWeight || '700'} !important;
-            color: ${color};
-            background: #f1f5f9;
+            color: ${config.tableHeaderColor || color};
+            background: ${config.tableHeaderBg || '#f1f5f9'};
             padding: ${config.tableHeaderPadding || '1em 1em'};
             text-transform: ${config.tableHeaderTransform || 'uppercase'};
             text-align: left;
@@ -541,7 +542,7 @@ const ProTheme = ({
                             <div className="header-left">
                                 {config.showLogo && companyData.logo && (
                                     <div className="company-logo">
-                                        <img src={companyData.logo} alt="Logo" />
+                                        <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                     </div>
                                 )}
                                 <div className="company-info">
@@ -561,7 +562,9 @@ const ProTheme = ({
                         <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `1px solid ${config.boxBorderColor || '#e2e8f0'}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8em', color: '#666' }}>
                                 <span>{companyData.name} - {config.title}</span>
-                                <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                {config.showPageNumbers !== false && (
+                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -729,6 +732,13 @@ const ProTheme = ({
                     {config.customFooter && (
                         <div className="pdf-footer" style={{ marginTop: 0, borderTop: 'none', paddingTop: '0.5rem', textAlign: 'center', fontSize: '0.65rem', color: '#94a3b8' }}>
                             {config.customFooter}
+                        </div>
+                    )}
+
+                    {/* Page Number */}
+                    {config.showPageNumbers && (
+                        <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.65rem', color: '#94a3b8' }}>
+                            {t.page} {pageIndex + 1} / {itemChunks.length}
                         </div>
                     )}
                 </div>
