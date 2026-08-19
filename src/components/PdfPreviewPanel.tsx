@@ -15,8 +15,21 @@ import useDebounce from '../hooks/useDebounce';
 import { deepEqual } from '../utils/deepEqual';
 import PdfSectionsTab from './pdf-tabs/PdfSectionsTab';
 import type html2pdfType from 'html2pdf.js';
+import type { PdfConfig } from '../context/quote/types';
 
 type Html2PdfOptions = NonNullable<Parameters<typeof html2pdfType>[1]>;
+
+interface SavedPdfTemplate {
+    id: number;
+    name: string;
+    config: PdfConfig;
+}
+
+interface PdfPreset {
+    id: string;
+    labelKey: string;
+    config: Partial<PdfConfig>;
+}
 
 const PdfPreviewPanel = React.memo(() => {
     const {
@@ -34,7 +47,7 @@ const PdfPreviewPanel = React.memo(() => {
     const { t } = useTranslation(quoteData?.language);
 
     const [activeTab, setActiveTab] = useState('sections');
-    const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
+    const [savedTemplates, setSavedTemplates] = useState<SavedPdfTemplate[]>([]);
     const [templateName, setTemplateName] = useState('');
     const [signature, setSignature] = useState<string | null>(null);
     const [performanceMode, setPerformanceMode] = useState(false);
@@ -49,7 +62,7 @@ const PdfPreviewPanel = React.memo(() => {
     const [estimatedPages, setEstimatedPages] = useState(1);
     const [pageCount, setPageCount] = useState(1);
     const [activePage, setActivePage] = useState(1);
-    const contentRef = useRef<any>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const thumbnailsRef = useRef<HTMLDivElement>(null);
     const marginGuidesRef = useRef<HTMLDivElement>(null);
@@ -192,7 +205,7 @@ const PdfPreviewPanel = React.memo(() => {
         }
     ], []);
 
-    const applyPreset = useCallback((preset: { config: Record<string, any> }) => {
+    const applyPreset = useCallback((preset: PdfPreset) => {
         setPdfConfig(prev => ({ ...prev, ...preset.config }));
         toast.success(t('presetApplied'));
     }, [setPdfConfig, t]);
@@ -353,7 +366,7 @@ const PdfPreviewPanel = React.memo(() => {
         const saved = localStorage.getItem('pdfTemplates');
         if (saved) {
             try {
-                setSavedTemplates(JSON.parse(saved));
+                setSavedTemplates(JSON.parse(saved) as SavedPdfTemplate[]);
             } catch (e) {
                 Logger.error('Failed to parse templates', e);
             }
@@ -374,12 +387,12 @@ const PdfPreviewPanel = React.memo(() => {
         toast.success(t('templateSaved'));
     }, [templateName, pdfConfig, savedTemplates]);
 
-    const loadTemplate = useCallback((template) => {
+    const loadTemplate = useCallback((template: SavedPdfTemplate) => {
         setPdfConfig(template.config);
         toast.success(t('templateLoaded'));
     }, [setPdfConfig]);
 
-    const deleteTemplate = useCallback((id) => {
+    const deleteTemplate = useCallback((id: number) => {
         const updatedTemplates = savedTemplates.filter(t => t.id !== id);
         setSavedTemplates(updatedTemplates);
         localStorage.setItem('pdfTemplates', JSON.stringify(updatedTemplates));

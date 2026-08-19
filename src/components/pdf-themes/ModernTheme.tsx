@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import type { QuoteItem } from '../../context/quote/types';
 import { useMemo } from 'react';
 
 const ModernTheme = ({
@@ -502,7 +503,7 @@ const ModernTheme = ({
 
     const itemsPerPage = config.itemsPerPage || 14;
     const itemChunks = useMemo(() => {
-        const chunks: any[] = [];
+        const chunks: QuoteItem[][] = [];
         if (items.length === 0) {
             chunks.push([]);
         } else {
@@ -859,3 +860,5 @@ const ModernTheme = ({
 };
 
 export default ModernTheme;
+
+

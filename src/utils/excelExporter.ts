@@ -39,8 +39,8 @@ const getLocale = (language?: string) => LOCALE_MAP[language || 'tr'] || FALLBAC
 
 const getT = (language?: string) => (translations[(language || 'tr') as keyof typeof translations] || translations.tr);
 
-function safe(val: unknown, fallback = '') {
-    return val != null ? val : fallback;
+function safe(val: unknown, fallback = ''): string | number {
+    return val != null ? (val as string | number) : fallback;
 }
 
 function toLocale(val: unknown, locale: string = FALLBACK_LOCALE) {
@@ -48,9 +48,9 @@ function toLocale(val: unknown, locale: string = FALLBACK_LOCALE) {
     return typeof val === 'number' ? val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(val);
 }
 
-const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], locale: string): any[][] => {
+const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], locale: string): (string | number)[][] => {
     const t = getT(quoteData?.language);
-    const rows: any[][] = [];
+    const rows: (string | number)[][] = [];
     const c = quoteData?.customer || {};
     const comp = quoteData?.company || {};
     const bank = quoteData?.bankData || {};
@@ -140,7 +140,7 @@ export const exportQuoteToExcel = async (quoteData: ExportQuoteData, items: Expo
         XLSX.writeFile(wb, buildFileName(quoteData, 'xlsx'));
 
         return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
         Logger.error('Excel export error:', error);
         throw error;
     }
@@ -149,17 +149,17 @@ export const exportQuoteToExcel = async (quoteData: ExportQuoteData, items: Expo
 export const exportQuoteToCSV = (quoteData: ExportQuoteData, items: ExportItem[]) => {
     try {
         const locale = getLocale(quoteData?.language);
-        const lines: any[] = [];
+        const lines: string[] = [];
         const csvSep = ';';
 
-        const esc = (val: any) => {
+        const esc = (val: unknown) => {
             const s = String(val != null ? val : '');
             return s.includes(csvSep) || s.includes('"') || s.includes('\n')
                 ? `"${s.replace(/"/g, '""')}"`
                 : s;
         };
 
-        const row = (...cells: any[]) => lines.push(cells.map(esc).join(csvSep));
+        const row = (...cells: unknown[]) => lines.push(cells.map(esc).join(csvSep));
 
         buildRows(quoteData, items, locale).forEach(r => row(...r));
 
@@ -175,7 +175,7 @@ export const exportQuoteToCSV = (quoteData: ExportQuoteData, items: ExportItem[]
         URL.revokeObjectURL(url);
 
         return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
         Logger.error('CSV export error:', error);
         throw error;
     }

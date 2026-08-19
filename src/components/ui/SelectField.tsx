@@ -6,7 +6,7 @@ interface SelectOption {
   label: string;
 }
 
-interface SelectFieldProps<T extends FieldValues> {
+interface SelectFieldProps<T extends FieldValues> extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'name'> {
   id?: string;
   label?: string;
   name: Path<T>;
@@ -16,7 +16,6 @@ interface SelectFieldProps<T extends FieldValues> {
   icon?: React.ReactNode;
   disabled?: boolean;
   className?: string;
-  [key: string]: any;
 }
 
 function SelectField<T extends FieldValues>({

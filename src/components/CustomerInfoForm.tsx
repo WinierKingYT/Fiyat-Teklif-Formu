@@ -7,6 +7,7 @@ import { useQuoteData } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { InputField, TextAreaField } from './ui';
 import Logger from '../utils/logger';
+import type { CustomerData } from '../context/quote/types';
 
 const customerInfoSchema = z.object({
   name: z.string().min(1, 'Müşteri adı zorunludur'),
@@ -22,8 +23,8 @@ const customerInfoSchema = z.object({
 type CustomerInfoFormData = z.infer<typeof customerInfoSchema>;
 
 interface CustomerInfoFormProps {
-  data: Record<string, any>;
-  onChange: (name: string, value: any) => void;
+  data: Partial<CustomerData>;
+  onChange: (name: string, value: string) => void;
   onSelectCustomer: () => void;
 }
 
@@ -31,7 +32,7 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
   const { quoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<CustomerData[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
   const [showDetails, setShowDetails] = useState(false);
@@ -59,7 +60,7 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
     if (!db || searchQuery.length < 2) { setSearchResults([]); return; }
     const timer = setTimeout(async () => {
       try {
-        const all = await db.getAll('customers');
+        const all = await db.getAll<CustomerData>('customers');
         const q = searchQuery.toLowerCase();
         const filtered = all.filter(c =>
           (c.name?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
@@ -90,7 +91,7 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
     }
   };
 
-  const selectCustomer = (customer: any) => {
+  const selectCustomer = (customer: CustomerData) => {
     onChange('name', customer.name || '');
     onChange('company', customer.company || '');
     onChange('email', customer.email || '');

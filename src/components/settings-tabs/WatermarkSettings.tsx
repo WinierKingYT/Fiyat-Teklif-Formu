@@ -6,7 +6,7 @@ import { useQuoteData } from "../../context/QuoteContext";
 
 interface WatermarkSettingsProps {
   pdfConfig: PdfConfig;
-  setPdfConfig: (config: any) => void;
+  setPdfConfig: React.Dispatch<React.SetStateAction<PdfConfig>>;
 }
 
 const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) => {

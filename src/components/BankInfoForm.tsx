@@ -19,7 +19,7 @@ type BankInfoFormData = z.infer<typeof bankInfoSchema>;
 
 interface BankInfoFormProps {
   data?: Record<string, string | undefined>;
-  onChange: (name: string, value: any) => void;
+  onChange: (name: string, value: string) => void;
   onOpenManager?: () => void;
 }
 

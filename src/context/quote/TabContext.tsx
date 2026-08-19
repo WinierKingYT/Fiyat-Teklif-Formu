@@ -48,7 +48,7 @@ export const TabProvider = ({ children }: { children: React.ReactNode }) => {
         if (isReady && db) {
             const loadTabs = async () => {
                 try {
-                    const savedTabs = await db.getByIndex('settings', 'key', 'session_tabs');
+                    const savedTabs = await db.getByIndex<{ id: string; value: Tab[] }>('settings', 'key', 'session_tabs');
                     if (savedTabs && savedTabs.value) {
                         setTabs(savedTabs.value);
                     } else {
@@ -74,7 +74,7 @@ export const TabProvider = ({ children }: { children: React.ReactNode }) => {
         if (isReady && db) {
             const saveTabs = async () => {
                 try {
-                    const existingRecord = await db.getByIndex('settings', 'key', 'session_tabs');
+                    const existingRecord = await db.getByIndex<{ id: string; value: Tab[] }>('settings', 'key', 'session_tabs');
                     const record = { id: 'session_tabs', key: 'session_tabs', value: tabs };
                     if (existingRecord) { record.id = existingRecord.id; await db.put('settings', record); }
                     else { await db.add('settings', record); }
@@ -127,7 +127,7 @@ export const TabProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     // --- History State ---
-    const historyTimeoutRef = useRef<any>(null);
+    const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isNavigatingHistory = useRef(false);
 
     const undo = useCallback(() => {
@@ -202,7 +202,7 @@ export const TabProvider = ({ children }: { children: React.ReactNode }) => {
                 const metrics = await performanceMonitor.getPerformanceMetrics(db, tabs);
                 const recommendations = performanceMonitor.getRecommendations(metrics);
                 if (recommendations.needsCleanup) {
-                    const highWarnings = recommendations.warnings.filter((w: any) => w.severity === 'high');
+                    const highWarnings = recommendations.warnings.filter((w: { type: string; severity: string; message: string }) => w.severity === 'high');
                     if (highWarnings.length > 0) toast('Performans uyarısı: ' + highWarnings[0].message, { duration: 5000, icon: '⚠️' });
                 }
             } catch (error) { Logger.error('Performance check failed:', error); }

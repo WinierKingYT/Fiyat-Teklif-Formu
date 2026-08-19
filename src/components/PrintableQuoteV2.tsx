@@ -28,7 +28,7 @@ interface PrintableQuoteProps {
     config?: PdfConfig;
     layout?: PdfLayoutItem[];
     signature?: string | null;
-    onEdit?: (field: string, value: any) => void;
+    onEdit?: (field: string, value: unknown) => void;
 }
 
 const PrintableQuote = React.memo(({

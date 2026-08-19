@@ -47,8 +47,8 @@ const AnalyticsModal = ({ isOpen, onClose }) => {
     const calculateStats = async () => {
         setLoading(true);
         try {
-            const quotes = await (db).getAll('quotes');
-            const customers = await (db).getAll('customers');
+            const quotes = await (db).getAll<import('../context/quote/types').DbQuote>('quotes');
+            const customers = await (db).getAll<import('../context/quote/types').CustomerData>('customers');
             let totalAmount = 0;
             quotes.forEach(quote => {
                 const calc = calculateQuoteTotals(quote.items || [], quote.discount || {}, { currency: quote.quoteData?.currency });

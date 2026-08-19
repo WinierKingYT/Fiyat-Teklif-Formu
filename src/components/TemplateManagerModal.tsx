@@ -8,6 +8,23 @@ import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
 import { useQuoteData } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
+import type { QuoteData, CustomerData, CompanyData, QuoteItem, Discount } from '../context/quote/types';
+
+interface SavedTemplateData {
+    quoteData?: QuoteData;
+    customerData?: CustomerData;
+    companyData?: CompanyData;
+    items?: QuoteItem[];
+    discount?: Discount;
+    discountRate?: number;
+}
+
+interface SavedTemplate {
+    id: number;
+    name: string;
+    createdAt?: string;
+    data: SavedTemplateData;
+}
 
 const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
     const { t } = useTranslation(language);
@@ -17,7 +34,7 @@ const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscount
     } = useQuoteData();
 
-    const [templates, setTemplates] = useState<any[]>([]);
+    const [templates, setTemplates] = useState<SavedTemplate[]>([]);
     const [templateName, setTemplateName] = useState('');
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
@@ -26,7 +43,7 @@ const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
     }, [isOpen, db]);
 
     const loadTemplates = async () => {
-        const allTemplates = await (db).getAll('templates');
+        const allTemplates = await (db).getAll<SavedTemplate>('templates');
         setTemplates(allTemplates);
     };
 
@@ -44,16 +61,16 @@ const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         }
     };
 
-    const handleLoadTemplate = (template) => {
+    const handleLoadTemplate = (template: SavedTemplate) => {
         setConfirmDialog({ isOpen: true, title: t('loadTemplateTitle'), message: t('loadTemplateConfirm').replace('{name}', template.name), onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const { data } = template; if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v)); if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v)); if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v)); if (data.items) setItems(data.items); if (data.discount) setDiscount(data.discount); else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate }); toast.success(t('templateLoaded')); onClose(); }, variant: 'warning' });
     };
 
-    const handleDeleteTemplate = async (id) => {
+    const handleDeleteTemplate = async (id: number) => {
         setConfirmDialog({ isOpen: true, title: t('deleteTemplateTitle'), message: t('deleteTemplateConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('templates', id); toast.success(t('templateDeleted')); loadTemplates(); } catch (error) { Logger.error(error);
                 toast.error(t('templateDeleteError')); } }, variant: 'danger' });
     };
 
-    const handleExportTemplate = (template) => {
+    const handleExportTemplate = (template: SavedTemplate) => {
         try {
             const dataStr = JSON.stringify(template, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
@@ -124,7 +141,7 @@ const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
                                 <div key={template.id} className="flex items-center justify-between p-3 border border-[var(--color-border)] rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] transition-colors">
                                     <div>
                                         <div className="font-medium text-[var(--color-text)]">{template.name}</div>
-                                        <div className="text-xs text-[var(--color-text-muted)]">{new Date(template.createdAt).toLocaleDateString('tr-TR')}</div>
+                                        <div className="text-xs text-[var(--color-text-muted)]">{template.createdAt ? new Date(template.createdAt).toLocaleDateString('tr-TR') : ''}</div>
                                     </div>
                                     <div className="flex gap-2">
                                         <button type="button" className="btn btn-sm btn-outline" onClick={() => handleLoadTemplate(template)} title={t('loadTemplate')}>

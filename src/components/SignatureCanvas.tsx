@@ -2,8 +2,14 @@ import React from 'react';
 import { useRef, useState, useEffect } from 'react';
 import { Eraser, Check, Upload, X } from 'lucide-react';
 
-const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
-    const canvasRef = useRef<any>(null);
+interface SignatureCanvasProps {
+    onSave: (dataUrl: string) => void;
+    onClear?: () => void;
+    savedSignature?: string;
+}
+
+const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasProps) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasSignature, setHasSignature] = useState(false);
     const [lineWidth, setLineWidth] = useState(2);
@@ -12,6 +18,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
         const canvas = canvasRef.current;
         if (canvas) {
             const ctx = canvas.getContext('2d');
+            if (!ctx) return;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.strokeStyle = '#000000';
@@ -60,6 +67,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
+        if (!ctx) return;
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX || e.touches[0].clientX) - rect.left;
         const y = (e.clientY || e.touches[0].clientY) - rect.top;
@@ -78,6 +86,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
         e.preventDefault(); // Prevent scrolling on touch
 
         const ctx = canvas.getContext('2d');
+        if (!ctx) return;
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX || e.touches[0].clientX) - rect.left;
         const y = (e.clientY || e.touches[0].clientY) - rect.top;
@@ -97,9 +106,10 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
         const canvas = canvasRef.current;
         if (canvas) {
             const ctx = canvas.getContext('2d');
+            if (!ctx) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             setHasSignature(false);
-            onClear();
+            onClear?.();
         }
     };
 
@@ -172,7 +182,9 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }) => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = canvasRef.current;
+                    if (!canvas) return;
                     const ctx = canvas.getContext('2d');
+                    if (!ctx) return;
 
                     // Clear canvas first
                     ctx.clearRect(0, 0, canvas.width, canvas.height);

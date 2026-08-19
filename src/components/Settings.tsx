@@ -82,8 +82,8 @@ const Settings = () => {
     setSettings((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCompanyChange = (name: string, value: string) => {
-    setCompanySettings((prev) => ({ ...prev, [name]: value }));
+  const handleCompanyChange = (name: string, value: string | null) => {
+    setCompanySettings((prev) => ({ ...prev, [name]: value ?? undefined }));
   };
 
   const handleSave = async () => {

@@ -9,6 +9,7 @@ import { useQuoteData, useCompanyDefaults } from '../context/QuoteContext';
 import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
 import { InputField, TextAreaField } from './ui';
+import type { CompanyData } from '../context/quote/types';
 
 const companyInfoSchema = z.object({
   name: z.string().min(1, 'Firma adı zorunludur'),
@@ -28,8 +29,8 @@ const companyInfoSchema = z.object({
 type CompanyInfoFormData = z.infer<typeof companyInfoSchema>;
 
 interface CompanyInfoFormProps {
-  data: Record<string, any>;
-  onChange: (name: string, value: any) => void;
+  data: Partial<CompanyData>;
+  onChange: (name: string, value: string | null) => void;
 }
 
 const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => {
@@ -67,7 +68,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
     const file = e.currentTarget.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => onChange('logo', (ev.currentTarget as FileReader).result);
+      reader.onload = (ev) => onChange('logo', (ev.currentTarget as FileReader).result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -232,7 +233,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
                     <Upload size={14} /> {t('signature')}
                   </label>
                   <SignatureCanvas
-                    savedSignature={data.signature}
+                    savedSignature={data.signature ?? undefined}
                     onSave={(signatureData) => onChange('signature', signatureData)}
                     onClear={() => onChange('signature', null)}
                   />
@@ -265,7 +266,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
                       {data.stamp && <button type="button" className="btn btn-danger btn-sm" onClick={clearStamp}><Trash size={13} /> {t('delete')}</button>}
                     </div>
                   </div>
-                  <input type="file" id="stampUpload" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => onChange('stamp', (ev.currentTarget as FileReader).result); reader.readAsDataURL(file); } }} />
+                  <input type="file" id="stampUpload" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => onChange('stamp', (ev.currentTarget as FileReader).result as string); reader.readAsDataURL(file); } }} />
                 </div>
               </div>
             </div>

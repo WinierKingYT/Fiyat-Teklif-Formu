@@ -10,11 +10,11 @@ import { useQuote } from '../context/QuoteContext';
 import { Trash2, Edit, Plus, Search, Image as ImageIcon, Grid, List, Filter, CheckSquare, Square, Download, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ImageOptimizer from '../utils/imageOptimizer';
-import { parseExcelFile } from '../utils/excelParser';
+import { parseExcelFile, type ImportedProduct } from '../utils/excelParser';
 import Logger from '../utils/logger';
 
 interface Product {
-    id?: string;
+    id: string | number;
     name: string;
     description?: string;
     price: number;
@@ -32,11 +32,11 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
-    const [selectedProducts, setSelectedProducts] = useState(new Set());
+    const [selectedProducts, setSelectedProducts] = useState<Set<string | number>>(new Set());
 
     // Edit/Add State
     const [isEditing, setIsEditing] = useState(false);
-    const [currentProduct, setCurrentProduct] = useState<any>(null);
+    const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
@@ -293,7 +293,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
 
         try {
             toast.loading(t('loading'), { id: 'import-loading' });
-            let importedProducts: any[] = [];
+            let importedProducts: ImportedProduct[] = [];
 
             if (file.name.endsWith('.json')) {
                 const text = await file.text();
@@ -311,10 +311,10 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                 let count = 0;
                 for (const p of importedProducts) {
                     if (p.name && (p.price !== undefined && p.price !== null)) {
-                        const { id, ...productData } = p;
+                        const { id: _id, ...productData } = p as ImportedProduct & { id?: unknown };
                         await db.add('products', {
                             ...productData,
-                            price: parseFloat(productData.price),
+                            price: Number(productData.price),
                             id: Date.now() + count++
                         });
                     }

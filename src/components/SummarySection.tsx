@@ -4,12 +4,21 @@ import { Calculator, Percent, Receipt, RefreshCw } from 'lucide-react';
 import { calculateQuoteTotals, formatCurrency } from '../utils/calculations';
 import { getExchangeRates, CURRENCIES } from '../utils/exchangeRates';
 import { useTranslation } from '../hooks/useTranslation';
+import type { QuoteItem, Discount } from '../context/quote/types';
 
-const SummarySection = React.memo(({ items, discount = { type: 'percentage', value: 0 }, onDiscountChange, currency = 'TRY', language = 'tr' }: any) => {
+interface SummarySectionProps {
+    items: QuoteItem[];
+    discount: Discount;
+    onDiscountChange: (discount: Discount) => void;
+    currency?: string;
+    language?: string;
+}
+
+const SummarySection = React.memo(({ items, discount = { type: 'percentage', value: 0 }, onDiscountChange, currency = 'TRY', language = 'tr' }: SummarySectionProps) => {
     const { t } = useTranslation(language);
     const calc = useMemo(() => calculateQuoteTotals(items, discount, { currency }), [items, discount, currency]);
 
-    const [rates, setRates] = useState(null);
+    const [rates, setRates] = useState<Record<string, number> | null>(null);
     const [showConversion, setShowConversion] = useState(false);
     const [targetCurrency, setTargetCurrency] = useState('USD');
 

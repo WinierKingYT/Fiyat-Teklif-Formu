@@ -49,6 +49,16 @@ interface ItemsTableProps {
   onAddProduct?: () => void;
 }
 
+interface ProductRow {
+  id?: string | number;
+  name: string;
+  description?: string;
+  unit?: string;
+  price?: number;
+  taxRate?: number;
+  image?: string | null;
+}
+
 const ItemsTable = ({
   items,
   onItemsChange,
@@ -57,24 +67,23 @@ const ItemsTable = ({
 }: ItemsTableProps) => {
   const { quoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
-  const fileInputRef = useRef<any>(null);
-  const searchRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [viewMode, setViewMode] = useState(
     window.innerWidth < 768 ? "card" : "table",
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<ProductRow[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
   const [touchedRows, setTouchedRows] = useState<Record<string, Record<string, boolean>>>({});
 
-  const getRowErrors = useCallback((item: any) => {
+  const getRowErrors = useCallback((item: QuoteItem) => {
     const errs: Record<string, string> = {};
     if (!item.name) errs.name = t('productNameRequired');
-    if (!item.quantity || parseFloat(item.quantity) <= 0) errs.quantity = 'Miktar > 0 olmalı';
-    if (item.price === undefined || item.price === '' || parseFloat(item.price) < 0) errs.price = 'Geçersiz fiyat';
-    const tax = parseFloat(item.taxRate);
-    if (isNaN(tax) || tax < 0 || tax > 100) errs.taxRate = 'KDV 0-100 arası';
+    if (!item.quantity || item.quantity <= 0) errs.quantity = 'Miktar > 0 olmalı';
+    if (item.price === undefined || item.price < 0) errs.price = 'Geçersiz fiyat';
+    if (item.taxRate < 0 || item.taxRate > 100) errs.taxRate = 'KDV 0-100 arası';
     return errs;
   }, [t]);
 
@@ -85,7 +94,7 @@ const ItemsTable = ({
     }));
   }, []);
 
-  const getFieldClass = useCallback((itemId: string, field: string, item: any) => {
+  const getFieldClass = useCallback((itemId: string, field: string, item: QuoteItem) => {
     const rowTouched = touchedRows[itemId];
     const rowErrors = getRowErrors(item);
     if (rowTouched?.[field] && rowErrors[field]) return 'form-control field-error text-sm';
@@ -99,7 +108,7 @@ const ItemsTable = ({
   }, [items, getRowErrors]);
 
   const hasErrors = useMemo(() => {
-    return items.some((item: any) => Object.keys(getRowErrors(item)).length > 0);
+    return items.some((item) => Object.keys(getRowErrors(item)).length > 0);
   }, [items, getRowErrors]);
   useEffect(() => {
     if (!db || searchQuery.length < 2) {
@@ -108,7 +117,7 @@ const ItemsTable = ({
     }
     const timer = setTimeout(async () => {
       try {
-        const allProducts = await db.getAll("products");
+        const allProducts = await db.getAll<ProductRow>("products");
         const q = searchQuery.toLowerCase();
         const filtered = allProducts.filter(
           (p) =>
@@ -123,15 +132,15 @@ const ItemsTable = ({
     }, 250);
     return () => clearTimeout(timer);
   }, [searchQuery, db]);
-  const [recentProducts, setRecentProducts] = useState<any[]>(() => {
+  const [recentProducts, setRecentProducts] = useState<ProductRow[]>(() => {
     try {
       const saved = localStorage.getItem("recentProducts");
-      return saved ? JSON.parse(saved) : [];
+      return saved ? (JSON.parse(saved) as ProductRow[]) : [];
     } catch {
       return [];
     }
   });
-  const addToRecentProducts = useCallback((product) => {
+  const addToRecentProducts = useCallback((product: ProductRow) => {
     setRecentProducts((prev) => {
       const filtered = prev.filter((p) => p.id !== product.id);
       const updated = [product, ...filtered].slice(0, 5);
@@ -139,7 +148,7 @@ const ItemsTable = ({
       return updated;
     });
   }, []);
-  const addProductFromSearch = useCallback((product) => {
+  const addProductFromSearch = useCallback((product: ProductRow) => {
     const newItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: product.name,
@@ -150,7 +159,7 @@ const ItemsTable = ({
       taxRate: product.taxRate || 20,
       discountRate: 0,
       total: product.price || 0,
-      image: product.image,
+      image: product.image ?? undefined,
     };
     onItemsChange(prev => [...prev, newItem]);
     addToRecentProducts(product);
@@ -294,7 +303,7 @@ const ItemsTable = ({
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        const newItems: any[] = [];
+        const newItems: QuoteItem[] = [];
         for (let i = 1; i < jsonData.length; i++) {
           const row = (jsonData[i] ?? []) as unknown[];
           if (row.length === 0) continue;
@@ -308,7 +317,7 @@ const ItemsTable = ({
             taxRate: parseFloat(String(row[5])) || 20,
             discountRate: parseFloat(String(row[6])) || 0,
             total: 0,
-            image: null,
+            image: undefined,
           });
         }
         if (newItems.length > 0) {

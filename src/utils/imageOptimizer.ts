@@ -14,7 +14,7 @@ class ImageOptimizer {
         this.maxFileSize = 300 * 1024; // Increased target output size to 300KB
     }
 
-    async optimizeImage(file: any, isStamp = false) {
+    async optimizeImage(file: File, isStamp = false): Promise<string> {
         return new Promise((resolve, reject) => {
             if (!file || !file.type.startsWith('image/')) {
                 reject(new Error('Geçersiz dosya türü'));
@@ -69,15 +69,15 @@ class ImageOptimizer {
                     }
 
                     resolve(optimizedDataUrl);
-                } catch (error: any) {
+                } catch (error: unknown) {
                     reject(error);
                 }
             };
 
             img.onerror = () => {
                 const reader = new FileReader();
-                reader.onload = (e: any) => {
-                    const result = e.target.result;
+                reader.onload = (e: ProgressEvent<FileReader>) => {
+                    const result = e.target?.result as string;
                     const resultSize = this.getBase64Size(result);
                     // If raw file is small enough, just use it
                     if (resultSize < this.maxFileSize * 2) {
@@ -86,7 +86,7 @@ class ImageOptimizer {
                         reject(new Error('Resim işlenemedi ve boyutu çok büyük'));
                     }
                 };
-                reader.onerror = (err: any) => reject(new Error('Resim yüklenemedi'));
+                reader.onerror = () => reject(new Error('Resim yüklenemedi'));
                 reader.readAsDataURL(file);
             };
 
@@ -136,7 +136,7 @@ class ImageOptimizer {
         return (base64String.length * 3) / 4 - padding;
     }
 
-    async validateImage(file: any) {
+    async validateImage(file: File) {
         const maxSize = 10 * 1024 * 1024; // 10MB Limit
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 

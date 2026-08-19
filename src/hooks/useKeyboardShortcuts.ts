@@ -1,6 +1,14 @@
 import { useHotkeys } from 'react-hotkeys-hook';
 
-const useKeyboardShortcuts = ({ onSave, onPdf, onNew, onUndo, onRedo }: any) => {
+interface KeyboardShortcutsProps {
+    onSave?: () => void;
+    onPdf?: () => void;
+    onNew?: () => void;
+    onUndo?: () => void;
+    onRedo?: () => void;
+}
+
+const useKeyboardShortcuts = ({ onSave, onPdf, onNew, onUndo, onRedo }: KeyboardShortcutsProps) => {
     // Save: Ctrl+S or Cmd+S
     useHotkeys('ctrl+s, meta+s', (e) => {
         e.preventDefault();

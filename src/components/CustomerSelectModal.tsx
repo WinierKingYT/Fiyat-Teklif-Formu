@@ -8,10 +8,18 @@ import useDebounce from '../hooks/useDebounce';
 import Logger from '../utils/logger';
 import Skeleton from './Skeleton';
 import EmptyState from './EmptyState';
+import type { CustomerData } from '../context/quote/types';
 
-const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }) => {
+interface CustomerSelectModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (customer: CustomerData) => void;
+    onCreateNew?: () => void;
+}
+
+const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: CustomerSelectModalProps) => {
     const { db, isReady } = useIndexedDB();
-    const [customers, setCustomers] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<CustomerData[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -24,7 +32,7 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }) => {
     const loadCustomers = async () => {
         setLoading(true);
         try {
-            const result = await (db).getAll('customers');
+            const result = await (db).getAll<CustomerData>('customers');
             setCustomers(result);
         } catch (error) {
             Logger.error('Error loading customers:', error);

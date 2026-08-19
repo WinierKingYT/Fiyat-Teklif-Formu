@@ -4,9 +4,25 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { calculateLineTotal } from "../../utils/calculations";
 import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from "./shared";
+import type { QuoteItem } from "../../context/quote/types";
+
+interface SortableRowCardProps {
+  item: QuoteItem;
+  index: number;
+  handleItemChange: (index: number, field: string, value: unknown) => void;
+  removeItem: (index: number) => void;
+  duplicateItem: (index: number) => void;
+  formatCurrency: (amount: number) => string;
+  t: (key: string) => string;
+  getFieldClass: (itemId: string, field: string, item: QuoteItem) => string;
+  handleRowBlur: (itemId: string, field: string) => void;
+  rowErrors?: Record<string, string>;
+  selected?: boolean;
+  toggleSelectItem: (index: number) => void;
+}
 
 const SortableRowCard = memo(
-  ({ item, index, handleItemChange, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem }: any) => {
+  ({ item, index, handleItemChange, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem }: SortableRowCardProps) => {
     const {
       attributes,
       listeners,
@@ -15,7 +31,7 @@ const SortableRowCard = memo(
       transition,
       isDragging,
     } = useSortable({ id: item.id });
-    const fileInputRef = useRef<any>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const style = {
       transform: CSS.Transform.toString(transform),
       transition,

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Hash, Calendar, Clock, AlignLeft, DollarSign, Globe } from 'lucide-react';
 import { InputField, SelectField, TextAreaField } from './ui';
+import type { QuoteData } from '../context/quote/types';
 
 const quoteInfoSchema = z.object({
   title: z.string().min(1, 'Teklif başlığı zorunludur'),
@@ -18,8 +19,8 @@ const quoteInfoSchema = z.object({
 type QuoteInfoFormData = z.infer<typeof quoteInfoSchema>;
 
 interface QuoteInfoFormProps {
-  data: Record<string, any>;
-  onChange: (name: string, value: any) => void;
+  data: Partial<QuoteData>;
+  onChange: (name: string, value: string) => void;
 }
 
 const QuoteInfoForm: React.FC<QuoteInfoFormProps> = ({ data, onChange }) => {

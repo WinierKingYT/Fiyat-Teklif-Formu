@@ -1,10 +1,10 @@
-﻿import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuoteData } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState';
+﻿import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, Clock, Trash, Trash2, Eye, PlusCircle, ArrowLeft, Download, CheckSquare, FileText } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuoteData } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter'; import { toast } from 'react-hot-toast'; import { useTranslation } from '../hooks/useTranslation'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState'; import type { DbQuote } from '../context/quote/types';
 
 const HistoryList = ({ onNavigate }) => {
     const { db, isReady } = useIndexedDB();
     const { currentQuoteId, setCurrentQuoteId, loadQuote, quoteData } = useQuoteData();
     const { t } = useTranslation(quoteData?.language);
-    const [quotes, setQuotes] = useState<any[]>([]);
+    const [quotes, setQuotes] = useState<DbQuote[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -20,8 +20,8 @@ const HistoryList = ({ onNavigate }) => {
     const loadQuotes = async () => {
         setLoading(true);
         try {
-            const result = await (db).getAll('quotes');
-            result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            const result = await (db).getAll<DbQuote>('quotes');
+            result.sort((a, b) => (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0));
             setQuotes(result);
         } catch (error) {
             Logger.error('Error loading quotes:', error);
@@ -30,14 +30,14 @@ const HistoryList = ({ onNavigate }) => {
         }
     };
 
-    const handleDelete = async (id: number | number[], e?: any) => {
+    const handleDelete = async (id: number | number[], e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         const isSingle = !Array.isArray(id);
         const ids = Array.isArray(id) ? id : [id];
         setConfirmDialog({ isOpen: true, title: isSingle ? t('deleteQuote') : t('deleteQuote'), message: isSingle ? t('deleteQuoteConfirm') : t('deleteQuotesConfirm').replace('{count}', String(ids.length)), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const deleteId of ids) { const quoteToDelete = quotes.find(q => q.id === deleteId); if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: deleteId, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', deleteId); if (currentQuoteId === deleteId) setCurrentQuoteId(null); } toast.success(t('quotesMovedToBin').replace('{count}', String(ids.length))); setSelectedIds(new Set()); setSelectAll(false); loadQuotes(); } catch (error) { Logger.error('Error deleting quotes:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
     };
 
-    const handleLoad = (quote) => {
+    const handleLoad = (quote: DbQuote) => {
         try {
             loadQuote(quote);
             onNavigate('builder');
@@ -105,7 +105,7 @@ const HistoryList = ({ onNavigate }) => {
                 const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
                     .map(s => s.outerHTML).join('\n');
                 const rows = (quote.items || []).map(item =>
-                    `<tr><td>${item.name || ''}</td><td>${item.quantity || 0}</td><td>${item.unit || ''}</td><td style="text-align:right">${Number(item.price || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td><td style="text-align:right">${Number(item.netTotal || (item.quantity * item.price)).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td></tr>`
+                    `<tr><td>${item.name || ''}</td><td>${item.quantity || 0}</td><td>${item.unit || ''}</td><td style="text-align:right">${Number(item.price || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td><td style="text-align:right">${Number(item.total ?? item.quantity * item.price).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td></tr>`
                 ).join('');
                 win.document.write(`
                     <!DOCTYPE html><html><head><title>${quote.quoteData?.title || 'Teklif'}</title>${styles}
@@ -283,7 +283,7 @@ const HistoryList = ({ onNavigate }) => {
                                             <td className="p-3 text-[var(--color-text-muted)] whitespace-nowrap">
                                                 <div className="flex items-center gap-1">
                                                     <Clock size={14} />
-                                                    {new Date(quote.createdAt).toLocaleDateString('tr-TR')}
+                                                    {quote.createdAt ? new Date(quote.createdAt).toLocaleDateString('tr-TR') : '-'}
                                                 </div>
                                             </td>
                                             <td className="p-3 font-medium text-[var(--color-text)]">{quote.quoteData?.number || '-'}</td>

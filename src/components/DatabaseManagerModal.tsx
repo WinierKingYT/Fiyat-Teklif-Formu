@@ -162,7 +162,7 @@ const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
 
                 validateBackup(data);
 
-                const allOperations: any[] = [];
+                const allOperations: Array<{ store: string; action: 'clear' | 'put' | 'tryAdd'; item?: unknown }> = [];
 
                 for (const [store, items] of Object.entries(data.stores)) {
                     if (EXCLUDED_IMPORT_STORES.includes(store)) continue;

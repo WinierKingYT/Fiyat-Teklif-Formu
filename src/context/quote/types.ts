@@ -47,6 +47,7 @@ export type QuoteData = z.infer<typeof quoteDataSchema>;
 
 // ─── Customer Data ──────────────────────────────────────────────────────────
 export const customerDataSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
   name: z.string().optional(),
   company: z.string().optional(),
   email: z.string().optional(),
@@ -95,10 +96,21 @@ export interface Quote {
   items: QuoteItem[];
   discount: Discount;
   bankData: BankData;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
   status?: string;
   discountRate?: number;
+}
+
+// ─── Stored Quote (IndexedDB'de saklanan genişletilmiş şekil) ───────────────
+export interface DbQuote extends Quote {
+  quoteNumber?: string;
+  customerName?: string;
+  customerCompany?: string;
+  subtotalMinor?: number;
+  taxTotalMinor?: number;
+  grandTotalMinor?: number;
+  currency?: string;
 }
 
 // ─── Tab Data ───────────────────────────────────────────────────────────────
@@ -231,12 +243,13 @@ export interface SaveStatus {
 }
 
 export interface IndexedDBManager {
-  getAll: (storeName: string) => Promise<any[]>;
-  get: (storeName: string, id: any) => Promise<any>;
-  add: (storeName: string, data: any) => Promise<any>;
-  put: (storeName: string, data: any) => Promise<any>;
-  delete: (storeName: string, id: any) => Promise<void>;
-  getByIndex: (storeName: string, indexName: string, value: any) => Promise<any>;
+  getAll: <T = unknown>(storeName: string, indexName?: string | null) => Promise<T[]>;
+  get: <T = unknown>(storeName: string, key: IDBValidKey) => Promise<T | undefined>;
+  add: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
+  put: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
+  delete: (storeName: string, key: IDBValidKey) => Promise<void>;
+  clear: (storeName: string) => Promise<void>;
+  getByIndex: <T = unknown>(storeName: string, indexName: string, value: IDBValidKey) => Promise<T | undefined>;
 }
 
 // ─── Quote Context Value ────────────────────────────────────────────────────
@@ -262,12 +275,12 @@ export interface QuoteContextValue {
   db: IndexedDBManager;
 
   // Update functions
-  updateQuoteData: (field: string, value: any) => void;
-  updateCustomerData: (field: string, value: any) => void;
-  updateCompanyData: (field: string, value: any) => void;
+  updateQuoteData: (field: string, value: unknown) => void;
+  updateCustomerData: (field: string, value: unknown) => void;
+  updateCompanyData: (field: string, value: unknown) => void;
   setItems: (items: QuoteItem[] | ((prev: QuoteItem[]) => QuoteItem[])) => void;
   setDiscount: (discount: Discount) => void;
-  updateBankData: (field: string, value: any) => void;
+  updateBankData: (field: string, value: unknown) => void;
   setBankData: (data: BankData | ((prev: BankData) => BankData)) => void;
 
   // History

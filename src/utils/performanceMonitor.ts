@@ -1,16 +1,70 @@
 // Performance Monitor Utility
 // Tracks memory usage, storage size, and application performance metrics
 import Logger from './logger';
+import type { Tab } from '../context/quote/types';
+
+interface MemoryUsage {
+    usedJSHeapSize: number;
+    totalJSHeapSize: number;
+    jsHeapSizeLimit: number;
+    usedPercentage: string;
+    usedMB: string;
+    totalMB: string;
+    limitMB: string;
+}
+
+interface StorageEstimate {
+    usage: number;
+    quota: number;
+    usagePercentage: string;
+    usageMB: string;
+    quotaMB: string;
+    availableMB: string;
+}
+
+interface SessionInfo {
+    openTabs: number;
+    totalHistorySteps: number;
+    averageHistoryPerTab: number | string;
+    totalItems: number;
+    averageItemsPerTab: number | string;
+}
+
+interface IndexedDBSize {
+    error?: string;
+    stores: Record<string, object>;
+    totalBytes: number;
+    totalMB: string;
+    totalKB: string;
+}
+
+interface LocalStorageInfo {
+    error?: string;
+    items: Record<string, object>;
+    count: number;
+    totalBytes: number;
+    totalKB: string;
+    totalMB: string;
+    estimatedLimit: number;
+    usagePercentage: string;
+}
+
+interface PerformanceMetrics {
+    memory: MemoryUsage | null;
+    storage: StorageEstimate | null;
+    indexedDB: IndexedDBSize | null;
+    localStorage: LocalStorageInfo | null;
+    sessionInfo: SessionInfo | null;
+    timestamp?: number;
+}
+
+interface DbManagerLike {
+    db?: IDBDatabase | null;
+    getAll?: <T = unknown>(storeName: string) => Promise<T[]>;
+}
 
 class PerformanceMonitor {
-    private metrics: {
-        memory: any;
-        storage: any;
-        indexedDB: any;
-        localStorage: any;
-        sessionInfo: any;
-        timestamp?: number;
-    };
+    private metrics: PerformanceMetrics;
 
     constructor() {
         this.metrics = {
@@ -60,7 +114,7 @@ class PerformanceMonitor {
                     quotaMB: (quota / (1024 * 1024)).toFixed(2),
                     availableMB: ((quota - usage) / (1024 * 1024)).toFixed(2)
                 };
-            } catch (error: any) {
+            } catch (error: unknown) {
                 Logger.error('Error getting storage estimate:', error);
                 return null;
             }
@@ -73,27 +127,27 @@ class PerformanceMonitor {
      * @param {IndexedDBManager|IDBDatabase} dbManager - Database manager or native instance
      * @returns {Promise<Object>} Size info for each store
      */
-    async getIndexedDBSize(dbManager: any) {
+    async getIndexedDBSize(dbManager: DbManagerLike): Promise<IndexedDBSize> {
         if (!dbManager) {
-            return { error: 'Database not available' };
+            return { error: 'Database not available', stores: {}, totalBytes: 0, totalMB: '0.00', totalKB: '0.00' };
         }
 
         // Get the actual IDBDatabase instance
         // IndexedDBManager has a .db property with the native IDBDatabase
-        const db = dbManager.db || dbManager;
+        const db = dbManager.db || (dbManager as IDBDatabase);
 
         if (!db || !db.objectStoreNames) {
             return { error: 'Database not properly initialized', stores: {}, totalBytes: 0, totalMB: '0.00', totalKB: '0.00' };
         }
 
         const storeNames = Array.from(db.objectStoreNames) as string[];
-        const sizes = {};
+        const sizes: Record<string, object> = {};
         let totalSize = 0;
 
         for (const storeName of storeNames) {
             try {
                 // Use the wrapper's getAll method if available
-                let allRecords;
+                let allRecords: unknown[];
                 if (dbManager.getAll && typeof dbManager.getAll === 'function') {
                     allRecords = await dbManager.getAll(storeName);
                 } else {
@@ -114,7 +168,7 @@ class PerformanceMonitor {
                 };
 
                 totalSize += sizeBytes;
-            } catch (error: any) {
+            } catch (error: unknown) {
                 Logger.error(`Error calculating size for ${storeName}:`, error);
                 sizes[storeName] = { error: (error as Error).message, count: 0, sizeBytes: 0 };
             }
@@ -132,8 +186,8 @@ class PerformanceMonitor {
      * Helper to get all records from a store using native API
      * @private
      */
-    _getAllRecordsNative(db: IDBDatabase, storeName: string) {
-        return new Promise((resolve, reject) => {
+    _getAllRecordsNative(db: IDBDatabase, storeName: string): Promise<unknown[]> {
+        return new Promise<unknown[]>((resolve, reject) => {
             try {
                 const tx = db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
@@ -151,10 +205,10 @@ class PerformanceMonitor {
      * Get LocalStorage size
      * @returns {Object} LocalStorage usage info
      */
-    getLocalStorageSize() {
+    getLocalStorageSize(): LocalStorageInfo {
         try {
             let totalSize = 0;
-            const items = {};
+            const items: Record<string, object> = {};
 
             for (const key in localStorage) {
                 if (localStorage.hasOwnProperty(key)) {
@@ -177,9 +231,9 @@ class PerformanceMonitor {
                 estimatedLimit: 5 * 1024 * 1024, // 5MB
                 usagePercentage: ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(2)
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             Logger.error('Error calculating localStorage size:', error);
-            return { error: error.message };
+            return { error: (error as Error).message, items: {}, count: 0, totalBytes: 0, totalKB: '0.00', totalMB: '0.0000', estimatedLimit: 5 * 1024 * 1024, usagePercentage: '0.00' };
         }
     }
 
@@ -188,7 +242,7 @@ class PerformanceMonitor {
      * @param {Array} tabs - Current tabs from QuoteContext
      * @returns {Object} Session info
      */
-    getSessionInfo(tabs: any[] = []) {
+    getSessionInfo(tabs: Tab[] = []): SessionInfo {
         const totalHistorySteps = tabs.reduce((sum, tab) => {
             return sum + (tab.history?.length || 0);
         }, 0);
@@ -212,7 +266,7 @@ class PerformanceMonitor {
      * @param {Array} tabs - Current tabs
      * @returns {Promise<Object>} Complete metrics
      */
-    async getPerformanceMetrics(dbManager: any = null, tabs: any[] = []) {
+    async getPerformanceMetrics(dbManager: DbManagerLike | null = null, tabs: Tab[] = []): Promise<PerformanceMetrics> {
         const [memory, storage, indexedDB, localStorage, sessionInfo] = await Promise.all([
             Promise.resolve(this.getMemoryUsage()),
             this.getStorageEstimate(),
@@ -238,7 +292,7 @@ class PerformanceMonitor {
      * @param {Object} metrics - Performance metrics
      * @returns {Object} Recommendations
      */
-    getRecommendations(metrics = this.metrics) {
+    getRecommendations(metrics: PerformanceMetrics = this.metrics) {
         const recommendations: {
             needsCleanup: boolean;
             warnings: { type: string; severity: string; message: string }[];

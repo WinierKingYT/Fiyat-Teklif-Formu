@@ -10,14 +10,21 @@ import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
 import { getLocalDateString } from '../utils/dateUtils';
 import { useTranslation } from '../hooks/useTranslation';
+import type { CustomerData } from '../context/quote/types';
 
-const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
+interface CustomerManagerModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    language?: string;
+}
+
+const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerManagerModalProps) => {
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
-    const [customers, setCustomers] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<CustomerData[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditing, setIsEditing] = useState(false);
-    const [currentCustomer, setCurrentCustomer] = useState<any>(null);
+    const [currentCustomer, setCurrentCustomer] = useState<CustomerData | null>(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
@@ -39,7 +46,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
     }, [isOpen, db]);
 
     const loadCustomers = async () => {
-        const allCustomers = await (db).getAll('customers');
+        const allCustomers = await (db).getAll<CustomerData>('customers');
         setCustomers(allCustomers);
     };
 
@@ -88,7 +95,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         }
     };
 
-    const handleEdit = (customer) => {
+    const handleEdit = (customer: CustomerData) => {
         setCurrentCustomer(customer);
         setFormData({
             name: customer.name || '',
@@ -97,12 +104,12 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
             phone: customer.phone || '',
             address: customer.address || '',
             taxOffice: customer.taxOffice || '',
-            taxNo: customer.taxNo || ''
+            taxNo: customer.taxNumber || ''
         });
         setIsEditing(true);
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: string | number) => {
         setConfirmDialog({ isOpen: true, title: t('deleteCustomer'), message: t('deleteCustomerConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { const customerToDelete = customers.find(c => c.id === id); if (customerToDelete) { await db.add('recycle_bin', { ...customerToDelete, originalStore: 'customers', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('customers', id); toast.success(t('customerMovedToBin')); loadCustomers(); } } catch (error) { Logger.error(error);
                 toast.error(t('customerDeleteError')); } }, variant: 'danger' });
     };
@@ -250,7 +257,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
                                         <button
                                             type="button"
                                             className="p-2 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(customer.id); }}
+                                            onClick={(e) => { e.stopPropagation(); if (customer.id !== undefined) handleDelete(customer.id); }}
                                             aria-label={`${t('deleteCustomer')}: ${customer.name || customer.company || ''}`}
                                         >
                                             <Trash2 size={16} />

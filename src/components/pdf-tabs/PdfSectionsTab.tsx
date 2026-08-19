@@ -3,7 +3,7 @@ import type { PdfConfig } from "../../context/quote/types";
 
 interface PdfSectionsTabProps {
   pdfConfig: PdfConfig;
-  handleConfigChange: (key: string, value: any) => void;
+  handleConfigChange: (key: string, value: unknown) => void;
   t: (key: string) => string;
 }
 

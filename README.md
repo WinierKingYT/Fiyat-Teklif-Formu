@@ -49,6 +49,10 @@ npx playwright test  # E2E testler (önce dev sunucusu açık: npm run dev)
 
 Mevcut durum: **0 cast** (`TOTAL: 0`). Yeni `as any` ekleyen bir değişiklik hem lint'te hem CI'da uyarı/hatayla işaretlenir.
 
+## Tip Güvenliği
+
+Proje **sıfır `any`** hedefiyle yönetilir; `@typescript-eslint/no-explicit-any` kuralı `error` seviyesinde aktiftir — kod tabanında hiçbir explicit `any` kalmamıştır (IndexedDBManager generic `T = unknown` imzalarla, form `onChange` imzaları daraltılmış, PDF temaları `QuoteItem[][]` ile, UI field'ları HTML attribute tipiyle genişletilmiştir). Yeni `any` ekleyen bir değişiklik lint hatası verir.
+
 ## Mimari
 
 Uygulama, teklif durumunu **odaklı context'lere** bölünmüş hâlde yönetir (`src/context/quote/`):

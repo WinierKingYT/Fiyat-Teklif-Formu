@@ -6,7 +6,7 @@
  * @param {string|number} value - The input value to evaluate
  * @returns {number|string} - The calculated number or the original value if invalid
  */
-export const evaluateMathExpression = (value: any) => {
+export const evaluateMathExpression = (value: unknown): unknown => {
     if (value === null || value === undefined || value === '') return value;
 
     // If it's already a number, return it

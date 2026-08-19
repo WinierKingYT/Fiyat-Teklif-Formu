@@ -2,10 +2,45 @@
 // Manages database cleanup operations for long-term application health
 
 import Logger from './logger';
+import type { IndexedDBManager, DbQuote, Tab } from '../context/quote/types';
+
+interface CleanupSettings {
+    autoCleanupEnabled: boolean;
+    quoteRetentionDays: number;
+    recycleBinRetentionDays: number;
+    cleanupOnStartup: boolean;
+    maxHistorySteps: number;
+}
+
+interface CleanupOptions {
+    cleanQuotes?: boolean;
+    quoteRetentionDays?: number;
+    cleanRecycleBin?: boolean;
+    recycleBinRetentionDays?: number;
+    cleanOrphaned?: boolean;
+}
+
+interface CleanupResult {
+    success: boolean;
+    deletedCount?: number;
+    cutoffDate?: string;
+    cutoffDays?: number;
+    cleanedCount?: number;
+}
+
+interface RecycleBinRecord {
+    id: IDBValidKey;
+    deletedAt?: string;
+}
+
+interface FormStateRecord {
+    id: IDBValidKey;
+    timestamp?: string;
+}
 
 class CleanupService {
-    private dbManager: any;
-    private settings: any;
+    private dbManager: IndexedDBManager | null;
+    private settings: CleanupSettings;
     constructor() {
         this.dbManager = null; // IndexedDBManager instance
         this.settings = {
@@ -21,7 +56,7 @@ class CleanupService {
      * Initialize with database manager instance
      * @param {IndexedDBManager} dbManager
      */
-    setDatabase(dbManager) {
+    setDatabase(dbManager: IndexedDBManager) {
         this.dbManager = dbManager;
     }
 
@@ -29,14 +64,14 @@ class CleanupService {
      * Load cleanup settings from IndexedDB
      * @returns {Promise<Object>}
      */
-    async loadSettings() {
+    async loadSettings(): Promise<CleanupSettings> {
         if (!this.dbManager) {
             Logger.warn('Database not initialized');
             return this.settings;
         }
 
         try {
-            const result = await this.dbManager.getByIndex('settings', 'key', 'cleanup_settings');
+            const result = await this.dbManager.getByIndex<{ id: string; value: Partial<CleanupSettings> }>('settings', 'key', 'cleanup_settings');
 
             if (result?.value) {
                 this.settings = { ...this.settings, ...result.value };
@@ -53,7 +88,7 @@ class CleanupService {
      * @param {Object} newSettings
      * @returns {Promise<void>}
      */
-    async saveSettings(newSettings) {
+    async saveSettings(newSettings: Partial<CleanupSettings>) {
         if (!this.dbManager) throw new Error('Database not initialized');
 
         this.settings = { ...this.settings, ...newSettings };
@@ -77,7 +112,7 @@ class CleanupService {
      * @param {number} days - Age threshold in days
      * @returns {Promise<Object>} Cleanup stats
      */
-    async cleanOldQuotes(days = null) {
+    async cleanOldQuotes(days: number | null = null): Promise<CleanupResult> {
         const cutoffDays = days ?? this.settings.quoteRetentionDays;
         if (!this.dbManager) throw new Error('Database not initialized');
 
@@ -86,7 +121,7 @@ class CleanupService {
         const cutoffTime = cutoffDate.toISOString();
 
         try {
-            const allQuotes = await this.dbManager.getAll('quotes');
+            const allQuotes = await this.dbManager.getAll<DbQuote>('quotes');
 
             let deletedCount = 0;
 
@@ -117,7 +152,7 @@ class CleanupService {
      * @param {number} days
      * @returns {Promise<Object>}
      */
-    async cleanRecycleBin(days = null) {
+    async cleanRecycleBin(days: number | null = null): Promise<CleanupResult> {
         const cutoffDays = days ?? this.settings.recycleBinRetentionDays;
         if (!this.dbManager) throw new Error('Database not initialized');
 
@@ -126,7 +161,7 @@ class CleanupService {
         const cutoffTime = cutoffDate.toISOString();
 
         try {
-            const allItems = await this.dbManager.getAll('recycle_bin');
+            const allItems = await this.dbManager.getAll<RecycleBinRecord>('recycle_bin');
 
             let deletedCount = 0;
 
@@ -155,7 +190,7 @@ class CleanupService {
      * Clean orphaned data (e.g., references to deleted items)
      * @returns {Promise<Object>}
      */
-    async cleanOrphanedData() {
+    async cleanOrphanedData(): Promise<CleanupResult> {
         if (!this.dbManager) throw new Error('Database not initialized');
 
         try {
@@ -163,7 +198,7 @@ class CleanupService {
 
             // Clean old form states (store name might be 'formState')
             try {
-                const allStates = await this.dbManager.getAll('formState');
+                const allStates = await this.dbManager.getAll<FormStateRecord>('formState');
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -196,7 +231,7 @@ class CleanupService {
      * @param {number} maxSteps - Maximum history steps to keep
      * @returns {Array} Updated tabs
      */
-    trimTabHistory(tabs, maxSteps = null) {
+    trimTabHistory(tabs: Tab[], maxSteps: number | null = null): Tab[] {
         const limit = maxSteps ?? this.settings.maxHistorySteps;
 
         return tabs.map(tab => {
@@ -237,7 +272,7 @@ class CleanupService {
             cutoffDate.setDate(cutoffDate.getDate() - this.settings.quoteRetentionDays);
             const cutoffTime = cutoffDate.toISOString();
 
-            const allQuotes = await this.dbManager.getAll('quotes');
+            const allQuotes = await this.dbManager.getAll<DbQuote>('quotes');
             stats.oldQuotes = allQuotes.filter(q => {
                 const date = q.updatedAt || q.createdAt;
                 return date && date < cutoffTime;
@@ -248,14 +283,14 @@ class CleanupService {
             rbCutoffDate.setDate(rbCutoffDate.getDate() - this.settings.recycleBinRetentionDays);
             const rbCutoffTime = rbCutoffDate.toISOString();
 
-            const rbItems = await this.dbManager.getAll('recycle_bin');
+            const rbItems = await this.dbManager.getAll<RecycleBinRecord>('recycle_bin');
             stats.recycleBinItems = rbItems.filter(item => {
                 return item.deletedAt && item.deletedAt < rbCutoffTime;
             }).length;
 
             // Count orphaned form states
             try {
-                const formStates = await this.dbManager.getAll('formState');
+                const formStates = await this.dbManager.getAll<FormStateRecord>('formState');
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -284,28 +319,28 @@ class CleanupService {
      * @param {Object} options - Custom options to override settings
      * @returns {Promise<Object>}
      */
-    async performFullCleanup(options: any = {}) {
-        const results: {
-            oldQuotes: any;
-            recycleBin: any;
-            orphanedData: any;
-            success: boolean;
-            errors: string[];
-        } = {
-            oldQuotes: null,
-            recycleBin: null,
-            orphanedData: null,
+    async performFullCleanup(options: CleanupOptions = {}): Promise<{
+        oldQuotes: CleanupResult | null;
+        recycleBin: CleanupResult | null;
+        orphanedData: CleanupResult | null;
+        success: boolean;
+        errors: string[];
+    }> {
+        const results = {
+            oldQuotes: null as CleanupResult | null,
+            recycleBin: null as CleanupResult | null,
+            orphanedData: null as CleanupResult | null,
             success: true,
-            errors: []
+            errors: [] as string[]
         };
 
         try {
             if (options.cleanQuotes !== false) {
-                results.oldQuotes = await this.cleanOldQuotes(options.quoteRetentionDays);
+                results.oldQuotes = await this.cleanOldQuotes(options.quoteRetentionDays ?? null);
             }
 
             if (options.cleanRecycleBin !== false) {
-                results.recycleBin = await this.cleanRecycleBin(options.recycleBinRetentionDays);
+                results.recycleBin = await this.cleanRecycleBin(options.recycleBinRetentionDays ?? null);
             }
 
             if (options.cleanOrphaned !== false) {
@@ -343,4 +378,3 @@ class CleanupService {
 // Export singleton instance
 const cleanupService = new CleanupService();
 export default cleanupService;
-

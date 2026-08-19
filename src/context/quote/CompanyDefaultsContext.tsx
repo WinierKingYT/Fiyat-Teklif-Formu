@@ -19,7 +19,7 @@ export const CompanyDefaultsProvider = ({ children }: { children: React.ReactNod
         if (isReady && db) {
             const loadDefaults = async () => {
                 try {
-                    const defaultsRecord = await db.getByIndex('settings', 'key', 'company_defaults');
+                    const defaultsRecord = await db.getByIndex<{ id: string; value: CompanyData }>('settings', 'key', 'company_defaults');
                     if (defaultsRecord && defaultsRecord.value) setCompanyDefaults(defaultsRecord.value);
                 } catch (error) { Logger.error("Error loading company defaults:", error); }
             };

@@ -7,12 +7,24 @@ import { Plus, Trash, Edit, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Logger from '../utils/logger';
 import { useTranslation } from '../hooks/useTranslation';
+import type { BankData } from '../context/quote/types';
 
-const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }) => {
+interface StoredBank extends BankData {
+    id: number;
+}
+
+interface BankManagerModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect?: (bank: StoredBank) => void;
+    language?: string;
+}
+
+const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankManagerModalProps) => {
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
-    const [banks, setBanks] = useState<any[]>([]);
-    const [editingBank, setEditingBank] = useState<any>(null);
+    const [banks, setBanks] = useState<StoredBank[]>([]);
+    const [editingBank, setEditingBank] = useState<StoredBank | null>(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [formData, setFormData] = useState({
         bankName: '',
@@ -30,7 +42,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }) => {
 
     const loadBanks = async () => {
         try {
-            const result = await (db).getAll('bankInfo');
+            const result = await (db).getAll<StoredBank>('bankInfo');
             setBanks(result);
         } catch (error) {
             Logger.error('Error loading banks:', error);
@@ -68,16 +80,16 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }) => {
         }
     };
 
-    const handleEdit = (bank) => {
+    const handleEdit = (bank: StoredBank) => {
         setEditingBank(bank);
-        setFormData(bank);
+        setFormData({ bankName: bank.bankName ?? '', branch: bank.branch ?? '', accountNumber: bank.accountNumber ?? '', iban: bank.iban ?? '', accountHolder: bank.accountHolder ?? '' });
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: number) => {
         setConfirmDialog({ isOpen: true, title: t('deleteBank'), message: t('deleteBankConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('bankInfo', id); toast.success(t('bankDeleted')); loadBanks(); } catch (error) { Logger.error('Error deleting bank:', error); toast.error(t('bankDeleteError')); } }, variant: 'danger' });
     };
 
-    const handleSelect = (bank) => {
+    const handleSelect = (bank: StoredBank) => {
         if (onSelect) {
             onSelect(bank);
             onClose();

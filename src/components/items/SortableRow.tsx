@@ -5,6 +5,24 @@ import { CSS } from "@dnd-kit/utilities";
 import { evaluateMathExpression } from "../../utils/smartCalc";
 import { calculateLineTotal } from "../../utils/calculations";
 import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from "./shared";
+import type { QuoteItem } from "../../context/quote/types";
+
+interface SortableRowProps {
+  item: QuoteItem;
+  index: number;
+  handleItemChange: (index: number, field: string, value: unknown) => void;
+  removeItem: (index: number) => void;
+  duplicateItem: (index: number) => void;
+  formatCurrency: (amount: number) => string;
+  onKeyDown: (e: React.KeyboardEvent, index: number, field: string) => void;
+  t: (key: string) => string;
+  getFieldClass: (itemId: string, field: string, item: QuoteItem) => string;
+  handleRowBlur: (itemId: string, field: string) => void;
+  rowErrors?: Record<string, string>;
+  selected?: boolean;
+  toggleSelectItem: (index: number) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
+}
 
 const SortableRow = memo(
   ({
@@ -22,7 +40,7 @@ const SortableRow = memo(
     selected,
     toggleSelectItem,
     onContextMenu,
-  }: any) => {
+  }: SortableRowProps) => {
     const {
       attributes,
       listeners,
@@ -31,7 +49,7 @@ const SortableRow = memo(
       transition,
       isDragging,
     } = useSortable({ id: item.id });
-    const fileInputRef = useRef<any>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const style = {
       transform: CSS.Transform.toString(transform),
       transition,

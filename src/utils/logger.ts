@@ -1,24 +1,24 @@
 // Logger Utility
 class Logger {
-    static log(...args: any[]) {
+    static log(...args: unknown[]) {
         if (Logger.isEnabled()) {
             console.log('[LOG]', ...args);
         }
     }
 
-    static error(...args: any[]) {
+    static error(...args: unknown[]) {
         if (Logger.isEnabled()) {
             console.error('[ERROR]', ...args);
         }
     }
 
-    static warn(...args: any[]) {
+    static warn(...args: unknown[]) {
         if (Logger.isEnabled()) {
             console.warn('[WARN]', ...args);
         }
     }
 
-    static info(...args: any[]) {
+    static info(...args: unknown[]) {
         if (Logger.isEnabled()) {
             console.info('[INFO]', ...args);
         }

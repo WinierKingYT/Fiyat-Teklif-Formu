@@ -33,7 +33,7 @@ export const parseExcelFile = async (file: File): Promise<ImportedProduct[]> => 
                 }
 
                 // Convert to JSON
-                const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
                 if (jsonData.length < 2) {
                     reject(new Error("Dosya boş veya başlık satırı yok."));

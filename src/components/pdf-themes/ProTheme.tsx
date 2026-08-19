@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import type { QuoteItem } from '../../context/quote/types';
 import { useMemo } from 'react';
 import { getAdjustedFontSize } from '../../utils/themeHelpers';
 
@@ -447,7 +448,7 @@ const ProTheme = ({
 
     const itemsPerPage = config.itemsPerPage || 14;
     const itemChunks = useMemo(() => {
-        const chunks: any[] = [];
+        const chunks: QuoteItem[][] = [];
         if (items.length === 0) {
             chunks.push([]);
         } else {
@@ -754,3 +755,5 @@ const ProTheme = ({
 };
 
 export default ProTheme;
+
+

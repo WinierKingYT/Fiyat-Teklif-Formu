@@ -3,23 +3,21 @@ import { Save, Settings2, Check } from "lucide-react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useQuoteData } from "../../context/QuoteContext";
 
-type SetterFn = (value: any) => void;
-
 interface GeneralSettingsProps {
   viewMode: string;
-  setViewMode: SetterFn;
+  setViewMode: (value: 'desktop' | 'mobile') => void;
   performanceMode: boolean;
-  setPerformanceMode: SetterFn;
+  setPerformanceMode: (value: boolean) => void;
   compactMode: boolean;
-  setCompactMode: SetterFn;
+  setCompactMode: (value: boolean) => void;
   appFontSize: number;
-  setAppFontSize: SetterFn;
+  setAppFontSize: (value: number) => void;
   appLayout: string;
-  setAppLayout: SetterFn;
+  setAppLayout: (value: 'modern' | 'classic') => void;
   appTheme: string;
-  setAppTheme: SetterFn;
+  setAppTheme: (value: 'light' | 'dark') => void;
   appColor: string;
-  setAppColor: SetterFn;
+  setAppColor: (value: 'blue' | 'purple' | 'green' | 'red' | 'orange') => void;
   onSave: () => void;
 }
 

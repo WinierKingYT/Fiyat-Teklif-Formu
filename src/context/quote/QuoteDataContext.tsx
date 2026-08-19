@@ -12,7 +12,7 @@ import { useSaveStatusSetter } from './SaveStatusContext';
 import {
     type QuoteData, type CustomerData, type CompanyData, type BankData,
     type QuoteItem, type Discount, type PdfConfig, type Quote, type SaveStatus,
-    type IndexedDBManager, type TabData,
+    type IndexedDBManager, type TabData, type DbQuote,
 } from './types';
 import {
     getInitialQuoteData, getInitialBankData,
@@ -20,17 +20,17 @@ import {
 
 export interface QuoteDataContextValue {
     quoteData: QuoteData;
-    updateQuoteData: (field: string, value: any) => void;
+    updateQuoteData: (field: string, value: unknown) => void;
     customerData: CustomerData;
-    updateCustomerData: (field: string, value: any) => void;
+    updateCustomerData: (field: string, value: unknown) => void;
     companyData: CompanyData;
-    updateCompanyData: (field: string, value: any) => void;
+    updateCompanyData: (field: string, value: unknown) => void;
     items: QuoteItem[];
     setItems: (items: QuoteItem[] | ((prev: QuoteItem[]) => QuoteItem[])) => void;
     discount: Discount;
     setDiscount: (discount: Discount) => void;
     bankData: BankData;
-    updateBankData: (field: string, value: any) => void;
+    updateBankData: (field: string, value: unknown) => void;
     setBankData: (data: BankData | ((prev: BankData) => BankData)) => void;
     saveQuote: (isFinal?: boolean) => Promise<void>;
     loadQuote: (quote: Quote) => void;
@@ -53,7 +53,7 @@ export const useQuoteData = () => {
     return context;
 };
 
-const sanitizeValue = (val: any) => {
+const sanitizeValue = (val: unknown): unknown => {
     if (typeof val === 'string') return sanitizeInput(val);
     return val;
 };
@@ -77,7 +77,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     const bankData = activeTabData.bankData || getInitialBankData();
 
     // --- Data Update Actions ---
-    const updateQuoteData = useCallback((field: string, value: any) => {
+    const updateQuoteData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
@@ -88,7 +88,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }));
     }, [activeTabId, setTabs]);
 
-    const updateCustomerData = useCallback((field: string, value: any) => {
+    const updateCustomerData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
@@ -102,7 +102,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }));
     }, [activeTabId, setTabs]);
 
-    const updateCompanyData = useCallback((field: string, value: any) => {
+    const updateCompanyData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
@@ -137,7 +137,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }));
     }, [activeTabId, setTabs]);
 
-    const updateBankData = useCallback((field: string, value: any) => {
+    const updateBankData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
@@ -172,7 +172,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         if (isReady && db) {
             const loadSettings = async () => {
                 try {
-                    const settings = await db.get('settings', 'global');
+                    const settings = await db.get<{ currency?: string }>('settings', 'global');
                     if (settings && settings.currency) updateQuoteData('currency', settings.currency);
                 } catch (error) { Logger.error("Error loading settings:", error); }
             };
@@ -189,7 +189,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     }, [isReady, db]);
 
     // Auto-save with debounce
-    const autoSaveTimerRef = useRef<any>(null);
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         if (!isReady || !db || !tabs.find(t => t.id === activeTabId)?.savedQuoteId) return;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -198,12 +198,12 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             if (!activeTab) return;
             const quoteId = activeTab.savedQuoteId;
             if (!quoteId) return;
-            const quote = {
+            const quote: DbQuote = {
                 id: quoteId, quoteNumber: quoteData.number, customerName: customerData.name,
                 customerCompany: customerData.company, status: 'draft', currency: quoteData.currency,
                 subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0,
                 quoteData, customerData, companyData, items, discount, bankData,
-                updatedAt: getLocalDateTimeString(),
+                updatedAt: getLocalDateTimeString(), createdAt: getLocalDateTimeString(),
             };
             db.put('quotes', quote).catch(e => Logger.error('Auto-save error:', e));
         }, 3000);
@@ -239,7 +239,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
                 return { subtotalMinor: Math.round(calc.subtotal * 100), taxTotalMinor: Math.round(calc.taxTotal * 100), grandTotalMinor: Math.round(calc.grandTotal * 100) };
             } catch { return { subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0 }; }
         })();
-        const quote: any = {
+        const quote: DbQuote = {
             id: tabSavedQuoteId || Date.now(), quoteNumber: quoteData.number, customerName: customerData.name,
             customerCompany: customerData.company, status: isFinal ? 'final' : 'draft', currency: quoteData.currency,
             subtotalMinor, taxTotalMinor, grandTotalMinor, quoteData, customerData, companyData, items, discount, bankData,
@@ -247,7 +247,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         };
         try {
             if (tabSavedQuoteId) {
-                const existing = await db.get('quotes', tabSavedQuoteId);
+                const existing = await db.get<DbQuote>('quotes', tabSavedQuoteId);
                 if (existing) { quote.createdAt = existing.createdAt; quote.status = isFinal ? 'final' : existing.status; }
                 await db.put('quotes', quote);
                 toast.success('Teklif güncellendi');
@@ -305,11 +305,11 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         reader.onload = async (event) => {
             try {
                 const data = JSON.parse((event.target as FileReader).result as string);
-                if (data.customers) await Promise.all(data.customers.map((item: any) => db.put('customers', item)));
-                if (data.products) await Promise.all(data.products.map((item: any) => db.put('products', item)));
-                if (data.quotes) await Promise.all(data.quotes.map((item: any) => db.put('quotes', item)));
-                if (data.templates) await Promise.all(data.templates.map((item: any) => db.put('templates', item)));
-                if (data.banks) await Promise.all(data.banks.map((item: any) => db.put('bankInfo', item)));
+                if (data.customers) await Promise.all(data.customers.map((item: unknown) => db.put('customers', item)));
+                if (data.products) await Promise.all(data.products.map((item: unknown) => db.put('products', item)));
+                if (data.quotes) await Promise.all(data.quotes.map((item: unknown) => db.put('quotes', item)));
+                if (data.templates) await Promise.all(data.templates.map((item: unknown) => db.put('templates', item)));
+                if (data.banks) await Promise.all(data.banks.map((item: unknown) => db.put('bankInfo', item)));
                 toast.success('Yedekleme geri yüklendi');
             } catch (error) { Logger.error('Error restoring backup', error); toast.error('Yedekleme geri yükleme hatası'); }
         };

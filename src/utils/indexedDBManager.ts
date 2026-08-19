@@ -8,7 +8,7 @@ class IndexedDBManager {
     private isInitialized: boolean;
     private initializationPromise: Promise<IDBDatabase> | null;
     private isConnectionOpen: boolean;
-    private writeCache: any;
+    private writeCache: unknown;
 
     constructor() {
         this.dbName = 'TeklifMasterDB';
@@ -172,7 +172,7 @@ class IndexedDBManager {
         return this.db!;
     }
 
-    async get<T = any>(storeName, key): Promise<T> {
+    async get<T = unknown>(storeName: string, key: IDBValidKey): Promise<T | undefined> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -195,7 +195,7 @@ class IndexedDBManager {
         });
     }
 
-    async getByIndex(storeName, indexName, key): Promise<any> {
+    async getByIndex<T = unknown>(storeName: string, indexName: string, key: IDBValidKey): Promise<T | undefined> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -219,7 +219,7 @@ class IndexedDBManager {
         });
     }
 
-    async getAll<T = any>(storeName, indexName = null): Promise<T[]> {
+    async getAll<T = unknown>(storeName: string, indexName: string | null = null): Promise<T[]> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -249,7 +249,7 @@ class IndexedDBManager {
         });
     }
 
-    async add(storeName, data): Promise<any> {
+    async add<T = unknown>(storeName: string, data: T): Promise<unknown> {
         this.validateData(storeName, data);
         await this.ensureConnection();
 
@@ -281,7 +281,7 @@ class IndexedDBManager {
         });
     }
 
-    async put(storeName, data): Promise<any> {
+    async put<T = unknown>(storeName: string, data: T): Promise<unknown> {
         this.validateData(storeName, data);
         await this.ensureConnection();
 
@@ -312,7 +312,7 @@ class IndexedDBManager {
         });
     }
 
-    async delete(storeName, key): Promise<any> {
+    async delete(storeName: string, key: IDBValidKey): Promise<void> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -322,7 +322,7 @@ class IndexedDBManager {
                 const request = store.delete(key);
 
                 request.onsuccess = () => {
-                    resolve(request.result);
+                    resolve(undefined);
                 };
                 request.onerror = () => {
                     Logger.error(`${storeName} delete işlemi hatası:`, request.error);
@@ -335,7 +335,7 @@ class IndexedDBManager {
         });
     }
 
-    async clear(storeName): Promise<any> {
+    async clear(storeName: string): Promise<void> {
         await this.ensureConnection();
 
         return new Promise((resolve, reject) => {
@@ -345,7 +345,7 @@ class IndexedDBManager {
                 const request = store.clear();
 
                 request.onsuccess = () => {
-                    resolve(request.result);
+                    resolve(undefined);
                 };
                 request.onerror = () => {
                     Logger.error(`${storeName} clear işlemi hatası:`, request.error);

@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import type { QuoteItem } from '../../context/quote/types';
 import { useMemo } from 'react';
 
 const BoldTheme = ({
@@ -490,7 +491,7 @@ const BoldTheme = ({
 
     const itemsPerPage = config.itemsPerPage || 14;
     const itemChunks = useMemo(() => {
-        const chunks: any[] = [];
+        const chunks: QuoteItem[][] = [];
         if (items.length === 0) {
             chunks.push([]);
         } else {
@@ -596,7 +597,7 @@ const BoldTheme = ({
                                     <div className="company-name">{renderEditable(companyData.name, 'companyName')}</div>
                                     <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>
                                         <div>{companyData.address}</div>
-                                        <div style={{ marginTop: '0.25em' }}>{companyData.phone}{companyData.email ? ` • ${companyData.email}` : ''}</div>
+                                        <div style={{ marginTop: '0.25em' }}>{companyData.phone}{companyData.email ? ` â€¢ ${companyData.email}` : ''}</div>
                                     </div>
                                 </div>
                             </div>
@@ -836,3 +837,4 @@ const BoldTheme = ({
 };
 
 export default BoldTheme;
+

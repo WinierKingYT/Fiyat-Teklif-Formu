@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { translations as pdfTranslations } from '../utils/translations';
 import Logger from '../utils/logger';
 
-const uiTranslations: { [key: string]: any } = {
+const uiTranslations: { [key: string]: Record<string, string> } = {
   tr: {
     appName: 'TeklifMaster Pro',
     appNameShort: 'Teklif',

@@ -1,7 +1,7 @@
 import React from 'react';
 import { UseFormRegister, FieldError, Path, FieldValues } from 'react-hook-form';
 
-interface InputFieldProps<T extends FieldValues> {
+interface InputFieldProps<T extends FieldValues> extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'name'> {
   id?: string;
   label?: string;
   type?: string;
@@ -13,7 +13,6 @@ interface InputFieldProps<T extends FieldValues> {
   autoComplete?: string;
   disabled?: boolean;
   className?: string;
-  [key: string]: any;
 }
 
 function InputField<T extends FieldValues>({

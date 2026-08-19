@@ -1,10 +1,10 @@
-﻿import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Modal from './Modal'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuoteData } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState'; import { useTranslation } from '../hooks/useTranslation';
+﻿import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Modal from './Modal'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuoteData } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState'; import { useTranslation } from '../hooks/useTranslation'; import type { DbQuote } from '../context/quote/types';
 
 const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language = 'tr' }) => {
     const { t } = useTranslation(language);
     const { db, isReady } = useIndexedDB();
     const { saveQuote, currentQuoteId, setCurrentQuoteId } = useQuoteData();
-    const [quotes, setQuotes] = useState<any[]>([]);
+    const [quotes, setQuotes] = useState<DbQuote[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
@@ -18,8 +18,8 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language =
     const loadQuotes = async () => {
         setLoading(true);
         try {
-            const result = await (db).getAll('quotes');
-            result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            const result = await (db).getAll<DbQuote>('quotes');
+            result.sort((a, b) => (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0));
             setQuotes(result);
         } catch (error) {
             Logger.error('Error loading quotes:', error);
@@ -28,7 +28,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language =
         }
     };
 
-    const handleDelete = async (id: number, e?: any) => {
+    const handleDelete = async (id: number, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         setConfirmDialog({ isOpen: true, title: t('deleteQuote'), message: t('deleteQuoteConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const quoteToDelete = quotes.find(q => q.id === id); try { if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: id, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', id); toast.success(t('quoteMovedToBin')); loadQuotes(); if (currentQuoteId === id) setCurrentQuoteId(null); } catch (error) { Logger.error('Error deleting quote:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
     };
@@ -137,7 +137,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language =
                                                 <td className="p-3 text-[var(--color-text-muted)] whitespace-nowrap">
                                                     <div className="flex items-center gap-1">
                                                         <Clock size={14} />
-                                                        {new Date(quote.createdAt).toLocaleDateString('tr-TR')}
+                                                        {quote.createdAt ? new Date(quote.createdAt).toLocaleDateString('tr-TR') : '-'}
                                                     </div>
                                                 </td>
                                                 <td className="p-3 font-medium text-[var(--color-text)]">{quote.quoteData?.number || '-'}</td>

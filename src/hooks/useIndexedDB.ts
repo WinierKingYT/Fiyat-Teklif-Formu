@@ -4,7 +4,7 @@ import Logger from '../utils/logger';
 
 export function useIndexedDB() {
     const [isReady, setIsReady] = useState(false);
-    const [error, setError] = useState<any>(null);
+    const [error, setError] = useState<unknown>(null);
 
     useEffect(() => {
         const initDB = async () => {

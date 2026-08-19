@@ -27,7 +27,7 @@ interface CompanyDefaultsProps {
     stamp: string | null;
   };
   onSettingsChange: (name: string, value: string | number) => void;
-  onCompanyChange: (name: string, value: string) => void;
+onCompanyChange: (name: string, value: string | null) => void;
   onSave: () => void;
 }
 

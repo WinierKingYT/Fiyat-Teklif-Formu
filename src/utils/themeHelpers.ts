@@ -1,4 +1,4 @@
-export const getAdjustedFontSize = (size: any, factor: number = 0.9, defaultSize: string = '0.85em') => {
+export const getAdjustedFontSize = (size: unknown, factor: number = 0.9, defaultSize: string = '0.85em') => {
     if (!size || size === 'inherit') return defaultSize;
     if (typeof size === 'number') return `${size * factor}px`;
     if (typeof size === 'string') {

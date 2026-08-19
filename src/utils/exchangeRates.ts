@@ -21,7 +21,7 @@ export const getExchangeRates = async () => {
     const data = await response.json();
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data: data.rates, timestamp: Date.now() }));
     return data.rates;
-  } catch (error: any) {
+  } catch (error: unknown) {
     Logger.error('Exchange rate fetch failed:', error);
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
