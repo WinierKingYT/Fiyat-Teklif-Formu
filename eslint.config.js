@@ -40,6 +40,12 @@ export default defineConfig([
       '@typescript-eslint/ban-ts-comment': 'off',
       'no-prototype-builtins': 'off',
       'react-hooks/immutability': 'off',
+      // as any regresyonunu engelle: yeni `as any` cast'leri lint hatası verir
+      'no-restricted-syntax': ['error', {
+        selector: 'TSAsExpression[typeAnnotation.type="TSAnyKeyword"], TSAsExpression[typeAnnotation.type="TSArrayType"][typeAnnotation.elementType.type="TSAnyKeyword"]',
+        message: "'as any' kullanimi yasak: tip guvenli cast kullan (dogru tip veya `as unknown as X`)",
+      }],
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'as' }],
     },
   },
 ])

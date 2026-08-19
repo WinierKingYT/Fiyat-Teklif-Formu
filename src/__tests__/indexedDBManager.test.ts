@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import indexedDBManager from '../utils/indexedDBManager';
 
+// Internal state erişimi için daraltılmış test tipi
+type TestableManager = {
+    isInitialized: boolean;
+    isConnectionOpen: boolean;
+    initializationPromise: Promise<void> | null;
+    db: IDBDatabase | null;
+};
+
+const testableManager = indexedDBManager as unknown as TestableManager;
+
 // --- Global IndexedDB Mock ---
 const mockTransaction = {
     objectStore: vi.fn(),
@@ -50,12 +60,12 @@ const captureRequest = () => {
 
 const triggerSuccess = (target: typeof mockDb) => {
     expect(currentRequest).not.toBeNull();
-    currentRequest!.onsuccess?.({ target } as any);
+    currentRequest!.onsuccess?.({ target } as unknown as Event);
 };
 
 const triggerUpgrade = (target: typeof mockDb, oldVersion: number) => {
     expect(currentRequest).not.toBeNull();
-    currentRequest!.onupgradeneeded?.({ target: { result: target }, oldVersion } as any);
+    currentRequest!.onupgradeneeded?.({ target: { result: target }, oldVersion } as unknown as IDBVersionChangeEvent);
 };
 
 const mockIndexedDB = {
@@ -64,24 +74,24 @@ const mockIndexedDB = {
 
 describe('IndexedDBManager', () => {
     beforeEach(() => {
-        (indexedDBManager as any).isInitialized = false;
-        (indexedDBManager as any).isConnectionOpen = false;
-        (indexedDBManager as any).initializationPromise = null;
-        (indexedDBManager as any).db = null;
+        testableManager.isInitialized = false;
+        testableManager.isConnectionOpen = false;
+        testableManager.initializationPromise = null;
+        testableManager.db = null;
 
         vi.clearAllMocks();
 
-        (globalThis as any).indexedDB = mockIndexedDB;
+        (globalThis as unknown as { indexedDB: unknown }).indexedDB = mockIndexedDB;
 
         mockDb.transaction.mockReturnValue(mockTransaction);
         mockTransaction.objectStore.mockReturnValue(mockStore);
 
         // Mock store method returns for generic CRUD
-        const mockRequestSuccess = (result: any) => ({
+        const mockRequestSuccess = (result: unknown) => ({
             result,
             error: null,
             onsuccess: null as (() => void) | null,
-            onerror: null as ((...args: any[]) => void) | null,
+            onerror: null as ((...args: unknown[]) => void) | null,
         });
 
         const simulateRequest = (method, resultVal) => {
@@ -111,8 +121,8 @@ describe('IndexedDBManager', () => {
 
         await initPromise;
 
-        expect((indexedDBManager as any).isInitialized).toBe(true);
-        expect((indexedDBManager as any).db).toBe(mockDb);
+        expect(testableManager.isInitialized).toBe(true);
+        expect(testableManager.db).toBe(mockDb);
     });
 
     it('should add data to store', async () => {

@@ -296,17 +296,17 @@ const ItemsTable = ({
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         const newItems: any[] = [];
         for (let i = 1; i < jsonData.length; i++) {
-          const row = jsonData[i] as any[];
-          if (!row || row.length === 0) continue;
+          const row = (jsonData[i] ?? []) as unknown[];
+          if (row.length === 0) continue;
           newItems.push({
             id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: row[0] || "",
-            description: row[1] || "",
-            quantity: parseFloat(row[2]) || 1,
-            unit: row[3] || "Adet",
-            price: parseFloat(row[4]) || 0,
-            taxRate: parseFloat(row[5]) || 20,
-            discountRate: parseFloat(row[6]) || 0,
+            name: String(row[0] ?? ""),
+            description: String(row[1] ?? ""),
+            quantity: parseFloat(String(row[2])) || 1,
+            unit: String(row[3] ?? "Adet"),
+            price: parseFloat(String(row[4])) || 0,
+            taxRate: parseFloat(String(row[5])) || 20,
+            discountRate: parseFloat(String(row[6])) || 0,
             total: 0,
             image: null,
           });

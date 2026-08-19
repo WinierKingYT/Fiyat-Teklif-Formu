@@ -1,5 +1,8 @@
 import Logger from './logger';
 import toast from 'react-hot-toast';
+import type html2pdfType from 'html2pdf.js';
+
+type Html2PdfOptions = NonNullable<Parameters<typeof html2pdfType>[1]>;
 
 const PAGE_BREAK_STYLE_ID = 'pdf-page-break-styles';
 const MAX_IMAGE_DIMENSION = 4096;
@@ -303,7 +306,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                     },
                 },
                 pagebreak: { mode: ['css', 'legacy'] },
-            } as any;
+            } as Html2PdfOptions;
 
             const worker = html2pdf().set(opt);
             const blob = await worker.from(element).outputPdf('blob');

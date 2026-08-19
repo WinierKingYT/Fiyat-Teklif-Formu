@@ -28,7 +28,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language =
         }
     };
 
-    const handleDelete = async (id: any, e?: any) => {
+    const handleDelete = async (id: number, e?: any) => {
         if (e) e.stopPropagation();
         setConfirmDialog({ isOpen: true, title: t('deleteQuote'), message: t('deleteQuoteConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const quoteToDelete = quotes.find(q => q.id === id); try { if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: id, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', id); toast.success(t('quoteMovedToBin')); loadQuotes(); if (currentQuoteId === id) setCurrentQuoteId(null); } catch (error) { Logger.error('Error deleting quote:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
     };
@@ -44,7 +44,7 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language =
         if (!currentQuoteId) return;
         const currentQuote = quotes.find(q => q.id === currentQuoteId);
         if (currentQuote && (currentQuote.status === 'sent' || currentQuote.status === 'accepted')) {
-            setConfirmDialog({ isOpen: true, title: t('deleteSentQuote'), message: t('deleteSentQuoteConfirm'), onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); handleDelete(currentQuoteId as any); onClose(); onNewQuote(); }, variant: 'danger' });
+            setConfirmDialog({ isOpen: true, title: t('deleteSentQuote'), message: t('deleteSentQuoteConfirm'), onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); handleDelete(currentQuoteId!); onClose(); onNewQuote(); }, variant: 'danger' });
             return;
         }
         handleDelete(currentQuoteId);
