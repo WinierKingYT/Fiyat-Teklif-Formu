@@ -39,6 +39,16 @@ npm run test:run     # Vitest (birim testleri)
 npx playwright test  # E2E testler (önce dev sunucusu açık: npm run dev)
 ```
 
+## Cast Sayacı
+
+`as any` kullanımı tip güvenliğini bozar; projede regresyonu engellemek için:
+
+- ESLint kuralı: `no-restricted-syntax` yeni `as any` cast'lerini **lint hatası** olarak yakalar (`scripts/scan-casts.mjs` ile aynı eşikte).
+- Sayaç: `node scripts/scan-casts.mjs --threshold 0` → `TOTAL: N` çıktısı; eşik aşılırsa `::warning` basar (CI build'i yine de geçer).
+- CI: `.github/workflows/typecheck.yml` her push/PR'da typecheck + lint + test + cast sayacını çalıştırır.
+
+Mevcut durum: **0 cast** (`TOTAL: 0`). Yeni `as any` ekleyen bir değişiklik hem lint'te hem CI'da uyarı/hatayla işaretlenir.
+
 ## Mimari
 
 Uygulama, teklif durumunu **odaklı context'lere** bölünmüş hâlde yönetir (`src/context/quote/`):
