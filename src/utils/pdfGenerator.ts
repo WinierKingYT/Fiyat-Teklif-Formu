@@ -136,23 +136,24 @@ const injectPageBreakStyles = (containerId?: string) => {
     const style = document.createElement('style');
     style.id = PAGE_BREAK_STYLE_ID;
     style.textContent = `
-        ${prefix}.pdf-section, ${prefix}[class*="pdf-section"] { page-break-inside: avoid; }
-        ${prefix}.pdf-header, ${prefix}[class*="pdf-header"] { page-break-inside: avoid; }
-        ${prefix}.pdf-customer, ${prefix}[class*="pdf-customer"] { page-break-inside: avoid; }
-        ${prefix}.pdf-items-section { page-break-inside: avoid; }
-        ${prefix}.pdf-summary-section { page-break-inside: avoid; }
-        ${prefix}.pdf-signatures { page-break-inside: avoid; }
-        ${prefix}.pdf-terms-section { page-break-inside: avoid; }
-        ${prefix}.pdf-footer { page-break-inside: avoid; }
-        ${prefix}.pdf-page-break { page-break-before: always; }
+        ${prefix}.pdf-section, ${prefix}[class*="pdf-section"] { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-header, ${prefix}[class*="pdf-header"], ${prefix}.header-container { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-customer, ${prefix}[class*="pdf-customer"], ${prefix}.customer-section, ${prefix}.customer-seller-grid { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-items-section { page-break-inside: auto; break-inside: auto; }
+        ${prefix}.pdf-summary-section, ${prefix}.summary-section, ${prefix}.summary-grid, ${prefix}.summary-box { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-signatures, ${prefix}.signatures-grid, ${prefix}.signature-section { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-terms-section, ${prefix}.terms-box, ${prefix}.notes-section { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-footer, ${prefix}[class*="pdf-footer"] { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-page-break { page-break-before: always !important; break-before: page !important; }
         ${prefix} table { page-break-inside: auto; }
-        ${prefix} tr { page-break-inside: avoid; page-break-after: auto; }
-        ${prefix} thead { display: table-header-group; }
-        ${prefix} tfoot { display: table-footer-group; }
+        ${prefix} tr, ${prefix} tbody tr { page-break-inside: avoid !important; break-inside: avoid !important; page-break-after: auto; }
+        ${prefix} thead { display: table-header-group !important; }
+        ${prefix} tfoot { display: table-footer-group !important; }
         @media print {
-            ${prefix}.pdf-section, ${prefix}[class*="pdf-section"] { page-break-inside: avoid; }
-            ${prefix}.pdf-page-break { page-break-before: always; }
-            ${prefix} tr { page-break-inside: avoid; }
+            ${prefix}.pdf-section, ${prefix}[class*="pdf-section"] { page-break-inside: avoid !important; break-inside: avoid !important; }
+            ${prefix}.pdf-page-break { page-break-before: always !important; break-before: page !important; }
+            ${prefix} tr, ${prefix} tbody tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+            ${prefix}.signatures-grid, ${prefix}.terms-box, ${prefix}.summary-grid { page-break-inside: avoid !important; break-inside: avoid !important; }
         }
     `;
     document.head.appendChild(style);
@@ -305,7 +306,10 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                         creator: 'TeklifApp v7',
                     },
                 },
-                pagebreak: { mode: ['css', 'legacy'] },
+                pagebreak: {
+                    mode: ['avoid-all', 'css', 'legacy'],
+                    avoid: ['tr', 'tbody tr', '.signatures-grid', '.summary-box', '.summary-grid', '.terms-box', '.pdf-summary-section', '.pdf-signatures', '.pdf-terms-section', '.pdf-header', '.customer-seller-grid', '.customer-section', '.notes-section']
+                },
             } as Html2PdfOptions;
 
             const worker = html2pdf().set(opt);

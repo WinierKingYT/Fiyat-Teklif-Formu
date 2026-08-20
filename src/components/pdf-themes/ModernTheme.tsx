@@ -6,7 +6,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
     id,
     containerStyles,
     config,
-    color,
+    color = '#2563eb',
     activeLayout,
     companyData,
     quoteData,
@@ -52,13 +52,13 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
 
     const modernStyles = useMemo(() => `
         .modern-theme-container {
-            font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
-            line-height: ${config.bodyLineHeight || '1.4'};
-            color: ${config.globalFontColor || '#000000'} !important;
+            font-family: ${config.globalFontFamily || "'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
+            line-height: ${config.bodyLineHeight || '1.35'};
+            color: ${config.globalFontColor || '#0f172a'} !important;
             background: var(--pdf-page-bg, #ffffff) !important;
-            font-size: ${config.fontSize || 12}px;
+            font-size: ${config.fontSize || 11}px;
             position: relative;
-            overflow: hidden;
+            box-sizing: border-box;
             border-radius: ${config.borderRadius || 6}px;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
             -webkit-print-color-adjust: exact;
@@ -72,11 +72,37 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
             left: 0;
             right: 0;
             height: 4px;
-            background: ${color};
+            background: linear-gradient(90deg, ${color}, #3b82f6);
+            z-index: 10;
         }
 
         .modern-theme-container, .modern-theme-container * {
             box-sizing: border-box;
+        }
+
+        /* Force light theme for PDF container & dark mode protection */
+        [data-theme="dark"] .modern-theme-container,
+        .modern-theme-container {
+            background-color: var(--pdf-page-bg, #ffffff) !important;
+            color: ${config.globalFontColor || '#0f172a'} !important;
+        }
+
+        [data-theme="dark"] .modern-theme-container .customer-box,
+        [data-theme="dark"] .modern-theme-container .bottom-section,
+        [data-theme="dark"] .modern-theme-container .terms-box,
+        .modern-theme-container .customer-box,
+        .modern-theme-container .bottom-section,
+        .modern-theme-container .terms-box {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #e2e8f0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        [data-theme="dark"] .modern-theme-container .pdf-items-table td,
+        .modern-theme-container .pdf-items-table td {
+            color: #1e293b !important;
         }
         
         /* HEADER */
@@ -84,19 +110,20 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 2em;
-            padding-bottom: 0;
-            position: relative;
-            padding-top: 1em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid ${color};
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         
         .modern-theme-container .header-left {
             flex: 1;
-            padding-right: 2em;
+            padding-right: 1.25rem;
             display: flex;
-            flex-direction: row; /* Changed to row for side-by-side logo */
+            flex-direction: row;
             align-items: center;
-            gap: 1.5em;
+            gap: 1rem;
         }
 
         .modern-theme-container .company-logo {
@@ -104,166 +131,87 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
         }
 
         .modern-theme-container .company-logo img {
-            max-height: 80px;
-            max-width: 150px;
+            max-height: 48px;
+            max-width: 130px;
             object-fit: contain;
         }
 
         .modern-theme-container .company-info {
             flex: 1;
-            min-width: 0; /* Prevents flex item from overflowing */
+            min-width: 0;
         }
         
         .modern-theme-container .header-right {
-            flex: 0 0 300px;
-            padding-left: 1.5em;
+            flex: 0 0 auto;
             text-align: right;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: flex-end;
-            border-left: 3px solid ${color}; /* Thick vertical line */
+            border-left: 3px solid ${color};
+            padding-left: 0.85rem;
             border-radius: 2px 0 0 2px;
         }
         
         .modern-theme-container .company-name {
-            word-wrap: break-word; /* Ensure long names wrap */
-            font-size: ${config.headerTitleFontSize || '1.4em'};
+            word-wrap: break-word;
+            font-size: ${config.headerTitleFontSize || '1.15rem'};
             font-weight: ${config.headerTitleFontWeight || '800'};
+            color: ${color};
         }
         
-        .modern-theme-container .company-address {
-            font-size: ${config.headerInfoFontSize || '0.8em'};
-            color: #4b5563;
+        .modern-theme-container .company-details {
+            font-size: ${config.headerInfoFontSize || '0.76rem'};
+            color: #475569;
             line-height: 1.3;
+            margin-top: 0.15rem;
         }
 
         .modern-theme-container .quote-title {
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: ${config.titleFontSize || '1.4em'};
+            letter-spacing: 0.04em;
+            font-size: ${config.titleFontSize || '1.2rem'};
             font-weight: ${config.titleFontWeight || '800'};
-            font-family: ${config.titleFontFamily || 'inherit'};
+            color: ${color};
         }
         
-        .modern-theme-container .quote-meta-grid {
-            display: grid;
-            grid-template-columns: auto auto;
-            gap: 0.5em 1em;
-            font-size: ${config.quoteMetaLabelFontSize || '0.8em'};
-            color: #4b5563;
+        .modern-theme-container .quote-meta {
+            font-size: 0.76rem;
+            color: #475569;
+            margin-top: 0.25rem;
+            display: inline-flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: #f8fafc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
         }
 
-        .modern-theme-container .quote-meta-label {
-            color: #6b7280;
-            font-weight: ${config.quoteMetaLabelFontWeight || '500'};
-        }
-
-        .modern-theme-container .quote-meta-value {
-            font-weight: ${config.quoteMetaValueFontWeight || '600'};
-            color: #000;
-            font-size: ${config.quoteMetaValueFontSize || 'inherit'};
-        }
-        
         /* CUSTOMER SECTION */
         .modern-theme-container .customer-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5em;
-            margin-bottom: 2em;
+            margin-bottom: 0.65rem;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         
         .modern-theme-container .customer-box {
-            background: #f8fafc !important;
-            border-radius: 8px;
-            padding: 1.25em;
+            background: #ffffff;
+            border-radius: 6px;
+            padding: 0.6rem 0.9rem;
             border: 1px solid #e2e8f0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            border-left: 3px solid ${color};
         }
         
         .modern-theme-container .section-title {
             text-transform: uppercase;
-            font-size: ${config.customerTitleFontSize || '0.9em'};
+            font-size: ${config.customerTitleFontSize || '0.72rem'};
             font-weight: ${config.customerTitleFontWeight || '700'};
-        }
-
-        /* Force light theme for PDF container - Stronger Selector */
-        [data-theme="dark"] .modern-theme-container,
-        .modern-theme-container {
-            background-color: var(--pdf-page-bg, #ffffff) !important;
-            color: ${config.globalFontColor || '#000000'} !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container *,
-        .modern-theme-container * {
-            border-color: #e2e8f0 !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container .customer-box,
-        [data-theme="dark"] .modern-theme-container .bottom-section,
-        .modern-theme-container .customer-box,
-        .modern-theme-container .bottom-section {
-            background-color: #f8fafc !important;
-            color: #000000 !important;
-            border: 1px solid #e2e8f0 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container .company-name,
-        [data-theme="dark"] .modern-theme-container .quote-title,
-        [data-theme="dark"] .modern-theme-container .section-title,
-        .modern-theme-container .company-name,
-        .modern-theme-container .quote-title,
-        .modern-theme-container .section-title {
-            color: ${color} !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container .quote-meta-value,
-        [data-theme="dark"] .modern-theme-container .info-value strong,
-        [data-theme="dark"] .modern-theme-container .summary-row,
-        .modern-theme-container .quote-meta-value,
-        .modern-theme-container .info-value strong,
-        .modern-theme-container .summary-row {
-            color: #000000 !important;
-        }
-
-        [data-theme="dark"] .modern-theme-container .header-right,
-        .modern-theme-container .header-right {
-            border-left-color: ${color} !important;
-        }
-        
-        /* Ensure summary row text is dark */
-        .modern-theme-container .summary-row span {
-            color: #000000 !important;
-        }
-        .modern-theme-container .summary-row.discount span {
-            color: #ef4444 !important;
-        }
-        
-        .modern-theme-container .info-grid {
-            display: grid;
-            gap: 0.5em;
-        }
-        
-        .modern-theme-container .info-line {
-            display: grid;
-            grid-template-columns: 80px 1fr;
-            font-size: 0.8em;
-            align-items: baseline;
-        }
-        
-        .modern-theme-container .info-label {
             color: #64748b;
-            font-weight: ${config.customerLabelFontWeight || '500'};
-            font-size: ${config.customerLabelFontSize || 'inherit'};
-        }
-        
-        .modern-theme-container .info-value {
-            color: #1e293b;
-            font-weight: ${config.customerValueFontWeight || '500'};
-            font-size: ${config.customerValueFontSize || 'inherit'};
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 0.15rem;
         }
         
         /* TABLE */
@@ -271,42 +219,36 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            margin-bottom: 2em;
+            margin-bottom: 0.65rem;
         }
         
         .modern-theme-container .pdf-items-table th {
-            padding: 0.75em 0.5em;
+            padding: ${config.tableHeaderPadding || '6px 8px'};
             text-align: left;
             font-weight: ${config.tableHeaderFontWeight || '700'};
-            color: ${config.tableHeaderColor || '#94a3b8'}; /* Lighter gray for headers */
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '1.15em')} !important;
+            color: ${config.tableHeaderColor || '#475569'};
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8pt')} !important;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 1px solid ${config.tableBorderColor || '#e2e8f0'};
+            letter-spacing: 0.04em;
+            background: ${config.tableHeaderBg || '#f8fafc'};
+            border-top: 1px solid ${config.tableBorderColor || '#e2e8f0'};
+            border-bottom: 1.5px solid ${config.tableBorderColor || '#cbd5e1'};
         }
-        .modern-theme-container .pdf-items-table thead th:first-child { border-top-left-radius: 8px; }
-        .modern-theme-container .pdf-items-table thead th:last-child { border-top-right-radius: 8px; }
-        .modern-theme-container .pdf-items-table tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }
-        .modern-theme-container .pdf-items-table tbody tr:last-child td:last-child { border-bottom-right-radius: 8px; }
-        
-        .modern-theme-container .pdf-items-table thead {
-            background: ${config.tableHeaderBg || 'transparent'};
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
+        .modern-theme-container .pdf-items-table thead th:first-child { border-top-left-radius: 6px; }
+        .modern-theme-container .pdf-items-table thead th:last-child { border-top-right-radius: 6px; }
         
         .modern-theme-container .pdf-items-table td {
-            padding: ${config.tableCellPadding || '1em 0.5em'};
+            padding: ${config.tableCellPadding || '5px 8px'};
             border-bottom: 1px solid ${config.tableBorderColor || '#f1f5f9'};
             vertical-align: middle;
-            font-size: ${config.tableBodyFontSize || 'inherit'};
+            font-size: ${config.tableBodyFontSize || '8.5pt'};
             font-weight: ${config.tableBodyFontWeight || 'normal'};
-            height: ${config.tableRowHeight || 0}px;
+            color: #1e293b;
         }
 
         ${config.tableStriped ? `
         .modern-theme-container .pdf-items-table tbody tr:nth-child(even) td {
-            background: ${config.tableStripedColor || '#f8fafc'};
+            background-color: ${config.tableStripedColor || '#f8fafc'};
         }` : ''}
 
         ${config.tableShowVerticalLines ? `
@@ -320,15 +262,16 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
         }` : ''}
 
         .modern-theme-container .item-image {
-            width: 48px;
-            height: 48px;
-            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
             border: 1px solid #e2e8f0;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            background: #fff;
+            background: #ffffff;
+            margin: 0 auto;
         }
         
         .modern-theme-container .item-image img {
@@ -338,111 +281,77 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
         }
 
         .modern-theme-container .item-name {
-            font-weight: 600;
-            color: ${color};
-            font-size: 1.2em;
-            margin-bottom: 0.25em;
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 8.5pt;
         }
 
         .modern-theme-container .item-desc {
-            font-size: 1em !important;
+            font-size: 7.5pt !important;
             color: #64748b;
-            line-height: 1.4;
+            line-height: 1.25;
+            margin-top: 1px;
         }
 
-        .modern-theme-container .item-value {
-            font-weight: 600;
-            color: ${color};
-            font-size: 0.85em;
-        }
-
-        /* SUMMARY & BANK SECTION - COMBINED CONTAINER */
+        /* SUMMARY & BANK SECTION */
         .modern-theme-container .bottom-section {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2em;
-            margin-bottom: 2em;
-            background: #f8fafc !important; /* Shared background */
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 1.5em;
-        }
-
-        .modern-theme-container .summary-section {
-            /* No individual background */
-        }
-
-        .modern-theme-container .bank-section {
-            /* No individual background */
+            border-radius: 6px;
+            padding: 0.65rem 0.9rem;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .modern-theme-container .summary-row {
-            padding: 0.5em 0;
-            font-size: ${config.summaryLabelFontSize || '0.85em'};
+            display: flex;
+            justify-content: space-between;
+            padding: 0.15rem 0;
+            font-size: ${config.summaryLabelFontSize || '8pt'};
             font-weight: ${config.summaryLabelFontWeight || 'normal'};
             color: #475569;
         }
 
         .modern-theme-container .summary-row.discount {
-            color: #ef4444;
+            color: #dc2626;
         }
 
         .modern-theme-container .summary-row.grand-total {
-            margin-top: 1em;
-            padding-top: 1em;
-            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.25rem;
+            padding-top: 0.25rem;
+            border-top: 2px solid ${color};
             align-items: center;
-            font-size: ${config.summaryTotalFontSize || '1.1em'};
-        }
-
-        .modern-theme-container .bank-list {
-            font-size: 0.8em;
-            color: #475569;
-            line-height: 1.6;
-        }
-
-        .modern-theme-container .bank-row {
-            display: grid;
-            grid-template-columns: 80px 1fr;
-            margin-bottom: 0.25em;
+            font-size: ${config.summaryTotalFontSize || '10.5pt'};
+            font-weight: 800;
+            color: #0f172a;
         }
 
         /* TERMS & NOTES */
-        .modern-theme-container .notes-section {
-            margin-bottom: 2em;
-        }
-
-        .modern-theme-container .notes-title {
-            font-size: 0.8em;
-            font-weight: 700;
-            color: ${color};
-            margin-bottom: 0.5em;
-            text-transform: uppercase;
-        }
-
-        .modern-theme-container .notes-content {
-            font-size: 0.8em;
-            color: #475569;
-            line-height: 1.5;
-        }
-
         .modern-theme-container .terms-box {
-            background: #f8fafc;
+            background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 1em;
-            margin-bottom: 2em;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         /* SIGNATURES */
         .modern-theme-container .signatures-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4em;
-            margin-top: 3em;
-            margin-bottom: 2em;
+            gap: 1.5rem;
+            margin-top: 0.65rem;
+            margin-bottom: 0.5rem;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .modern-theme-container .signature-col {
@@ -450,54 +359,55 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
         }
 
         .modern-theme-container .signature-line {
-            border-bottom: 1px solid #cbd5e1;
-            height: 60px;
-            margin-bottom: 0.5em;
+            border-bottom: 1.5px solid #94a3b8;
+            min-height: 40px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 0.75rem;
+            padding-bottom: 3px;
         }
 
         .modern-theme-container .signature-label {
-            font-size: 0.8em;
-            font-weight: 600;
-            color: #64748b;
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: #0f172a;
+            padding-top: 0.25rem;
         }
 
         /* FOOTER */
         .modern-theme-container .pdf-footer {
             text-align: center;
-            padding-top: 2em;
+            padding-top: 0.35rem;
             border-top: 1px solid #e2e8f0;
             margin-top: auto;
-        }
-
-            margin-bottom: 0.5em;
-            font-size: ${config.footerFontSize ? `calc(${config.footerFontSize} * 1.2)` : '0.9rem'};
-            font-weight: ${config.footerFontWeight || '700'};
-        }
-
-        .modern-theme-container .footer-info {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            font-size: ${config.footerFontSize || '0.75rem'};
-            font-weight: ${config.footerFontWeight || 'normal'};
-            color: #64748b;
-        }
-
-        .modern-theme-container .footer-item {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         /* COMPACT MODES */
+        .pdf-compact-mode .customer-section { margin-bottom: 0.5rem; }
+        .pdf-compact-mode .customer-box { padding: 0.5rem 0.75rem; }
+        .pdf-compact-mode .pdf-items-table { margin-bottom: 0.5rem; }
         .pdf-compact-mode .pdf-items-table th,
         .pdf-compact-mode .pdf-items-table td {
-            padding: 0.5rem 0.25rem;
+            padding: 4px 6px;
+            font-size: 8pt;
         }
         
         .pdf-compact-mode .item-image {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
+        }
+
+        .pdf-compact-mode .signatures-grid {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            gap: 1.25rem;
+        }
+
+        .pdf-compact-mode .signature-line {
+            min-height: 32px;
         }
     `, [color, config]);
 
@@ -514,32 +424,50 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
         return chunks;
     }, [items, itemsPerPage]);
 
+    const vatBreakdown = useMemo(() => {
+        const map: Record<number, { taxable: number; tax: number }> = {};
+        items.forEach((item) => {
+            const qty = Number(item.quantity) || 0;
+            const price = Number(item.price) || 0;
+            const discRate = Number(item.discountRate) || 0;
+            const rate = Number(item.taxRate) || 0;
+            const lineTotal = qty * price * (1 - discRate / 100);
+            const lineTax = (lineTotal * rate) / 100;
+            if (!map[rate]) {
+                map[rate] = { taxable: 0, tax: 0 };
+            }
+            map[rate].taxable += lineTotal;
+            map[rate].tax += lineTax;
+        });
+        return map;
+    }, [items]);
+
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="pdf-items-table">
             <thead>
                 <tr>
-                    <th style={{ width: '30px', textAlign: 'center' }}>#</th>
-                    {config.showTableImages && <th style={{ width: '50px', textAlign: 'center' }}>{t.image}</th>}
-                    <th>{config.textItem || t.item} / {t.description}</th>
-                    {config.showTableUnit && <th style={{ width: '60px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '60px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '60px', textAlign: 'center' }}>{t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '60px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '110px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ width: '32px', textAlign: 'center' }}>#</th>
+                    {config.showTableImages && <th style={{ width: '46px', textAlign: 'center' }}>{t.image}</th>}
+                    <th>{config.textItem || t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
+                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
+                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
+                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
                 {tableItems.map((item, index) => (
                     <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', color: '#64748b' }}>{startIndex + index + 1}</td>
+                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
                         {config.showTableImages && (
                             <td>
                                 <div className="item-image">
                                     {item.image ? (
                                         <img src={item.image} alt="" />
                                     ) : (
-                                        <span style={{ fontSize: '8px' }}>-</span>
+                                        <span style={{ fontSize: '8px', color: '#94a3b8' }}>-</span>
                                     )}
                                 </div>
                             </td>
@@ -548,12 +476,12 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                             <div className="item-name">{item.name}</div>
                             {item.description && <div className="item-desc">{item.description}</div>}
                         </td>
-                        {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center' }}>{item.unit}</td>}
-                        <td className="item-quantity" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                        {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                        <td className="item-quantity" style={{ textAlign: 'center', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
                         <td className="item-price" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td className="item-total" style={{ textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                        <td className="item-total" style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -567,7 +495,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles?.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '284mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
@@ -586,7 +514,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                                 zIndex: 0,
                                 transform: `rotate(${config.watermarkRotation || -45}deg)`,
                                 opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 120}px`,
+                                fontSize: `${config.watermarkFontSize || 96}px`,
                                 fontWeight: 'bold',
                                 color: config.watermarkColor || '#000000',
                                 whiteSpace: 'nowrap'
@@ -598,19 +526,19 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div className="pdf-header" style={{ marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: `2px solid ${color}` }}>
+                        <div className="pdf-header">
                             <div className="header-left">
                                 {config.showLogo && companyData.logo && (
-                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
-                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
+                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.25rem' }}>
+                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '140px', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                     </div>
                                 )}
                                 <div className="company-info">
-                                    <div className="company-name" style={{ fontSize: '1.15rem', fontWeight: '800', color: color }}>{renderEditable(companyData.name, 'companyName')}</div>
-                                    <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.78rem', color: '#475569', marginTop: '0.2rem' }}>
+                                    <div className="company-name">{renderEditable(companyData.name, 'companyName')}</div>
+                                    <div className="company-details">
                                         {companyData.address && <div>{companyData.address}</div>}
                                         {(companyData.phone || companyData.email || companyData.website) && (
-                                            <div style={{ marginTop: '0.15rem', color: '#64748b' }}>
+                                            <div style={{ marginTop: '0.15rem' }}>
                                                 {companyData.phone && <span>{companyData.phone}</span>}
                                                 {companyData.phone && companyData.email && <span> • </span>}
                                                 {companyData.email && <span>{companyData.email}</span>}
@@ -618,12 +546,18 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                                                 {companyData.website && <span>{companyData.website}</span>}
                                             </div>
                                         )}
+                                        {(companyData.taxOffice || companyData.taxNumber) && (
+                                            <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '1px' }}>
+                                                {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                                {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="header-right" style={{ textAlign: 'right' }}>
-                                <div className="quote-title" style={{ fontSize: '1.25rem', fontWeight: '800', color: color, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{renderEditable(config.title, 'quoteTitle')}</div>
-                                <div className="quote-meta" style={{ fontSize: '0.78rem', color: '#475569', marginTop: '0.4rem', display: 'inline-flex', gap: '0.6rem', alignItems: 'center', background: '#f8fafc', padding: '0.3rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                            <div className="header-right">
+                                <div className="quote-title">{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div className="quote-meta">
                                     <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
                                     <span>•</span>
                                     <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
@@ -633,9 +567,9 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                             </div>
                         </div>
                     ) : (
-                        <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `1px solid ${color}` }}>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.8em', color: '#666' }}>
-                                <span>{companyData.name} - {config.title}</span>
+                        <div className="pdf-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.35rem', borderBottom: `1.5px solid ${color}` }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '8pt', color: '#64748b' }}>
+                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -643,40 +577,46 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     ))}
 
-                    {/* Customer Section - Only Page 1 (Single Full-Width Clean Card) */}
+                    {/* Customer Section - Only Page 1 */}
                     {showSection('customer') && pageIndex === 0 && (
-                        <div className="customer-section" style={{ marginBottom: '1.25rem' }}>
-                            <div className="customer-box" style={{ width: '100%', backgroundColor: '#ffffff', color: '#000000', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem 1.25rem', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                <div className="section-title" style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.25rem' }}>
+                        <div className="customer-section">
+                            <div className="customer-box">
+                                <div className="section-title">
                                     {t.customer} / {t.to}
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem 1.5rem', alignItems: 'center' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.35rem 1.25rem', alignItems: 'baseline' }}>
                                     {customerData.company && (
-                                        <div style={{ gridColumn: '1 / -1', fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '9.5pt', fontWeight: '700', color: '#0f172a' }}>
                                             {renderEditable(customerData.company, 'customerCompany')}
                                         </div>
                                     )}
                                     {customerData.name && (
-                                        <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                        <div style={{ fontSize: '8pt', color: '#334155' }}>
                                             <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
                                             <span style={{ fontWeight: '500' }}>{renderEditable(customerData.name, 'customerName')}</span>
                                         </div>
                                     )}
                                     {customerData.phone && (
-                                        <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                        <div style={{ fontSize: '8pt', color: '#334155' }}>
                                             <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
                                             <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
                                         </div>
                                     )}
                                     {customerData.email && (
-                                        <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                        <div style={{ fontSize: '8pt', color: '#334155' }}>
                                             <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
                                             <span>{renderEditable(customerData.email, 'customerEmail')}</span>
                                         </div>
                                     )}
                                     {customerData.address && (
-                                        <div style={{ gridColumn: '1 / -1', fontSize: '0.78rem', color: '#64748b' }}>
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '8pt', color: '#475569' }}>
                                             <span>{customerData.address}</span>
+                                        </div>
+                                    )}
+                                    {(customerData.taxOffice || customerData.taxNumber) && (
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#94a3b8' }}>
+                                            {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                            {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
                                 </div>
@@ -691,59 +631,75 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     )}
 
-                    {/* Summary, Notes, Signatures - Only Last Page */}
+                    {/* Summary, Bank, Notes, Signatures - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: 'auto' }}>
+                        <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {(config.showSummary || config.showBankInfo) && (
-                                <div className="bottom-section" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1.5rem', backgroundColor: '#ffffff', color: '#000000', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem 1.25rem', marginBottom: '1.25rem', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                    <div className="bank-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
+                                <div className="bottom-section">
+                                    <div className="bank-section">
                                         {config.showBankInfo && (bankData.bankName || bankData.iban) && (
-                                            <div className="bank-info">
-                                                <div className="section-title" style={{ marginBottom: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem', textTransform: 'uppercase', color: '#64748b', fontSize: '0.75rem', fontWeight: '700' }}>
+                                            <div>
+                                                <div className="section-title">
                                                     {t.bankInfo}
                                                 </div>
-                                                <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.6' }}>
+                                                <div style={{ fontSize: '8pt', color: '#475569', lineHeight: '1.4' }}>
                                                     {bankData.bankName && (
-                                                        <div style={{ display: 'flex' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.bank}:</strong> <span style={{ color: '#0f172a', fontWeight: '500' }}>{bankData.bankName}</span></div>
-                                                    )}
-                                                    {bankData.branch && (
-                                                        <div style={{ display: 'flex' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.branch}:</strong> <span>{bankData.branch}</span></div>
-                                                    )}
-                                                    {bankData.accountHolder && (
-                                                        <div style={{ display: 'flex' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.accountHolder}:</strong> <span>{bankData.accountHolder}</span></div>
+                                                        <div><strong style={{ color: '#0f172a' }}>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>
                                                     )}
                                                     {bankData.iban && (
-                                                        <div style={{ display: 'flex', marginTop: '0.2rem' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.iban}:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.03em', color: '#0f172a' }}>{bankData.iban}</span></div>
+                                                        <div style={{ marginTop: '2px' }}><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>
+                                                    )}
+                                                    {bankData.accountHolder && (
+                                                        <div style={{ color: '#64748b', fontSize: '7.5pt' }}>{bankData.accountHolder}</div>
                                                     )}
                                                 </div>
                                             </div>
                                         )}
+                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                            <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '6px' }}>
+                                                {quoteData.deliveryTerms && <div><strong>{t.deliveryConditions || t.delivery || 'Teslimat'}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                {(quoteData.warrantyTerms || quoteData.terms) && <div><strong>{t.warrantyConditions || t.warranty || 'Garanti'}:</strong> {renderEditable(quoteData.warrantyTerms || quoteData.terms, 'terms', 'textarea')}</div>}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="summary-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
-                                        <div className="section-title" style={{ marginBottom: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem', color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase' }}>
+                                    <div className="summary-section">
+                                        <div className="section-title">
                                             {t.summary}
                                         </div>
-                                        <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#475569', fontSize: '0.8rem' }}>
+                                        <div className="summary-row">
                                             <span>{t.subtotal}:</span>
                                             <span style={{ fontWeight: '600', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div className="summary-row discount" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#ef4444', fontSize: '0.8rem' }}>
+                                            <div className="summary-row discount">
                                                 <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
-                                            <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#475569', fontSize: '0.8rem' }}>
-                                                <span>{t.vat}:</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
-                                            </div>
+                                            <>
+                                                {Object.keys(vatBreakdown).length > 1 ? (
+                                                    Object.entries(vatBreakdown)
+                                                        .filter(([_, data]) => data.tax > 0)
+                                                        .map(([rate, data]) => (
+                                                            <div key={rate} className="summary-row" style={{ fontSize: '7.5pt' }}>
+                                                                <span>{t.vat || t.tax} (%{rate}):</span>
+                                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
+                                                            </div>
+                                                        ))
+                                                ) : (
+                                                    <div className="summary-row">
+                                                        <span>{t.vat || t.tax}:</span>
+                                                        <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
-                                        <div className="summary-row grand-total" style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0f172a', marginTop: '0.4rem', paddingTop: '0.4rem', color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>
+                                        <div className="summary-row grand-total">
                                             <span>{t.generalTotal}:</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'right' }}>
+                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
                                             {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
                                         </div>
                                     </div>
@@ -751,96 +707,76 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                             )}
 
                             {/* Unified Notes & Terms */}
-                            {showSection('notes') && (config.showTerms || config.showNotes) && (quoteData.notes || quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
-                                <div className="terms-box" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
-                                    <div className="notes-title" style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.35rem' }}>{t.terms} & {t.notes}</div>
-                                    <div className="notes-content" style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.5' }}>
-                                        {quoteData.notes && <div style={{ marginBottom: '0.25rem' }}><strong>{t.notes}:</strong> {renderEditable(quoteData.notes, 'notes', 'textarea')}</div>}
-                                        {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                        {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
-                                        {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
+                            {showSection('notes') && config.showNotes && quoteData.notes && (
+                                <div className="terms-box">
+                                    <div className="section-title">{t.notes}</div>
+                                    <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
+                                        {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Signatures - 2 Sütun (Teklifi Hazırlayan & Müşteri Onayı) */}
+                            {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="signatures-grid" style={{ marginTop: '2rem', marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem' }}>
-                                    <div className="signature-col" style={{ textAlign: 'center' }}>
-                                        <div className="signature-line" style={{
-                                            height: 'auto',
-                                            minHeight: (signature || companyData.signature || companyData.stamp) ? '55px' : '35px',
-                                            display: 'flex',
-                                            alignItems: 'flex-end',
-                                            justifyContent: 'center',
-                                            gap: '1rem',
-                                            paddingBottom: '4px',
-                                            borderBottom: '1px solid #94a3b8'
-                                        }}>
+                                <div className="signatures-grid">
+                                    <div className="signature-col">
+                                        <div className="signature-line">
                                             {(signature || companyData.signature) && (
                                                 <img
                                                     src={(signature || companyData.signature) as string}
-                                                    alt="Signature"
-                                                    style={{ maxHeight: '50px', maxWidth: '120px', objectFit: 'contain' }}
+                                                    alt={t.signature}
+                                                    style={{ maxHeight: '42px', maxWidth: '110px', objectFit: 'contain' }}
                                                 />
                                             )}
                                             {companyData.stamp && (
                                                 <img
                                                     src={companyData.stamp}
-                                                    alt="Stamp"
-                                                    style={{ maxHeight: '50px', maxWidth: '100px', objectFit: 'contain', opacity: 0.85 }}
+                                                    alt={t.companyStamp}
+                                                    style={{ maxHeight: '42px', maxWidth: '85px', objectFit: 'contain', opacity: 0.85 }}
                                                 />
                                             )}
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.35rem', fontWeight: '600', color: '#0f172a', fontSize: '0.8rem' }}>
-                                            {t.seller} (Kaşe & İmza)
+                                        <div className="signature-label">
+                                            {t.seller} ({t.deliveredBy || 'Yetkili Kaşe / İmza'})
                                         </div>
                                     </div>
-                                    <div className="signature-col" style={{ textAlign: 'center' }}>
-                                        <div className="signature-line" style={{
-                                            height: 'auto',
-                                            minHeight: (signature || companyData.signature || companyData.stamp) ? '55px' : '35px',
-                                            display: 'flex',
-                                            alignItems: 'flex-end',
-                                            justifyContent: 'center',
-                                            paddingBottom: '4px',
-                                            borderBottom: '1px solid #94a3b8'
-                                        }}>
+                                    <div className="signature-col">
+                                        <div className="signature-line">
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.35rem', fontWeight: '600', color: '#0f172a', fontSize: '0.8rem' }}>
-                                            {t.customer} (Onay / İmza)
+                                        <div className="signature-label">
+                                            {t.customer} ({t.receivedBy || 'Müşteri Onay / İmza'})
                                         </div>
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
 
-                    {/* Footer - Only Last Page (Clean Single Line) */}
-                    {showSection('footer') && pageIndex === itemChunks.length - 1 && (
-                        <div className="pdf-footer" style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                <span><strong>{companyData.name}</strong></span>
-                                {companyData.phone && <span>• {companyData.phone}</span>}
-                                {companyData.email && <span>• {companyData.email}</span>}
-                                {companyData.website && <span>• {companyData.website}</span>}
-                            </div>
-                            <div style={{ marginTop: '0.25rem', fontSize: '0.7rem', color: '#94a3b8' }}>
-                                {t.thankYou} • {t.regards}
-                            </div>
-                        </div>
-                    )}
-                    {config.customFooter && (
-                        <div className="custom-footer" style={{ fontSize: '0.7rem', color: '#94a3b8', textAlign: 'center', marginTop: '0.25rem' }}>
-                            {config.customFooter}
-                        </div>
-                    )}
+                            {/* Footer */}
+                            {showSection('footer') && (
+                                <div className="pdf-footer">
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '7.5pt', color: '#64748b' }}>
+                                        <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
+                                        {companyData.phone && <span>• {companyData.phone}</span>}
+                                        {companyData.email && <span>• {companyData.email}</span>}
+                                        {companyData.website && <span>• {companyData.website}</span>}
+                                    </div>
+                                    <div style={{ marginTop: '2px', fontSize: '7pt', color: '#94a3b8' }}>
+                                        {t.thankYou} • {t.regards}
+                                    </div>
+                                </div>
+                            )}
+                            {config.customFooter && (
+                                <div style={{ fontSize: '6.5pt', color: '#94a3b8', textAlign: 'center', marginTop: '2px' }}>
+                                    {config.customFooter}
+                                </div>
+                            )}
 
-                    {/* Page Number */}
-                    {config.showPageNumbers && (
-                        <div style={{ marginTop: '0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '0.25rem' }}>
-                            <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                            <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                            {/* Page Number */}
+                            {config.showPageNumbers && (
+                                <div style={{ marginTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
+                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
+                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -850,5 +786,3 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
 };
 
 export default ModernTheme;
-
-

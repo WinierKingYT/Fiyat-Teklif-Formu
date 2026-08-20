@@ -49,7 +49,6 @@ vi.mock('@/components/BankInfoForm', () => ({ default: () => <div data-testid="b
 vi.mock('@/components/CustomerSelectModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/ProductSelectModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/SavedQuotesModal', () => ({ default: () => <div data-testid="modal" /> }));
-vi.mock('@/components/AnalyticsModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/CustomerManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/ProductManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/TemplateManagerModal', () => ({ default: () => <div data-testid="modal" /> }));

@@ -6,7 +6,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
     id,
     containerStyles,
     config,
-    color,
+    color = '#0284c7',
     companyData,
     quoteData,
     customerData,
@@ -52,440 +52,163 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
 
     const boldStyles = useMemo(() => `
         .bold-theme-container {
-            font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
-            line-height: ${config.bodyLineHeight || '1.4'};
-            color: ${config.globalFontColor || '#000000'} !important;
+            font-family: ${config.globalFontFamily || "'Montserrat', 'Inter', sans-serif"};
+            line-height: ${config.bodyLineHeight || '1.35'};
+            color: ${config.globalFontColor || '#0f172a'};
             background: var(--pdf-page-bg, #ffffff) !important;
-            font-size: ${config.fontSize || 12}px;
+            font-size: ${config.fontSize || 11}px;
             position: relative;
+            box-sizing: border-box;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .bold-theme-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 12px;
-            background: linear-gradient(90deg, ${color} 0%, ${color} 70%, #000000 70%, #000000 100%);
+        [data-theme="dark"] .bold-theme-container {
+            background-color: var(--pdf-page-bg, #ffffff) !important;
+            color: ${config.globalFontColor || '#0f172a'} !important;
         }
 
-        .bold-theme-container, .bold-theme-container * {
+        [data-theme="dark"] .bold-party-card,
+        [data-theme="dark"] .bold-table td,
+        [data-theme="dark"] .bold-summary-section {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+
+        .bold-theme-container * {
             box-sizing: border-box;
         }
 
-        /* HEADER */
-        .bold-theme-container .pdf-header {
+        .bold-top-gradient {
+            height: 6px;
+            background: linear-gradient(90deg, ${color} 0%, ${color} 70%, #0f172a 70%, #0f172a 100%);
+            margin-bottom: 12px;
+            border-radius: 2px;
+        }
+
+        .bold-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 2em;
-            padding-bottom: 1.2em;
-            border-bottom: 4px solid ${color};
-            position: relative;
-            padding-top: 2.2em;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid ${color};
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
-        .bold-theme-container .header-left {
-            flex: 1;
-            padding-right: 2em;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 1.5em;
-        }
-
-        .bold-theme-container .company-logo {
-            flex-shrink: 0;
-        }
-
-        .bold-theme-container .company-logo img {
-            max-height: ${config.logoMaxHeight || 90}px;
-            max-width: 160px;
-            object-fit: contain;
-            border-radius: ${config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0'};
-        }
-
-        .bold-theme-container .company-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .bold-theme-container .header-right {
-            flex: 0 0 320px;
-            padding-left: 1.5em;
-            text-align: right;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: flex-end;
-        }
-
-        .bold-theme-container .company-name {
-            word-wrap: break-word;
-            font-size: ${config.headerTitleFontSize || '1.5em'};
-            font-weight: ${config.headerTitleFontWeight || '900'};
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-        }
-
-        .bold-theme-container .company-address {
-            font-size: ${config.headerInfoFontSize || '0.8em'};
-            color: #4b5563;
-            line-height: 1.3;
-        }
-
-        .bold-theme-container .quote-title {
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-size: ${config.titleFontSize || '1.6em'};
-            font-weight: ${config.titleFontWeight || '900'};
-            font-family: ${config.titleFontFamily || 'inherit'};
-            color: ${color};
-        }
-
-        .bold-theme-container .quote-meta-grid {
-            display: grid;
-            grid-template-columns: auto auto;
-            gap: 0.5em 1em;
-            font-size: ${config.quoteMetaLabelFontSize || '0.8em'};
-            color: #4b5563;
-        }
-
-        .bold-theme-container .quote-meta-label {
-            color: #6b7280;
-            font-weight: ${config.quoteMetaLabelFontWeight || '600'};
-            text-transform: uppercase;
-            font-size: 0.85em;
-        }
-
-        .bold-theme-container .quote-meta-value {
-            font-weight: ${config.quoteMetaValueFontWeight || '800'};
-            color: #000;
-            font-size: ${config.quoteMetaValueFontSize || 'inherit'};
-        }
-
-        /* CUSTOMER SECTION */
-        .bold-theme-container .customer-section {
+        .bold-parties-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5em;
-            margin-bottom: 2em;
+            gap: 12px;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
-        .bold-theme-container .customer-box {
-            background: #f8fafc !important;
-            border-left: 6px solid ${color};
-            border-radius: 0 8px 8px 0;
-            padding: 1.25em;
-            border-top: 1px solid #e2e8f0;
-            border-right: 1px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        .bold-party-box {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-left: 4px solid ${color};
+            border-radius: 6px;
+            padding: 8px 12px;
         }
 
-        .bold-theme-container .section-title {
-            text-transform: uppercase;
-            font-size: ${config.customerTitleFontSize || '0.85em'};
-            font-weight: ${config.customerTitleFontWeight || '800'};
-            letter-spacing: 0.06em;
-            color: ${color};
-            margin-bottom: 0.75em;
-        }
-
-        [data-theme="dark"] .bold-theme-container,
-        .bold-theme-container {
-            background-color: var(--pdf-page-bg, #ffffff) !important;
-            color: #000000 !important;
-        }
-
-        [data-theme="dark"] .bold-theme-container *,
-        .bold-theme-container * {
-            border-color: #e2e8f0 !important;
-        }
-
-        .bold-theme-container .info-grid {
-            display: grid;
-            gap: 0.5em;
-        }
-
-        .bold-theme-container .info-line {
-            display: grid;
-            grid-template-columns: 80px 1fr;
-            font-size: 0.8em;
-            align-items: baseline;
-        }
-
-        .bold-theme-container .info-label {
-            color: #64748b;
-            font-weight: ${config.customerLabelFontWeight || '600'};
-            font-size: ${config.customerLabelFontSize || 'inherit'};
-            text-transform: uppercase;
-            font-size: 0.75em;
-            letter-spacing: 0.04em;
-        }
-
-        .bold-theme-container .info-value {
-            color: #1e293b;
-            font-weight: ${config.customerValueFontWeight || '600'};
-            font-size: ${config.customerValueFontSize || 'inherit'};
-        }
-
-        /* TABLE */
-        .bold-theme-container .pdf-items-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-bottom: 2em;
-            border: 2px solid ${color};
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .bold-theme-container .pdf-items-table thead {
-            background: ${config.tableHeaderBg || color} !important;
-        }
-
-        .bold-theme-container .pdf-items-table th {
-            padding: ${config.tableHeaderPadding || '0.75em 0.5em'};
-            text-align: left;
-            font-weight: ${config.tableHeaderFontWeight || '800'};
-            color: ${config.tableHeaderColor || '#ffffff'} !important;
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.9em')} !important;
+        .bold-party-title {
+            font-size: 7.5pt;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            color: ${color};
+            margin-bottom: 4px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 2px;
         }
 
-        .bold-theme-container .pdf-items-table td {
-            padding: ${config.tableCellPadding || '0.9em 0.5em'};
-            border-bottom: 2px solid ${config.tableBorderColor || '#e2e8f0'};
-            vertical-align: middle;
-            font-size: ${config.tableBodyFontSize || 'inherit'};
-            font-weight: ${config.tableBodyFontWeight || 'normal'};
-            height: ${config.tableRowHeight || 0}px;
-        }
-
-        ${config.tableStriped ? `
-        .bold-theme-container .pdf-items-table tbody tr:nth-child(even) td {
-            background: ${config.tableStripedColor || '#f8fafc'};
-        }` : ''}
-
-        ${config.tableShowVerticalLines ? `
-        .bold-theme-container .pdf-items-table th,
-        .bold-theme-container .pdf-items-table td {
-            border-left: 2px solid ${config.tableBorderColor || '#e2e8f0'};
-        }
-        .bold-theme-container .pdf-items-table th:first-child,
-        .bold-theme-container .pdf-items-table td:first-child {
-            border-left: none;
-        }` : ''}
-
-        .bold-theme-container .pdf-items-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .bold-theme-container .item-image {
-            width: 48px;
-            height: 48px;
-            border-radius: 6px;
-            border: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: #fff;
-        }
-
-        .bold-theme-container .item-image img {
+        .bold-table {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
+            border-collapse: collapse;
+            margin-bottom: 10px;
         }
 
-        .bold-theme-container .item-name {
+        .bold-table th {
+            background: ${config.tableHeaderBg || '#0f172a'};
+            color: ${config.tableHeaderColor || '#ffffff'};
+            padding: ${config.tableHeaderPadding || '6px 8px'};
+            text-align: left;
             font-weight: 800;
-            color: ${color};
-            font-size: 1.1em;
-            margin-bottom: 0.25em;
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8.5pt')};
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .bold-theme-container .item-desc {
-            font-size: 1em !important;
-            color: #64748b;
-            line-height: 1.4;
+        .bold-table td {
+            padding: ${config.tableCellPadding || '6px 8px'};
+            border-bottom: 1px solid #e2e8f0;
+            font-size: ${config.tableBodyFontSize || '9pt'};
+            color: #1e293b;
+            vertical-align: middle;
         }
 
-        .bold-theme-container .item-value {
-            font-weight: 700;
-            color: ${color};
-            font-size: 0.85em;
+        .bold-table tbody tr:nth-child(even) td {
+            background-color: ${config.tableStripedColor || '#f8fafc'};
         }
 
-        /* SUMMARY & BANK SECTION */
-        .bold-theme-container .bottom-section {
+        .bold-summary-section {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2em;
-            margin-bottom: 2em;
-            background: #f8fafc !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 1.5em;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 12px;
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
-        .bold-theme-container .summary-row {
+        .bold-grand-total {
             display: flex;
             justify-content: space-between;
-            padding: 0.55em 0;
-            font-size: ${config.summaryLabelFontSize || '0.85em'};
-            font-weight: ${config.summaryLabelFontWeight || '500'};
-            color: #475569;
-            border-bottom: 1px dashed #cbd5e1;
+            border-top: 3px solid ${color};
+            margin-top: 4px;
+            padding-top: 4px;
+            font-size: 11pt;
+            font-weight: 900;
+            color: #0f172a;
         }
 
-        .bold-theme-container .summary-row:last-of-type {
-            border-bottom: none;
-        }
-
-        .bold-theme-container .summary-row.discount span:last-child {
-            color: #ef4444;
-            font-weight: 700;
-        }
-
-        .bold-theme-container .grand-total {
-            margin-top: 1em;
-            background: ${color};
-            color: #ffffff !important;
-            border-radius: 6px;
-            padding: 0.75em 1em !important;
-            border: none !important;
-            font-size: ${config.summaryTotalFontSize || '1.05em'};
-            font-weight: ${config.summaryTotalFontWeight || '800'};
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        .bold-theme-container .grand-total span {
-            color: #ffffff !important;
-        }
-
-        .bold-theme-container .bank-list {
-            font-size: 0.8em;
-            color: #475569;
-            line-height: 1.8;
-        }
-
-        .bold-theme-container .bank-row {
-            display: grid;
-            grid-template-columns: 90px 1fr;
-            margin-bottom: 0.25em;
-        }
-
-        /* TERMS & NOTES */
-        .bold-theme-container .notes-section {
-            margin-bottom: 2em;
-        }
-
-        .bold-theme-container .notes-title {
-            font-size: 0.8em;
-            font-weight: 800;
-            color: ${color};
-            margin-bottom: 0.5em;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .bold-theme-container .notes-content {
-            font-size: 0.8em;
-            color: #475569;
-            line-height: 1.5;
-        }
-
-        .bold-theme-container .terms-box {
-            background: #f8fafc;
-            border-left: 6px solid ${color};
-            border-radius: 0 8px 8px 0;
-            border-top: 1px solid #e2e8f0;
-            border-right: 1px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 1em;
-            margin-bottom: 2em;
-        }
-
-        /* SIGNATURES */
-        .bold-theme-container .signatures-grid {
+        .bold-signatures {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4em;
-            margin-top: 3em;
-            margin-bottom: 2em;
+            gap: 16px;
+            margin-top: 8px;
+            margin-bottom: 6px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
-        .bold-theme-container .signature-col {
+        .bold-sig-box {
             text-align: center;
         }
 
-        .bold-theme-container .signature-line {
-            border-bottom: 3px solid #475569;
-            height: 60px;
-            margin-bottom: 0.5em;
-        }
-
-        .bold-theme-container .signature-label {
-            font-size: 0.8em;
-            font-weight: 700;
-            color: #475569;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        /* FOOTER */
-        .bold-theme-container .pdf-footer {
-            text-align: center;
-            padding-top: 1.5em;
-            border-top: 4px solid ${color};
-            margin-top: auto;
-        }
-
-        .bold-theme-container .footer-info {
+        .bold-sig-area {
+            min-height: 44px;
             display: flex;
+            align-items: flex-end;
             justify-content: center;
-            gap: 1.5rem;
-            font-size: ${config.footerFontSize || '0.75rem'};
-            font-weight: ${config.footerFontWeight || 'normal'};
-            color: #64748b;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 4px;
+            gap: 10px;
         }
 
-        .bold-theme-container .footer-item {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .bold-theme-container .custom-footer {
-            margin-top: 0.5em;
-            font-size: 0.75em;
-            color: #64748b;
-            text-align: center;
-        }
-
-        /* COMPACT MODES */
-        .pdf-compact-mode .pdf-items-table th,
-        .pdf-compact-mode .pdf-items-table td {
-            padding: 0.5rem 0.25rem;
-        }
-
-        .pdf-compact-mode .item-image {
-            width: 32px;
-            height: 32px;
+        .bold-sig-label {
+            padding-top: 3px;
+            font-size: 7.5pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #0f172a;
         }
     `, [color, config]);
 
@@ -503,18 +226,18 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
     }, [items, itemsPerPage]);
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
-        <table className="pdf-items-table">
+        <table className="bold-table">
             <thead>
                 <tr>
-                    <th style={{ width: '30px', textAlign: 'center' }}>#</th>
-                    {config.showTableImages && <th style={{ width: '50px', textAlign: 'center' }}>{t.image}</th>}
-                    <th>{config.textItem || t.item} / {t.description}</th>
-                    {config.showTableUnit && <th style={{ width: '60px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '60px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '60px', textAlign: 'center' }}>{t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '60px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '110px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ width: '35px', textAlign: 'center' }}>#</th>
+                    {config.showTableImages && <th style={{ width: '45px', textAlign: 'center' }}>{t.image}</th>}
+                    <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
+                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
+                    <th style={{ width: '90px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
+                    <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
@@ -523,25 +246,25 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                         <td style={{ textAlign: 'center', color: '#64748b', fontWeight: '700' }}>{startIndex + index + 1}</td>
                         {config.showTableImages && (
                             <td>
-                                <div className="item-image">
+                                <div style={{ width: '36px', height: '36px', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden' }}>
                                     {item.image ? (
-                                        <img src={item.image} alt="" />
+                                        <img src={item.image} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
                                     ) : (
-                                        <span style={{ fontSize: '8px' }}>-</span>
+                                        <span style={{ fontSize: '9px', color: '#94a3af' }}>-</span>
                                     )}
                                 </div>
                             </td>
                         )}
                         <td>
-                            <div className="item-name">{item.name}</div>
-                            {item.description && <div className="item-desc">{item.description}</div>}
+                            <div style={{ fontWeight: '800', color: '#0f172a' }}>{item.name}</div>
+                            {item.description && <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
                         </td>
-                        {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center' }}>{item.unit}</td>}
-                        <td className="item-quantity" style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
-                        <td className="item-price" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td className="item-total" style={{ textAlign: 'right', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                        <td style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                        <td style={{ textAlign: 'right', fontWeight: '800', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -555,12 +278,14 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles?.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '284mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
                     pageBreakAfter: pageIndex < itemChunks.length - 1 ? 'always' : 'auto'
                 }}>
+                    <div className="bold-top-gradient" />
+
                     {/* Watermark */}
                     {config.showWatermark && (
                         <div
@@ -586,27 +311,33 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div className="pdf-header" style={{ marginBottom: '1.25rem', paddingBottom: '0.75rem', paddingTop: '1.5rem', borderBottom: `3px solid ${color}` }}>
-                            <div className="header-left">
+                        <div className="bold-header">
+                            <div style={{ flex: 1, paddingRight: '12px' }}>
                                 {config.showLogo && companyData.logo && (
-                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
-                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
+                                    <div style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '4px' }}>
+                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '160px', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                     </div>
                                 )}
-                                <div className="company-info">
-                                    <div className="company-name" style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
-                                    <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.75rem', color: '#64748b' }}>
-                                        {companyData.address && <div>{companyData.address}</div>}
-                                        {(companyData.phone || companyData.email) && (
-                                            <div style={{ marginTop: '0.15rem' }}>{companyData.phone}{companyData.phone && companyData.email ? ' • ' : ''}{companyData.email}</div>
-                                        )}
+                                <div style={{ fontSize: config.headerTitleFontSize || '1.25rem', fontWeight: '900', color: '#0f172a', textTransform: 'uppercase' }}>{renderEditable(companyData.name, 'companyName')}</div>
+                                <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.3' }}>
+                                    {companyData.address && <div>{companyData.address}</div>}
+                                    <div style={{ marginTop: '2px' }}>
+                                        {companyData.phone && <span>{companyData.phone}</span>}
+                                        {companyData.phone && companyData.email && <span> • </span>}
+                                        {companyData.email && <span>{companyData.email}</span>}
                                     </div>
+                                    {(companyData.taxOffice || companyData.taxNumber) && (
+                                        <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '1px' }}>
+                                            {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                            {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <div className="header-right" style={{ textAlign: 'right' }}>
-                                <div className="quote-title" style={{ fontSize: '1.35rem', fontWeight: '900', textTransform: 'uppercase', color: color }}>{renderEditable(config.title, 'quoteTitle')}</div>
-                                <div style={{ marginTop: '0.35rem', display: 'inline-flex', gap: '0.6rem', fontSize: '0.75rem', background: '#f8fafc', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                    <span style={{ fontWeight: '700' }}>#{quoteData.number}</span>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: '1.35rem', fontWeight: '900', textTransform: 'uppercase', color: color }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1.5px solid #e2e8f0' }}>
+                                    <span style={{ fontWeight: '800' }}>#{quoteData.number}</span>
                                     <span>•</span>
                                     <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
                                     <span>•</span>
@@ -615,9 +346,9 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                             </div>
                         </div>
                     ) : (
-                        <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.35rem', paddingTop: '1rem', borderBottom: `3px solid ${color}` }}>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.75em', color: '#666' }}>
-                                <span><strong>{companyData.name}</strong> - {config.title}</span>
+                        <div style={{ marginBottom: '8px', paddingBottom: '4px', borderBottom: `2px solid ${color}` }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b' }}>
+                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -625,38 +356,58 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     ))}
 
-                    {/* Customer Section Single Box - Only Page 1 */}
+                    {/* Customer & Quote Details */}
                     {showSection('customer') && pageIndex === 0 && (
-                        <div className="customer-section" style={{ display: 'block', marginBottom: '1.25rem' }}>
-                            <div className="customer-box" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.75rem 1rem' }}>
-                                <div className="section-title" style={{ fontSize: '0.75rem', fontWeight: '800', color: color, textTransform: 'uppercase', marginBottom: '0.35rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem' }}>{t.customer} / {t.to}</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.4rem 1.5rem', alignItems: 'center' }}>
-                                    {customerData.company && (
-                                        <div style={{ gridColumn: '1 / -1', fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>
-                                            {renderEditable(customerData.company, 'customerCompany')}
-                                        </div>
-                                    )}
-                                    {customerData.name && (
-                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
-                                            <span style={{ color: '#64748b', fontWeight: '700' }}>{t.authorized}: </span>
-                                            <span>{renderEditable(customerData.name, 'customerName')}</span>
-                                        </div>
-                                    )}
-                                    {customerData.phone && (
-                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
-                                            <span style={{ color: '#64748b', fontWeight: '700' }}>{t.phone}: </span>
-                                            <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
-                                        </div>
-                                    )}
-                                    {customerData.email && (
-                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
-                                            <span style={{ color: '#64748b', fontWeight: '700' }}>{t.email}: </span>
-                                            <span>{renderEditable(customerData.email, 'customerEmail')}</span>
-                                        </div>
-                                    )}
-                                    {customerData.address && (
-                                        <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#64748b' }}>
-                                            <span>{customerData.address}</span>
+                        <div className="bold-parties-grid">
+                            {/* Customer Box */}
+                            <div className="bold-party-box">
+                                <div className="bold-party-title">{t.customer} / {t.to}</div>
+                                {customerData.company && (
+                                    <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '2px' }}>
+                                        {renderEditable(customerData.company, 'customerCompany')}
+                                    </div>
+                                )}
+                                {customerData.name && (
+                                    <div style={{ fontSize: '8.5pt', color: '#334155' }}>
+                                        <span style={{ color: '#64748b', fontWeight: '700' }}>{t.authorized}: </span>
+                                        <span>{renderEditable(customerData.name, 'customerName')}</span>
+                                    </div>
+                                )}
+                                {customerData.phone && (
+                                    <div style={{ fontSize: '8pt', color: '#334155' }}>
+                                        <span style={{ color: '#64748b', fontWeight: '700' }}>{t.phone}: </span>
+                                        <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                    </div>
+                                )}
+                                {customerData.email && (
+                                    <div style={{ fontSize: '8pt', color: '#334155' }}>
+                                        <span style={{ color: '#64748b', fontWeight: '700' }}>{t.email}: </span>
+                                        <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                    </div>
+                                )}
+                                {customerData.address && (
+                                    <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
+                                        {customerData.address}
+                                    </div>
+                                )}
+                                {(customerData.taxOffice || customerData.taxNumber) && (
+                                    <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
+                                        {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                        {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Quote Info Box */}
+                            <div className="bold-party-box">
+                                <div className="bold-party-title">{t.details}</div>
+                                <div style={{ fontSize: '8.5pt', color: '#334155', lineHeight: '1.4' }}>
+                                    <div><strong>{t.quoteNo}:</strong> #{quoteData.number}</div>
+                                    <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
+                                    <div><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</div>
+                                    {config.showNotes && quoteData.notes && (
+                                        <div style={{ marginTop: '3px', fontSize: '8pt', color: '#475569', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                                            {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                         </div>
                                     )}
                                 </div>
@@ -673,62 +424,50 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Summary, Notes, Signatures - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: 'auto' }}>
+                        <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {(config.showSummary || config.showBankInfo) && (
-                                <div className="bottom-section" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1.5rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '1rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
-                                    <div className="bank-section">
+                                <div className="bold-summary-section">
+                                    <div>
                                         {config.showBankInfo && (bankData.bankName || bankData.iban) && (
-                                            <div className="bank-info">
-                                                <div className="section-title" style={{ fontSize: '0.75rem', fontWeight: '800', color: color, textTransform: 'uppercase', marginBottom: '0.4rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem' }}>{t.bankInfo}</div>
-                                                <div className="bank-list" style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.6' }}>
-                                                    {bankData.bankName && <div className="bank-row"><strong>{t.bank}:</strong> <span>{bankData.bankName}</span></div>}
-                                                    {bankData.branch && <div className="bank-row"><strong>{t.branch}:</strong> <span>{bankData.branch}</span></div>}
-                                                    {bankData.accountHolder && <div className="bank-row"><strong>{t.accountHolder}:</strong> <span>{bankData.accountHolder}</span></div>}
-                                                    {bankData.iban && <div className="bank-row" style={{ marginTop: '0.2rem' }}><strong>{t.iban}:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{bankData.iban}</span></div>}
+                                            <div>
+                                                <div style={{ fontSize: '7.5pt', fontWeight: '800', color: color, textTransform: 'uppercase', marginBottom: '3px', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px' }}>{t.bankInfo}</div>
+                                                <div style={{ fontSize: '8pt', color: '#475569', lineHeight: '1.4' }}>
+                                                    {bankData.bankName && <div><strong>{t.bank}:</strong> {bankData.bankName} {bankData.branch && <span>({bankData.branch})</span>}</div>}
+                                                    {bankData.iban && <div style={{ marginTop: '1px' }}><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>}
+                                                    {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                                 </div>
                                             </div>
                                         )}
-                                        {/* Notes & Terms */}
-                                        {showSection('notes') && (config.showTerms || config.showNotes) && (
-                                            <div style={{ marginTop: '0.5rem' }}>
-                                                {quoteData.notes && (
-                                                    <div style={{ fontSize: '0.78rem', color: '#475569', marginBottom: '0.4rem' }}>
-                                                        <div style={{ fontWeight: '700', color: '#64748b', fontSize: '0.75rem' }}>{t.notes}</div>
-                                                        <div>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
-                                                    </div>
-                                                )}
-                                                {config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
-                                                    <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.5' }}>
-                                                        {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                                        {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
-                                                        {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
-                                                    </div>
-                                                )}
+                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                            <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '4px' }}>
+                                                {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
+                                                {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
                                     </div>
-                                    <div className="summary-section">
-                                        <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#475569' }}>
                                             <span>{t.subtotal}:</span>
                                             <span style={{ fontWeight: '700', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div className="summary-row discount" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#ef4444' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#dc2626' }}>
                                                 <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '700' }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
-                                            <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#475569' }}>
                                                 <span>{t.total} {t.vat}:</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a', fontWeight: '600' }}>{formatCurrency(totalTax)}</span>
                                             </div>
                                         )}
-                                        <div className="summary-row grand-total" style={{ display: 'flex', justifyContent: 'space-between', borderTop: `3px solid ${color}`, marginTop: '0.35rem', paddingTop: '0.35rem', fontSize: '1.1rem', fontWeight: '900', color: '#0f172a' }}>
+                                        <div className="bold-grand-total">
                                             <span>{t.generalTotal}:</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'right' }}>
+                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
                                             {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
                                         </div>
                                     </div>
@@ -737,89 +476,65 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="signatures-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
-                                    <div className="signature-col" style={{ textAlign: 'center' }}>
-                                        <div className="signature-line" style={{
-                                            minHeight: '48px',
-                                            display: 'flex',
-                                            alignItems: 'flex-end',
-                                            justifyContent: 'center',
-                                            gap: '1rem',
-                                            borderBottom: '2px solid #0f172a',
-                                            paddingBottom: '4px'
-                                        }}>
+                                <div className="bold-signatures">
+                                    <div className="bold-sig-box">
+                                        <div className="bold-sig-area">
                                             {(signature || companyData.signature) && (
                                                 <img
                                                     src={(signature || companyData.signature) as string}
                                                     alt="Signature"
-                                                    style={{
-                                                        maxHeight: '45px',
-                                                        maxWidth: '120px',
-                                                        objectFit: 'contain'
-                                                    }}
+                                                    style={{ maxHeight: '38px', maxWidth: '110px', objectFit: 'contain' }}
                                                 />
                                             )}
                                             {companyData.stamp && (
                                                 <img
                                                     src={companyData.stamp}
                                                     alt="Stamp"
-                                                    style={{
-                                                        maxHeight: '45px',
-                                                        maxWidth: '90px',
-                                                        objectFit: 'contain',
-                                                        opacity: 0.85
-                                                    }}
+                                                    style={{ maxHeight: '38px', maxWidth: '80px', objectFit: 'contain', opacity: 0.85 }}
                                                 />
                                             )}
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.3rem', fontSize: '0.78rem', fontWeight: '800', color: '#0f172a' }}>
+                                        <div className="bold-sig-label">
                                             {t.seller} (Kaşe & İmza)
                                         </div>
                                     </div>
-                                    <div className="signature-col" style={{ textAlign: 'center' }}>
-                                        <div className="signature-line" style={{
-                                            minHeight: '48px',
-                                            display: 'flex',
-                                            alignItems: 'flex-end',
-                                            justifyContent: 'center',
-                                            borderBottom: '2px solid #0f172a',
-                                            paddingBottom: '4px'
-                                        }}>
+                                    <div className="bold-sig-box">
+                                        <div className="bold-sig-area">
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.3rem', fontSize: '0.78rem', fontWeight: '800', color: '#0f172a' }}>
+                                        <div className="bold-sig-label">
                                             {t.customer} (Onay / İmza)
                                         </div>
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
 
-                    {/* Footer - Only Last Page (Clean Single Line) */}
-                    {showSection('footer') && pageIndex === itemChunks.length - 1 && (
-                        <div className="pdf-footer" style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>
-                            <div className="footer-info" style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                <span><strong>{companyData.name}</strong></span>
-                                {companyData.phone && <span>• {companyData.phone}</span>}
-                                {companyData.email && <span>• {companyData.email}</span>}
-                                {companyData.website && <span>• {companyData.website}</span>}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                                <span>{t.thankYou} • {t.regards}</span>
-                            </div>
-                        </div>
-                    )}
-                    {config.customFooter && (
-                        <div className="custom-footer" style={{ marginTop: '0.25rem', textAlign: 'center', fontSize: '0.65rem', color: '#64748b' }}>
-                            {config.customFooter}
-                        </div>
-                    )}
+                            {/* Footer */}
+                            {showSection('footer') && (
+                                <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '7.5pt', color: '#64748b' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                        <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
+                                        {companyData.phone && <span>• {companyData.phone}</span>}
+                                        {companyData.email && <span>• {companyData.email}</span>}
+                                        {companyData.website && <span>• {companyData.website}</span>}
+                                    </div>
+                                    <div style={{ fontSize: '7pt', color: '#94a3b8', marginTop: '2px' }}>
+                                        <span>{t.thankYou} • {t.regards}</span>
+                                    </div>
+                                </div>
+                            )}
+                            {config.customFooter && (
+                                <div style={{ marginTop: '2px', textAlign: 'center', fontSize: '6.5pt', color: '#64748b' }}>
+                                    {config.customFooter}
+                                </div>
+                            )}
 
-                    {/* Page Number */}
-                    {config.showPageNumbers && (
-                        <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '0.25rem' }}>
-                            <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                            <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                            {/* Page Number */}
+                            {config.showPageNumbers && (
+                                <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
+                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
+                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -829,4 +544,3 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
 };
 
 export default BoldTheme;
-

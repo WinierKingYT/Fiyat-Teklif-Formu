@@ -9,6 +9,7 @@ import SignatureCanvas from '@/components/SignatureCanvas';
 import { InputField, TextAreaField } from '@/components/ui';
 import { useQuoteData, useCompanyDefaults } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
+import ImageOptimizer from '@/utils/imageOptimizer';
 import type { CompanyData } from '@/context/quote/types';
 
 const companyInfoSchema = z.object({
@@ -64,12 +65,16 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
     onChange(name, value);
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => onChange('logo', (ev.currentTarget as FileReader).result as string);
-      reader.readAsDataURL(file);
+      try {
+        const optimizer = new ImageOptimizer();
+        const optimizedLogo = await optimizer.optimizeImage(file);
+        onChange('logo', optimizedLogo);
+      } catch (error) {
+        toast.error('Logo yüklenemedi');
+      }
     }
   };
 
@@ -89,8 +94,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
   };
 
   const handleSaveAsDefault = () => {
-    saveCompanyDefaults(data);
-    toast.success(t('saved'));
+    saveCompanyDefaults(data as CompanyData);
   };
 
   return (
@@ -220,7 +224,24 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
                   ) : (
                     <button type="button" onClick={() => document.getElementById('stampUploadTab')?.click()} className="btn btn-outline btn-xs w-full text-[11px]"><Upload size={11} /> Kaşe Yükle</button>
                   )}
-                  <input type="file" id="stampUploadTab" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => onChange('stamp', (ev.currentTarget as FileReader).result as string); reader.readAsDataURL(file); } }} />
+                  <input
+                    type="file"
+                    id="stampUploadTab"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const optimizer = new ImageOptimizer();
+                          const optimizedStamp = await optimizer.optimizeImage(file, true);
+                          onChange('stamp', optimizedStamp);
+                        } catch (error) {
+                          toast.error('Kaşe yüklenemedi');
+                        }
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>

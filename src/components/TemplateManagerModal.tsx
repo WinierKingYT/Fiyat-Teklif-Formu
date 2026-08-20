@@ -8,7 +8,7 @@ import { useQuoteData } from '@/context/QuoteContext';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
 import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
-import type { QuoteData, CustomerData, CompanyData, QuoteItem, Discount } from '@/context/quote/types';
+import type { QuoteData, CustomerData, CompanyData, QuoteItem, Discount, BankData } from '@/context/quote/types';
 
 interface SavedTemplateData {
     quoteData?: QuoteData;
@@ -17,6 +17,7 @@ interface SavedTemplateData {
     items?: QuoteItem[];
     discount?: Discount;
     discountRate?: number;
+    bankData?: BankData;
 }
 
 interface SavedTemplate {
@@ -36,8 +37,8 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const {
-        quoteData, customerData, companyData, items, discount,
-        updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscount
+        quoteData, customerData, companyData, items, discount, bankData,
+        updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscount, setBankData
     } = useQuoteData();
 
     const [templates, setTemplates] = useState<SavedTemplate[]>([]);
@@ -61,7 +62,7 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
 
     const handleSaveTemplate = async () => {
         if (!templateName.trim()) { toast.error(t('enterTemplateName')); return; }
-        const template = { id: Date.now(), name: templateName, createdAt: new Date().toISOString(), data: { quoteData, customerData, companyData, items, discount } };
+        const template = { id: Date.now(), name: templateName, createdAt: new Date().toISOString(), data: { quoteData, customerData, companyData, items, discount, bankData } };
         try {
             await db.add('templates', template);
             toast.success(t('templateSaved'));
@@ -74,7 +75,25 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
     };
 
     const handleLoadTemplate = (template: SavedTemplate) => {
-        setConfirmDialog({ isOpen: true, title: t('loadTemplateTitle'), message: t('loadTemplateConfirm').replace('{name}', template.name), onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const { data } = template; if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v)); if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v)); if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v)); if (data.items) setItems(data.items); if (data.discount) setDiscount(data.discount); else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate }); toast.success(t('templateLoaded')); onClose(); }, variant: 'warning' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('loadTemplateTitle'),
+            message: t('loadTemplateConfirm').replace('{name}', template.name),
+            onConfirm: () => {
+                setConfirmDialog({ ...confirmDialog, isOpen: false });
+                const { data } = template;
+                if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v));
+                if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v));
+                if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v));
+                if (data.items) setItems(data.items);
+                if (data.discount) setDiscount(data.discount);
+                else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate });
+                if (data.bankData) setBankData(data.bankData);
+                toast.success(t('templateLoaded'));
+                onClose();
+            },
+            variant: 'warning'
+        });
     };
 
     const handleDeleteTemplate = async (id: number) => {

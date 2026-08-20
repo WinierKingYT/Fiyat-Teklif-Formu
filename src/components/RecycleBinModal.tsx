@@ -60,8 +60,13 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
     const handleRestore = async (item: DeletedItem) => {
         try {
             await db.delete('recycle_bin', item.id);
-            const { id: _ignoredId, originalStore, deletedAt: _ignoredDeletedAt, originalId, ...originalData } = item;
-            await db.put(originalStore, { ...originalData, id: originalId });
+            if (item.originalStore === 'quotes' && item.data && typeof item.data === 'object') {
+                const quoteObj = item.data as Record<string, unknown>;
+                await db.put('quotes', { ...quoteObj, id: item.originalId || quoteObj.id });
+            } else {
+                const { id: _ignoredId, originalStore, deletedAt: _ignoredDeletedAt, originalId, data: _ignoredData, ...originalData } = item;
+                await db.put(originalStore, { ...originalData, id: originalId });
+            }
             toast.success(t('itemRestored'));
             loadDeletedItems();
         } catch (error) {
@@ -78,10 +83,30 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
         setConfirmDialog({ isOpen: true, title: t('emptyBin'), message: t('emptyBinConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.clear('recycle_bin'); toast.success(t('binEmptied')); loadDeletedItems(); } catch (error) { Logger.error('Empty bin error:', error); toast.error(t('emptyBinFailed')); } }, variant: 'danger' });
     };
 
+    const getItemTitle = (item: DeletedItem) => {
+        if (item.name) return item.name;
+        if (item.company) return item.company;
+        if (item.originalStore === 'quotes' && item.data && typeof item.data === 'object') {
+            const q = item.data as { quoteData?: { title?: string }; quoteNumber?: string; customerData?: { name?: string; company?: string } };
+            return q.quoteData?.title || q.quoteNumber || q.customerData?.name || q.customerData?.company || `Teklif #${item.originalId || ''}`;
+        }
+        return t('unnamedItem') || 'İsimsiz Öğe';
+    };
+
+    const getItemStoreBadge = (storeName: string) => {
+        if (storeName === 'customers') return t('customers') || 'Müşteri';
+        if (storeName === 'products') return t('products') || 'Ürün';
+        if (storeName === 'quotes') return t('quotes') || 'Teklif';
+        return storeName;
+    };
+
     const filteredItems = deletedItems.filter(item => {
-        const matchesSearch = (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        const title = getItemTitle(item).toLowerCase();
+        const matchesSearch = title.includes(searchTerm.toLowerCase()) ||
+            (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (item.company && item.company.toLowerCase().includes(searchTerm.toLowerCase()));
         if (activeTab === 'all') return matchesSearch;
+        if (activeTab === 'quotes') return matchesSearch && item.originalStore === 'quotes';
         if (activeTab === 'customers') return matchesSearch && item.originalStore === 'customers';
         if (activeTab === 'products') return matchesSearch && item.originalStore === 'products';
         return matchesSearch;
@@ -98,6 +123,7 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                     <div className="flex gap-1 p-0.5 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded">
                         <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'all' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('all')}>{t('all')}</button>
+                        <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'quotes' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('quotes')}>{t('quotes')}</button>
                         <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'customers' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('customers')}>{t('customers')}</button>
                         <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'products' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('products')}>{t('products')}</button>
                     </div>
@@ -127,11 +153,11 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                                     <div className="flex-1 min-w-0 pr-2">
                                         <div className="flex items-center gap-1.5 mb-0.5">
                                             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[var(--color-primary-muted)] text-[var(--color-primary)] uppercase">
-                                                {item.originalStore === 'customers' ? t('customers') : t('products')}
+                                                {getItemStoreBadge(item.originalStore)}
                                             </span>
                                             <span className="text-[10px] text-[var(--color-text-muted)]">{formatDate(item.deletedAt)}</span>
                                         </div>
-                                        <div className="text-xs font-semibold text-[var(--color-text)] truncate">{item.name || item.company || t('unnamedItem')}</div>
+                                        <div className="text-xs font-semibold text-[var(--color-text)] truncate">{getItemTitle(item)}</div>
                                     </div>
                                     <div className="flex gap-1">
                                         <button type="button" className="btn btn-xs btn-outline p-1.5 text-[var(--color-success)]" onClick={() => handleRestore(item)} title={t('restoreItem')}>

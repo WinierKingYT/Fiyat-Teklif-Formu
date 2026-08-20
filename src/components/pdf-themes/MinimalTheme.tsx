@@ -48,92 +48,100 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
             </span>
         );
     };
+
     const minimalStyles = useMemo(() => `
         .minimal-theme-container {
-            font-family: ${config.globalFontFamily || "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif"};
-            color: ${config.globalFontColor || '#000'} !important;
-            background: var(--pdf-page-bg, #fff) !important;
-            line-height: ${config.bodyLineHeight || '1.3'};
-            font-size: ${config.fontSize || 11}px;
+            font-family: ${config.globalFontFamily || "'Helvetica Neue', Helvetica, Arial, sans-serif"};
+            line-height: ${config.bodyLineHeight || '1.35'};
+            color: ${config.globalFontColor || '#0f172a'};
+            background: var(--pdf-page-bg, #ffffff) !important;
+            font-size: ${config.fontSize || 10.5}px;
+            position: relative;
+            box-sizing: border-box;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        [data-theme="dark"] .minimal-theme-container {
+            background-color: var(--pdf-page-bg, #ffffff) !important;
+            color: ${config.globalFontColor || '#0f172a'} !important;
+        }
+
+        [data-theme="dark"] .minimal-table {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+
+        .minimal-theme-container * {
+            box-sizing: border-box;
         }
 
         .minimal-header {
-            font-size: ${config.headerTitleFontSize || '0.7rem'} !important;
-            font-weight: ${config.headerTitleFontWeight || '600'} !important;
-            text-transform: ${config.headerTransform || 'uppercase'};
-            letter-spacing: 0.05em;
-            color: #9ca3af;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 0.25rem;
-            margin-bottom: 0.5rem;
-            font-family: ${config.headerFontFamily || 'inherit'};
-        }
-
-        .minimal-label {
-            font-size: ${config.customerLabelFontSize || '0.65rem'} !important;
-            font-weight: ${config.customerLabelFontWeight || 'normal'} !important;
-            color: ${config.labelColor || '#6b7280'};
-            margin-bottom: 0.1rem;
-            font-family: ${config.labelFontFamily || 'inherit'};
-        }
-
-        .minimal-value {
-            font-size: ${config.customerValueFontSize || '0.85rem'} !important;
-            font-weight: ${config.customerValueFontWeight || '500'} !important;
-            color: ${config.bodyColor || '#111'};
-            font-family: ${config.bodyFontFamily || 'inherit'};
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            border-bottom: 1.5px solid #0f172a;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .minimal-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0;
+            margin-top: 6px;
+            margin-bottom: 8px;
         }
 
         .minimal-table th {
+            border-bottom: 1.5px solid #0f172a;
+            border-top: 1.5px solid #0f172a;
+            padding: ${config.tableHeaderPadding || '5px 6px'};
             text-align: left;
-            padding: ${config.tableHeaderPadding || '0.5rem 0'};
-            border-bottom: 2px solid ${config.tableHeaderBorderColor || '#000'};
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.7rem')};
-            text-transform: ${config.tableHeaderTransform || 'uppercase'};
+            font-weight: 700;
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8pt')};
+            color: #0f172a;
+            text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-weight: ${config.tableHeaderFontWeight || '600'};
-            color: ${config.tableHeaderColor || '#000'};
-            background: ${config.tableHeaderBg || 'transparent'};
+            background: transparent;
         }
 
         .minimal-table td {
-            padding: ${config.tableCellPadding || '0.5rem 0'};
-            border-bottom: 1px solid ${config.tableBorderColor || '#e5e7eb'};
-            font-size: ${config.tableBodyFontSize || 'inherit'} !important;
-            font-weight: ${config.tableBodyFontWeight || 'normal'} !important;
+            border-bottom: 1px solid #f1f5f9;
+            padding: ${config.tableCellPadding || '5px 6px'};
+            font-size: ${config.tableBodyFontSize || '8.5pt'};
+            color: #1e293b;
             vertical-align: middle;
         }
 
         ${config.tableStriped ? `
-        .minimal-table tr:nth-child(even) {
-            background: ${config.tableStripedColor || '#f9fafb'};
+        .minimal-table tbody tr:nth-child(even) td {
+            background-color: ${config.tableStripedColor || '#f8fafc'};
         }
         ` : ''}
 
-        .minimal-table td {
-            height: ${config.tableRowHeight || 0}px;
+        .minimal-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 8px 10px;
+            background: #ffffff;
         }
 
-        ${config.tableShowVerticalLines ? `
-        .minimal-table th,
-        .minimal-table td {
-            border-left: 1px solid ${config.tableBorderColor || '#e5e7eb'};
+        .minimal-box-title {
+            font-size: 7.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 2px;
         }
-        .minimal-table th:first-child,
-        .minimal-table td:first-child {
-            border-left: none;
-        }
-        ` : ''}
     `, [config]);
 
-    const itemsPerPage = config.itemsPerPage || 14;
+    const itemsPerPage = config.itemsPerPage || 15;
     const itemChunks = useMemo(() => {
         const chunks: QuoteItem[][] = [];
         if (items.length === 0) {
@@ -150,36 +158,36 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
         <table className="minimal-table">
             <thead>
                 <tr>
-                    <th style={{ width: '5%' }}>#</th>
-                    {config.showTableImages && <th style={{ width: '10%' }}>{t.image}</th>}
-                    <th style={{ width: '45%' }}>{config.textItem || t.item}</th>
-                    {config.showTableUnit && <th style={{ width: '10%', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '10%', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '15%', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '10%', textAlign: 'center' }}>{t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '10%', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '15%', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ width: '30px', textAlign: 'center' }}>#</th>
+                    {config.showTableImages && <th style={{ width: '40px', textAlign: 'center' }}>{t.image}</th>}
+                    <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '45px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
+                    <th style={{ width: '50px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
+                    <th style={{ width: '80px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '45px', textAlign: 'center' }}>{t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '45px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
+                    <th style={{ width: '95px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
                 {tableItems.map((item, index) => (
                     <tr key={startIndex + index}>
-                        <td style={{ color: '#9ca3af' }}>{startIndex + index + 1}</td>
+                        <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: '8pt' }}>{startIndex + index + 1}</td>
                         {config.showTableImages && (
-                            <td>
-                                {item.image && <img src={item.image} alt="" style={{ width: '30px', height: '30px', objectFit: 'contain', borderRadius: '4px' }} />}
+                            <td style={{ textAlign: 'center' }}>
+                                {item.image && <img src={item.image} alt="" style={{ width: '28px', height: '28px', objectFit: 'contain', margin: '0 auto' }} />}
                             </td>
                         )}
                         <td>
-                            <div style={{ fontWeight: '500', color: '#111' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.1rem' }}>{item.description}</div>}
+                            <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.name}</div>
+                            {item.description && <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2' }}>{item.description}</div>}
                         </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.8rem' }}>{item.unit}</td>}
-                        <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#64748b', fontSize: '7.5pt' }}>{item.unit}</td>}
+                        <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{item.quantity}</td>
                         <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center', fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td style={{ textAlign: 'center', fontSize: '7.5pt', fontVariantNumeric: 'tabular-nums', color: '#64748b' }}>%{item.taxRate}</td>}
+                        <td style={{ textAlign: 'right', fontWeight: '600', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -193,7 +201,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles?.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '284mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
@@ -224,28 +232,32 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Header Section */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.75rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                        <div className="minimal-header">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
                                 {config.showLogo && companyData.logo ? (
-                                    <img src={companyData.logo} alt="Logo" style={{ height: `${config.logoMaxHeight || 35}px`, objectFit: 'contain', marginBottom: '0.35rem', alignSelf: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
+                                    <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 36}px`, objectFit: 'contain', marginBottom: '3px', alignSelf: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '4px' : '0' }} />
                                 ) : (
-                                    <div style={{ fontSize: config.headerTitleFontSize || '1.15rem', fontWeight: config.headerTitleFontWeight || '800', letterSpacing: '-0.02em', color: '#000' }}>{renderEditable(companyData.name, 'companyName')}</div>
+                                    <div style={{ fontSize: config.headerTitleFontSize || '1.15rem', fontWeight: config.headerTitleFontWeight || '800', letterSpacing: '-0.02em', color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 )}
-                                {companyData.address && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{companyData.address}</div>}
-                                {(companyData.phone || companyData.email || companyData.website) && (
-                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                        {companyData.phone && <span>{companyData.phone}</span>}
-                                        {companyData.phone && companyData.email && <span> • </span>}
-                                        {companyData.email && <span>{companyData.email}</span>}
-                                        {(companyData.phone || companyData.email) && companyData.website && <span> • </span>}
-                                        {companyData.website && <span>{companyData.website}</span>}
+                                {companyData.address && <div style={{ fontSize: '7.5pt', color: '#64748b' }}>{companyData.address}</div>}
+                                <div style={{ fontSize: '7.5pt', color: '#64748b' }}>
+                                    {companyData.phone && <span>{companyData.phone}</span>}
+                                    {companyData.phone && companyData.email && <span> • </span>}
+                                    {companyData.email && <span>{companyData.email}</span>}
+                                    {(companyData.phone || companyData.email) && companyData.website && <span> • </span>}
+                                    {companyData.website && <span>{companyData.website}</span>}
+                                </div>
+                                {(companyData.taxOffice || companyData.taxNumber) && (
+                                    <div style={{ fontSize: '7pt', color: '#94a3b8' }}>
+                                        {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                        {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                     </div>
                                 )}
                             </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '1.25rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.02em', color: '#000' }}>{renderEditable(config.title, 'quoteTitle')}</div>
-                                <div style={{ marginTop: '0.35rem', display: 'inline-flex', gap: '0.6rem', fontSize: '0.75rem', background: '#f8fafc', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                    <span style={{ fontWeight: '700', color: '#000' }}>#{quoteData.number}</span>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.02em', color: '#0f172a' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ marginTop: '3px', display: 'inline-flex', gap: '6px', fontSize: '7.5pt', background: '#f8fafc', padding: '2px 6px', borderRadius: '3px', border: '1px solid #e2e8f0' }}>
+                                    <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
                                     <span>•</span>
                                     <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
                                     <span>•</span>
@@ -254,8 +266,8 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
                             </div>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.35rem', fontSize: '0.75rem', color: '#9ca3af' }}>
-                            <span>{companyData.name} - {config.title}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', fontSize: '7.5pt', color: '#94a3b8' }}>
+                            <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
                             {config.showPageNumbers !== false && (
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             )}
@@ -264,14 +276,20 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Customer Info Box - Only Page 1 */}
                     {showSection('customer') && pageIndex === 0 && (
-                        <div style={{ marginBottom: '1.25rem', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.75rem 1rem' }}>
-                            <div className="minimal-header" style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.35rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem' }}>{t.customer} / {t.to}</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.4rem 1.5rem', alignItems: 'center' }}>
-                                {customerData.company && <div style={{ gridColumn: '1 / -1', fontSize: '0.95rem', fontWeight: '700', color: '#000' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
-                                {customerData.name && <div style={{ fontSize: '0.78rem', color: '#374151' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>{renderEditable(customerData.name, 'customerName')}</div>}
-                                {customerData.phone && <div style={{ fontSize: '0.78rem', color: '#374151' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>{renderEditable(customerData.phone, 'customerPhone')}</div>}
-                                {customerData.email && <div style={{ fontSize: '0.78rem', color: '#374151' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>{renderEditable(customerData.email, 'customerEmail')}</div>}
-                                {customerData.address && <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#64748b' }}>{customerData.address}</div>}
+                        <div className="minimal-box" style={{ marginBottom: '10px' }}>
+                            <div className="minimal-box-title">{t.customer} / {t.to}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '3px 12px', alignItems: 'center' }}>
+                                {customerData.company && <div style={{ gridColumn: '1 / -1', fontSize: '9pt', fontWeight: '700', color: '#0f172a' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
+                                {customerData.name && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>{renderEditable(customerData.name, 'customerName')}</div>}
+                                {customerData.phone && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>{renderEditable(customerData.phone, 'customerPhone')}</div>}
+                                {customerData.email && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>{renderEditable(customerData.email, 'customerEmail')}</div>}
+                                {customerData.address && <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#64748b' }}>{customerData.address}</div>}
+                                {(customerData.taxOffice || customerData.taxNumber) && (
+                                    <div style={{ gridColumn: '1 / -1', fontSize: '7pt', color: '#94a3b8' }}>
+                                        {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                        {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -283,88 +301,87 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Totals Section & Footer - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: 'auto' }}>
+                        <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {config.showSummary && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1.5rem', marginTop: '1rem', borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', pageBreakInside: 'avoid' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '12px', marginTop: '8px', borderTop: '1px solid #0f172a', paddingTop: '6px' }}>
                                     <div>
                                         {config.showBankInfo && (bankData.bankName || bankData.iban) && (
-                                            <div style={{ fontSize: '0.78rem', color: '#4b5563', lineHeight: '1.6' }}>
-                                                <div style={{ fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', marginBottom: '0.2rem' }}>{t.bankInfo}</div>
-                                                {bankData.bankName && <div><strong>{t.bank}:</strong> {bankData.bankName}</div>}
-                                                {bankData.iban && <div><strong>{t.iban}:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{bankData.iban}</span></div>}
+                                            <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.4' }}>
+                                                <div style={{ fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '7pt', marginBottom: '2px' }}>{t.bankInfo}</div>
+                                                {bankData.bankName && <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>}
+                                                {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>}
+                                                {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                             </div>
                                         )}
                                         {showSection('notes') && config.showNotes && quoteData.notes && (
-                                            <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#475569' }}>
-                                                <div style={{ fontWeight: '700', color: '#64748b', fontSize: '0.75rem' }}>{t.notes}</div>
+                                            <div style={{ marginTop: '4px', fontSize: '7.5pt', color: '#475569' }}>
+                                                <div style={{ fontWeight: '700', color: '#64748b', fontSize: '7pt' }}>{t.notes}</div>
                                                 <div>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
+                                            </div>
+                                        )}
+                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.terms) && (
+                                            <div style={{ marginTop: '4px', fontSize: '7pt', color: '#64748b', lineHeight: '1.3' }}>
+                                                {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '7.5pt', color: '#475569' }}>
                                             <span>{t.subtotal}</span>
-                                            <span style={{ fontWeight: '600', fontVariantNumeric: 'tabular-nums', color: '#000' }}>{formatCurrency(subtotal)}</span>
+                                            <span style={{ fontWeight: '600', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#ef4444' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '7.5pt', color: '#dc2626' }}>
                                                 <span>{t.discount}</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '7.5pt', color: '#475569' }}>
                                                 <span>{t.tax}</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#000' }}>{formatCurrency(totalTax)}</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
                                             </div>
                                         )}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #000', marginTop: '0.35rem', paddingTop: '0.35rem', fontSize: '1.05rem', fontWeight: '800', color: '#000' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1.5px solid #0f172a', marginTop: '3px', paddingTop: '3px', fontSize: '9.5pt', fontWeight: '800', color: '#0f172a' }}>
                                             <span>{t.generalTotal}</span>
                                             <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'right' }}>
+                                        <div style={{ fontSize: '6.5pt', color: '#64748b', fontStyle: 'italic', marginTop: '2px', textAlign: 'right' }}>
                                             {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Terms */}
-                            {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.terms) && (
-                                <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#64748b', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
-                                    {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                    {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
-                                </div>
-                            )}
-
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem', marginBottom: '0.5rem', pageBreakInside: 'avoid' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px', marginBottom: '4px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                                     <div style={{ textAlign: 'center' }}>
-                                        <div style={{ minHeight: '45px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '1rem' }}>
-                                            {signature && <img src={signature} alt="" style={{ maxHeight: '40px', maxWidth: '100px', objectFit: 'contain' }} />}
-                                            {companyData.stamp && <img src={companyData.stamp} alt="" style={{ maxHeight: '40px', maxWidth: '80px', objectFit: 'contain', opacity: 0.85 }} />}
+                                        <div style={{ minHeight: '40px', borderBottom: '1px solid #cbd5e1', paddingBottom: '2px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px' }}>
+                                            {(signature || companyData.signature) && <img src={(signature || companyData.signature) as string} alt="" style={{ maxHeight: '36px', maxWidth: '90px', objectFit: 'contain' }} />}
+                                            {companyData.stamp && <img src={companyData.stamp} alt="" style={{ maxHeight: '36px', maxWidth: '70px', objectFit: 'contain', opacity: 0.85 }} />}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#000', paddingTop: '0.25rem' }}>{t.seller} (Kaşe & İmza)</div>
+                                        <div style={{ fontSize: '7pt', fontWeight: '600', color: '#0f172a', paddingTop: '2px' }}>{t.seller} ({t.deliveredBy})</div>
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
-                                        <div style={{ minHeight: '45px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                        <div style={{ minHeight: '40px', borderBottom: '1px solid #cbd5e1', paddingBottom: '2px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#000', paddingTop: '0.25rem' }}>{t.customer} (Onay / İmza)</div>
+                                        <div style={{ fontSize: '7pt', fontWeight: '600', color: '#0f172a', paddingTop: '2px' }}>{t.customer} ({t.receivedBy})</div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Footer - Only Last Page (Clean Single Line) */}
+                            {/* Footer */}
                             {showSection('footer') && (
-                            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>
+                            <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #f1f5f9', textAlign: 'center', fontSize: '7pt', color: '#64748b' }}>
                                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                    <span><strong>{companyData.name}</strong></span>
+                                    <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
                                     {companyData.phone && <span>• {companyData.phone}</span>}
                                     {companyData.email && <span>• {companyData.email}</span>}
                                     {companyData.website && <span>• {companyData.website}</span>}
                                 </div>
-                                <div style={{ marginTop: '0.25rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                                <div style={{ marginTop: '1px', fontSize: '6.5pt', color: '#94a3b8' }}>
                                     {t.thankYou} • {t.regards}
                                 </div>
                             </div>
@@ -372,14 +389,14 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
 
                             {/* Custom Footer */}
                             {config.customFooter && (
-                                <div style={{ marginTop: '0.25rem', textAlign: 'center', fontSize: '0.65rem', color: '#9ca3af' }}>
+                                <div style={{ marginTop: '2px', textAlign: 'center', fontSize: '6.5pt', color: '#94a3b8' }}>
                                     {config.customFooter}
                                 </div>
                             )}
 
                             {/* Page Number */}
                             {config.showPageNumbers && (
-                                <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', borderTop: '1px solid #f3f4f6', paddingTop: '0.25rem' }}>
+                                <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f8fafc', paddingTop: '2px' }}>
                                     <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 </div>
@@ -393,5 +410,3 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
 };
 
 export default MinimalTheme;
-
-

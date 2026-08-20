@@ -61,13 +61,23 @@ export const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], local
     rows.push([`${t.quoteNo}:`, safe(quoteData?.number, '-')]);
     rows.push([]);
 
+    const custTaxNumber = (c as Record<string, unknown>).taxNumber || (c as Record<string, unknown>).taxNo;
+    const compTaxNumber = (comp as Record<string, unknown>).taxNumber || (comp as Record<string, unknown>).taxNo;
+    const compTaxOffice = (comp as Record<string, unknown>).taxOffice;
+
     rows.push([t.customer, '', t.company]);
     rows.push([safe(c.name, '-'), '', safe(comp.name, '-')]);
     rows.push([safe(c.company), '', safe(comp.email)]);
     rows.push([safe(c.email), '', safe(comp.phone)]);
     rows.push([safe(c.phone), '', safe(comp.website)]);
     rows.push([safe(c.address), '', safe(comp.address)]);
-    rows.push([safe(c.taxOffice), '', `${t.authorized}: ${safe(comp.authorized)}`]);
+    if (c.taxOffice || comp.authorized) {
+        rows.push([c.taxOffice ? `${t.taxOffice}: ${safe(c.taxOffice)}` : '', '', comp.authorized ? `${t.authorized}: ${safe(comp.authorized)}` : '']);
+    }
+    if (custTaxNumber || compTaxOffice || compTaxNumber) {
+        const compTaxStr = [compTaxOffice ? `${t.taxOffice}: ${compTaxOffice}` : '', compTaxNumber ? `${t.taxNo}: ${compTaxNumber}` : ''].filter(Boolean).join(' | ');
+        rows.push([custTaxNumber ? `${t.taxNo}: ${safe(custTaxNumber)}` : '', '', compTaxStr]);
+    }
     rows.push([]);
 
     rows.push([t.bankInfo]);

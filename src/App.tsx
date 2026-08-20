@@ -14,7 +14,6 @@ const TemplateManagerModal = lazy(() => import('@/components/TemplateManagerModa
 const BankManagerModal = lazy(() => import('@/components/BankManagerModal'));
 const DatabaseManagerModal = lazy(() => import('@/components/DatabaseManagerModal'));
 const RecycleBinModal = lazy(() => import('@/components/RecycleBinModal'));
-const AnalyticsModal = lazy(() => import('@/components/AnalyticsModal'));
 
 const ModalLoadingFallback = () => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -66,7 +65,6 @@ function App() {
   const [isDatabaseManagerOpen, setIsDatabaseManagerOpen] = useState(false);
   const [isBankManagerOpen, setIsBankManagerOpen] = useState(false);
   const [isRecycleBinModalOpen, setIsRecycleBinModalOpen] = useState(false);
-  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
 
   const openCustomerManager = useCallback(() => setIsCustomerManagerOpen(true), []);
   const openProductManager = useCallback(() => setIsProductManagerOpen(true), []);
@@ -74,7 +72,6 @@ function App() {
   const openDatabaseManager = useCallback(() => setIsDatabaseManagerOpen(true), []);
   const openBankManager = useCallback(() => setIsBankManagerOpen(true), []);
   const openRecycleBin = useCallback(() => setIsRecycleBinModalOpen(true), []);
-  const openAnalytics = useCallback(() => setIsAnalyticsModalOpen(true), []);
 
   const closeCustomerManager = useCallback(() => setIsCustomerManagerOpen(false), []);
   const closeProductManager = useCallback(() => setIsProductManagerOpen(false), []);
@@ -82,7 +79,6 @@ function App() {
   const closeDatabaseManager = useCallback(() => setIsDatabaseManagerOpen(false), []);
   const closeBankManager = useCallback(() => setIsBankManagerOpen(false), []);
   const closeRecycleBin = useCallback(() => setIsRecycleBinModalOpen(false), []);
-  const closeAnalytics = useCallback(() => setIsAnalyticsModalOpen(false), []);
 
   return (
     <QuoteProvider>
@@ -96,7 +92,6 @@ function App() {
           onOpenDatabaseManager={openDatabaseManager}
           onOpenBankManager={openBankManager}
           onOpenRecycleBin={openRecycleBin}
-          onOpenAnalytics={openAnalytics}
         >
           {currentView === 'builder' && (
             <div className="page-enter" key="builder">
@@ -108,7 +103,6 @@ function App() {
                 onOpenDatabaseManager={openDatabaseManager}
                 onOpenBankManager={openBankManager}
                 onOpenRecycleBin={openRecycleBin}
-                onOpenAnalytics={openAnalytics}
               />
             </div>
           )}
@@ -155,13 +149,6 @@ function App() {
           <RecycleBinModal
             isOpen={isRecycleBinModalOpen}
             onClose={closeRecycleBin}
-          />
-        </Suspense>
-
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <AnalyticsModal
-            isOpen={isAnalyticsModalOpen}
-            onClose={closeAnalytics}
           />
         </Suspense>
 

@@ -31,7 +31,10 @@ class ImageOptimizer {
             const ctx = canvas.getContext('2d')!;
             const img = new Image();
 
+            const objectUrl = URL.createObjectURL(file);
+
             img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
                 try {
                     const { width, height } = this.calculateScale(img.width, img.height);
 
@@ -75,6 +78,7 @@ class ImageOptimizer {
             };
 
             img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
                 const reader = new FileReader();
                 reader.onload = (e: ProgressEvent<FileReader>) => {
                     const result = e.target?.result as string;
@@ -90,7 +94,7 @@ class ImageOptimizer {
                 reader.readAsDataURL(file);
             };
 
-            img.src = URL.createObjectURL(file);
+            img.src = objectUrl;
         });
     }
 

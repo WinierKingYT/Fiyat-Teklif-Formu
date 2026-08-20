@@ -1,4 +1,4 @@
-﻿import { Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import React from "react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
@@ -62,12 +62,12 @@ const Settings = () => {
         if (savedSettings) {
           setSettings((prev) => ({ ...prev, ...savedSettings }));
         }
-        const savedCompanyDefaults = await db.get<Partial<typeof companySettings>>(
+        const savedCompanyDefaults = await db.get<{ id: string; key?: string; value: typeof companySettings }>(
+          "settings",
           "company_defaults",
-          "default",
         );
-        if (savedCompanyDefaults) {
-          setCompanySettings((prev) => ({ ...prev, ...savedCompanyDefaults }));
+        if (savedCompanyDefaults && savedCompanyDefaults.value) {
+          setCompanySettings((prev) => ({ ...prev, ...savedCompanyDefaults.value }));
         }
         setLoading(false);
       } catch (error) {
@@ -89,8 +89,8 @@ const Settings = () => {
   const handleSave = async () => {
     if (!db) return;
     try {
-      await db.put("settings", { id: "global", ...settings });
-      await db.put("company_defaults", { id: "default", ...companySettings });
+      await db.put("settings", { id: "global", key: "global", ...settings });
+      await db.put("settings", { id: "company_defaults", key: "company_defaults", value: companySettings });
       toast.success(t('settingsSaved'));
     } catch (error) {
       Logger.error("Error saving settings:", error);

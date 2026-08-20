@@ -31,7 +31,7 @@ const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpen
 
   useEffect(() => {
     if (!db) return;
-    db.getAll<Record<string, string>>('bank_accounts')
+    db.getAll<Record<string, string>>('bankInfo')
       .then((banks) => {
         if (banks && banks.length > 0) setSavedBanks(banks);
       })

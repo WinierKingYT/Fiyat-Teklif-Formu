@@ -58,7 +58,25 @@ const PdfPreviewPanel = React.memo(() => {
     const [renderedConfig, setRenderedConfig] = useState(pdfConfig);
     const [pageSize, setPageSize] = useState<PageSize>('a4');
     const [quality, setQuality] = useState<PdfQuality>('high');
-    const [showControls, setShowControls] = useState(window.innerWidth > 900);
+    const [showControls, setShowControls] = useState(() => {
+        try {
+            return localStorage.getItem('pdf_preview_controls_open') === 'true';
+        } catch {
+            return false;
+        }
+    });
+
+    const toggleControls = useCallback(() => {
+        setShowControls(prev => {
+            const next = !prev;
+            try {
+                localStorage.setItem('pdf_preview_controls_open', String(next));
+            } catch {
+                /* ignore */
+            }
+            return next;
+        });
+    }, []);
     const [zoomLevel, setZoomLevel] = useState(0.7);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStage, setGenerationStage] = useState('');
@@ -142,10 +160,10 @@ const PdfPreviewPanel = React.memo(() => {
         const overflow: number[] = [];
         pages.forEach((p, i) => {
             const pageEl = p as HTMLElement;
-            if (pageEl.scrollHeight > pageEl.clientHeight + 2) overflow.push(i + 1);
+            if (pageEl.scrollHeight > pageEl.clientHeight + 8) overflow.push(i + 1);
         });
         setOverflowPages(overflow);
-    }, [renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, pdfConfig.tableRowHeight]);
+    }, [renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, pdfConfig.tableRowHeight, zoomLevel]);
 
     // Margin guide overlay (preview only, not included in PDF output)
     useEffect(() => {
@@ -639,18 +657,19 @@ const PdfPreviewPanel = React.memo(() => {
                     </button>
 
                     <button type="button"
-                        onClick={() => setShowControls(!showControls)}
-                        className="p-1.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors md:hidden"
-                        title={showControls ? t('hideControls') : t('showControls')}
+                        onClick={toggleControls}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius)] transition-colors text-xs font-medium ${showControls ? 'bg-[var(--color-primary-muted)] text-[var(--color-primary)] font-semibold' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'}`}
+                        title={showControls ? (t('hideControls') || 'Ayarları Gizle') : (t('showControls') || 'Ayar Paneli')}
                     >
-                        <Settings2 size={16} />
+                        <Settings2 size={15} />
+                        <span className="hidden sm:inline">{showControls ? (t('hideControls') || 'Ayarları Gizle') : (t('showControls') || 'Ayar Paneli')}</span>
                     </button>
                 </div>
             </div>
 
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                {/* Left: Controls (Collapsible on mobile) */}
-                <div className={`${showControls ? 'flex' : 'hidden'} md:flex w-full md:w-80 flex-shrink-0 border-r border-[var(--color-border)] flex-col bg-[var(--color-bg-card)]`}>
+                {/* Left: Controls (Collapsible) */}
+                <div className={`${showControls ? 'flex w-full md:w-80' : 'hidden'} flex-shrink-0 border-r border-[var(--color-border)] flex-col bg-[var(--color-bg-card)] transition-all`}>
                     {/* Segmented Control Tabs */}
                     <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-muted)]/50 p-1 gap-1">
                         {tabs.map(tab => (
@@ -828,8 +847,8 @@ const PdfPreviewPanel = React.memo(() => {
                                             ].map(opt => (
                                                 <button type="button"
                                                     key={opt.val}
-                                                    onClick={() => handleConfigChange('pageMargin', opt.val)}
-                                                    className={`py-1.5 text-xs rounded border transition-colors ${pdfConfig.pageMargin === opt.val ? 'bg-[var(--color-info)] text-white border-[var(--color-info)]' : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'}`}
+                                                    onClick={() => handleConfigChange('margins', opt.val)}
+                                                    className={`py-1.5 text-xs rounded border transition-colors ${pdfConfig.margins === opt.val ? 'bg-[var(--color-info)] text-white border-[var(--color-info)]' : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'}`}
                                                 >
                                                     {opt.label}
                                                 </button>

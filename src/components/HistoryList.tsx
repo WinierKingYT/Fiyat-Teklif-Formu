@@ -293,12 +293,12 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
     ));
 
     const paginatedQuotes = useMemo(() =>
-        filteredQuotes.slice(0, page * PAGE_SIZE),
+        filteredQuotes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
         [filteredQuotes, page]
     );
 
     const paginatedVersions = useMemo(() =>
-        filteredVersions.slice(0, page * PAGE_SIZE),
+        filteredVersions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
         [filteredVersions, page]
     );
 
@@ -308,6 +308,8 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
 
     useEffect(() => {
         setPage(1);
+        setSelectedIds(new Set());
+        setSelectAll(false);
     }, [debouncedSearch, activeTab]);
 
     return (

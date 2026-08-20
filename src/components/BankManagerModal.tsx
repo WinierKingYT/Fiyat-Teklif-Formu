@@ -86,7 +86,32 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankMa
     };
 
     const handleDelete = async (id: number) => {
-        setConfirmDialog({ isOpen: true, title: t('deleteBank'), message: t('deleteBankConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('bankInfo', id); toast.success(t('bankDeleted')); loadBanks(); } catch (error) { Logger.error('Error deleting bank:', error); toast.error(t('bankDeleteError')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('deleteBank'),
+            message: t('deleteBankConfirm'),
+            onConfirm: async () => {
+                setConfirmDialog({ ...confirmDialog, isOpen: false });
+                try {
+                    const bankToDelete = banks.find(b => b.id === id);
+                    if (bankToDelete) {
+                        await db.add('recycle_bin', {
+                            ...bankToDelete,
+                            originalStore: 'bankInfo',
+                            deletedAt: new Date().toISOString(),
+                            originalId: id
+                        });
+                    }
+                    await db.delete('bankInfo', id);
+                    toast.success(t('bankDeleted'));
+                    loadBanks();
+                } catch (error) {
+                    Logger.error('Error deleting bank:', error);
+                    toast.error(t('bankDeleteError'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const handleSelect = (bank: StoredBank) => {

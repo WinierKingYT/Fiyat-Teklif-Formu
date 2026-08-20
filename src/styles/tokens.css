@@ -112,6 +112,20 @@
   --color-primary-ring: rgba(52, 211, 153, 0.25);
   --color-info: #34D399;
 }
+[data-color="violet"] {
+  --color-primary: #8B5CF6;
+  --color-primary-hover: #7C3AED;
+  --color-primary-muted: #EDE9FE;
+  --color-primary-ring: rgba(139, 92, 246, 0.2);
+  --color-info: #8B5CF6;
+}
+[data-color="violet"][data-theme="dark"] {
+  --color-primary: #A78BFA;
+  --color-primary-hover: #C4B5FD;
+  --color-primary-muted: #2E1065;
+  --color-primary-ring: rgba(167, 139, 250, 0.25);
+  --color-info: #A78BFA;
+}
 [data-color="amber"] {
   --color-primary: #F59E0B;
   --color-primary-hover: #D97706;

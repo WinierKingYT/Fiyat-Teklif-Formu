@@ -174,3 +174,13 @@ export function formatCurrency(amount: number, currency: string = 'TRY'): string
   const locale = currency === 'TRY' ? 'tr-TR' : 'en-US';
   return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
 }
+
+export function getCurrencySymbol(currency: string = 'TRY'): string {
+  switch (currency.toUpperCase()) {
+    case 'TRY': return '₺';
+    case 'USD': return '$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    default: return currency;
+  }
+}

@@ -111,6 +111,8 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
     onChange('email', customer.email || '');
     onChange('phone', customer.phone || '');
     onChange('address', customer.address || '');
+    onChange('taxOffice', customer.taxOffice || '');
+    onChange('taxNumber', customer.taxNumber || (customer as Record<string, string>).taxNo || '');
     setSearchQuery('');
     setSearchResults([]);
     setShowDropdown(false);

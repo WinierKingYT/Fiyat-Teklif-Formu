@@ -94,7 +94,7 @@ const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, on
 
     const totalPages = Math.max(1, Math.ceil(filteredQuotes.length / PAGE_SIZE));
     const paginatedQuotes = useMemo(() =>
-        filteredQuotes.slice(0, page * PAGE_SIZE),
+        filteredQuotes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
         [filteredQuotes, page]
     );
 

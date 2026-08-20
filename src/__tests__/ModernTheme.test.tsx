@@ -155,11 +155,52 @@ describe('ModernTheme', () => {
         expect(document.querySelectorAll('.pdf-page').length).toBe(3);
     });
 
-    it('renders an editable field when onEdit is provided', () => {
-        const onEdit = () => {};
-        renderTheme({ onEdit });
+    it('renders company and customer tax information when provided', () => {
+        renderTheme({
+            companyData: {
+                name: 'Bizim A.Ş.',
+                address: 'İstiklal Cd.',
+                phone: '0212',
+                email: 'info@bizim.com',
+                website: 'bizim.com',
+                logo: null,
+                signature: null,
+                stamp: null,
+                authorized: 'Ali',
+                taxOffice: 'Beşiktaş',
+                taxNumber: '1234567890'
+            },
+            customerData: {
+                name: 'Müşteri Adı',
+                company: 'Acme Ltd',
+                phone: '',
+                email: '',
+                taxOffice: 'Kadıköy',
+                taxNumber: '9876543210'
+            }
+        });
 
-        const editable = document.querySelector('.editable-field');
-        expect(editable).not.toBeNull();
+        expect(screen.getByText(/Beşiktaş V.D./)).toBeInTheDocument();
+        expect(screen.getByText(/1234567890/)).toBeInTheDocument();
+        expect(screen.getByText(/Kadıköy V.D./)).toBeInTheDocument();
+        expect(screen.getByText(/9876543210/)).toBeInTheDocument();
+    });
+
+    it('renders itemized multi-rate VAT breakdown when multiple rates exist', () => {
+        const multiVatItems = [
+            { id: 'i1', name: 'Kitap', description: '', quantity: 1, price: 100, taxRate: 10, discountRate: 0, unit: 'Adet' },
+            { id: 'i2', name: 'Telefon', description: '', quantity: 1, price: 200, taxRate: 20, discountRate: 0, unit: 'Adet' },
+        ];
+
+        renderTheme({
+            items: multiVatItems,
+            subtotal: 300,
+            totalTax: 50,
+            total: 350,
+            config: { ...baseConfig, showTableTax: true }
+        });
+
+        expect(screen.getByText(/KDV \(%10\):/)).toBeInTheDocument();
+        expect(screen.getByText(/KDV \(%20\):/)).toBeInTheDocument();
     });
 });

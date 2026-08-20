@@ -219,7 +219,10 @@ const PrintableQuote = React.memo(({
     const getContainerStyles = () => {
         const isLandscape = config.pageOrientation === 'landscape';
         const pageWidth = isLandscape ? '297mm' : '210mm';
-        const pageMinHeight = isLandscape ? '200mm' : '290mm';
+        const paddingPx = config.margins === 'compact' ? 16 : config.margins === 'wide' ? 36 : 24;
+        const pageMinHeight = isLandscape
+            ? (config.margins === 'compact' ? '201mm' : config.margins === 'wide' ? '191mm' : '197mm')
+            : (config.margins === 'compact' ? '288mm' : config.margins === 'wide' ? '278mm' : '284mm');
         const baseStyles = {
             minHeight: 'auto',
             maxWidth: pageWidth,
@@ -231,7 +234,7 @@ const PrintableQuote = React.memo(({
                             config.fontFamily === 'Montserrat' ? "'Montserrat', sans-serif" :
                                 "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             fontSize: typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize === 'small' ? '12px' : config.fontSize === 'large' ? '16px' : '14px'),
-            padding: config.margins === 'compact' ? '20px' : config.margins === 'wide' ? '60px' : '40px',
+            padding: `${paddingPx}px`,
             backgroundColor: config.pageBackgroundColor || 'white',
             backgroundImage: config.pageBgPattern === 'dots'
                 ? 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.30) 1px, transparent 0)'
@@ -307,25 +310,8 @@ const PrintableQuote = React.memo(({
         return <ModernTheme {...commonProps} activeLayout={activeLayout} />;
     };
 
-    const watermarkLabel = useMemo(() => {
-        const wm = (quoteData as Record<string, unknown>).watermark as string;
-        if (!wm || wm === 'none') return null;
-        if (wm === 'draft') return 'TASLAK';
-        if (wm === 'preview') return 'ÖN TEKLİF';
-        if (wm === 'confidential') return 'GİZLİDİR';
-        if (wm === 'approved') return 'ONAYLANDI';
-        return wm.toUpperCase();
-    }, [quoteData]);
-
     return (
         <div className="relative">
-            {watermarkLabel && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden select-none">
-                    <span className="text-[54px] sm:text-[72px] font-black tracking-widest text-slate-400/20 dark:text-slate-500/25 rotate-[-30deg] uppercase border-4 sm:border-8 border-slate-400/20 px-8 py-3 rounded-2xl">
-                        {watermarkLabel}
-                    </span>
-                </div>
-            )}
             {renderThemeContent()}
         </div>
     );

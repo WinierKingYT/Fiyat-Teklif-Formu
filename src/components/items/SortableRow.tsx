@@ -4,7 +4,7 @@ import { GripVertical, ImageIcon, Trash, Copy, CheckSquare, Square } from "lucid
 import React, { useRef, memo } from "react";
 import ProductTypeahead, { type ProductTypeaheadItem } from '@/components/items/ProductTypeahead';
 import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from '@/components/items/shared';
-import { calculateLineTotal } from '@/utils/calculations';
+import { calculateLineTotal, getCurrencySymbol } from '@/utils/calculations';
 import { evaluateMathExpression } from '@/utils/smartCalc';
 import type { QuoteItem } from '@/context/quote/types';
 
@@ -301,7 +301,7 @@ const SortableRow = memo(
                 title="İskonto Tipi (% veya Sabit Tutar)"
                 aria-label="İskonto Tipi"
               >
-                {discountType === 'fixed' ? '₺' : '%'}
+                {discountType === 'fixed' ? getCurrencySymbol(currency) : '%'}
               </button>
               <input
                 type="text"

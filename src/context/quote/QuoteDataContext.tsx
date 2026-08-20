@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useCallback, useMemo, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { useCompanyDefaults } from '@/context/quote/CompanyDefaultsContext';
 import { useConfirm } from '@/context/quote/ConfirmContext';
 import { useDatabase } from '@/context/quote/DatabaseContext';
 import {
-    getInitialQuoteData, getInitialBankData,
+    getInitialQuoteData, getInitialBankData, getInitialTabData,
 } from '@/context/quote/initialState';
 import { useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
 import { useTab } from '@/context/quote/TabContext';
@@ -64,6 +65,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     const { db, isReady } = useDatabase();
     const { tabs, activeTabId, setTabs } = useTab();
     const { showConfirm } = useConfirm();
+    const { companyDefaults } = useCompanyDefaults();
     const setSaveStatus = useSaveStatusSetter();
 
     // Helper to get active tab
@@ -195,11 +197,12 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     useEffect(() => {
         if (!isReady || !db || !tabs.find(t => t.id === activeTabId)?.savedQuoteId) return;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = setTimeout(() => {
+        autoSaveTimerRef.current = setTimeout(async () => {
             const activeTab = tabs.find(t => t.id === activeTabId);
             if (!activeTab) return;
             const quoteId = activeTab.savedQuoteId;
             if (!quoteId) return;
+            setSaveStatus({ status: 'saving', lastSaved: null });
             const quote: DbQuote = {
                 id: quoteId, quoteNumber: quoteData.number, customerName: customerData.name,
                 customerCompany: customerData.company, status: 'draft', currency: quoteData.currency,
@@ -207,10 +210,22 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
                 quoteData, customerData, companyData, items, discount, bankData,
                 updatedAt: getLocalDateTimeString(), createdAt: getLocalDateTimeString(),
             };
-            db.put('quotes', quote).catch(e => Logger.error('Auto-save error:', e));
+            try {
+                await db.put('quotes', quote);
+                setSaveStatus({ status: 'saved', lastSaved: Date.now() });
+                setTimeout(() => {
+                    setSaveStatus(prev => prev.status === 'saved' ? { status: 'idle', lastSaved: prev.lastSaved } : prev);
+                }, 3000);
+            } catch (e) {
+                Logger.error('Auto-save error:', e);
+                setSaveStatus({ status: 'error', lastSaved: null });
+                setTimeout(() => {
+                    setSaveStatus(prev => prev.status === 'error' ? { status: 'idle', lastSaved: null } : prev);
+                }, 5000);
+            }
         }, 3000);
         return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-    }, [isReady, db, quoteData, customerData, companyData, items, discount, bankData, tabs, activeTabId]);
+    }, [isReady, db, quoteData, customerData, companyData, items, discount, bankData, tabs, activeTabId, setSaveStatus]);
 
     const validateQuote = useCallback((isFinal = false) => {
         const errors: string[] = [];
@@ -368,8 +383,24 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     }, [isReady, db, loadQuote]);
 
     const resetQuote = useCallback(() => {
-        setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: null } : tab));
-    }, [activeTabId, setTabs]);
+        const initialData = getInitialTabData(companyDefaults);
+        setTabs(prev => prev.map(tab => tab.id === activeTabId ? {
+            ...tab,
+            title: 'Yeni Teklif',
+            savedQuoteId: null,
+            data: initialData,
+            history: [initialData],
+            historyIndex: 0
+        } : tab));
+    }, [activeTabId, companyDefaults, setTabs]);
+
+    useEffect(() => {
+        const handleDbReset = () => {
+            resetQuote();
+        };
+        window.addEventListener('db-cleared', handleDbReset);
+        return () => window.removeEventListener('db-cleared', handleDbReset);
+    }, [resetQuote]);
 
     const createBackup = useCallback(async () => {
         try {

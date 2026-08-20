@@ -1,31 +1,57 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Sun, Moon, Download, Menu } from 'lucide-react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import Sidebar from '@/components/Sidebar';
 import TabBar from '@/components/TabBar';
-
-const PdfPreviewPanel = lazy(() => import('@/components/PdfPreviewPanel'));
 import { useQuoteData, useTab } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Sun, Moon, Download, Menu } from 'lucide-react';
-import AutoSaveIndicator from '@/components/AutoSaveIndicator';
+
+const PdfPreviewPanel = lazy(() => import('@/components/PdfPreviewPanel'));
 
 interface TopBarProps {
   currentView: string;
   onToggleMobile: () => void;
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
   const { isLivePreviewMode, setIsLivePreviewMode, appTheme, setAppTheme } = useUI();
   const { t } = useTranslation();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const goOffline = () => setIsOffline(true);
     const goOnline = () => setIsOffline(false);
     window.addEventListener('offline', goOffline);
     window.addEventListener('online', goOnline);
-    return () => { window.removeEventListener('offline', goOffline); window.removeEventListener('online', goOnline); };
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    return () => {
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
 
   return (
     <div className="top-bar">
@@ -36,6 +62,17 @@ const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
         {currentView === 'builder' && <TabBar />}
       </div>
       <div className="top-bar-right">
+        {installPrompt && (
+          <button
+            type="button"
+            onClick={handleInstallClick}
+            className="top-bar-btn flex items-center gap-1.5 text-xs text-[var(--color-primary)] font-semibold border border-[var(--color-primary)]/30 rounded px-2 py-1 bg-[var(--color-primary-muted)] hover:bg-[var(--color-primary)] hover:text-white transition-colors"
+            title={t('installApp') || 'Uygulamayı Yükle'}
+          >
+            <Download size={13} />
+            <span className="hidden sm:inline">{t('installApp') || 'Uygulamayı Yükle'}</span>
+          </button>
+        )}
         <AutoSaveIndicator />
         <div className="top-bar-divider" />
         <button type="button"
@@ -73,17 +110,35 @@ interface LayoutProps {
   onOpenDatabaseManager: () => void;
   onOpenBankManager: () => void;
   onOpenRecycleBin: () => void;
-  onOpenAnalytics: () => void;
 }
 
 const Layout = React.memo(({
   children, currentView, onNavigate,
   onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
-  onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin, onOpenAnalytics,
+  onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin,
 }: LayoutProps) => {
   const { focusMode, setFocusMode, isLivePreviewMode } = useUI();
   const { addTab } = useTab();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebar_collapsed') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleSidebarCollapse = useCallback(() => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar_collapsed', String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const handleNewQuote = () => {
     addTab();
@@ -104,10 +159,11 @@ const Layout = React.memo(({
         onOpenDatabaseManager={onOpenDatabaseManager}
         onOpenBankManager={onOpenBankManager}
         onOpenRecycleBin={onOpenRecycleBin}
-        onOpenAnalytics={onOpenAnalytics}
         onNewQuote={handleNewQuote}
         isMobileOpen={isMobileSidebarOpen}
         onMobileClose={() => setIsMobileSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
       />
 
       <div className="main-area">

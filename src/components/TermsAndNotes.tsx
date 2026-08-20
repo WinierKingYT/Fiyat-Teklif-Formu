@@ -1,6 +1,6 @@
 import { FileText, Truck, Shield, StickyNote, Stamp } from 'lucide-react';
 import React from 'react';
-import { useQuoteData } from '@/context/QuoteContext';
+import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { QuoteData } from '@/context/quote/types';
 
@@ -36,13 +36,32 @@ interface TermsAndNotesProps {
     onChange: (field: string, value: string) => void;
 }
 
+const watermarkMap: Record<string, string> = {
+    draft: 'TASLAK',
+    preview: 'ÖN TEKLİF',
+    confidential: 'GİZLİDİR',
+    approved: 'ONAYLANDI'
+};
+
 const TermsAndNotes: React.FC<TermsAndNotesProps> = ({ data, onChange }) => {
     const { quoteData } = useQuoteData();
+    const { setPdfConfig } = usePdfConfig();
     const { t } = useTranslation(quoteData?.language);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         onChange(name, value);
+    };
+
+    const handleWatermarkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        onChange('watermark', val);
+        if (val === 'none') {
+            setPdfConfig(prev => ({ ...prev, showWatermark: false }));
+        } else {
+            const text = watermarkMap[val] || val.toUpperCase();
+            setPdfConfig(prev => ({ ...prev, showWatermark: true, watermarkText: text }));
+        }
     };
 
     const handlePresetClick = (fieldId: string, presetText: string) => {
@@ -62,7 +81,7 @@ const TermsAndNotes: React.FC<TermsAndNotesProps> = ({ data, onChange }) => {
                 <select
                     name="watermark"
                     value={data.watermark || 'none'}
-                    onChange={handleChange}
+                    onChange={handleWatermarkChange}
                     aria-label="PDF Filigranı"
                     className="text-xs bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text)] outline-none cursor-pointer"
                 >

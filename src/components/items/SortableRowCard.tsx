@@ -4,7 +4,7 @@ import { GripVertical, ImageIcon, Trash, Copy, CheckSquare, Square } from "lucid
 import React, { useRef, memo } from "react";
 import ProductTypeahead, { type ProductTypeaheadItem } from '@/components/items/ProductTypeahead';
 import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from '@/components/items/shared';
-import { calculateLineTotal } from '@/utils/calculations';
+import { calculateLineTotal, getCurrencySymbol } from '@/utils/calculations';
 import type { QuoteItem } from '@/context/quote/types';
 
 interface SortableRowCardProps {
@@ -223,9 +223,19 @@ const SortableRowCard = memo(
             />
           </div>
           <div>
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5 block" htmlFor={`card-disc-${index}`}>
-              {t("discountRate")}
-            </label>
+            <div className="flex items-center justify-between mb-0.5">
+              <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide block" htmlFor={`card-disc-${index}`}>
+                {t("discountRate")}
+              </label>
+              <button
+                type="button"
+                onClick={() => handleItemChange(index, "discountType", (item as unknown as { discountType?: string }).discountType === 'fixed' ? 'percentage' : 'fixed')}
+                className="text-[9px] font-bold text-[var(--color-primary)] px-1 py-0.5 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)]"
+                title="İskonto Tipi"
+              >
+                {(item as unknown as { discountType?: string }).discountType === 'fixed' ? getCurrencySymbol(currency) : '%'}
+              </button>
+            </div>
             <input
               id={`card-disc-${index}`}
               type="text"

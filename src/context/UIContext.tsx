@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 
 type ViewMode = 'desktop' | 'mobile';
 type AppTheme = 'light' | 'dark';
-type AppColor = 'blue' | 'purple' | 'green' | 'red' | 'orange';
+type AppColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate';
 type AppLayout = 'modern' | 'classic';
 
 export interface UIContextValue {

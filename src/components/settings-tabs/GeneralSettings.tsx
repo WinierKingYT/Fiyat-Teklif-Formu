@@ -1,4 +1,4 @@
-﻿import { Save, Settings2, Check } from "lucide-react";
+import { Save, Settings2, Check } from "lucide-react";
 import React from "react";
 import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -17,7 +17,7 @@ interface GeneralSettingsProps {
   appTheme: string;
   setAppTheme: (value: 'light' | 'dark') => void;
   appColor: string;
-  setAppColor: (value: 'blue' | 'purple' | 'green' | 'red' | 'orange') => void;
+  setAppColor: (value: 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate') => void;
   onSave: () => void;
 }
 
@@ -89,7 +89,7 @@ const GeneralSettings = ({
             {appColors.map((color) => (
               <button type="button"
                 key={color.id}
-                onClick={() => setAppColor(color.id as 'blue' | 'purple' | 'green' | 'red' | 'orange')}
+                onClick={() => setAppColor(color.id as 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate')}
                 className={`flex items-center gap-3 p-2.5 rounded-[var(--radius)] border transition-all ${appColor === color.id ? "bg-[var(--color-primary-muted)] border-[var(--color-primary)]" : "bg-[var(--color-bg-card)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]"}`}
               >
                 <div

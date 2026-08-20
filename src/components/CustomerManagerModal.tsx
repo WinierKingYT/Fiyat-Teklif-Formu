@@ -36,7 +36,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
         phone: '',
         address: '',
         taxOffice: '',
-        taxNo: ''
+        taxNumber: ''
     });
 
     useEffect(() => {
@@ -104,7 +104,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
             phone: customer.phone || '',
             address: customer.address || '',
             taxOffice: customer.taxOffice || '',
-            taxNo: customer.taxNumber || ''
+            taxNumber: customer.taxNumber || (customer as Record<string, string>).taxNo || ''
         });
         setIsEditing(true);
     };
@@ -115,7 +115,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
     };
 
     const resetForm = () => {
-        setFormData({ name: '', company: '', email: '', phone: '', address: '', taxOffice: '', taxNo: '' });
+        setFormData({ name: '', company: '', email: '', phone: '', address: '', taxOffice: '', taxNumber: '' });
         setIsEditing(false);
         setCurrentCustomer(null);
     };
@@ -131,7 +131,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
 
     const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
     const paginatedCustomers = useMemo(() =>
-        filteredCustomers.slice(0, page * PAGE_SIZE),
+        filteredCustomers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
         [filteredCustomers, page]
     );
 
@@ -318,7 +318,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
                             </div>
                             <div className="form-group">
                                 <label className="form-label" htmlFor="customerTaxNo">{t('taxNo')}</label>
-                                <input type="text" className="form-control" id="customerTaxNo" name="taxNo" value={formData.taxNo} onChange={handleInputChange} autoComplete="off" />
+                                <input type="text" className="form-control" id="customerTaxNo" name="taxNumber" value={formData.taxNumber} onChange={handleInputChange} autoComplete="off" />
                             </div>
                         </div>
 

@@ -51,44 +51,75 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
 
     const classicStyles = useMemo(() => `
         .classic-theme-container {
-            font-family: ${config.globalFontFamily || "'Times New Roman', Times, serif"};
-            line-height: ${config.bodyLineHeight || '1.15'};
-            color: ${config.globalFontColor || '#000'};
-            background: var(--pdf-page-bg, #fff) !important;
+            font-family: ${config.globalFontFamily || "'Georgia', 'Times New Roman', Times, serif"};
+            line-height: ${config.bodyLineHeight || '1.35'};
+            color: ${config.globalFontColor || '#1e293b'};
+            background: var(--pdf-page-bg, #ffffff) !important;
             font-size: ${config.fontSize || 11}px;
+            position: relative;
+            box-sizing: border-box;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        [data-theme="dark"] .classic-theme-container {
+            background-color: var(--pdf-page-bg, #ffffff) !important;
+            color: ${config.globalFontColor || '#1e293b'} !important;
+        }
+
+        [data-theme="dark"] .classic-header-box,
+        [data-theme="dark"] .classic-section-box,
+        [data-theme="dark"] .classic-table {
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+        }
+
+        .classic-theme-container * {
+            box-sizing: border-box;
+        }
+
+        .classic-header-box {
+            border: 1.5px solid #334155;
+            margin-bottom: 12px;
+            background: #ffffff;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .classic-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            font-size: ${config.tableBodyFontSize || '10pt'} !important;
+            margin-top: 6px;
+            margin-bottom: 8px;
+            font-size: ${config.tableBodyFontSize || '9.5pt'} !important;
             font-weight: ${config.tableBodyFontWeight || 'normal'} !important;
         }
 
         .classic-table th {
-            border: 1px solid #000;
-            padding: ${config.tableHeaderPadding || '8px'};
-            background: ${config.tableHeaderBg || '#e0e0e0'};
+            border: 1px solid #475569;
+            padding: ${config.tableHeaderPadding || '6px 8px'};
+            background: ${config.tableHeaderBg || '#f1f5f9'};
             text-align: center;
             font-weight: ${config.tableHeaderFontWeight || 'bold'};
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '10pt')};
-            color: ${config.tableHeaderColor || '#000'};
-            text-transform: ${config.tableHeaderTransform || 'none'};
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '9pt')};
+            color: ${config.tableHeaderColor || '#0f172a'};
+            text-transform: ${config.tableHeaderTransform || 'uppercase'};
+            letter-spacing: 0.03em;
         }
 
         .classic-table td {
-            border: 1px solid #000;
-            padding: ${config.tableCellPadding || '8px'};
+            border: 1px solid #cbd5e1;
+            padding: ${config.tableCellPadding || '6px 8px'};
             vertical-align: middle;
             font-size: ${config.tableBodyFontSize || 'inherit'} !important;
             font-weight: ${config.tableBodyFontWeight || 'normal'} !important;
+            color: #1e293b;
         }
 
         ${config.tableStriped ? `
-        .classic-table tr:nth-child(even) {
-            background: ${config.tableStripedColor || '#f9f9f9'};
+        .classic-table tr:nth-child(even) td {
+            background: ${config.tableStripedColor || '#f8fafc'};
         }
         ` : ''}
 
@@ -99,7 +130,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
         ${config.tableShowVerticalLines ? `
         .classic-table th,
         .classic-table td {
-            border-left: 1px solid ${config.tableBorderColor || '#ccc'};
+            border-left: 1px solid ${config.tableBorderColor || '#cbd5e1'};
         }
         .classic-table th:first-child,
         .classic-table td:first-child {
@@ -107,10 +138,31 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
         }
         ` : ''}
 
+        .classic-section-box {
+            border: 1px solid #94a3b8;
+            background: #ffffff;
+            margin-bottom: 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .classic-section-header {
+            background: #f1f5f9;
+            padding: 4px 8px;
+            font-weight: 700;
+            border-bottom: 1px solid #94a3b8;
+            font-size: 8.5pt;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
         .classic-theme-container .footer {
             font-size: ${config.footerFontSize || '8pt'} !important;
             font-weight: ${config.footerFontWeight || 'normal'} !important;
-            color: ${config.footerColor || '#444'};
+            color: ${config.footerColor || '#64748b'};
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
     `, [config]);
 
@@ -136,31 +188,31 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                     <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
                     {config.showTableUnit && <th style={{ width: '50px' }}>{config.textUnit || t.unit}</th>}
                     <th style={{ width: '60px' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '80px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
+                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
                     {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
                     {config.showTableTax && <th style={{ width: '50px' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
                 {tableItems.map((item, index) => (
                     <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center' }}>{startIndex + index + 1}</td>
+                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
                         {config.showTableImages && (
                             <td style={{ textAlign: 'center' }}>
-                                {item.image && <img src={item.image} alt="" style={{ height: '40px', objectFit: 'contain' }} />}
+                                {item.image && <img src={item.image} alt="" style={{ height: '36px', width: '36px', objectFit: 'contain', margin: '0 auto' }} />}
                             </td>
                         )}
                         <td>
-                            <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '8.5pt', color: '#444' }}>{item.description}</div>}
+                            <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{item.name}</div>
+                            {item.description && <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
                         </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center' }}>{item.unit}</td>}
-                        <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                        <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.quantity}</td>
                         <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: 'bold', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: '#475569' }}>%{item.taxRate}</td>}
+                        <td style={{ textAlign: 'right', fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -174,7 +226,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles?.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '284mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
@@ -205,52 +257,58 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Header Section - Grid Layout */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr 180px', border: '1px solid #000', marginBottom: '8px' }}>
+                        <div className="classic-header-box" style={{ display: 'grid', gridTemplateColumns: '130px 1fr 180px' }}>
                             {/* Logo Area */}
-                            <div style={{ borderRight: '1px solid #000', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
+                            <div style={{ borderRight: '1.5px solid #334155', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
                                 {config.showLogo && companyData.logo ? (
                                     <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: `${config.logoMaxHeight || 60}px`, objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                 ) : (
-                                    <span style={{ fontSize: '12pt', fontWeight: 'bold' }}>{t.logo}</span>
+                                    <span style={{ fontSize: '11pt', fontWeight: 'bold', color: '#475569' }}>{t.logo}</span>
                                 )}
                             </div>
 
                             {/* Company Info */}
-                            <div style={{ borderRight: '1px solid #000', padding: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                                <div style={{ fontSize: config.headerTitleFontSize || '14pt', fontWeight: config.headerTitleFontWeight || 'bold', textTransform: 'uppercase' }}>{renderEditable(companyData.name, 'companyName')}</div>
-                                <div style={{ fontSize: config.headerInfoFontSize || '9pt', marginTop: '4px' }}>{companyData.address}</div>
-                                <div style={{ fontSize: config.headerInfoFontSize || '9pt' }}>{companyData.phone} | {companyData.email}</div>
-                                <div style={{ fontSize: config.headerInfoFontSize || '9pt' }}>{companyData.website}</div>
+                            <div style={{ borderRight: '1.5px solid #334155', padding: '8px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
+                                <div style={{ fontSize: config.headerTitleFontSize || '13pt', fontWeight: config.headerTitleFontWeight || 'bold', textTransform: 'uppercase', color: '#0f172a', letterSpacing: '0.02em' }}>{renderEditable(companyData.name, 'companyName')}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '8.5pt', color: '#334155', marginTop: '3px', lineHeight: '1.3' }}>{companyData.address}</div>
+                                <div style={{ fontSize: config.headerInfoFontSize || '8.5pt', color: '#475569', marginTop: '2px' }}>{companyData.phone} | {companyData.email}</div>
+                                {companyData.website && <div style={{ fontSize: config.headerInfoFontSize || '8.5pt', color: '#475569' }}>{companyData.website}</div>}
+                                {(companyData.taxOffice || companyData.taxNumber) && (
+                                    <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
+                                        {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                        {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Document Info */}
                             <div style={{ padding: '0', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ background: '#e0e0e0', borderBottom: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '9pt' }}>
+                                <div style={{ background: '#f1f5f9', borderBottom: '1px solid #334155', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '8.5pt', color: '#0f172a', textTransform: 'uppercase' }}>
                                     {t.quoteNo}
                                 </div>
-                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12pt', fontWeight: 'bold', borderBottom: '1px solid #000' }}>
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11.5pt', fontWeight: 'bold', borderBottom: '1px solid #334155', color: '#0f172a' }}>
                                     #{quoteData.number}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: '100%' }}>
-                                    <div style={{ borderRight: '1px solid #000', padding: '2px', fontSize: config.quoteMetaLabelFontSize || '7.5pt', fontWeight: config.quoteMetaLabelFontWeight || 'normal', textAlign: 'center', background: '#f9f9f9' }}>
+                                    <div style={{ borderRight: '1px solid #334155', padding: '2px', fontSize: config.quoteMetaLabelFontSize || '7.5pt', fontWeight: config.quoteMetaLabelFontWeight || 'normal', textAlign: 'center', background: '#f8fafc', color: '#475569' }}>
                                         {t.date}
                                     </div>
-                                    <div style={{ padding: '2px', fontSize: config.quoteMetaLabelFontSize || '7.5pt', fontWeight: config.quoteMetaLabelFontWeight || 'normal', textAlign: 'center', background: '#f9f9f9' }}>
+                                    <div style={{ padding: '2px', fontSize: config.quoteMetaLabelFontSize || '7.5pt', fontWeight: config.quoteMetaLabelFontWeight || 'normal', textAlign: 'center', background: '#f8fafc', color: '#475569' }}>
                                         {t.validUntil}
                                     </div>
-                                    <div style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', padding: '2px', textAlign: 'center', fontSize: config.quoteMetaValueFontSize || '8.5pt', fontWeight: config.quoteMetaValueFontWeight || 'normal' }}>
+                                    <div style={{ borderRight: '1px solid #334155', borderTop: '1px solid #334155', padding: '2px', textAlign: 'center', fontSize: config.quoteMetaValueFontSize || '8pt', fontWeight: config.quoteMetaValueFontWeight || '600', color: '#0f172a' }}>
                                         {formatDate(quoteData.date, currentLocale)}
                                     </div>
-                                    <div style={{ borderTop: '1px solid #000', padding: '2px', textAlign: 'center', fontSize: config.quoteMetaValueFontSize || '8.5pt', fontWeight: config.quoteMetaValueFontWeight || 'normal' }}>
+                                    <div style={{ borderTop: '1px solid #334155', padding: '2px', textAlign: 'center', fontSize: config.quoteMetaValueFontSize || '8pt', fontWeight: config.quoteMetaValueFontWeight || '600', color: '#0f172a' }}>
                                         {formatDate(quoteData.validUntil, currentLocale)}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div style={{ borderBottom: '2px solid #000', marginBottom: '1rem', paddingBottom: '0.5rem' }}>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8em', color: '#666' }}>
-                                <span>{companyData.name} - {config.title}</span>
+                        <div style={{ borderBottom: '1.5px solid #334155', marginBottom: '0.75rem', paddingBottom: '0.35rem' }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#475569' }}>
+                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -262,42 +320,53 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                     {showSection('customer') && pageIndex === 0 && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                             {/* Customer Box */}
-                            <div style={{ border: '1px solid #000' }}>
-                                <div style={{ background: '#e0e0e0', padding: '4px 8px', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '9pt' }}>
+                            <div className="classic-section-box">
+                                <div className="classic-section-header">
                                     {t.customer} / {t.to}
                                 </div>
-                                <div style={{ padding: '8px' }}>
-                                    {customerData.company && <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '10pt' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
+                                <div style={{ padding: '6px 8px', fontSize: '8.5pt', lineHeight: '1.35' }}>
+                                    {customerData.company && <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '9.5pt', color: '#0f172a' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
                                     {customerData.name && (
-                                        <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
-                                            <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.authorized}: </span>
+                                        <div style={{ fontSize: config.customerLabelFontSize || '8.5pt', color: '#334155' }}>
+                                            <span style={{ fontWeight: config.customerLabelFontWeight || '600', color: '#475569' }}>{t.authorized}: </span>
                                             <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.name, 'customerName')}</span>
                                         </div>
                                     )}
                                     {customerData.phone && (
-                                        <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
-                                            <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.phone}: </span>
+                                        <div style={{ fontSize: config.customerLabelFontSize || '8.5pt', color: '#334155' }}>
+                                            <span style={{ fontWeight: config.customerLabelFontWeight || '600', color: '#475569' }}>{t.phone}: </span>
                                             <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.phone, 'customerPhone')}</span>
                                         </div>
                                     )}
                                     {customerData.email && (
-                                        <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
-                                            <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.email}: </span>
+                                        <div style={{ fontSize: config.customerLabelFontSize || '8.5pt', color: '#334155' }}>
+                                            <span style={{ fontWeight: config.customerLabelFontWeight || '600', color: '#475569' }}>{t.email}: </span>
                                             <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.address && (
+                                        <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
+                                            {customerData.address}
+                                        </div>
+                                    )}
+                                    {(customerData.taxOffice || customerData.taxNumber) && (
+                                        <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
+                                            {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                            {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
                                 </div>
                             </div>
 
                             {/* Quote Details Box */}
-                            <div style={{ border: '1px solid #000' }}>
-                                <div style={{ background: '#e0e0e0', padding: '4px 8px', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '9pt' }}>
+                            <div className="classic-section-box">
+                                <div className="classic-section-header">
                                     {t.details}
                                 </div>
-                                <div style={{ padding: '8px' }}>
-                                    <div style={{ fontWeight: (config.titleFontWeight as React.CSSProperties['fontWeight']) || 'bold', fontSize: (config.titleFontSize as React.CSSProperties['fontSize']) || '10pt', fontFamily: (config.titleFontFamily as string) || 'inherit' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ padding: '6px 8px', fontSize: '8.5pt' }}>
+                                    <div style={{ fontWeight: (config.titleFontWeight as React.CSSProperties['fontWeight']) || 'bold', fontSize: (config.titleFontSize as React.CSSProperties['fontSize']) || '9.5pt', color: '#0f172a' }}>{renderEditable(config.title, 'quoteTitle')}</div>
                                     {config.showNotes && quoteData.notes && (
-                                        <div style={{ marginTop: '4px', fontSize: '8.5pt', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                                        <div style={{ marginTop: '4px', fontSize: '8pt', color: '#475569', fontStyle: 'italic', whiteSpace: 'pre-wrap', lineHeight: '1.3' }}>
                                             {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                         </div>
                                     )}
@@ -315,28 +384,28 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Totals & Notes - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: 'auto' }}>
-                            <div style={{ display: 'flex', marginTop: '8px', pageBreakInside: 'avoid' }}>
+                        <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <div style={{ display: 'flex', marginTop: '6px', gap: '8px' }}>
                                 {/* Left Side: Bank & Notes */}
-                                <div style={{ flex: 1, paddingRight: '8px' }}>
+                                <div style={{ flex: 1 }}>
                                     {config.showBankInfo && (
-                                        <div style={{ border: '1px solid #000', marginBottom: '8px' }}>
-                                            <div style={{ background: '#e0e0e0', padding: '3px 6px', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8.5pt' }}>
+                                        <div className="classic-section-box" style={{ marginBottom: '6px' }}>
+                                            <div className="classic-section-header">
                                                 {t.bankInfo}
                                             </div>
-                                            <div style={{ padding: '6px', fontSize: '8.5pt' }}>
-                                                <div><strong>{bankData.bankName}</strong></div>
-                                                <div>TR {bankData.iban}</div>
-                                                <div>{bankData.accountHolder}</div>
+                                            <div style={{ padding: '5px 8px', fontSize: '8pt', color: '#334155' }}>
+                                                <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>
+                                                <div style={{ fontFamily: 'monospace', fontSize: '8.5pt', fontWeight: 600, color: '#0f172a' }}>TR {bankData.iban}</div>
+                                                <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>
                                             </div>
                                         </div>
                                     )}
                                     {showSection('notes') && config.showTerms && (
-                                        <div style={{ border: '1px solid #000' }}>
-                                            <div style={{ background: '#e0e0e0', padding: '3px 6px', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8.5pt' }}>
+                                        <div className="classic-section-box" style={{ marginBottom: '0' }}>
+                                            <div className="classic-section-header">
                                                 {t.deliveryConditions}
                                             </div>
-                                            <div style={{ padding: '6px', fontSize: '8.5pt', whiteSpace: 'pre-wrap' }}>
+                                            <div style={{ padding: '5px 8px', fontSize: '8pt', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.3' }}>
                                                 {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}
                                             </div>
                                         </div>
@@ -344,34 +413,34 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                                 </div>
 
                                 {/* Right Side: Totals */}
-                                <div style={{ width: '260px' }}>
+                                <div style={{ width: '250px' }}>
                                     {config.showSummary && (
                                         <>
-                                            <table className="classic-table" style={{ marginTop: 0 }}>
+                                            <table className="classic-table" style={{ marginTop: 0, marginBottom: 0 }}>
                                                 <tbody>
                                                     <tr>
-                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9', width: '40%' }}>{t.subtotal}:</td>
-                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(subtotal)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || '600', fontSize: config.summaryLabelFontSize || '8.5pt', background: '#f8fafc', width: '45%', color: '#334155' }}>{t.subtotal}:</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || '8.5pt', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</td>
                                                     </tr>
                                                     {discountAmount > 0 && (
                                                         <tr>
-                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.discount}:</td>
-                                                            <td style={{ textAlign: 'right', color: 'red', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit', fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</td>
+                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || '600', fontSize: config.summaryLabelFontSize || '8.5pt', background: '#f8fafc', color: '#dc2626' }}>{t.discount}:</td>
+                                                            <td style={{ textAlign: 'right', color: '#dc2626', fontWeight: config.summaryValueFontWeight || '600', fontSize: config.summaryValueFontSize || '8.5pt', fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</td>
                                                         </tr>
                                                     )}
                                                     {config.showTableTax && (
                                                         <tr>
-                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.tax}:</td>
-                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(totalTax)}</td>
+                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || '600', fontSize: config.summaryLabelFontSize || '8.5pt', background: '#f8fafc', color: '#334155' }}>{t.tax}:</td>
+                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || '8.5pt', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</td>
                                                         </tr>
                                                     )}
                                                     <tr>
-                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt' }}>{t.generalTotal}:</td>
-                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e2e8f0', fontSize: config.summaryTotalFontSize || '10pt', color: '#0f172a' }}>{t.generalTotal}:</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e2e8f0', fontSize: config.summaryTotalFontSize || '10pt', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(total)}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
-                                            <div style={{ fontSize: '7.5pt', color: '#555', fontStyle: 'italic', marginTop: '4px', textAlign: 'right' }}>
+                                            <div style={{ fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic', marginTop: '4px', textAlign: 'right' }}>
                                                 {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
                                             </div>
                                         </>
@@ -381,29 +450,29 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px', pageBreakInside: 'avoid' }}>
-                                    <div style={{ border: '1px solid #000', minHeight: '55px', position: 'relative' }}>
-                                        <div style={{ background: '#e0e0e0', padding: '3px', textAlign: 'center', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8pt' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                    <div className="classic-section-box" style={{ minHeight: '55px', margin: 0 }}>
+                                        <div className="classic-section-header" style={{ textAlign: 'center', fontSize: '7.5pt' }}>
                                             {t.seller} ({t.deliveredBy})
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
-                                            {signature ? (
-                                                <img src={signature} alt="Signature" style={{ maxHeight: '45px', maxWidth: '100%' }} />
-                                            ) : (
-                                                <span style={{ color: '#888', fontSize: '8pt' }}>{t.signature}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '4px', minHeight: '40px' }}>
+                                            {(signature || companyData.signature) && (
+                                                <img src={(signature || companyData.signature) as string} alt="Signature" style={{ maxHeight: '38px', maxWidth: '100px', objectFit: 'contain' }} />
+                                            )}
+                                            {companyData.stamp && (
+                                                <img src={companyData.stamp} alt="Stamp" style={{ maxHeight: '38px', maxWidth: '75px', objectFit: 'contain', opacity: 0.85 }} />
+                                            )}
+                                            {!signature && !companyData.signature && !companyData.stamp && (
+                                                <span style={{ color: '#94a3b8', fontSize: '7.5pt' }}>{t.signature} / {t.stamp}</span>
                                             )}
                                         </div>
                                     </div>
-                                    <div style={{ border: '1px solid #000', minHeight: '55px', position: 'relative' }}>
-                                        <div style={{ background: '#e0e0e0', padding: '3px', textAlign: 'center', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8pt' }}>
+                                    <div className="classic-section-box" style={{ minHeight: '55px', margin: 0 }}>
+                                        <div className="classic-section-header" style={{ textAlign: 'center', fontSize: '7.5pt' }}>
                                             {t.customer} ({t.receivedBy})
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
-                                            {companyData.stamp ? (
-                                                <img src={companyData.stamp} alt="Stamp" style={{ maxHeight: '45px', maxWidth: '100%' }} />
-                                            ) : (
-                                                <span style={{ color: '#888', fontSize: '8pt' }}>{t.stamp} / {t.signature}</span>
-                                            )}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', minHeight: '40px' }}>
+                                            <span style={{ color: '#94a3b8', fontSize: '7.5pt' }}>{t.approvedBy || 'Kaşe / İmza'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -411,21 +480,21 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
 
                             {/* Custom Footer */}
                             {config.customFooter && (
-                                <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '7.5pt', color: '#444', borderTop: '1px solid #ccc', paddingTop: '4px' }}>
+                                <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '7.5pt', color: '#475569', borderTop: '1px solid #cbd5e1', paddingTop: '4px' }}>
                                     {config.customFooter}
                                 </div>
                             )}
 
-                            {/* Footer - Only Last Page (Clean Single Line) */}
+                            {/* Footer - Only Last Page */}
                             {showSection('footer') && (
-                            <div className="footer" style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #ccc', textAlign: 'center', color: (config.footerColor as string) || '#444', fontSize: '7.5pt' }}>
+                            <div className="footer" style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid #cbd5e1', textAlign: 'center', color: (config.footerColor as string) || '#64748b', fontSize: '7.5pt' }}>
                                 <div>
-                                    <strong>{companyData.name}</strong> • {companyData.address}
+                                    <strong style={{ color: '#0f172a' }}>{companyData.name}</strong> • {companyData.address}
                                     {companyData.phone && <span> • {companyData.phone}</span>}
                                     {companyData.email && <span> • {companyData.email}</span>}
                                     {companyData.website && <span> • {companyData.website}</span>}
                                 </div>
-                                <div style={{ marginTop: '3px', color: '#666' }}>
+                                <div style={{ marginTop: '2px', color: '#94a3b8' }}>
                                     {t.thankYou} • {t.regards}
                                 </div>
                             </div>
@@ -433,7 +502,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
 
                             {/* Page Number */}
                             {config.showPageNumbers && (
-                                <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '7pt', color: '#888', borderTop: '1px solid #eee', paddingTop: '3px' }}>
+                                <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '7pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
                                     <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 </div>

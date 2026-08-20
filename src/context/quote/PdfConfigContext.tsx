@@ -53,6 +53,14 @@ export const PdfConfigProvider = ({ children }: { children: React.ReactNode }) =
         return getDefaultPdfLayout();
     });
 
+    useEffect(() => {
+        try {
+            localStorage.setItem('pdfLayout', JSON.stringify(pdfLayout));
+        } catch (e) {
+            Logger.error('Error saving pdfLayout:', e);
+        }
+    }, [pdfLayout]);
+
     const value = useMemo<PdfConfigContextValue>(() => ({ pdfConfig, setPdfConfig, pdfLayout, setPdfLayout }), [pdfConfig, pdfLayout]);
 
     return <PdfConfigContext.Provider value={value}>{children}</PdfConfigContext.Provider>;

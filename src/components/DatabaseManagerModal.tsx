@@ -13,8 +13,7 @@ const BACKUP_SCHEMA_VERSION = 3;
 
 const ALL_STORES = [
     'customers', 'products', 'quotes', 'templates', 'bankInfo',
-    'settings', 'recycle_bin', 'drafts', 'previewData', 'formState',
-    'company_defaults'
+    'settings', 'recycle_bin', 'drafts', 'previewData', 'formState', 'quoteVersions'
 ];
 
 const EXCLUDED_IMPORT_STORES = ['previewData', 'formState'];
@@ -93,7 +92,25 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
             .map(([store, count]) => `${store}: ${count} kayıt`)
             .join(', ');
 
-        setConfirmDialog({ isOpen: true, title: t('deleteAllData'), message: t('deleteAllDataConfirm').replace('{summary}', summary), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {}))); toast.success(t('allDataCleared')); setClearConfirmText(''); loadStats(); } catch (error) { Logger.error('Error clearing data:', error); toast.error(t('clearDataError')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('deleteAllData'),
+            message: t('deleteAllDataConfirm').replace('{summary}', summary),
+            onConfirm: async () => {
+                setConfirmDialog({ ...confirmDialog, isOpen: false });
+                try {
+                    await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {})));
+                    toast.success(t('allDataCleared'));
+                    setClearConfirmText('');
+                    loadStats();
+                    window.dispatchEvent(new CustomEvent('db-cleared'));
+                } catch (error) {
+                    Logger.error('Error clearing data:', error);
+                    toast.error(t('clearDataError'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const handleExport = async () => {
@@ -213,6 +230,7 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
 
                 toast.success(t('dataImported'));
                 loadStats();
+                window.dispatchEvent(new CustomEvent('db-imported'));
                 toast(t('backupWarning'), { duration: 5000, icon: '⚠️' });
             } catch (error) {
                 Logger.error('Error importing data:', error);

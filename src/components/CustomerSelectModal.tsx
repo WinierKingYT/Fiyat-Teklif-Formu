@@ -52,7 +52,7 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: Custome
 
     const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
     const paginatedCustomers = useMemo(() =>
-        filteredCustomers.slice(0, page * PAGE_SIZE),
+        filteredCustomers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
         [filteredCustomers, page]
     );
 

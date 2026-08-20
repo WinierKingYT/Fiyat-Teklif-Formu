@@ -269,7 +269,7 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
 
     const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
     const paginatedProducts = useMemo(() =>
-        filteredProducts.slice(0, page * PAGE_SIZE),
+        filteredProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
         [filteredProducts, page]
     );
 

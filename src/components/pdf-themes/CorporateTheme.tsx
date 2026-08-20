@@ -6,7 +6,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
     id,
     containerStyles,
     config,
-    color,
+    color = '#1e3a8a',
     companyData,
     quoteData,
     customerData,
@@ -49,152 +49,140 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
             </span>
         );
     };
+
     const corporateStyles = useMemo(() => `
         .corporate-theme-container {
-            font-family: ${config.globalFontFamily || "'Inter', 'Roboto', sans-serif"};
-            line-height: ${config.bodyLineHeight || '1.5'};
-            color: ${config.globalFontColor || '#1f2937'};
-            background: var(--pdf-page-bg, #fff);
+            font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"};
+            line-height: ${config.bodyLineHeight || '1.4'};
+            color: ${config.globalFontColor || '#1e293b'};
+            background: var(--pdf-page-bg, #ffffff) !important;
             font-size: ${config.fontSize || 11}px;
             position: relative;
+            box-sizing: border-box;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        [data-theme="dark"] .corporate-theme-container {
+            background-color: var(--pdf-page-bg, #ffffff) !important;
+            color: ${config.globalFontColor || '#1e293b'} !important;
+        }
+
+        [data-theme="dark"] .corporate-party-card,
+        [data-theme="dark"] .corporate-summary-box,
+        [data-theme="dark"] .corporate-table {
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+        }
+
+        .corporate-theme-container * {
+            box-sizing: border-box;
+        }
+
+        .corporate-top-bar {
+            height: 5px;
+            background: ${color};
+            margin-bottom: 12px;
+            border-radius: 2px;
         }
 
         .corporate-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            padding-bottom: 0.2rem;
-            margin-bottom: 0.4rem;
-            border-bottom: 2px solid ${color};
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            border-bottom: 1.5px solid #e2e8f0;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .corporate-logo-box {
-            width: 120px;
-            height: ${config.logoMaxHeight || 45}px;
+            max-height: ${config.logoMaxHeight || 55}px;
             display: flex;
             align-items: center;
-            justify-content: ${config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start'};
-            margin-bottom: 0.2rem;
+            margin-bottom: 4px;
         }
 
         .corporate-logo-box img {
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 160px;
+            max-height: ${config.logoMaxHeight || 55}px;
             object-fit: contain;
             border-radius: ${config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0'};
         }
 
-        .corporate-title-box {
-            text-align: right;
-        }
-
-        .corporate-title {
-            font-size: ${config.titleFontSize || '1.4rem'} !important;
-            font-weight: ${config.titleFontWeight || '800'} !important;
-            color: ${color};
-            text-transform: uppercase;
-            letter-spacing: -0.02em;
-            margin-bottom: 0.1rem;
-            font-family: ${config.titleFontFamily || 'inherit'};
-        }
-
-        .corporate-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 0.1rem;
-            font-size: ${config.quoteMetaLabelFontSize || '0.75em'};
-            color: #4b5563;
-        }
-
-        .corporate-meta strong {
-            font-weight: ${config.quoteMetaLabelFontWeight || 'bold'};
-        }
-
-        .corporate-meta div {
-            font-size: ${config.quoteMetaValueFontSize || '0.9em'};
-            font-weight: ${config.quoteMetaValueFontWeight || '500'};
-        }
-
-        .corporate-grid {
+        .corporate-parties-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 0.8rem;
+            gap: 12px;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
-        .corporate-card-title {
-            font-size: ${config.customerTitleFontSize || '0.85rem'} !important;
-            font-weight: ${config.customerTitleFontWeight || '700'} !important;
-            color: ${color};
+        .corporate-party-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-top: 3px solid ${color};
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+
+        .corporate-party-label {
+            font-size: 7.5pt;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            margin-bottom: 0.4rem;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 0.2rem;
-        }
-
-        .corporate-info-row {
-            display: flex;
-            margin-bottom: 0.2rem;
-            font-size: 0.85em;
-        }
-
-        .corporate-info-label {
-            width: 90px;
-            font-weight: ${config.customerLabelFontWeight || '600'};
-            font-size: ${config.customerLabelFontSize || 'inherit'};
-            color: #6b7280;
-            flex-shrink: 0;
-        }
-
-        .corporate-info-value {
-            color: #111827;
-            font-weight: ${config.customerValueFontWeight || '500'};
-            font-size: ${config.customerValueFontSize || 'inherit'};
+            color: #64748b;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 2px;
         }
 
         .corporate-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0;
+            margin-bottom: 10px;
         }
 
         .corporate-table th {
             background: ${config.tableHeaderBg || color};
-            color: ${config.tableHeaderColor || 'white'};
-            padding: ${config.tableHeaderPadding || '0.25rem 0.4rem'};
+            color: ${config.tableHeaderColor || '#ffffff'};
+            padding: ${config.tableHeaderPadding || '6px 8px'};
             text-align: left;
-            font-weight: ${config.tableHeaderFontWeight || '600'};
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '0.7em')};
+            font-weight: ${config.tableHeaderFontWeight || '700'};
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8.5pt')};
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.04em;
+            border-top: 1px solid ${color};
+            border-bottom: 1px solid ${color};
         }
 
         .corporate-table td {
-            padding: ${config.tableCellPadding || '0.25rem 0.4rem'};
-            border-bottom: 1px solid #e5e7eb;
-            font-size: ${config.tableBodyFontSize || '0.75em'};
+            padding: ${config.tableCellPadding || '6px 8px'};
+            border-bottom: 1px solid #e2e8f0;
+            font-size: ${config.tableBodyFontSize || '9pt'};
             font-weight: ${config.tableBodyFontWeight || 'normal'};
-            color: #374151;
+            color: #1e293b;
             vertical-align: middle;
         }
 
-        ${config.tableStriped ? `
-        .corporate-table tr:nth-child(even) {
-            background-color: ${config.tableStripedColor || '#f9fafb'};
-        }` : ''}
+        .corporate-table tbody tr:nth-child(even) td {
+            background-color: ${config.tableStripedColor || '#f8fafc'};
+        }
 
         .corporate-item-image {
-            width: 48px;
-            height: 48px;
-            border: 1px solid #e5e7eb;
+            width: 36px;
+            height: 36px;
+            border: 1px solid #e2e8f0;
             border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #fff;
             overflow: hidden;
+            margin: 0 auto;
         }
 
         .corporate-item-image img {
@@ -205,47 +193,48 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
 
         .corporate-summary-section {
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 3rem;
-            margin-top: 2rem;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 12px;
+            margin-top: 8px;
+            margin-bottom: 10px;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .corporate-bank-box {
-            background: #f9fafb;
-            padding: 1.5rem;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
         }
 
         .corporate-totals-box {
-            padding: 1.5rem;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
+            padding: 8px 12px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
         }
 
         .corporate-total-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px dashed #e5e7eb;
-            font-size: ${config.summaryLabelFontSize || '0.95em'};
-            font-weight: ${config.summaryLabelFontWeight || 'normal'};
+            padding: 3px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: ${config.summaryLabelFontSize || '8.5pt'};
+            color: #475569;
         }
 
         .corporate-total-row:last-child {
             border-bottom: none;
-            padding-bottom: 0;
         }
 
         .corporate-grand-total {
-            margin-top: 1rem;
-            padding-top: 1rem;
+            margin-top: 4px;
+            padding-top: 4px;
             border-top: 2px solid ${color};
             font-weight: 800;
-            font-size: ${config.summaryTotalFontSize || '1.2em'};
-            color: ${color};
+            font-size: ${config.summaryTotalFontSize || '10.5pt'};
+            color: #0f172a;
             display: flex;
             justify-content: space-between;
         }
@@ -253,9 +242,11 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
         .corporate-signatures {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            margin-top: 4rem;
+            gap: 16px;
+            margin-top: 10px;
+            margin-bottom: 8px;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .corporate-sig-box {
@@ -263,46 +254,22 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
         }
 
         .corporate-sig-area {
-            height: 100px;
-            border-bottom: 1px solid #d1d5db;
-            margin-bottom: 0.5rem;
+            height: 48px;
+            border-bottom: 1px solid #94a3b8;
+            margin-bottom: 4px;
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            padding-bottom: 10px;
+            padding-bottom: 4px;
+            gap: 10px;
         }
 
         .corporate-sig-label {
-            font-size: 0.85em;
-            color: #6b7280;
-            font-weight: 600;
+            font-size: 7.5pt;
+            color: #64748b;
+            font-weight: 700;
             text-transform: uppercase;
         }
-
-        .corporate-table thead {
-            background: ${config.tableHeaderBg || 'transparent'};
-        }
-
-        ${config.tableStriped ? `
-        .corporate-table tbody tr:nth-child(even) td {
-            background: ${config.tableStripedColor || '#f8fafc'};
-        }
-        ` : ''}
-
-        .corporate-table td {
-            height: ${config.tableRowHeight || 0}px;
-        }
-
-        ${config.tableShowVerticalLines ? `
-        .corporate-table th,
-        .corporate-table td {
-            border-left: 1px solid ${config.tableBorderColor || '#e2e8f0'};
-        }
-        .corporate-table th:first-child,
-        .corporate-table td:first-child {
-            border-left: none;
-        }
-        ` : ''}
     `, [color, config]);
 
     const itemsPerPage = config.itemsPerPage || 14;
@@ -318,46 +285,64 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
         return chunks;
     }, [items, itemsPerPage]);
 
+    const vatBreakdown = useMemo(() => {
+        const map: Record<number, { taxable: number; tax: number }> = {};
+        items.forEach((item) => {
+            const qty = Number(item.quantity) || 0;
+            const price = Number(item.price) || 0;
+            const discRate = Number(item.discountRate) || 0;
+            const rate = Number(item.taxRate) || 0;
+            const lineTotal = qty * price * (1 - discRate / 100);
+            const lineTax = (lineTotal * rate) / 100;
+            if (!map[rate]) {
+                map[rate] = { taxable: 0, tax: 0 };
+            }
+            map[rate].taxable += lineTotal;
+            map[rate].tax += lineTax;
+        });
+        return map;
+    }, [items]);
+
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="corporate-table">
             <thead>
                 <tr>
-                    <th style={{ width: '5%', textAlign: 'center' }}>#</th>
-                    {config.showTableImages && <th style={{ width: '10%' }}>{t.image}</th>}
-                    <th style={{ width: '40%' }}>{config.textItem || t.item}</th>
-                    {config.showTableUnit && <th style={{ width: '10%', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '10%', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '12%', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '8%', textAlign: 'center' }}>{t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '8%', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '15%', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ width: '35px', textAlign: 'center' }}>#</th>
+                    {config.showTableImages && <th style={{ width: '45px', textAlign: 'center' }}>{t.image}</th>}
+                    <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
+                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
+                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
+                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
                 {tableItems.map((item, index) => (
                     <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#9ca3af' }}>{startIndex + index + 1}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}>{startIndex + index + 1}</td>
                         {config.showTableImages && (
                             <td>
                                 <div className="corporate-item-image">
                                     {item.image ? (
                                         <img src={item.image} alt="" />
                                     ) : (
-                                        <span style={{ fontSize: '10px', color: '#9ca3af' }}>-</span>
+                                        <span style={{ fontSize: '9px', color: '#9ca3af' }}>-</span>
                                     )}
                                 </div>
                             </td>
                         )}
                         <td>
-                            <div style={{ fontWeight: '600', color: '#111827' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '0.85em', color: '#6b7280', marginTop: '0.25rem' }}>{item.description}</div>}
+                            <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
+                            {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
                         </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center' }}>{item.unit}</td>}
+                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
                         <td style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
                         <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                        <td style={{ textAlign: 'right', fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -371,12 +356,14 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles?.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '284mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
                     pageBreakAfter: pageIndex < itemChunks.length - 1 ? 'always' : 'auto'
                 }}>
+                    <div className="corporate-top-bar" />
+
                     {/* Watermark - Per Page */}
                     {config.showWatermark && (
                         <div
@@ -402,19 +389,26 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div className="corporate-header" style={{ marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: `2px solid ${color}` }}>
-                            <div className="corporate-header-left">
+                        <div className="corporate-header">
+                            <div className="corporate-header-left" style={{ flex: 1 }}>
                                 {config.showLogo && companyData.logo && (
-                                    <div className="corporate-logo-box" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
-                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
+                                    <div className="corporate-logo-box" style={{ justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
+                                        <img src={companyData.logo} alt="Logo" />
                                     </div>
                                 )}
-                                <div style={{ fontSize: config.headerTitleFontSize || '1.2em', fontWeight: config.headerTitleFontWeight || '800', color: color }}>{renderEditable(companyData.name, 'companyName')}</div>
-                                {companyData.address && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>{companyData.address}</div>}
+                                <div style={{ fontSize: config.headerTitleFontSize || '1.15rem', fontWeight: config.headerTitleFontWeight || '800', color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
+                                {companyData.address && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>{companyData.address}</div>}
+                                <div style={{ fontSize: '8pt', color: '#64748b' }}>{companyData.phone} | {companyData.email}</div>
+                                {(companyData.taxOffice || companyData.taxNumber) && (
+                                    <div style={{ fontSize: '7.5pt', color: '#94a3b8' }}>
+                                        {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                        {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
+                                    </div>
+                                )}
                             </div>
-                            <div className="corporate-title-box" style={{ textAlign: 'right' }}>
-                                <div className="corporate-title" style={{ fontSize: '1.25rem', fontWeight: '800', color: color }}>{renderEditable(config.title, 'quoteTitle')}</div>
-                                <div className="corporate-meta" style={{ marginTop: '0.35rem', display: 'inline-flex', gap: '0.6rem', fontSize: '0.75rem', background: '#f8fafc', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                            <div className="corporate-title-box" style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div className="corporate-title" style={{ fontSize: '1.2rem', fontWeight: '800', color: color, textTransform: 'uppercase' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div className="corporate-meta" style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                     <div><strong>{t.quoteNo}:</strong> #{quoteData.number}</div>
                                     <span>•</span>
                                     <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
@@ -424,9 +418,9 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                             </div>
                         </div>
                     ) : (
-                        <div className="corporate-header" style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '0.75rem', paddingBottom: '0.35rem' }}>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748b' }}>
-                                <span>{companyData.name} - {config.title}</span>
+                        <div className="corporate-header" style={{ borderBottom: '1px solid #e2e8f0', marginBottom: '8px', paddingBottom: '4px' }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b' }}>
+                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -434,34 +428,54 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     ))}
 
-                    {/* Customer Single Box - Only Page 1 */}
+                    {/* Customer & Company Details - 2 Column Cards */}
                     {showSection('customer') && pageIndex === 0 && (
-                        <div className="corporate-grid" style={{ display: 'block', marginBottom: '1rem' }}>
-                            <div className="corporate-card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.75rem 1rem' }}>
-                                <div className="corporate-card-title" style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.35rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem' }}>{t.customer} / {t.to}</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.4rem 1.5rem', alignItems: 'center' }}>
-                                    {customerData.company && <div style={{ gridColumn: '1 / -1', fontWeight: '700', fontSize: '1rem', color: '#0f172a' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
-                                    {customerData.name && (
-                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
-                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
-                                            <span>{renderEditable(customerData.name, 'customerName')}</span>
-                                        </div>
-                                    )}
-                                    {customerData.phone && (
-                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
-                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
-                                            <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
-                                        </div>
-                                    )}
-                                    {customerData.email && (
-                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
-                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
-                                            <span>{renderEditable(customerData.email, 'customerEmail')}</span>
-                                        </div>
-                                    )}
-                                    {customerData.address && (
-                                        <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#64748b' }}>
-                                            <span>{customerData.address}</span>
+                        <div className="corporate-parties-grid">
+                            {/* Customer Card */}
+                            <div className="corporate-party-card">
+                                <div className="corporate-party-label">{t.customer} / {t.to}</div>
+                                {customerData.company && <div style={{ fontWeight: '700', fontSize: '9.5pt', color: '#0f172a', marginBottom: '2px' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
+                                {customerData.name && (
+                                    <div style={{ fontSize: '8.5pt', color: '#334155' }}>
+                                        <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
+                                        <span>{renderEditable(customerData.name, 'customerName')}</span>
+                                    </div>
+                                )}
+                                {customerData.phone && (
+                                    <div style={{ fontSize: '8pt', color: '#334155' }}>
+                                        <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
+                                        <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                    </div>
+                                )}
+                                {customerData.email && (
+                                    <div style={{ fontSize: '8pt', color: '#334155' }}>
+                                        <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
+                                        <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                    </div>
+                                )}
+                                {customerData.address && (
+                                    <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
+                                        {customerData.address}
+                                    </div>
+                                )}
+                                {(customerData.taxOffice || customerData.taxNumber) && (
+                                    <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
+                                        {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                        {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Quote Info Card */}
+                            <div className="corporate-party-card">
+                                <div className="corporate-party-label">{t.details}</div>
+                                <div style={{ fontSize: '8.5pt', color: '#334155', lineHeight: '1.4' }}>
+                                    <div><strong>{t.quoteNo}:</strong> #{quoteData.number}</div>
+                                    <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
+                                    <div><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</div>
+                                    {config.showNotes && quoteData.notes && (
+                                        <div style={{ marginTop: '3px', fontSize: '8pt', color: '#64748b', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                                            {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                         </div>
                                     )}
                                 </div>
@@ -478,29 +492,22 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Summary & Footer - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: 'auto' }}>
+                        <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {config.showSummary && (
-                                <div className="corporate-summary-section" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1.5rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '1rem', marginBottom: '1rem' }}>
+                                <div className="corporate-summary-section">
                                     <div className="corporate-left-col">
                                         {config.showBankInfo && (bankData.bankName || bankData.iban) && (
                                             <div className="corporate-bank-box">
-                                                <div style={{ fontWeight: '700', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem' }}>{t.bankInfo}</div>
-                                                <div style={{ fontSize: '0.78rem', color: '#4b5563', lineHeight: '1.6' }}>
-                                                    {bankData.bankName && <div><strong>{t.bank}:</strong> {bankData.bankName}</div>}
-                                                    {bankData.branch && <div><strong>{t.branch}:</strong> {bankData.branch}</div>}
-                                                    {bankData.iban && <div><strong>{t.iban}:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{bankData.iban}</span></div>}
-                                                    {bankData.accountHolder && <div><strong>{t.accountHolder}:</strong> {bankData.accountHolder}</div>}
+                                                <div style={{ fontWeight: '700', color: '#64748b', marginBottom: '3px', textTransform: 'uppercase', fontSize: '7.5pt', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px' }}>{t.bankInfo}</div>
+                                                <div style={{ fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
+                                                    {bankData.bankName && <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>}
+                                                    {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>}
+                                                    {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                                 </div>
                                             </div>
                                         )}
-                                        {showSection('notes') && config.showNotes && quoteData.notes && (
-                                            <div style={{ marginTop: '0.5rem' }}>
-                                                <div style={{ fontWeight: '700', color: '#64748b', marginBottom: '0.2rem', fontSize: '0.75rem' }}>{t.notes}</div>
-                                                <div style={{ fontSize: '0.78rem', color: '#475569' }}>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
-                                            </div>
-                                        )}
                                         {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
-                                            <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#475569', lineHeight: '1.5' }}>
+                                            <div style={{ marginTop: '4px', fontSize: '7.5pt', color: '#64748b', lineHeight: '1.35' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
                                                 {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'terms', 'textarea')}</div>}
                                                 {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
@@ -508,27 +515,40 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                                         )}
                                     </div>
                                     <div className="corporate-totals-box">
-                                        <div className="corporate-total-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
+                                        <div className="corporate-total-row">
                                             <span>{t.subtotal}</span>
                                             <span style={{ fontWeight: '600', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div className="corporate-total-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#ef4444' }}>
+                                            <div className="corporate-total-row" style={{ color: '#dc2626' }}>
                                                 <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)})</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '600' }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
-                                            <div className="corporate-total-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
-                                                <span>{t.tax}</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
-                                            </div>
+                                            <>
+                                                {Object.keys(vatBreakdown).length > 1 ? (
+                                                    Object.entries(vatBreakdown)
+                                                        .filter(([_, data]) => data.tax > 0)
+                                                        .map(([rate, data]) => (
+                                                            <div key={rate} className="corporate-total-row" style={{ fontSize: '7.5pt' }}>
+                                                                <span>{t.tax} (%{rate})</span>
+                                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
+                                                            </div>
+                                                        ))
+                                                ) : (
+                                                    <div className="corporate-total-row">
+                                                        <span>{t.tax}</span>
+                                                        <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
-                                        <div className="corporate-grand-total" style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0f172a', marginTop: '0.35rem', paddingTop: '0.35rem', color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>
+                                        <div className="corporate-grand-total">
                                             <span>{t.generalTotal}</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'right' }}>
+                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
                                             {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
                                         </div>
                                     </div>
@@ -537,36 +557,36 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="corporate-signatures" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem', marginBottom: '1rem' }}>
-                                    <div className="corporate-sig-box" style={{ textAlign: 'center' }}>
-                                        <div className="corporate-sig-area" style={{ minHeight: '50px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '1rem', borderBottom: '1px solid #94a3b8', paddingBottom: '4px' }}>
+                                <div className="corporate-signatures">
+                                    <div className="corporate-sig-box">
+                                        <div className="corporate-sig-area">
                                             {(signature || companyData.signature) && (
-                                                <img src={(signature || companyData.signature) as string} alt="" style={{ maxHeight: '45px', maxWidth: '120px', objectFit: 'contain' }} />
+                                                <img src={(signature || companyData.signature) as string} alt="" style={{ maxHeight: '38px', maxWidth: '110px', objectFit: 'contain' }} />
                                             )}
                                             {companyData.stamp && (
-                                                <img src={companyData.stamp} alt="" style={{ maxHeight: '45px', maxWidth: '90px', objectFit: 'contain', opacity: 0.85 }} />
+                                                <img src={companyData.stamp} alt="" style={{ maxHeight: '38px', maxWidth: '80px', objectFit: 'contain', opacity: 0.85 }} />
                                             )}
                                         </div>
-                                        <div className="corporate-sig-label" style={{ paddingTop: '0.35rem', fontSize: '0.78rem', fontWeight: '600', color: '#0f172a' }}>{t.seller} (Kaşe & İmza)</div>
+                                        <div className="corporate-sig-label">{t.seller} ({t.deliveredBy})</div>
                                     </div>
-                                    <div className="corporate-sig-box" style={{ textAlign: 'center' }}>
-                                        <div className="corporate-sig-area" style={{ minHeight: '50px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', borderBottom: '1px solid #94a3b8', paddingBottom: '4px' }}>
+                                    <div className="corporate-sig-box">
+                                        <div className="corporate-sig-area">
                                         </div>
-                                        <div className="corporate-sig-label" style={{ paddingTop: '0.35rem', fontSize: '0.78rem', fontWeight: '600', color: '#0f172a' }}>{t.customer} (Onay / İmza)</div>
+                                        <div className="corporate-sig-label">{t.customer} ({t.receivedBy})</div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Footer - Only Last Page (Clean Single Line) */}
+                            {/* Footer */}
                             {showSection('footer') && (
-                            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>
+                            <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '7.5pt', color: '#64748b' }}>
                                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                    <span><strong>{companyData.name}</strong></span>
+                                    <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
                                     {companyData.phone && <span>• {companyData.phone}</span>}
                                     {companyData.email && <span>• {companyData.email}</span>}
                                     {companyData.website && <span>• {companyData.website}</span>}
                                 </div>
-                                <div style={{ marginTop: '0.25rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                                <div style={{ marginTop: '2px', fontSize: '7pt', color: '#94a3b8' }}>
                                     {t.thankYou} • {t.regards}
                                 </div>
                             </div>
@@ -574,14 +594,14 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
 
                             {/* Custom Footer */}
                             {config.customFooter && (
-                                <div style={{ marginTop: '0.25rem', textAlign: 'center', fontSize: '0.65rem', color: '#6b7280' }}>
+                                <div style={{ marginTop: '2px', textAlign: 'center', fontSize: '6.5pt', color: '#64748b' }}>
                                     {config.customFooter}
                                 </div>
                             )}
 
                             {/* Page Number */}
                             {config.showPageNumbers && (
-                                <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', borderTop: '1px solid #f3f4f6', paddingTop: '0.25rem' }}>
+                                <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
                                     <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 </div>

@@ -40,7 +40,6 @@ export interface QuoteBuilderProps {
   onOpenDatabaseManager: () => void;
   onOpenBankManager: () => void;
   onOpenRecycleBin: () => void;
-  onOpenAnalytics: () => void;
 }
 
 export const QuoteBuilder = React.memo(({
@@ -75,7 +74,7 @@ export const QuoteBuilder = React.memo(({
     return () => document.removeEventListener('open-history-modal', handleOpenHistory);
   }, []);
 
-  const handleSaveShortcut = () => { toast.success('Teklif kaydediliyor...'); saveQuote(); };
+  const handleSaveShortcut = () => { saveQuote(); };
   const handlePdfShortcut = () => { setIsLivePreviewMode(prev => !prev); };
   const handleNewQuote = async () => { addTab(); };
 
@@ -95,12 +94,16 @@ export const QuoteBuilder = React.memo(({
     onRedo: redo
   });
 
-  const handleCustomerSelect = (customer: Partial<Customer>) => {
+  const handleCustomerSelect = (customer: Partial<Customer> & { taxOffice?: string; taxNumber?: string; taxNo?: string }) => {
     if (customer.name !== undefined) updateCustomerData('name', customer.name);
     if (customer.company !== undefined) updateCustomerData('company', customer.company);
     if (customer.email !== undefined) updateCustomerData('email', customer.email);
     if (customer.phone !== undefined) updateCustomerData('phone', customer.phone);
     if (customer.address !== undefined) updateCustomerData('address', customer.address);
+    if (customer.taxOffice !== undefined) updateCustomerData('taxOffice', customer.taxOffice);
+    if (customer.taxNumber !== undefined || customer.taxNo !== undefined) {
+      updateCustomerData('taxNumber', customer.taxNumber || customer.taxNo || '');
+    }
     toast.success('Müşteri bilgileri yüklendi');
   };
 
@@ -113,7 +116,7 @@ export const QuoteBuilder = React.memo(({
       quantity: 1,
       unit: product.unit || 'Adet',
       price: Number(product.price) || 0,
-      taxRate: product.taxRate || 20,
+      taxRate: product.taxRate !== undefined && product.taxRate !== null && !isNaN(Number(product.taxRate)) ? Number(product.taxRate) : 20,
       discountRate: 0,
       total: Number(product.price) || 0,
       image: product.image ?? undefined
@@ -332,6 +335,8 @@ export const QuoteBuilder = React.memo(({
               discount={discount}
               onDiscountChange={setDiscount}
               currency={quoteData.currency}
+              showAmountInWords={quoteData.showAmountInWords}
+              onToggleAmountInWords={(val) => updateQuoteData('showAmountInWords', val)}
               onSaveQuote={saveQuote}
               onPreviewPdf={() => setIsLivePreviewMode(true)}
             />

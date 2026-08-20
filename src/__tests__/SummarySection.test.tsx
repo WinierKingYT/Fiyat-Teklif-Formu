@@ -3,14 +3,6 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import SummarySection from '@/components/SummarySection';
 
-vi.mock('@/utils/exchangeRates', () => ({
-    getExchangeRates: vi.fn().mockResolvedValue({ TRY: 1, USD: 33.5, EUR: 36.2 }),
-    CURRENCIES: [
-        { code: 'TRY', name: 'Türk Lirası', symbol: '₺' },
-        { code: 'USD', name: 'ABD Doları', symbol: '$' },
-        { code: 'EUR', name: 'Euro', symbol: '€' },
-    ],
-}));
 
 // subtotal 250, line discount 5, net 245, global 10% => 24.5
 // tax: {20: 36, 10: 4.05}, total 40.05, grand total 260.55

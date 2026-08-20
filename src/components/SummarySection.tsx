@@ -11,6 +11,8 @@ interface SummarySectionProps {
     onDiscountChange: (discount: Discount) => void;
     currency?: string;
     language?: string;
+    showAmountInWords?: boolean;
+    onToggleAmountInWords?: (show: boolean) => void;
     onSaveQuote?: () => void;
     onPreviewPdf?: () => void;
     isSaving?: boolean;
@@ -22,13 +24,22 @@ const SummarySection = React.memo(({
     onDiscountChange,
     currency = 'TRY',
     language = 'tr',
+    showAmountInWords,
+    onToggleAmountInWords,
     onSaveQuote,
     onPreviewPdf,
     isSaving = false
 }: SummarySectionProps) => {
     const { t } = useTranslation(language);
     const calc = useMemo(() => calculateQuoteTotals(items, discount, { currency }), [items, discount, currency]);
-    const [showWords, setShowWords] = useState(false);
+    const [localShowWords, setLocalShowWords] = useState(showAmountInWords ?? false);
+    const isShowingWords = showAmountInWords !== undefined ? showAmountInWords : localShowWords;
+
+    const handleToggleWords = () => {
+        const next = !isShowingWords;
+        setLocalShowWords(next);
+        if (onToggleAmountInWords) onToggleAmountInWords(next);
+    };
 
     const amountInWords = useMemo(() => numberToWordsTurkish(calc.grandTotal, currency), [calc.grandTotal, currency]);
 
@@ -137,13 +148,13 @@ const SummarySection = React.memo(({
                     <div className="pt-1">
                         <button
                             type="button"
-                            onClick={() => setShowWords(prev => !prev)}
+                            onClick={handleToggleWords}
                             className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                         >
                             <FileText size={12} />
-                            <span>{showWords ? 'Yazıyla Tutarı Gizle' : 'Yazıyla Tutar Ekle'}</span>
+                            <span>{isShowingWords ? 'Yazıyla Tutarı Gizle' : 'Yazıyla Tutar Ekle'}</span>
                         </button>
-                        {showWords && (
+                        {isShowingWords && (
                             <div className="mt-1.5 p-2 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded text-xs font-mono text-[var(--color-text-secondary)] italic leading-relaxed select-all">
                                 {amountInWords}
                             </div>
