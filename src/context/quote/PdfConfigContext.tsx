@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import Logger from '../../utils/logger';
-import { getPdfMetadata } from '../../utils/pdfGenerator';
-import type { PdfConfig, PdfLayoutItem } from './types';
-import { getDefaultPdfConfig, getDefaultPdfLayout } from './initialState';
-import { useQuoteData } from './QuoteDataContext';
+import { getDefaultPdfConfig, getDefaultPdfLayout } from '@/context/quote/initialState';
+import { useQuoteData } from '@/context/quote/QuoteDataContext';
+import Logger from '@/utils/logger';
+import { getPdfMetadata } from '@/utils/pdfGenerator';
+import type { PdfConfig, PdfLayoutItem } from '@/context/quote/types';
 
 export interface PdfConfigContextValue {
     pdfConfig: PdfConfig;
@@ -37,7 +37,7 @@ export const PdfConfigProvider = ({ children }: { children: React.ReactNode }) =
         const localizedDefault = getPdfMetadata(language).title.toUpperCase();
         const knownDefaults = ['FİYAT TEKLİFİ', 'PRICE QUOTE', 'PREISANGEBOT'];
         setPdfConfig(prev =>
-            knownDefaults.includes(prev.title) && prev.title !== localizedDefault
+            prev.title && knownDefaults.includes(prev.title) && prev.title !== localizedDefault
                 ? { ...prev, title: localizedDefault }
                 : prev
         );

@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from 'react';
-import { useIndexedDB } from '../../hooks/useIndexedDB';
-import type { IndexedDBManager } from './types';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import type { IndexedDBManager } from '@/context/quote/types';
 
 interface DatabaseContextValue {
     db: IndexedDBManager;

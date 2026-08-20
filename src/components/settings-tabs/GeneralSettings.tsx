@@ -1,7 +1,7 @@
-﻿import React from "react";
-import { Save, Settings2, Check } from "lucide-react";
-import { useTranslation } from "../../hooks/useTranslation";
-import { useQuoteData } from "../../context/QuoteContext";
+﻿import { Save, Settings2, Check } from "lucide-react";
+import React from "react";
+import { useQuoteData } from '@/context/QuoteContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface GeneralSettingsProps {
   viewMode: string;

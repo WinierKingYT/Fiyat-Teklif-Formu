@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { useTab } from '../context/QuoteContext';
 import { X, Plus, FileText } from 'lucide-react';
+import React, { useRef } from 'react';
+import { useTab } from '@/context/QuoteContext';
 
 const TabBar = React.memo(() => {
     const { tabs, activeTabId, switchTab, closeTab, addTab } = useTab();
@@ -24,7 +24,7 @@ const TabBar = React.memo(() => {
         <div
             role="tablist"
             aria-label="Teklif sekmeleri"
-            className="flex items-center gap-0.5 px-3 pt-1.5 bg-[var(--color-bg-muted)] border-b border-[var(--color-border)] overflow-x-auto"
+            className="flex items-center gap-1 overflow-x-auto py-0.5"
             onKeyDown={(e) => {
                 const activeIndex = tabs.findIndex(tab => tab.id === activeTabId);
                 if (activeIndex >= 0) handleKeyDown(e, activeIndex);
@@ -35,9 +35,9 @@ const TabBar = React.memo(() => {
                 return (
                     <div
                         key={tab.id}
-                        className={`group flex items-center px-3 py-1.5 rounded-t-[var(--radius)] select-none transition-colors min-w-[120px] max-w-[180px] text-sm border-t border-x border-[var(--color-border)] -mb-px ${
+                        className={`group flex items-center px-2.5 py-1 rounded-[var(--radius)] select-none transition-all max-w-[170px] text-xs border ${
                             isActive
-                                ? 'bg-[var(--color-bg-card)] text-[var(--color-text)] font-medium z-10'
+                                ? 'bg-[var(--color-bg-card)] text-[var(--color-text)] font-semibold border-[var(--color-border)] shadow-xs'
                                 : 'bg-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] border-transparent'
                         }`}
                     >
@@ -48,34 +48,34 @@ const TabBar = React.memo(() => {
                             aria-selected={isActive}
                             tabIndex={isActive ? 0 : -1}
                             ref={el => { tabRefs.current[index] = el; }}
-                            className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+                            className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer text-left"
                             onClick={() => switchTab(tab.id)}
                         >
-                            <FileText size={13} className={isActive ? 'text-[var(--color-primary)] shrink-0' : 'shrink-0'} />
+                            <FileText size={12} className={isActive ? 'text-[var(--color-primary)] shrink-0' : 'text-[var(--color-text-muted)] shrink-0'} />
                             <span className="truncate text-xs flex-1">{tab.title || 'Yeni Teklif'}</span>
                         </button>
-                        <button
-                            type="button"
-                            className={`p-0.5 rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-[var(--color-bg-hover)] transition-all ${
-                                tabs.length === 1 ? 'hidden' : ''
-                            }`}
-                            onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
-                            title="Kapat"
-                            aria-label={`${tab.title || 'Yeni Teklif'} sekmesini kapat`}
-                        >
-                            <X size={11} />
-                        </button>
+                        {tabs.length > 1 && (
+                            <button
+                                type="button"
+                                className="p-0.5 ml-1 rounded-full opacity-60 hover:opacity-100 hover:bg-[var(--color-bg-hover)] transition-all"
+                                onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
+                                title="Kapat"
+                                aria-label={`${tab.title || 'Yeni Teklif'} sekmesini kapat`}
+                            >
+                                <X size={10} />
+                            </button>
+                        )}
                     </div>
                 );
             })}
             <button
                 type="button"
                 onClick={addTab}
-                className="ml-0.5 p-1 rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors"
-                title="Yeni Sekme"
+                className="p-1 rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                title="Yeni Teklif Sekmesi"
                 aria-label="Yeni Sekme"
             >
-                <Plus size={16} />
+                <Plus size={14} />
             </button>
         </div>
     );

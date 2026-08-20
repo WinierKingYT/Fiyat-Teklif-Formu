@@ -10,7 +10,7 @@ import {
   getDefaultTabs,
   getDefaultPdfConfig,
   getDefaultPdfLayout,
-} from '../context/quote/initialState';
+} from '@/context/quote/initialState';
 
 describe('getInitialQuoteData', () => {
   it('should return default quote data', () => {

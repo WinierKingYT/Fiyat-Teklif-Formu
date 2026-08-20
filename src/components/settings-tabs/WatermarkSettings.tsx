@@ -1,8 +1,8 @@
-import React from "react";
 import { Settings2 } from "lucide-react";
-import { PdfConfig } from "../../context/quote/types";
-import { useTranslation } from "../../hooks/useTranslation";
-import { useQuoteData } from "../../context/QuoteContext";
+import React from "react";
+import { PdfConfig } from '@/context/quote/types';
+import { useQuoteData } from '@/context/QuoteContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface WatermarkSettingsProps {
   pdfConfig: PdfConfig;
@@ -53,7 +53,21 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
           {pdfConfig.showWatermark && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">{t('watermarkTextLabel')}</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="form-label mb-0">{t('watermarkTextLabel')}</label>
+                  <div className="flex gap-1">
+                    {['TASLAK', 'ÖN TEKLİF', 'GİZLİ', 'ONAYLANDI'].map((preset) => (
+                      <button
+                        type="button"
+                        key={preset}
+                        onClick={() => setPdfConfig(prev => ({ ...prev, watermarkText: preset }))}
+                        className="px-1.5 py-0.5 text-[10px] rounded bg-[var(--color-bg-muted)] hover:bg-[var(--color-primary-muted)] hover:text-[var(--color-primary)] text-[var(--color-text-secondary)] font-semibold border border-[var(--color-border)] transition-colors"
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <input
                   type="text"
                   className="form-control"
@@ -91,7 +105,7 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
                     {t('watermarkOpacityLabel')}
                   </label>
                   <span className="text-sm font-bold text-[var(--color-primary)]">
-                    %{Math.round(pdfConfig.watermarkOpacity * 100)}
+                    %{Math.round((pdfConfig.watermarkOpacity ?? 0.15) * 100)}
                   </span>
                 </div>
                 <input
@@ -99,7 +113,7 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
                   min="0.05"
                   max="1"
                   step="0.05"
-                  value={pdfConfig.watermarkOpacity}
+                  value={pdfConfig.watermarkOpacity ?? 0.15}
                   onChange={(e) =>
                     setPdfConfig({
                       ...pdfConfig,

@@ -1,5 +1,5 @@
 // Image Optimizer Utility
-import Logger from './logger';
+import Logger from '@/utils/logger';
 
 class ImageOptimizer {
     private maxWidth: number;

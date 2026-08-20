@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getLocalDateString, getLocalDateTimeString, formatLocalDate } from '../utils/dateUtils';
+import { getLocalDateString, getLocalDateTimeString, formatLocalDate } from '@/utils/dateUtils';
 
 describe('dateUtils', () => {
   describe('getLocalDateString', () => {

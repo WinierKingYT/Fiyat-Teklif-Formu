@@ -1,14 +1,14 @@
+import { Trash2, Save, FileInput, Download, Upload } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect } from 'react';
-import Modal from './Modal';
-import ConfirmDialog from './ConfirmDialog';
-import { useIndexedDB } from '../hooks/useIndexedDB';
-import { Trash2, Save, FileInput, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Logger from '../utils/logger';
-import { useQuoteData } from '../context/QuoteContext';
-import { useTranslation } from '../hooks/useTranslation';
-import type { QuoteData, CustomerData, CompanyData, QuoteItem, Discount } from '../context/quote/types';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import Modal from '@/components/Modal';
+import { useQuoteData } from '@/context/QuoteContext';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import Logger from '@/utils/logger';
+import type { QuoteData, CustomerData, CompanyData, QuoteItem, Discount } from '@/context/quote/types';
 
 interface SavedTemplateData {
     quoteData?: QuoteData;
@@ -26,7 +26,13 @@ interface SavedTemplate {
     data: SavedTemplateData;
 }
 
-const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
+interface TemplateManagerModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    language?: string;
+}
+
+const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onClose, language = 'tr' }) => {
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const {
@@ -36,7 +42,13 @@ const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
 
     const [templates, setTemplates] = useState<SavedTemplate[]>([]);
     const [templateName, setTemplateName] = useState('');
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        variant: 'info' | 'warning' | 'danger';
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
     useEffect(() => {
         if (isOpen && db) loadTemplates();
@@ -88,13 +100,13 @@ const TemplateManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         }
     };
 
-    const handleImportTemplate = (e) => {
-        const file = e.target.files[0];
+    const handleImportTemplate = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = async (e) => {
+        reader.onload = async (event) => {
             try {
-                const importedTemplate = JSON.parse((e.target as FileReader).result as string);
+                const importedTemplate = JSON.parse((event.target as FileReader).result as string);
                 if (!importedTemplate.data || !importedTemplate.name) throw new Error('Invalid template format');
                 const newTemplate = { ...importedTemplate, id: Date.now(), name: `${importedTemplate.name} (İçe Aktarıldı)` };
                 await db.add('templates', newTemplate);

@@ -1,10 +1,9 @@
-﻿import React from 'react';
-import { useMemo, useState, useEffect } from 'react';
-import { Calculator, Percent, Receipt, RefreshCw } from 'lucide-react';
-import { calculateQuoteTotals, formatCurrency } from '../utils/calculations';
-import { getExchangeRates, CURRENCIES } from '../utils/exchangeRates';
-import { useTranslation } from '../hooks/useTranslation';
-import type { QuoteItem, Discount } from '../context/quote/types';
+import { Calculator, Receipt, Save, FileText } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from '@/hooks/useTranslation';
+import { calculateQuoteTotals, formatCurrency } from '@/utils/calculations';
+import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import type { QuoteItem, Discount } from '@/context/quote/types';
 
 interface SummarySectionProps {
     items: QuoteItem[];
@@ -12,39 +11,34 @@ interface SummarySectionProps {
     onDiscountChange: (discount: Discount) => void;
     currency?: string;
     language?: string;
+    onSaveQuote?: () => void;
+    onPreviewPdf?: () => void;
+    isSaving?: boolean;
 }
 
-const SummarySection = React.memo(({ items, discount = { type: 'percentage', value: 0 }, onDiscountChange, currency = 'TRY', language = 'tr' }: SummarySectionProps) => {
+const SummarySection = React.memo(({
+    items,
+    discount = { type: 'percentage', value: 0 },
+    onDiscountChange,
+    currency = 'TRY',
+    language = 'tr',
+    onSaveQuote,
+    onPreviewPdf,
+    isSaving = false
+}: SummarySectionProps) => {
     const { t } = useTranslation(language);
     const calc = useMemo(() => calculateQuoteTotals(items, discount, { currency }), [items, discount, currency]);
+    const [showWords, setShowWords] = useState(false);
 
-    const [rates, setRates] = useState<Record<string, number> | null>(null);
-    const [showConversion, setShowConversion] = useState(false);
-    const [targetCurrency, setTargetCurrency] = useState('USD');
+    const amountInWords = useMemo(() => numberToWordsTurkish(calc.grandTotal, currency), [calc.grandTotal, currency]);
 
-    useEffect(() => {
-        if (showConversion && currency !== targetCurrency) {
-            getExchangeRates().then(setRates).catch(() => {});
-        }
-    }, [showConversion, currency, targetCurrency]);
-
-    const convertedAmount = useMemo(() => {
-        if (!rates || currency === targetCurrency) return null;
-        const fromRate = rates[currency];
-        const toRate = rates[targetCurrency];
-        if (!fromRate || !toRate) return null;
-        const amountInTRY = calc.grandTotal / fromRate;
-        return amountInTRY * toRate;
-    }, [calc.grandTotal, rates, currency, targetCurrency]);
-
-    const handleDiscountValueChange = (e) => {
+    const handleDiscountValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseFloat(e.target.value) || 0;
         onDiscountChange({ ...discount, value });
     };
 
-    const handleDiscountTypeChange = (e) => {
-        const type = e.target.value;
-        onDiscountChange({ ...discount, type });
+    const handleDiscountTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        onDiscountChange({ ...discount, type: e.target.value as 'percentage' | 'fixed' });
     };
 
     if (!items?.length) return null;
@@ -60,74 +54,77 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                 </div>
             </div>
             <div className="card-body">
-                <div className="space-y-2.5">
-                    <div className="flex items-center justify-between py-1.5">
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between py-1">
                         <span className="text-sm text-[var(--color-text-secondary)]">{t('subtotal')}</span>
                         <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.subtotal)}</span>
                     </div>
 
                     {calc.lineDiscountTotal > 0 && (
-                        <div className="flex items-center justify-between py-1.5">
-                            <span className="text-sm text-[var(--color-text-secondary)]">{t('lineDiscount')}</span>
-                            <span className="text-sm font-semibold text-[var(--color-error)]">-{formatCurrency(calc.lineDiscountTotal)}</span>
+                        <div className="flex items-center justify-between py-1 text-[var(--color-warning)]">
+                            <span className="text-sm">{t('lineDiscounts')}</span>
+                            <span className="text-sm font-semibold">-{formatCurrency(calc.lineDiscountTotal)}</span>
                         </div>
                     )}
 
-                    <div className="border-t border-dashed border-[var(--color-border)] my-1.5"></div>
+                    <div className="border-t border-[var(--color-border)] my-1"></div>
 
-                    <div className="flex items-center justify-between py-1.5">
-                        <span className="text-sm font-semibold text-[var(--color-text)]">{t('netTotal')}</span>
-                        <span className="text-sm font-bold text-[var(--color-text)]">{formatCurrency(calc.netTotal)}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between py-1.5">
+                    {/* General Discount */}
+                    <div className="flex items-center justify-between py-1">
                         <div className="flex items-center gap-2">
-                            <Percent size={14} className="text-[var(--color-text-muted)]" />
-                            <span className="text-sm text-[var(--color-text-secondary)]">{t('generalDiscount')}</span>
-                            <div className="flex items-center gap-1">
-                                <select
-                                    className="form-control py-1 px-2 text-xs w-16"
-                                    value={discount.type}
-                                    onChange={handleDiscountTypeChange}
-                                >
-                                    <option value="percentage">%</option>
-                                    <option value="fixed">{t('amount')}</option>
-                                </select>
+                            <span className="text-sm text-[var(--color-text-secondary)]">{t('discount')}</span>
+                            <div className="inline-flex items-center border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden bg-[var(--color-bg-card)] focus-within:border-[var(--color-primary)]">
                                 <input
                                     type="number"
-                                    className="form-control py-1 px-2 w-20 text-right text-xs"
+                                    className="w-16 py-1 px-2 text-right text-xs bg-transparent border-0 outline-none"
                                     min="0"
                                     step={discount.type === 'percentage' ? "1" : "0.01"}
                                     value={discount.value}
                                     onChange={handleDiscountValueChange}
                                     aria-label={t('generalDiscount')}
                                 />
+                                <select
+                                    className="py-1 px-1.5 text-xs bg-[var(--color-bg-muted)] border-0 border-l border-[var(--color-border)] outline-none text-[var(--color-text-secondary)] font-semibold cursor-pointer"
+                                    value={discount.type}
+                                    onChange={handleDiscountTypeChange}
+                                    aria-label={t('discountType')}
+                                >
+                                    <option value="percentage">%</option>
+                                    <option value="fixed">{currency}</option>
+                                </select>
                             </div>
                         </div>
                         <span className="text-sm font-semibold text-[var(--color-error)]">-{formatCurrency(calc.globalDiscountAmount)}</span>
                     </div>
 
-                    <div className="border-t border-dashed border-[var(--color-border)] my-1.5"></div>
-
-                    {Object.entries(calc.taxBreakdown).length > 0 && (
+                    {/* VAT Section */}
+                    {Object.keys(calc.taxBreakdown).length > 1 ? (
                         <>
-                            <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className="flex items-center gap-1.5 mb-1">
                                 <Receipt size={13} className="text-[var(--color-text-muted)]" />
                                 <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">{t('vatBreakdown')}</span>
                             </div>
                             {Object.entries(calc.taxBreakdown).map(([rate, amount]) => (
-                                <div className="flex items-center justify-between py-1" key={rate}>
-                                    <span className="text-sm text-[var(--color-text-secondary)] ml-4">{t('vatRateDisplay').replace('{rate}', rate)}</span>
-                                    <span className="text-sm text-[var(--color-text)]">{formatCurrency(amount)}</span>
+                                <div className="flex items-center justify-between py-0.5" key={rate}>
+                                    <span className="text-xs text-[var(--color-text-secondary)] ml-3">{t('vatRateDisplay').replace('{rate}', rate)}</span>
+                                    <span className="text-xs font-medium text-[var(--color-text)]">{formatCurrency(amount)}</span>
                                 </div>
                             ))}
+                            <div className="flex items-center justify-between py-1 border-t border-[var(--color-border)]/50 mt-1">
+                                <span className="text-sm text-[var(--color-text-secondary)]">{t('totalVat')}</span>
+                                <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal)}</span>
+                            </div>
                         </>
+                    ) : (
+                        <div className="flex items-center justify-between py-1">
+                            <span className="text-sm text-[var(--color-text-secondary)]">
+                                {Object.keys(calc.taxBreakdown).length === 1
+                                    ? `KDV (%${Object.keys(calc.taxBreakdown)[0]})`
+                                    : t('totalVat')}
+                            </span>
+                            <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal)}</span>
+                        </div>
                     )}
-
-                    <div className="flex items-center justify-between py-1.5">
-                        <span className="text-sm text-[var(--color-text-secondary)]">{t('totalVat')}</span>
-                        <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal)}</span>
-                    </div>
 
                     <div className="border-t-2 border-[var(--color-primary)]/20 my-2"></div>
 
@@ -136,34 +133,50 @@ const SummarySection = React.memo(({ items, discount = { type: 'percentage', val
                         <span className="text-lg font-extrabold text-[var(--color-primary)]">{formatCurrency(calc.grandTotal)}</span>
                     </div>
 
-                    {showConversion && convertedAmount !== null && currency !== targetCurrency && (
-                        <div className="flex items-center justify-between py-1.5 border-t border-[var(--color-border)] mt-1">
-                            <span className="text-xs text-[var(--color-text-muted)]">
-                                {t('currencyEquivalent').replace('{currency}', targetCurrency)}
-                            </span>
-                            <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
-                                {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: targetCurrency }).format(convertedAmount)}
-                            </span>
-                        </div>
-                    )}
-
-                    <button type="button"
-                        onClick={() => setShowConversion(!showConversion)}
-                        className="flex items-center gap-1.5 text-xs text-[var(--color-info)] hover:text-[var(--color-info)]/80 mt-2 transition-colors"
-                    >
-                        <RefreshCw size={12} />
-                        {showConversion ? t('hideConverter') : t('showConverter')}
-                    </button>
-                    {showConversion && (
-                        <select
-                            value={targetCurrency}
-                            onChange={(e) => setTargetCurrency(e.target.value)}
-                            className="w-full mt-1.5 px-2 py-1 text-xs border border-[var(--color-border)] rounded"
+                    {/* Amount in Words */}
+                    <div className="pt-1">
+                        <button
+                            type="button"
+                            onClick={() => setShowWords(prev => !prev)}
+                            className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                         >
-                            {CURRENCIES.filter(c => c.code !== currency).map(c => (
-                                <option key={c.code} value={c.code}>{c.symbol} {c.code} - {c.name}</option>
-                            ))}
-                        </select>
+                            <FileText size={12} />
+                            <span>{showWords ? 'Yazıyla Tutarı Gizle' : 'Yazıyla Tutar Ekle'}</span>
+                        </button>
+                        {showWords && (
+                            <div className="mt-1.5 p-2 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded text-xs font-mono text-[var(--color-text-secondary)] italic leading-relaxed select-all">
+                                {amountInWords}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Prominent Action Buttons (CTAs) */}
+                    {(onSaveQuote || onPreviewPdf) && (
+                        <div className="pt-2 space-y-2 border-t border-[var(--color-border)]">
+                            {onPreviewPdf && (
+                                <button
+                                    type="button"
+                                    onClick={onPreviewPdf}
+                                    className="w-full btn btn-primary flex items-center justify-center gap-2 py-2.5 font-semibold text-sm shadow-sm"
+                                    title="PDF Önizle & İndir (Ctrl+P)"
+                                >
+                                    <FileText size={16} />
+                                    <span>PDF Önizle & İndir</span>
+                                </button>
+                            )}
+                            {onSaveQuote && (
+                                <button
+                                    type="button"
+                                    onClick={onSaveQuote}
+                                    disabled={isSaving}
+                                    className="w-full btn btn-outline flex items-center justify-center gap-2 py-2 text-xs font-medium text-[var(--color-text)]"
+                                    title="Teklifi Kaydet (Ctrl+S)"
+                                >
+                                    <Save size={14} className="text-[var(--color-info)]" />
+                                    <span>{isSaving ? 'Kaydediliyor...' : 'Teklifi Kaydet'}</span>
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

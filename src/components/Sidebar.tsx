@@ -1,24 +1,27 @@
-import React from 'react';
 import {
   FileText, PlusCircle, List,
   Users, Package, LayoutTemplate, Database, Landmark, Trash2, TrendingUp,
   Settings, X
 } from 'lucide-react';
-import { useTranslation } from '../hooks/useTranslation';
+import React from 'react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 const navItems = [
   { id: 'builder', icon: PlusCircle, labelKey: 'newQuote' },
   { id: 'history', icon: List, labelKey: 'myQuotes' },
 ];
 
-const managerItems = [
-  { icon: Users, labelKey: 'customerManager' },
-  { icon: Package, labelKey: 'productCatalog' },
-  { icon: LayoutTemplate, labelKey: 'templates' },
-  { icon: Database, labelKey: 'database' },
-  { icon: Landmark, labelKey: 'bankInfo' },
-  { icon: Trash2, labelKey: 'recycleBin' },
-  { icon: TrendingUp, labelKey: 'analytics' },
+const catalogItems = [
+  { icon: Users, labelKey: 'customerManager', handlerIndex: 0 },
+  { icon: Package, labelKey: 'productCatalog', handlerIndex: 1 },
+  { icon: Landmark, labelKey: 'bankInfo', handlerIndex: 4 },
+  { icon: LayoutTemplate, labelKey: 'templates', handlerIndex: 2 },
+];
+
+const systemItems = [
+  { icon: TrendingUp, labelKey: 'analytics', handlerIndex: 6 },
+  { icon: Database, labelKey: 'database', handlerIndex: 3 },
+  { icon: Trash2, labelKey: 'recycleBin', handlerIndex: 5 },
 ];
 
 interface SidebarProps {
@@ -45,7 +48,7 @@ const Sidebar = React.memo(({
 }: SidebarProps) => {
   const { t } = useTranslation();
 
-  const handleNav = (id) => {
+  const handleNav = (id: string) => {
     if (id === 'builder') { onNewQuote(); }
     onNavigate(id);
   };
@@ -64,19 +67,21 @@ const Sidebar = React.memo(({
           </div>
           <div>
             <span className="sidebar-logo-text">{t('appName')}</span>
-            <span className="sidebar-logo-version">v2.3</span>
+            <span className="sidebar-logo-version">v2.4</span>
           </div>
         </div>
       </div>
 
+      {/* ── Section 1: Ana Menü ── */}
       <div className="sidebar-nav">
+        <div className="sidebar-section-label">Ana Menü</div>
         {navItems.map(item => (
           <button type="button"
             key={item.id}
             onClick={() => handleNav(item.id)}
             className={`sidebar-nav-item ${currentView === item.id ? 'sidebar-nav-item-active' : ''}`}
           >
-            <item.icon size={18} />
+            <item.icon size={17} />
             <span>{t(item.labelKey)}</span>
           </button>
         ))}
@@ -84,15 +89,33 @@ const Sidebar = React.memo(({
 
       <div className="sidebar-divider" />
 
+      {/* ── Section 2: Tanımlar & Katalog ── */}
       <div className="sidebar-nav">
-        <div className="sidebar-section-label">Yönetim</div>
-        {managerItems.map((item, i) => (
+        <div className="sidebar-section-label">Tanımlar & Katalog</div>
+        {catalogItems.map((item) => (
           <button type="button"
-            key={i}
-            onClick={handlers[i]}
+            key={item.labelKey}
+            onClick={handlers[item.handlerIndex]}
             className="sidebar-nav-item"
           >
-            <item.icon size={18} />
+            <item.icon size={17} />
+            <span>{t(item.labelKey)}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="sidebar-divider" />
+
+      {/* ── Section 3: Sistem & Araçlar ── */}
+      <div className="sidebar-nav">
+        <div className="sidebar-section-label">Sistem & Araçlar</div>
+        {systemItems.map((item) => (
+          <button type="button"
+            key={item.labelKey}
+            onClick={handlers[item.handlerIndex]}
+            className="sidebar-nav-item"
+          >
+            <item.icon size={17} />
             <span>{t(item.labelKey)}</span>
           </button>
         ))}
@@ -105,13 +128,13 @@ const Sidebar = React.memo(({
           onClick={() => onNavigate('settings')}
           className={`sidebar-nav-item ${currentView === 'settings' ? 'sidebar-nav-item-active' : ''}`}
         >
-          <Settings size={18} />
+          <Settings size={17} />
           <span>{t('settings')}</span>
         </button>
       </div>
 
       <div className="sidebar-footer">
-        &copy; 2024 {t('appName')}
+        &copy; 2026 {t('appName')}
       </div>
     </>
   );
@@ -132,7 +155,7 @@ const Sidebar = React.memo(({
                 </div>
                 <div>
                   <span className="sidebar-logo-text">{t('appName')}</span>
-                  <span className="sidebar-logo-version">v2.3</span>
+                  <span className="sidebar-logo-version">v2.4</span>
                 </div>
               </div>
               <button type="button" onClick={onMobileClose} className="sidebar-close-btn" aria-label={t('close')}>
@@ -141,37 +164,59 @@ const Sidebar = React.memo(({
             </div>
             <div className="sidebar-mobile-body">
               <div className="sidebar-nav">
+                <div className="sidebar-section-label">Ana Menü</div>
                 {navItems.map(item => (
                   <button type="button"
                     key={item.id}
                     onClick={() => { handleNav(item.id); onMobileClose(); }}
                     className={`sidebar-nav-item ${currentView === item.id ? 'sidebar-nav-item-active' : ''}`}
                   >
-                    <item.icon size={18} />
+                    <item.icon size={17} />
                     <span>{t(item.labelKey)}</span>
                   </button>
                 ))}
               </div>
+
               <div className="sidebar-divider" />
+
               <div className="sidebar-nav">
-                {managerItems.map((item, i) => (
+                <div className="sidebar-section-label">Tanımlar & Katalog</div>
+                {catalogItems.map((item) => (
                   <button type="button"
-                    key={i}
-                    onClick={() => { handlers[i](); onMobileClose(); }}
+                    key={item.labelKey}
+                    onClick={() => { handlers[item.handlerIndex](); onMobileClose(); }}
                     className="sidebar-nav-item"
                   >
-                    <item.icon size={18} />
+                    <item.icon size={17} />
                     <span>{t(item.labelKey)}</span>
                   </button>
                 ))}
               </div>
+
               <div className="sidebar-divider" />
+
+              <div className="sidebar-nav">
+                <div className="sidebar-section-label">Sistem & Araçlar</div>
+                {systemItems.map((item) => (
+                  <button type="button"
+                    key={item.labelKey}
+                    onClick={() => { handlers[item.handlerIndex](); onMobileClose(); }}
+                    className="sidebar-nav-item"
+                  >
+                    <item.icon size={17} />
+                    <span>{t(item.labelKey)}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="sidebar-divider" />
+
               <div className="sidebar-nav">
                 <button type="button"
                   onClick={() => { onNavigate('settings'); onMobileClose(); }}
                   className="sidebar-nav-item"
                 >
-                  <Settings size={18} />
+                  <Settings size={17} />
                   <span>{t('settings')}</span>
                 </button>
               </div>

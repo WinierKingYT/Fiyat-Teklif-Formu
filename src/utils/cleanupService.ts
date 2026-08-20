@@ -1,8 +1,8 @@
 // Cleanup Service
 // Manages database cleanup operations for long-term application health
 
-import Logger from './logger';
-import type { IndexedDBManager, DbQuote, Tab } from '../context/quote/types';
+import Logger from '@/utils/logger';
+import type { IndexedDBManager, DbQuote, Tab } from '@/context/quote/types';
 
 interface CleanupSettings {
     autoCleanupEnabled: boolean;

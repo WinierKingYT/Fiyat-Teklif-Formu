@@ -1,4 +1,4 @@
-import Logger from './logger';
+import Logger from '@/utils/logger';
 
 export const shareQuote = async (pdfBlob: Blob, filename: string) => {
   if (!navigator.share) {

@@ -1,13 +1,13 @@
-﻿import React from "react";
+﻿import { Settings2 } from "lucide-react";
+import React from "react";
 import { useState, useEffect } from "react";
-import { useIndexedDB } from "../hooks/useIndexedDB";
-import { useQuoteData, usePdfConfig } from "../context/QuoteContext";
-import { useUI } from "../context/UIContext";
-import { useTranslation } from "../hooks/useTranslation";
-import { Settings2 } from "lucide-react";
 import toast from "react-hot-toast";
-import Logger from '../utils/logger';
-import { GeneralSettings, CompanyDefaults, PdfLayoutSettings, WatermarkSettings } from "./settings-tabs";
+import { GeneralSettings, CompanyDefaults, PdfLayoutSettings, WatermarkSettings } from '@/components/settings-tabs';
+import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
+import { useUI } from '@/context/UIContext';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import Logger from '@/utils/logger';
 
 const Settings = () => {
   const { db } = useIndexedDB();

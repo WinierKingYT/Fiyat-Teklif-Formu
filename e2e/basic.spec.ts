@@ -131,6 +131,42 @@ test.describe('PDF Settings', () => {
   });
 });
 
+test.describe('End-to-End: Quote to PDF', () => {
+  test('creates a quote, saves it, and downloads the PDF', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('#main-content');
+
+    await page.locator('input[aria-label="Teklif Başlığı"]').fill('E2E Teklif Testi');
+
+    await page.locator('input[name="name"]').first().fill('Test Müşteri A.Ş.');
+    await page.locator('input[name="company"]').first().fill('Test Firma Ltd.');
+
+    await page.locator('button[aria-label="Firma Bilgileri (aç)"]').click();
+    await page.locator('input[name="name"]').last().fill('Bizim Firma A.Ş.');
+
+    await page.locator('button[aria-label="Teklif Detayları (aç)"]').click();
+    await page.locator('input[name="number"]').fill('2026-001');
+
+    await page.locator('button.btn.btn-primary.btn-sm').click();
+    const nameInput = page.locator('[data-row="0"][data-field="name"]');
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('Dizüstü Bilgisayar');
+    await page.locator('[data-row="0"][data-field="quantity"]').fill('2');
+    await page.locator('[data-row="0"][data-field="price"]').fill('25000');
+
+    await page.locator('button[title="Kaydet (Ctrl+S)"]').click();
+    await expect(page.locator('text=Teklif kaydedildi')).toBeVisible();
+
+    await page.locator('button[title="PDF Önizleme (Ctrl+P)"]').click();
+    await page.waitForSelector('#printable-quote-container-panel');
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('button[title="PDF İNDİR"]').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
+  });
+});
+
 test.describe('Responsive Design', () => {
   test('shows mobile view on small screens', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });

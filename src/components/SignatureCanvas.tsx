@@ -1,6 +1,6 @@
+import { Eraser, Check, Upload, X } from 'lucide-react';
 import React from 'react';
 import { useRef, useState, useEffect } from 'react';
-import { Eraser, Check, Upload, X } from 'lucide-react';
 
 interface SignatureCanvasProps {
     onSave: (dataUrl: string) => void;
@@ -62,15 +62,17 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
         }
     }, [lineWidth, savedSignature]);
 
-    const startDrawing = (e) => {
+    const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX || e.touches[0].clientX) - rect.left;
-        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX;
+        const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
 
         ctx.beginPath();
         ctx.moveTo(x, y);
@@ -78,7 +80,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
         setHasSignature(true);
     };
 
-    const draw = (e) => {
+    const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawing) return;
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -88,8 +90,10 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX || e.touches[0].clientX) - rect.left;
-        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX;
+        const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
 
         ctx.lineTo(x, y);
         ctx.stroke();
@@ -104,21 +108,27 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
 
     const clearCanvas = () => {
         const canvas = canvasRef.current;
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             setHasSignature(false);
             onClear?.();
         }
     };
 
-    const trimCanvas = (canvas) => {
+    const trimCanvas = (canvas: HTMLCanvasElement): HTMLCanvasElement | null => {
         const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
         const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const l = pixels.data.length;
-        const bound = { top: null, left: null, right: null, bottom: null };
-        let x, y;
+        const bound: { top: number | null; left: number | null; right: number | null; bottom: number | null } = {
+            top: null,
+            left: null,
+            right: null,
+            bottom: null
+        };
+        let x: number, y: number;
 
         for (let i = 0; i < l; i += 4) {
             if (pixels.data[i + 3] !== 0) {
@@ -135,47 +145,40 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
             }
         }
 
-        if (bound.top === null) return null;
+        if (bound.top === null || bound.bottom === null || bound.left === null || bound.right === null) return null;
 
-        const trimHeight = bound.bottom! - bound.top! + 1;
-        const trimWidth = bound.right! - bound.left! + 1;
+        const trimHeight = bound.bottom - bound.top + 1;
+        const trimWidth = bound.right - bound.left + 1;
 
         // Add some padding
         const padding = 10;
         const trimmed = document.createElement('canvas');
-        trimmed.width = trimWidth + (padding * 2);
-        trimmed.height = trimHeight + (padding * 2);
+        trimmed.width = trimWidth + padding * 2;
+        trimmed.height = trimHeight + padding * 2;
         const trimmedCtx = trimmed.getContext('2d');
+        if (!trimmedCtx) return null;
 
-        trimmedCtx!.drawImage(
+        trimmedCtx.drawImage(
             canvas,
-            bound.left!, bound.top!, trimWidth, trimHeight,
+            bound.left, bound.top, trimWidth, trimHeight,
             padding, padding, trimWidth, trimHeight
         );
 
-        return trimmed.toDataURL('image/png');
+        return trimmed;
     };
 
     const handleSave = () => {
         const canvas = canvasRef.current;
         if (canvas) {
-            // Use trimmed version for saving to avoid whitespace issues
-            const trimmedDataUrl = trimCanvas(canvas);
-            if (trimmedDataUrl) {
-                onSave(trimmedDataUrl);
-            } else {
-                // If empty (cleared), save null or empty
-                // But if we are here, it might be just after drawing
-                // If trimmed returns null, it means empty canvas
-                // We might want to save the full canvas if trim fails? 
-                // No, if trim fails it means empty.
-                // onSave(null); // Don't clear if just empty?
+            const trimmedCanvas = trimCanvas(canvas);
+            if (trimmedCanvas) {
+                onSave(trimmedCanvas.toDataURL('image/png'));
             }
         }
     };
 
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {

@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import Logger from '../../utils/logger';
 import toast from 'react-hot-toast';
-import performanceMonitor from '../../utils/performanceMonitor';
-import { deepEqual } from '../../utils/deepEqual';
-import { useDatabase } from './DatabaseContext';
-import { useConfirm } from './ConfirmContext';
-import { useCompanyDefaults } from './CompanyDefaultsContext';
-import type { Tab } from './types';
-import { getDefaultTabs, getInitialTabData } from './initialState';
+import { useCompanyDefaults } from '@/context/quote/CompanyDefaultsContext';
+import { useConfirm } from '@/context/quote/ConfirmContext';
+import { useDatabase } from '@/context/quote/DatabaseContext';
+import { getDefaultTabs, getInitialTabData } from '@/context/quote/initialState';
+import { deepEqual } from '@/utils/deepEqual';
+import Logger from '@/utils/logger';
+import performanceMonitor from '@/utils/performanceMonitor';
+import type { Tab } from '@/context/quote/types';
 
 export interface TabContextValue {
     tabs: Tab[];

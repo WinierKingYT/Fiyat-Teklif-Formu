@@ -1,15 +1,16 @@
+import { Trash2, RefreshCw, Search, AlertTriangle } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect } from 'react';
-import Modal from './Modal';
-import ConfirmDialog from './ConfirmDialog';
-import { useIndexedDB } from '../hooks/useIndexedDB';
-import { Trash2, RefreshCw, Search, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Logger from '../utils/logger';
-import { useTranslation } from '../hooks/useTranslation';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import Modal from '@/components/Modal';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import Logger from '@/utils/logger';
 
 interface DeletedItem {
-    id: string;
+    id: string | number;
     originalStore: string;
     originalId?: string;
     deletedAt: string;
@@ -21,13 +22,25 @@ interface DeletedItem {
     [key: string]: unknown;
 }
 
-const RecycleBinModal = ({ isOpen, onClose, language = 'tr' }) => {
+interface RecycleBinModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    language?: string;
+}
+
+const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, language = 'tr' }) => {
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const [deletedItems, setDeletedItems] = useState<DeletedItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('all');
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        variant: 'info' | 'warning' | 'danger';
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
 
     useEffect(() => {
         if (isOpen && db) loadDeletedItems();
@@ -44,10 +57,10 @@ const RecycleBinModal = ({ isOpen, onClose, language = 'tr' }) => {
         }
     };
 
-    const handleRestore = async (item) => {
+    const handleRestore = async (item: DeletedItem) => {
         try {
             await db.delete('recycle_bin', item.id);
-            const { id, originalStore, deletedAt, originalId, ...originalData } = item;
+            const { id: _ignoredId, originalStore, deletedAt: _ignoredDeletedAt, originalId, ...originalData } = item;
             await db.put(originalStore, { ...originalData, id: originalId });
             toast.success(t('itemRestored'));
             loadDeletedItems();
@@ -57,8 +70,8 @@ const RecycleBinModal = ({ isOpen, onClose, language = 'tr' }) => {
         }
     };
 
-    const handlePermanentDelete = async (id) => {
-        setConfirmDialog({ isOpen: true, title: t('permanentDeleteTitle'), message: t('permanentDeleteConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('recycle_bin', id); toast.success(t('itemPermanentlyDeleted')); loadDeletedItems(); } catch (error) { Logger.error('Delete error:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
+    const handlePermanentDelete = async (id: number | string) => {
+        setConfirmDialog({ isOpen: true, title: t('permanentDeleteTitle'), message: t('permanentDeleteConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('recycle_bin', id as IDBValidKey); toast.success(t('itemPermanentlyDeleted')); loadDeletedItems(); } catch (error) { Logger.error('Delete error:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
     };
 
     const handleEmptyBin = async () => {
@@ -74,60 +87,58 @@ const RecycleBinModal = ({ isOpen, onClose, language = 'tr' }) => {
         return matchesSearch;
     });
 
-    const formatDate = (dateString) => {
+    const formatDate = (dateString?: string) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleString('tr-TR');
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t('recycleBinTitle')} size="lg">
-            <div className="flex flex-col h-[70vh]">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
-                    <div className="flex gap-2">
-                        <button type="button" className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('all')}>{t('all')}</button>
-                        <button type="button" className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'customers' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('customers')}>{t('customers')}</button>
-                        <button type="button" className={`px-4 py-2 rounded-[var(--radius)] text-sm font-medium transition-colors ${activeTab === 'products' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`} onClick={() => setActiveTab('products')}>{t('products')}</button>
+            <div className="flex flex-col h-[65vh] space-y-2.5">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <div className="flex gap-1 p-0.5 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded">
+                        <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'all' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('all')}>{t('all')}</button>
+                        <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'customers' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('customers')}>{t('customers')}</button>
+                        <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'products' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('products')}>{t('products')}</button>
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto">
-                        <div className="relative flex-1 md:w-64">
-                            <Search className="absolute left-3 top-2.5 text-[var(--color-text-muted)]" size={18} />
-                            <input type="text" className="form-control pl-10" placeholder={t('search')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <div className="flex gap-1.5 w-full sm:w-auto">
+                        <div className="relative flex-1 sm:w-48">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
+                            <input type="text" className="form-control pl-8 text-xs" placeholder={t('search')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
                         {deletedItems.length > 0 && (
-                            <button type="button" className="btn btn-danger whitespace-nowrap" onClick={handleEmptyBin}>
-                                <Trash2 size={18} /> Boşalt
+                            <button type="button" className="btn btn-danger btn-xs whitespace-nowrap" onClick={handleEmptyBin}>
+                                <Trash2 size={13} /> Boşalt
                             </button>
                         )}
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto bg-[var(--color-bg-muted)] rounded-[var(--radius)] border border-[var(--color-border)] p-2">
+                <div className="flex-1 overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] p-1.5 space-y-1.5">
                     {filteredItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)]">
-                            <Trash2 size={48} className="mb-2 opacity-20" />
-                            <p>{t('recycleBinEmpty')}</p>
-                        </div>
+                        <EmptyState
+                            icon={<Trash2 size={24} />}
+                            title={t('recycleBinEmpty')}
+                        />
                     ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             {filteredItems.map(item => (
-                                <div key={item.id} className="bg-[var(--color-bg-card)] p-3 rounded-[var(--radius)] border border-[var(--color-border)] flex justify-between items-center hover:shadow-sm transition-shadow">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${item.originalStore === 'customers' ? 'bg-[var(--color-primary-muted)] text-[var(--color-primary)]' : 'bg-[var(--color-primary-muted)] text-[var(--color-primary)]'}`}>
+                                <div key={item.id} className="bg-[var(--color-bg-card)] p-2.5 rounded-[var(--radius)] border border-[var(--color-border)]/60 flex justify-between items-center hover:border-[var(--color-primary)]/40 transition-colors">
+                                    <div className="flex-1 min-w-0 pr-2">
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[var(--color-primary-muted)] text-[var(--color-primary)] uppercase">
                                                 {item.originalStore === 'customers' ? t('customers') : t('products')}
                                             </span>
-                                            <span className="text-xs text-[var(--color-text-muted)]">{t('deletedAt').replace('{date}', formatDate(item.deletedAt))}</span>
+                                            <span className="text-[10px] text-[var(--color-text-muted)]">{formatDate(item.deletedAt)}</span>
                                         </div>
-                                        <div className="font-medium text-[var(--color-text)]">{item.name || item.company || t('unnamedItem')}</div>
-                                        {item.originalStore === 'products' && <div className="text-sm text-[var(--color-text-muted)]">{item.price} ₺</div>}
-                                        {item.originalStore === 'customers' && <div className="text-sm text-[var(--color-text-muted)]">{item.company}</div>}
+                                        <div className="text-xs font-semibold text-[var(--color-text)] truncate">{item.name || item.company || t('unnamedItem')}</div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button type="button" className="p-2 text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-full transition-colors" onClick={() => handleRestore(item)} title={t('restoreItem')}>
-                                            <RefreshCw size={18} />
+                                    <div className="flex gap-1">
+                                        <button type="button" className="btn btn-xs btn-outline p-1.5 text-[var(--color-success)]" onClick={() => handleRestore(item)} title={t('restoreItem')}>
+                                            <RefreshCw size={13} />
                                         </button>
-                                        <button type="button" className="p-2 text-[var(--color-error)] hover:bg-[var(--color-bg-hover)] rounded-full transition-colors" onClick={() => handlePermanentDelete(item.id)} title={t('permanentDelete')}>
-                                            <Trash2 size={18} />
+                                        <button type="button" className="btn btn-xs btn-danger p-1.5" onClick={() => handlePermanentDelete(item.id)} title={t('permanentDelete')}>
+                                            <Trash2 size={13} />
                                         </button>
                                     </div>
                                 </div>

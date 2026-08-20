@@ -1,5 +1,5 @@
-import { getLocalDateString } from '../../utils/dateUtils';
-import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, TabData, PdfConfig, PdfLayoutItem, Tab } from './types';
+import { getLocalDateString } from '@/utils/dateUtils';
+import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, TabData, PdfConfig, PdfLayoutItem, Tab } from '@/context/quote/types';
 
 export const getInitialQuoteData = (): QuoteData => ({
     title: '', number: '', date: getLocalDateString(), validUntilDays: '10',

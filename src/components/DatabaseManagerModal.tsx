@@ -1,13 +1,13 @@
+import { Database, Download, Upload, Trash, RefreshCw, AlertTriangle } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect } from 'react';
-import Modal from './Modal';
-import ConfirmDialog from './ConfirmDialog';
-import { useIndexedDB } from '../hooks/useIndexedDB';
-import { Database, Download, Upload, Trash, RefreshCw, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getLocalDateString } from '../utils/dateUtils';
-import Logger from '../utils/logger';
-import { useTranslation } from '../hooks/useTranslation';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import Modal from '@/components/Modal';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import { getLocalDateString } from '@/utils/dateUtils';
+import Logger from '@/utils/logger';
 
 const BACKUP_SCHEMA_VERSION = 3;
 
@@ -19,7 +19,13 @@ const ALL_STORES = [
 
 const EXCLUDED_IMPORT_STORES = ['previewData', 'formState'];
 
-const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
+interface DatabaseManagerModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    language?: string;
+}
+
+const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onClose, language = 'tr' }) => {
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const [stats, setStats] = useState({
@@ -29,8 +35,14 @@ const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         templates: 0,
         banks: 0
     });
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
-    const [importFile, setImportFile] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        variant: 'info' | 'warning' | 'danger';
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [importFile, setImportFile] = useState<File | null>(null);
     const [importMode, setImportMode] = useState('replace');
     const [showExportWarning, setShowExportWarning] = useState(false);
 
@@ -70,7 +82,7 @@ const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
             return;
         }
 
-        const counts = {};
+        const counts: Record<string, number> = {};
         for (const store of ALL_STORES) {
             try {
                 const items = await (db).getAll(store);
@@ -101,7 +113,7 @@ const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
                 })
             );
 
-            const data = {
+            const data: { schemaVersion: number; createdAt: string; stores: Record<string, unknown[]> } = {
                 schemaVersion: BACKUP_SCHEMA_VERSION,
                 createdAt: new Date().toISOString(),
                 stores: {}
@@ -128,7 +140,7 @@ const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         }
     };
 
-    const validateBackup = (data) => {
+    const validateBackup = (data: { schemaVersion?: number; stores?: Record<string, unknown> } | null) => {
         if (!data || typeof data !== 'object') {
             throw new Error('Geçersiz dosya: JSON nesnesi değil');
         }
@@ -144,8 +156,8 @@ const DatabaseManagerModal = ({ isOpen, onClose, language = 'tr' }) => {
         return true;
     };
 
-    const handleImport = (e) => {
-        const file = e.target.files[0];
+    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
 
         if (file.size > 50 * 1024 * 1024) {

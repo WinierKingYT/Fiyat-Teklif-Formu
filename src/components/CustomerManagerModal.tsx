@@ -1,16 +1,16 @@
+import { Trash2, Edit, Plus, Search, Download, Upload } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import Modal from './Modal';
-import Pagination from './Pagination';
-import ConfirmDialog from './ConfirmDialog';
-import { useIndexedDB } from '../hooks/useIndexedDB';
-import useDebounce from '../hooks/useDebounce';
-import { Trash2, Edit, Plus, Search, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Logger from '../utils/logger';
-import { getLocalDateString } from '../utils/dateUtils';
-import { useTranslation } from '../hooks/useTranslation';
-import type { CustomerData } from '../context/quote/types';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import Modal from '@/components/Modal';
+import Pagination from '@/components/Pagination';
+import useDebounce from '@/hooks/useDebounce';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import { getLocalDateString } from '@/utils/dateUtils';
+import Logger from '@/utils/logger';
+import type { CustomerData } from '@/context/quote/types';
 
 interface CustomerManagerModalProps {
     isOpen: boolean;
@@ -50,12 +50,12 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
         setCustomers(allCustomers);
     };
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!formData.name && !formData.company) {
@@ -165,14 +165,14 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
         }
     };
 
-    const handleImport = (e) => {
-        const file = e.target.files[0];
+    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = async (e) => {
+        reader.onload = async (event) => {
             try {
-                const importedCustomers = JSON.parse((e.target as FileReader).result as string);
+                const importedCustomers = JSON.parse((event.target as FileReader).result as string);
                 if (!Array.isArray(importedCustomers)) throw new Error('Invalid format');
 
                 let count = 0;
@@ -198,32 +198,22 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
 
                 {/* Left: List */}
                 <div className="w-full md:w-1/2 flex flex-col border-r border-[var(--color-border)] pr-4">
-                    <div className="flex gap-2 mb-4">
+                    <div className="flex items-center gap-1.5 mb-3">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-3 text-[var(--color-text-muted)]" size={18} />
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
                             <input
                                 type="text"
-                                className="form-control pl-10"
+                                className="form-control pl-8 text-xs"
                                 placeholder={t('searchCustomers')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <button type="button"
-                            className="btn btn-primary whitespace-nowrap"
-                            onClick={resetForm}
-                            title={t('addNewCustomer')}
-                        >
-                            <Plus size={18} /> Yeni
+                        <button type="button" className="btn btn-outline btn-xs p-1.5" onClick={handleExport} title="Dışa Aktar (JSON)">
+                            <Download size={13} />
                         </button>
-                    </div>
-
-                    <div className="flex gap-2 mb-4">
-                        <button type="button" className="btn btn-outline btn-sm flex-1" onClick={handleExport}>
-                            <Download size={14} /> Dışa Aktar
-                        </button>
-                        <button type="button" className="btn btn-outline btn-sm flex-1" onClick={() => document.getElementById('importCustomerInput')?.click()}>
-                            <Upload size={14} /> İçe Aktar
+                        <button type="button" className="btn btn-outline btn-xs p-1.5" onClick={() => document.getElementById('importCustomerInput')?.click()} title="İçe Aktar (JSON)">
+                            <Upload size={13} />
                         </button>
                         <input
                             type="file"
@@ -232,6 +222,13 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
                             style={{ display: 'none' }}
                             onChange={handleImport}
                         />
+                        <button type="button"
+                            className="btn btn-primary btn-xs whitespace-nowrap"
+                            onClick={resetForm}
+                            title={t('addNewCustomer')}
+                        >
+                            <Plus size={13} /> Yeni
+                        </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">

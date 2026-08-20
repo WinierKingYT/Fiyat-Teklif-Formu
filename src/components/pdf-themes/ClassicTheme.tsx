@@ -1,8 +1,8 @@
-﻿import React from 'react';
-import type { QuoteItem } from '../../context/quote/types';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const ClassicTheme = ({
+const ClassicTheme: React.FC<PdfThemeProps> = ({
     id,
     containerStyles,
     config,
@@ -26,14 +26,14 @@ const ClassicTheme = ({
 }) => {
     // Helper for editable fields
     const layoutMap = useMemo(() => {
-        const map = {};
+        const map: Record<string, boolean> = {};
         (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
         return map;
     }, [activeLayout]);
-    const showSection = (id) => layoutMap[id] !== false;
+    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
 
-    const renderEditable = (value, fieldKey, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{value}</span>;
+    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
+        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
 
         return (
             <span
@@ -44,7 +44,7 @@ const ClassicTheme = ({
                 }}
                 title={t.clickToEdit}
             >
-                {value || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
+                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
             </span>
         );
     };
@@ -127,7 +127,7 @@ const ClassicTheme = ({
         return chunks;
     }, [items, itemsPerPage]);
 
-    const renderTable = (tableItems, startIndex) => (
+    const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="classic-table">
             <thead>
                 <tr>
@@ -156,11 +156,11 @@ const ClassicTheme = ({
                             {item.description && <div style={{ fontSize: '8.5pt', color: '#444' }}>{item.description}</div>}
                         </td>
                         {config.showTableUnit && <td style={{ textAlign: 'center' }}>{item.unit}</td>}
-                        <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#ef4444' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                        <td style={{ textAlign: 'right', fontWeight: 'bold', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -174,7 +174,7 @@ const ClassicTheme = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '290mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
@@ -193,7 +193,7 @@ const ClassicTheme = ({
                                 zIndex: 0,
                                 transform: `rotate(${config.watermarkRotation || -45}deg)`,
                                 opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 120}px`,
+                                fontSize: `${config.watermarkFontSize || 48}px`,
                                 fontWeight: 'bold',
                                 color: config.watermarkColor || '#000000',
                                 whiteSpace: 'nowrap'
@@ -267,19 +267,25 @@ const ClassicTheme = ({
                                     {t.customer} / {t.to}
                                 </div>
                                 <div style={{ padding: '8px' }}>
-                                    <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '10pt' }}>{renderEditable(customerData.company, 'customerCompany')}</div>
-                                    <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
-                                        <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.authorized}: </span>
-                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.name, 'customerName')}</span>
-                                    </div>
-                                    <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
-                                        <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.phone}: </span>
-                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.phone, 'customerPhone')}</span>
-                                    </div>
-                                    <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
-                                        <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.email}: </span>
-                                        <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.email, 'customerEmail')}</span>
-                                    </div>
+                                    {customerData.company && <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '10pt' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
+                                    {customerData.name && (
+                                        <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
+                                            <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.authorized}: </span>
+                                            <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.name, 'customerName')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.phone && (
+                                        <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
+                                            <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.phone}: </span>
+                                            <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.email && (
+                                        <div style={{ fontSize: config.customerLabelFontSize || '9pt', fontWeight: config.customerLabelFontWeight || 'normal' }}>
+                                            <span style={{ fontWeight: config.customerLabelFontWeight || 'normal' }}>{t.email}: </span>
+                                            <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -289,7 +295,7 @@ const ClassicTheme = ({
                                     {t.details}
                                 </div>
                                 <div style={{ padding: '8px' }}>
-                                    <div style={{ fontWeight: config.titleFontWeight || 'bold', fontSize: config.titleFontSize || '10pt', fontFamily: config.titleFontFamily || 'inherit' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                    <div style={{ fontWeight: (config.titleFontWeight as React.CSSProperties['fontWeight']) || 'bold', fontSize: (config.titleFontSize as React.CSSProperties['fontSize']) || '10pt', fontFamily: (config.titleFontFamily as string) || 'inherit' }}>{renderEditable(config.title, 'quoteTitle')}</div>
                                     {config.showNotes && quoteData.notes && (
                                         <div style={{ marginTop: '4px', fontSize: '8.5pt', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
                                             {renderEditable(quoteData.notes, 'notes', 'textarea')}
@@ -340,58 +346,63 @@ const ClassicTheme = ({
                                 {/* Right Side: Totals */}
                                 <div style={{ width: '260px' }}>
                                     {config.showSummary && (
-                                        <table className="classic-table" style={{ marginTop: 0 }}>
-                                            <tbody>
-                                                <tr>
-                                                    <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9', width: '40%' }}>{t.subtotal}:</td>
-                                                    <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(subtotal)}</td>
-                                                </tr>
-                                                {discountAmount > 0 && (
+                                        <>
+                                            <table className="classic-table" style={{ marginTop: 0 }}>
+                                                <tbody>
                                                     <tr>
-                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.discount}:</td>
-                                                        <td style={{ textAlign: 'right', color: 'red', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>-{formatCurrency(discountAmount)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9', width: '40%' }}>{t.subtotal}:</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(subtotal)}</td>
                                                     </tr>
-                                                )}
-                                                {config.showTableTax && (
+                                                    {discountAmount > 0 && (
+                                                        <tr>
+                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.discount}:</td>
+                                                            <td style={{ textAlign: 'right', color: 'red', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit', fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</td>
+                                                        </tr>
+                                                    )}
+                                                    {config.showTableTax && (
+                                                        <tr>
+                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.tax}:</td>
+                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(totalTax)}</td>
+                                                        </tr>
+                                                    )}
                                                     <tr>
-                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || 'bold', fontSize: config.summaryLabelFontSize || 'inherit', background: '#f9f9f9' }}>{t.tax}:</td>
-                                                        <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(totalTax)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt' }}>{t.generalTotal}:</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</td>
                                                     </tr>
-                                                )}
-                                                <tr>
-                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt' }}>{t.generalTotal}:</td>
-                                                    <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e0e0e0', fontSize: config.summaryTotalFontSize || '11pt' }}>{formatCurrency(total)}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                                </tbody>
+                                            </table>
+                                            <div style={{ fontSize: '7.5pt', color: '#555', fontStyle: 'italic', marginTop: '4px', textAlign: 'right' }}>
+                                                {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px', pageBreakInside: 'avoid' }}>
-                                    <div style={{ border: '1px solid #000', height: '100px', position: 'relative' }}>
-                                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#e0e0e0', padding: '3px', textAlign: 'center', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8.5pt' }}>
-                                            {t.deliveredBy}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px', pageBreakInside: 'avoid' }}>
+                                    <div style={{ border: '1px solid #000', minHeight: '55px', position: 'relative' }}>
+                                        <div style={{ background: '#e0e0e0', padding: '3px', textAlign: 'center', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8pt' }}>
+                                            {t.seller} ({t.deliveredBy})
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', paddingTop: '20px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
                                             {signature ? (
-                                                <img src={signature} alt="Signature" style={{ maxHeight: '70px', maxWidth: '100%' }} />
+                                                <img src={signature} alt="Signature" style={{ maxHeight: '45px', maxWidth: '100%' }} />
                                             ) : (
-                                                <span style={{ color: '#ccc', fontSize: '9pt' }}>{t.signature}</span>
+                                                <span style={{ color: '#888', fontSize: '8pt' }}>{t.signature}</span>
                                             )}
                                         </div>
                                     </div>
-                                    <div style={{ border: '1px solid #000', height: '100px', position: 'relative' }}>
-                                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#e0e0e0', padding: '3px', textAlign: 'center', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8.5pt' }}>
-                                            {t.receivedBy}
+                                    <div style={{ border: '1px solid #000', minHeight: '55px', position: 'relative' }}>
+                                        <div style={{ background: '#e0e0e0', padding: '3px', textAlign: 'center', fontWeight: 'bold', borderBottom: '1px solid #000', fontSize: '8pt' }}>
+                                            {t.customer} ({t.receivedBy})
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', paddingTop: '20px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
                                             {companyData.stamp ? (
-                                                <img src={companyData.stamp} alt="Stamp" style={{ maxHeight: '70px', maxWidth: '100%' }} />
+                                                <img src={companyData.stamp} alt="Stamp" style={{ maxHeight: '45px', maxWidth: '100%' }} />
                                             ) : (
-                                                <span style={{ color: '#ccc', fontSize: '9pt' }}>{t.stamp} / {t.signature}</span>
+                                                <span style={{ color: '#888', fontSize: '8pt' }}>{t.stamp} / {t.signature}</span>
                                             )}
                                         </div>
                                     </div>
@@ -400,30 +411,31 @@ const ClassicTheme = ({
 
                             {/* Custom Footer */}
                             {config.customFooter && (
-                                <div style={{ marginTop: '15px', textAlign: 'center', fontSize: '8pt', color: '#444', borderTop: '1px solid #ccc', paddingTop: '5px' }}>
+                                <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '7.5pt', color: '#444', borderTop: '1px solid #ccc', paddingTop: '4px' }}>
                                     {config.customFooter}
                                 </div>
                             )}
 
-                            {/* Footer - Only Last Page */}
+                            {/* Footer - Only Last Page (Clean Single Line) */}
                             {showSection('footer') && (
-                            <div className="footer" style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ccc', textAlign: 'center', color: config.footerColor || '#444' }}>
-                                <div style={{ marginBottom: '3px' }}>{companyData.address}</div>
-                                <div style={{ marginBottom: '5px' }}>
-                                    {companyData.phone} | {companyData.email} | {companyData.website}
+                            <div className="footer" style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #ccc', textAlign: 'center', color: (config.footerColor as string) || '#444', fontSize: '7.5pt' }}>
+                                <div>
+                                    <strong>{companyData.name}</strong> • {companyData.address}
+                                    {companyData.phone && <span> • {companyData.phone}</span>}
+                                    {companyData.email && <span> • {companyData.email}</span>}
+                                    {companyData.website && <span> • {companyData.website}</span>}
                                 </div>
-                                <div style={{ marginTop: '10px' }}>
-                                    <div style={{ marginBottom: '3px' }}>{t.thankYou}</div>
-                                    <div style={{ marginBottom: '3px' }}>{t.regards}, {companyData.name}</div>
-                                    <div style={{ fontWeight: 'bold', color: '#000' }}>{companyData.name} - {config.title}</div>
+                                <div style={{ marginTop: '3px', color: '#666' }}>
+                                    {t.thankYou} • {t.regards}
                                 </div>
                             </div>
                             )}
 
                             {/* Page Number */}
                             {config.showPageNumbers && (
-                                <div style={{ marginTop: '15px', textAlign: 'center', fontSize: '8pt', color: '#666' }}>
-                                    {t.page} {pageIndex + 1} / {itemChunks.length}
+                                <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '7pt', color: '#888', borderTop: '1px solid #eee', paddingTop: '3px' }}>
+                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
+                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 </div>
                             )}
                         </div>

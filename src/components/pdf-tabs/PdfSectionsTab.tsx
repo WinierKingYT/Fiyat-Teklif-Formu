@@ -1,5 +1,5 @@
 import React from "react";
-import type { PdfConfig } from "../../context/quote/types";
+import type { PdfConfig } from '@/context/quote/types';
 
 interface PdfSectionsTabProps {
   pdfConfig: PdfConfig;

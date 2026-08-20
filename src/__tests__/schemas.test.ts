@@ -6,7 +6,7 @@ import {
   bankDataSchema,
   quoteDataSchema,
   customerDataSchema,
-} from '../context/quote/types';
+} from '@/context/quote/types';
 
 describe('quoteItemSchema', () => {
   it('should accept valid item', () => {

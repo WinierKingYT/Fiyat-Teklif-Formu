@@ -1,6 +1,6 @@
-import Logger from './logger';
-import { translations } from './translations';
-import type { CustomerData, CompanyData, BankData, Discount } from '../context/quote/types';
+import Logger from '@/utils/logger';
+import { translations } from '@/utils/translations';
+import type { CustomerData, CompanyData, BankData, Discount } from '@/context/quote/types';
 
 export interface ExportItem {
     name?: string;
@@ -48,7 +48,7 @@ function toLocale(val: unknown, locale: string = FALLBACK_LOCALE) {
     return typeof val === 'number' ? val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(val);
 }
 
-const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], locale: string): (string | number)[][] => {
+export const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], locale: string): (string | number)[][] => {
     const t = getT(quoteData?.language);
     const rows: (string | number)[][] = [];
     const c = quoteData?.customer || {};
@@ -120,11 +120,43 @@ const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], locale: stri
     return rows;
 };
 
-const buildFileName = (quoteData: ExportQuoteData, ext: string) => {
+export const buildFileName = (quoteData: ExportQuoteData, ext: string) => {
     const t = getT(quoteData?.language);
     const customerName = quoteData?.customer?.name || 'Musteri';
     const slug = (t.quote || 'teklif').toLowerCase();
     return `${slug}_${customerName}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+};
+
+export const generateExcelBuffer = async (quoteData: ExportQuoteData, items: ExportItem[]): Promise<Uint8Array> => {
+    const XLSX = await import('xlsx').then(m => m.default || m);
+    const locale = getLocale(quoteData?.language);
+    const rows = buildRows(quoteData, items, locale);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = COL_WIDTHS.map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, ws, getT(quoteData?.language).quote);
+    const buffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    return new Uint8Array(buffer);
+};
+
+export const generateCSVString = (quoteData: ExportQuoteData, items: ExportItem[]): string => {
+    const locale = getLocale(quoteData?.language);
+    const lines: string[] = [];
+    const csvSep = ';';
+
+    const esc = (val: unknown) => {
+        const s = String(val != null ? val : '');
+        return s.includes(csvSep) || s.includes('"') || s.includes('\n')
+            ? `"${s.replace(/"/g, '""')}"`
+            : s;
+    };
+
+    const row = (...cells: unknown[]) => lines.push(cells.map(esc).join(csvSep));
+    buildRows(quoteData, items, locale).forEach(r => row(...r));
+
+    const BOM = '\uFEFF';
+    return BOM + lines.join('\r\n');
 };
 
 export const exportQuoteToExcel = async (quoteData: ExportQuoteData, items: ExportItem[]) => {
@@ -148,23 +180,8 @@ export const exportQuoteToExcel = async (quoteData: ExportQuoteData, items: Expo
 
 export const exportQuoteToCSV = (quoteData: ExportQuoteData, items: ExportItem[]) => {
     try {
-        const locale = getLocale(quoteData?.language);
-        const lines: string[] = [];
-        const csvSep = ';';
-
-        const esc = (val: unknown) => {
-            const s = String(val != null ? val : '');
-            return s.includes(csvSep) || s.includes('"') || s.includes('\n')
-                ? `"${s.replace(/"/g, '""')}"`
-                : s;
-        };
-
-        const row = (...cells: unknown[]) => lines.push(cells.map(esc).join(csvSep));
-
-        buildRows(quoteData, items, locale).forEach(r => row(...r));
-
-        const BOM = '\uFEFF';
-        const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const csvContent = generateCSVString(quoteData, items);
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

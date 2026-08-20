@@ -1,24 +1,3 @@
-﻿import React from "react";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import {
-  Plus,
-  Trash,
-  Package,
-  Upload,
-  Search,
-  X,
-  Table,
-  Grid3X3,
-  AlertCircle,
-  ArrowUp,
-  ArrowDown,
-  CheckSquare,
-  Square,
-} from "lucide-react";
-import ConfirmDialog from "./ConfirmDialog";
-import SortableRow from "./items/SortableRow";
-import SortableRowCard from "./items/SortableRowCard";
-import ContextMenu from "./items/ContextMenu";
 import {
   DndContext,
   closestCenter,
@@ -33,14 +12,39 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import Logger from "../utils/logger";
-import { useQuoteData } from "../context/QuoteContext";
-import type { QuoteItem } from "../context/quote/types";
-import { useTranslation } from "../hooks/useTranslation";
-import { sanitizeInput } from "../utils/sanitize";
-import { evaluateMathExpression } from "../utils/smartCalc";
-import { formatCurrency } from "../utils/calculations";
+import {
+  Plus,
+  Trash,
+  Package,
+  Upload,
+  Search,
+  X,
+  AlertCircle,
+  ArrowUp,
+  ArrowDown,
+  CheckSquare,
+  Square,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Percent,
+  Receipt,
+  FileSpreadsheet,
+  Settings2
+} from "lucide-react";
+import React from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import toast from "react-hot-toast";
+import ConfirmDialog from '@/components/ConfirmDialog';
+import ContextMenu from '@/components/items/ContextMenu';
+import SortableRow from '@/components/items/SortableRow';
+import SortableRowCard from '@/components/items/SortableRowCard';
+import { useQuoteData } from '@/context/QuoteContext';
+import { useTranslation } from '@/hooks/useTranslation';
+import { formatCurrency } from '@/utils/calculations';
+import Logger from '@/utils/logger';
+import { sanitizeInput } from '@/utils/sanitize';
+import { evaluateMathExpression } from '@/utils/smartCalc';
+import type { QuoteItem } from '@/context/quote/types';
 
 interface ItemsTableProps {
   items: QuoteItem[];
@@ -65,7 +69,7 @@ const ItemsTable = ({
   currency = "TRY",
   onAddProduct,
 }: ItemsTableProps) => {
-  const { quoteData, db } = useQuoteData();
+  const { quoteData, updateQuoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -77,6 +81,85 @@ const ItemsTable = ({
   const [showSearch, setShowSearch] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
   const [touchedRows, setTouchedRows] = useState<Record<string, Record<string, boolean>>>({});
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
+
+  // Column Visibility Customization
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const saved = localStorage.getItem('quote_visible_cols');
+      return saved ? JSON.parse(saved) : { image: true, description: true, unit: true, discount: true };
+    } catch {
+      return { image: true, description: true, unit: true, discount: true };
+    }
+  });
+
+  const toggleColumn = (key: 'image' | 'description' | 'unit' | 'discount') => {
+    setVisibleColumns((prev: typeof visibleColumns) => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('quote_visible_cols', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // Tax Mode
+  const taxMode: 'exclusive' | 'inclusive' = (quoteData as Record<string, unknown>).taxMode === 'inclusive' ? 'inclusive' : 'exclusive';
+  const toggleTaxMode = () => {
+    const next = taxMode === 'exclusive' ? 'inclusive' : 'exclusive';
+    updateQuoteData('taxMode', next);
+    toast.success(next === 'inclusive' ? 'Fiyatlandırma: KDV Dahil Modu' : 'Fiyatlandırma: KDV Hariç Modu');
+  };
+
+  // Live item count & quantity calculations
+  const totalQuantity = useMemo(() => {
+    return items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  }, [items]);
+
+  // Fast Sort
+  const sortItems = (mode: 'price-desc' | 'price-asc' | 'name-asc') => {
+    onItemsChange(prev => {
+      const list = [...prev];
+      if (mode === 'price-desc') list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+      else if (mode === 'price-asc') list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+      else if (mode === 'name-asc') list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
+      return list;
+    });
+    setShowToolsMenu(false);
+    toast.success('Kalemler sıralandı');
+  };
+
+  // Direct Clipboard TSV/Excel Paste (Ctrl+V)
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData('text');
+    if (!text || (!text.includes('\t') && !text.includes('\n'))) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'TEXTAREA' || (target.tagName === 'INPUT' && !text.includes('\t'))) return;
+
+    const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length === 0) return;
+
+    const parsedItems: QuoteItem[] = [];
+    for (const line of lines) {
+      const cols = line.split('\t');
+      if (cols.length >= 1 && cols[0].trim()) {
+        parsedItems.push({
+          id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          name: String(sanitizeInput(cols[0].trim()) || ''),
+          description: String(sanitizeInput(cols[1]?.trim() || '') || ''),
+          quantity: parseFloat(cols[2]?.replace(',', '.')) || 1,
+          unit: cols[3]?.trim() || 'Adet',
+          price: parseFloat(cols[4]?.replace(/[^0-9,.-]/g, '').replace(',', '.')) || 0,
+          taxRate: parseFloat(cols[5]?.replace(/[^0-9,.-]/g, '').replace(',', '.')) || 20,
+          discountRate: 0,
+          total: 0,
+        });
+      }
+    }
+    if (parsedItems.length > 0) {
+      e.preventDefault();
+      onItemsChange(prev => [...prev, ...parsedItems]);
+      toast.success(`${parsedItems.length} kalem panodan yapıştırıldı`);
+    }
+  }, [onItemsChange]);
 
   const getRowErrors = useCallback((item: QuoteItem) => {
     const errs: Record<string, string> = {};
@@ -110,28 +193,36 @@ const ItemsTable = ({
   const hasErrors = useMemo(() => {
     return items.some((item) => Object.keys(getRowErrors(item)).length > 0);
   }, [items, getRowErrors]);
+  const [allCatalogProducts, setAllCatalogProducts] = useState<ProductRow[]>([]);
+
   useEffect(() => {
-    if (!db || searchQuery.length < 2) {
+    if (!db) return;
+    const fetchCatalog = async () => {
+      try {
+        const prods = await db.getAll<ProductRow>("products");
+        setAllCatalogProducts(prods || []);
+      } catch {
+        setAllCatalogProducts([]);
+      }
+    };
+    fetchCatalog();
+  }, [db]);
+
+  useEffect(() => {
+    if (!allCatalogProducts.length || searchQuery.length < 2) {
       setSearchResults([]);
       return;
     }
-    const timer = setTimeout(async () => {
-      try {
-        const allProducts = await db.getAll<ProductRow>("products");
-        const q = searchQuery.toLowerCase();
-        const filtered = allProducts.filter(
-          (p) =>
-            p.name?.toLowerCase().includes(q) ||
-            p.description?.toLowerCase().includes(q),
-        );
-        setSearchResults(filtered.slice(0, 10));
-        setSearchIndex(-1);
-      } catch (e) {
-        setSearchResults([]);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [searchQuery, db]);
+    const q = searchQuery.toLowerCase();
+    const filtered = allCatalogProducts.filter(
+      (p) =>
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q),
+    );
+    setSearchResults(filtered.slice(0, 10));
+    setSearchIndex(-1);
+  }, [searchQuery, allCatalogProducts]);
+
   const [recentProducts, setRecentProducts] = useState<ProductRow[]>(() => {
     try {
       const saved = localStorage.getItem("recentProducts");
@@ -140,6 +231,7 @@ const ItemsTable = ({
       return [];
     }
   });
+
   const addToRecentProducts = useCallback((product: ProductRow) => {
     setRecentProducts((prev) => {
       const filtered = prev.filter((p) => p.id !== product.id);
@@ -148,6 +240,24 @@ const ItemsTable = ({
       return updated;
     });
   }, []);
+
+  const handleProductSelect = useCallback((index: number, product: ProductRow) => {
+    onItemsChange(prev => {
+      const newItems = [...prev];
+      if (!newItems[index]) return prev;
+      newItems[index] = {
+        ...newItems[index],
+        name: product.name,
+        description: product.description !== undefined ? product.description : newItems[index].description,
+        unit: product.unit || newItems[index].unit || "Adet",
+        price: product.price !== undefined ? product.price : newItems[index].price,
+        taxRate: product.taxRate !== undefined ? product.taxRate : newItems[index].taxRate,
+        image: product.image ?? newItems[index].image,
+      };
+      return newItems;
+    });
+    addToRecentProducts(product);
+  }, [onItemsChange, addToRecentProducts]);
   const addProductFromSearch = useCallback((product: ProductRow) => {
     const newItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -167,7 +277,7 @@ const ItemsTable = ({
     setSearchResults([]);
     searchRef.current?.focus();
   }, [onItemsChange, addToRecentProducts]);
-  const handleSearchKeyDown = (e) => {
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!searchResults.length) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -208,7 +318,7 @@ const ItemsTable = ({
         .sort((a, b) => b - a)
         .map((i) => ({
           ...(prev[i] as QuoteItem),
-          id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         }));
       return [...prev, ...duplicates];
     });
@@ -245,33 +355,33 @@ const ItemsTable = ({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const handleItemChange = useCallback((index, field, value) => {
+  const handleItemChange = useCallback((index: number, field: string, value: unknown) => {
     onItemsChange(prev => {
       const newItems = [...prev];
       newItems[index] = { ...newItems[index], [field]: value };
       return newItems;
     });
   }, [onItemsChange]);
-  const removeItem = useCallback((index) => {
+  const removeItem = useCallback((index: number) => {
     onItemsChange(prev => prev.filter((_, i) => i !== index));
   }, [onItemsChange]);
-  const duplicateItem = useCallback((index) => {
+  const duplicateItem = useCallback((index: number) => {
     onItemsChange(prev => {
       const duplicate = {
         ...prev[index],
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       };
       const newItems = [...prev];
       newItems.splice(index + 1, 0, duplicate);
       return newItems;
     });
   }, [onItemsChange]);
-  const handleDragEnd = useCallback((event) => {
+  const handleDragEnd = useCallback((event: { active: { id: unknown }; over: { id: unknown } | null }) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
       onItemsChange(prev => {
         const oldIndex = prev.findIndex((item) => item.id === active.id);
-        const newIndex = prev.findIndex((item) => item.id === over.id);
+        const newIndex = prev.findIndex((item) => item.id === over?.id);
         return arrayMove(prev, oldIndex, newIndex);
       });
     }
@@ -291,14 +401,14 @@ const ItemsTable = ({
     };
     onItemsChange(prev => [...prev, newItem]);
   }, [onItemsChange]);
-  const handleExcelUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     const XLSX = await import('xlsx').then(m => m.default || m);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = (event) => {
       try {
-        const data = new Uint8Array((e.currentTarget as FileReader).result as ArrayBuffer);
+        const data = new Uint8Array((event.currentTarget as FileReader).result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
@@ -308,7 +418,7 @@ const ItemsTable = ({
           const row = (jsonData[i] ?? []) as unknown[];
           if (row.length === 0) continue;
           newItems.push({
-            id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
             name: String(row[0] ?? ""),
             description: String(row[1] ?? ""),
             quantity: parseFloat(String(row[2])) || 1,
@@ -331,35 +441,59 @@ const ItemsTable = ({
     reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
-  const handleKeyDown = useCallback((e, index, field) => {
-    if (e.key === "Tab") {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number, field: string) => {
+    const fields = ["name", "description", "quantity", "unit", "price", "taxRate", "discountRate"];
+    const currentFieldIndex = fields.indexOf(field);
+
+    if (e.key === "Enter") {
       e.preventDefault();
-      const fields = ["name", "description", "quantity", "unit", "price", "taxRate", "discountRate"];
-      const currentFieldIndex = fields.indexOf(field);
+      if (index === items.length - 1) {
+        addNewItem();
+        setTimeout(() => {
+          const nextEl = document.querySelector(`[data-row="${index + 1}"][data-field="name"]`) as HTMLElement;
+          if (nextEl) nextEl.focus();
+        }, 50);
+      } else {
+        const nextEl = (document.querySelector(`[data-row="${index + 1}"][data-field="${field}"]`) as HTMLElement)
+          || (document.querySelector(`[data-row="${index + 1}"][data-field="name"]`) as HTMLElement);
+        if (nextEl) nextEl.focus();
+      }
+    } else if (e.key === "Tab") {
       if (e.shiftKey) {
         if (currentFieldIndex > 0) {
+          e.preventDefault();
           const prevField = fields[currentFieldIndex - 1];
           const prevEl = document.querySelector(`[data-row="${index}"][data-field="${prevField}"]`) as HTMLElement;
           if (prevEl) prevEl.focus();
         } else if (index > 0) {
+          e.preventDefault();
           const lastField = fields[fields.length - 1];
           const prevEl = document.querySelector(`[data-row="${index - 1}"][data-field="${lastField}"]`) as HTMLElement;
           if (prevEl) prevEl.focus();
         }
       } else {
         if (currentFieldIndex < fields.length - 1) {
+          e.preventDefault();
           const nextField = fields[currentFieldIndex + 1];
           const nextEl = document.querySelector(`[data-row="${index}"][data-field="${nextField}"]`) as HTMLElement;
           if (nextEl) nextEl.focus();
         } else if (index < items.length - 1) {
+          e.preventDefault();
           const nextEl = document.querySelector(`[data-row="${index + 1}"][data-field="name"]`) as HTMLElement;
           if (nextEl) nextEl.focus();
+        } else if (index === items.length - 1) {
+          e.preventDefault();
+          addNewItem();
+          setTimeout(() => {
+            const nextEl = document.querySelector(`[data-row="${index + 1}"][data-field="name"]`) as HTMLElement;
+            if (nextEl) nextEl.focus();
+          }, 50);
         }
       }
     }
-  }, [items.length]);
+  }, [items.length, addNewItem]);
   const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, index: -1 });
-  const handleContextMenu = useCallback((e, index) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, index });
   }, []);
@@ -384,57 +518,177 @@ const ItemsTable = ({
       { icon: <Trash size={13} />, label: t('deleteRow'), onClick: () => removeItem(contextMenu.index) },
     ];
   }, [contextMenu.index, items, db, getRowErrors, removeItem, t]);
-  const formatItemCurrency = useCallback((amount) => formatCurrency(amount, currency), [currency]);
+  const applyBulkDiscount = (rate: number) => {
+    onItemsChange(prev => prev.map((item, idx) => selectedItems.has(idx) ? { ...item, discountRate: rate } : item));
+    toast.success(`Seçili kalemlere %${rate} iskonto uygulandı`);
+  };
+
+  const applyBulkVAT = (vat: number) => {
+    onItemsChange(prev => prev.map((item, idx) => selectedItems.has(idx) ? { ...item, taxRate: vat } : item));
+    toast.success(`Seçili kalemlerin KDV oranı %${vat} yapıldı`);
+  };
+
+  const formatItemCurrency = useCallback((amount: number) => formatCurrency(amount, currency), [currency]);
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+    <div className="space-y-3" onPaste={handlePaste}>
+      {/* ─── CONTROLS HEADER ─── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
             <Package size={16} className="text-[var(--color-primary)]" />
           </div>
           <h3 className="text-sm font-semibold text-[var(--color-text)]">
-            {t("items")} ({items.length})
+            {t("items")}
           </h3>
+          {/* Live item and quantity counter badge */}
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] border border-[var(--color-border)]">
+            {items.length} Kalem • {totalQuantity} Adet
+          </span>
           {hasErrors && (
             <span className="flex items-center gap-1 text-xs text-[var(--color-error)]">
               <AlertCircle size={12} /> {t('errorsExist')}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {selectedItems.size > 0 && (
-            <div className="flex items-center gap-1.5 bg-[var(--color-primary-muted)] px-2 py-1 rounded-lg text-xs">
-              <span className="font-medium text-[var(--color-primary)]">{selectedItems.size} {t('selected')}</span>
-              <button type="button" onClick={moveSelectedUp} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveUp')} aria-label={t('moveUp')}><ArrowUp size={12} /></button>
-              <button type="button" onClick={moveSelectedDown} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveDown')} aria-label={t('moveDown')}><ArrowDown size={12} /></button>
-              <button type="button" onClick={duplicateSelected} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('duplicateRow')} aria-label={t('duplicateRow')}><Package size={12} /></button>
-              <button type="button" onClick={deleteSelected} className="p-1 hover:bg-[var(--color-error-muted)] rounded text-[var(--color-error)]" title={t('delete')} aria-label={t('delete')}><Trash size={12} /></button>
-              <button type="button" onClick={() => setSelectedItems(new Set())} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('clearSelection')} aria-label={t('clearSelection')}><X size={12} /></button>
-            </div>
-          )}
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Tools & Options Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowToolsMenu(prev => !prev)}
+              className={`btn btn-xs flex items-center gap-1 ${showToolsMenu ? 'bg-[var(--color-bg-hover)]' : 'btn-outline'}`}
+              title="Tablo Araçları ve Seçenekler"
+            >
+              <Settings2 size={13} />
+              <span>Araçlar</span>
+            </button>
+            {showToolsMenu && (
+              <div className="absolute right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-xl p-2.5 min-w-[200px] z-50 space-y-2 text-xs">
+                {/* Tax Mode */}
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-1">Fiyatlandırma</div>
+                  <button
+                    type="button"
+                    onClick={toggleTaxMode}
+                    className="w-full flex items-center justify-between px-2 py-1 rounded hover:bg-[var(--color-bg-hover)] text-left transition-colors"
+                  >
+                    <span className="text-[var(--color-text)]">KDV Modu</span>
+                    <span className="font-semibold text-[var(--color-primary)]">{taxMode === 'inclusive' ? 'Dahil' : 'Hariç'}</span>
+                  </button>
+                </div>
+
+                <div className="border-t border-[var(--color-border)]" />
+
+                {/* Fast Sort */}
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-1">Sırala</div>
+                  <div className="space-y-0.5">
+                    <button type="button" onClick={() => { sortItems('price-desc'); setShowToolsMenu(false); }} className="w-full text-left px-2 py-1 rounded text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]">Pahalıdan Ucuza</button>
+                    <button type="button" onClick={() => { sortItems('price-asc'); setShowToolsMenu(false); }} className="w-full text-left px-2 py-1 rounded text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]">Ucuzdan Pahalıya</button>
+                    <button type="button" onClick={() => { sortItems('name-asc'); setShowToolsMenu(false); }} className="w-full text-left px-2 py-1 rounded text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]">İsim (A-Z)</button>
+                  </div>
+                </div>
+
+                <div className="border-t border-[var(--color-border)]" />
+
+                {/* Column Visibility */}
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-1">Sütunlar</div>
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
+                      <input type="checkbox" checked={visibleColumns.image !== false} onChange={() => toggleColumn('image')} />
+                      <span>Görsel</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
+                      <input type="checkbox" checked={visibleColumns.description !== false} onChange={() => toggleColumn('description')} />
+                      <span>Açıklama</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
+                      <input type="checkbox" checked={visibleColumns.unit !== false} onChange={() => toggleColumn('unit')} />
+                      <span>Birim</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
+                      <input type="checkbox" checked={visibleColumns.discount !== false} onChange={() => toggleColumn('discount')} />
+                      <span>İskonto</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="border-t border-[var(--color-border)]" />
+
+                {/* Excel Import */}
+                <label className="w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-[var(--color-bg-hover)] text-[var(--color-text)] transition-colors">
+                  <Upload size={13} className="text-[var(--color-primary)]" />
+                  <span>Excel'den Yükle (.xlsx)</span>
+                  <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { handleExcelUpload(e); setShowToolsMenu(false); }} />
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* Select All */}
           <div className="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden">
             <button type="button" onClick={selectAll} className="p-1.5 hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]" title={selectedItems.size === items.length ? t('deselectAll') : t('selectAllItems')} aria-label={selectedItems.size === items.length ? t('deselectAll') : t('selectAllItems')}>
               {selectedItems.size === items.length && items.length > 0 ? <CheckSquare size={14} /> : <Square size={14} />}
             </button>
           </div>
-          <div className="flex border border-[var(--color-border)] rounded-lg overflow-hidden">
-            <button type="button" onClick={() => setViewMode("table")} className={`p-1.5 ${viewMode === "table" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title={t('tableViewMode')} aria-label={t('tableViewMode')}><Table size={14} /></button>
-            <button type="button" onClick={() => setViewMode("card")} className={`p-1.5 ${viewMode === "card" ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`} title={t('cardViewMode')} aria-label={t('cardViewMode')}><Grid3X3 size={14} /></button>
-          </div>
-          <label className="btn btn-outline btn-sm cursor-pointer" title={t('importFromExcel')}>
-            <Upload size={13} /> Excel
-            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcelUpload} />
-          </label>
+
           {onAddProduct && (
-            <button type="button" onClick={onAddProduct} className="btn btn-outline btn-sm" title={t('addFromCatalogItems')}>
-              <Package size={13} /> {t('addFromCatalogItems')}
+            <button type="button" onClick={onAddProduct} className="btn btn-outline btn-xs" title={t('addFromCatalogItems')}>
+              <Package size={12} /> {t('addFromCatalogItems')}
             </button>
           )}
-          <button type="button" onClick={addNewItem} className="btn btn-primary btn-sm">
-            <Plus size={13} /> {t("addItem")}
+
+          <button type="button" onClick={addNewItem} className="btn btn-primary btn-xs">
+            <Plus size={12} /> {t("addItem")}
           </button>
         </div>
       </div>
+
+      {/* ─── BATCH OPERATIONS TOOLBAR ─── */}
+      {selectedItems.size > 0 && (
+        <div className="flex items-center gap-2 bg-[var(--color-primary-muted)] px-3 py-1.5 rounded-lg text-xs flex-wrap border border-[var(--color-primary)]/20 animate-in fade-in">
+          <span className="font-semibold text-[var(--color-primary)]">{selectedItems.size} {t('selected')}</span>
+
+          <div className="flex items-center gap-1 border-l border-r border-[var(--color-primary)]/30 px-2">
+            <span className="text-[10px] text-[var(--color-text-muted)]">Toplu % İndirim:</span>
+            {[0, 5, 10, 20].map(rate => (
+              <button
+                key={rate}
+                type="button"
+                onClick={() => applyBulkDiscount(rate)}
+                className="px-1.5 py-0.5 rounded bg-[var(--color-bg-card)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--color-border)] text-[10px] font-medium transition-colors"
+              >
+                %{rate}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 border-r border-[var(--color-primary)]/30 pr-2">
+            <span className="text-[10px] text-[var(--color-text-muted)]">Toplu KDV:</span>
+            {[20, 10, 1, 0].map(vat => (
+              <button
+                key={vat}
+                type="button"
+                onClick={() => applyBulkVAT(vat)}
+                className="px-1.5 py-0.5 rounded bg-[var(--color-bg-card)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--color-border)] text-[10px] font-medium transition-colors"
+              >
+                %{vat}
+              </button>
+            ))}
+          </div>
+
+          <button type="button" onClick={moveSelectedUp} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveUp')} aria-label={t('moveUp')}><ArrowUp size={13} /></button>
+          <button type="button" onClick={moveSelectedDown} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveDown')} aria-label={t('moveDown')}><ArrowDown size={13} /></button>
+          <button type="button" onClick={duplicateSelected} className="p-1 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-primary)]" title="Seçilenleri Çoğalt" aria-label="Seçilenleri Çoğalt"><Package size={13} /></button>
+          <button type="button" onClick={deleteSelected} className="p-1 hover:bg-[var(--color-error-muted)] rounded text-[var(--color-error)]" title={t('delete')} aria-label={t('delete')}><Trash size={13} /></button>
+          <button type="button" onClick={() => setSelectedItems(new Set())} className="p-1 hover:bg-[var(--color-bg-hover)] rounded ml-auto text-[var(--color-text-muted)]" title={t('clearSelection')} aria-label={t('clearSelection')}><X size={13} /></button>
+        </div>
+      )}
+
+      {/* ─── LIVE SEARCH & AUTOCOMPLETE ─── */}
       <div className="relative" ref={searchRef}>
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
@@ -477,6 +731,7 @@ const ItemsTable = ({
           </div>
         )}
       </div>
+
       {recentProducts.length > 0 && items.length === 0 && (
         <div className="text-xs text-[var(--color-text-muted)]">
           <span className="font-medium">{t('recentProducts')}</span>{" "}
@@ -487,45 +742,61 @@ const ItemsTable = ({
           ))}
         </div>
       )}
+
+      {/* ─── DND CONTEXT & ROWS ─── */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           {viewMode === "table" ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--color-border)] text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <tr className="border-b border-[var(--color-border)] text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
                     <th className="w-6 px-1"></th>
-                    <th className="w-8"></th>
-                    <th className="w-16">{t("image")}</th>
+                    <th className="w-7 text-center">#</th>
+                    {visibleColumns.image !== false && <th className="w-16">{t("image")}</th>}
                     <th className="min-w-[200px]">{t("productName")}</th>
                     <th className="w-20">{t("quantity")}</th>
-                    <th className="w-24">{t("unit")}</th>
+                    {visibleColumns.unit !== false && <th className="w-24">{t("unit")}</th>}
                     <th className="w-28">{t("unitPrice")}</th>
                     <th className="w-16">{t("vatRate")}</th>
-                    <th className="w-16">{t("discountRate")}</th>
+                    {visibleColumns.discount !== false && <th className="w-22">{t("discountRate")}</th>}
                     <th className="w-28">{t("total")}</th>
                     <th className="w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, index) => (
-                    <SortableRow
-                      key={item.id}
-                      item={item}
-                      index={index}
-                      handleItemChange={handleItemChange}
-                      removeItem={removeItem}
-                      duplicateItem={duplicateItem}
-                      formatCurrency={formatItemCurrency}
-                      onKeyDown={handleKeyDown}
-                      t={t}
-                      getFieldClass={getFieldClass}
-                      handleRowBlur={handleRowBlur}
-                      rowErrors={allRowErrors.get(item.id)}
-                      selected={selectedItems.has(index)}
-                      toggleSelectItem={toggleSelectItem}
-                      onContextMenu={(e) => handleContextMenu(e, index)}
-                    />
+                    <React.Fragment key={item.id}>
+                      {/* A4 Page Break Indicator guideline after 10th row */}
+                      {index === 10 && (
+                        <tr className="bg-[var(--color-primary-muted)]/20 border-y-2 border-dashed border-[var(--color-primary)]/40 text-center select-none">
+                          <td colSpan={11} className="py-1.5 text-[11px] font-semibold text-[var(--color-primary)] tracking-wide">
+                            📄 1. Sayfa Sonu (A4 Baskı Sınırı — Aşağıdaki Kalemler 2. Sayfaya Taşar)
+                          </td>
+                        </tr>
+                      )}
+                      <SortableRow
+                        item={item}
+                        index={index}
+                        handleItemChange={handleItemChange}
+                        onSelectProduct={handleProductSelect}
+                        removeItem={removeItem}
+                        duplicateItem={duplicateItem}
+                        formatCurrency={formatItemCurrency}
+                        onKeyDown={handleKeyDown}
+                        t={t}
+                        getFieldClass={getFieldClass}
+                        handleRowBlur={handleRowBlur}
+                        rowErrors={allRowErrors.get(item.id)}
+                        selected={selectedItems.has(index)}
+                        toggleSelectItem={toggleSelectItem}
+                        onContextMenu={(e) => handleContextMenu(e, index)}
+                        visibleColumns={visibleColumns}
+                        taxMode={taxMode}
+                        products={allCatalogProducts}
+                        currency={currency}
+                      />
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -538,6 +809,7 @@ const ItemsTable = ({
                   item={item}
                   index={index}
                   handleItemChange={handleItemChange}
+                  onSelectProduct={handleProductSelect}
                   removeItem={removeItem}
                   duplicateItem={duplicateItem}
                   formatCurrency={formatItemCurrency}
@@ -547,6 +819,8 @@ const ItemsTable = ({
                   rowErrors={allRowErrors.get(item.id)}
                   selected={selectedItems.has(index)}
                   toggleSelectItem={toggleSelectItem}
+                  products={allCatalogProducts}
+                  currency={currency}
                 />
               ))}
             </div>

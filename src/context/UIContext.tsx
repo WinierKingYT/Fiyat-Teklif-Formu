@@ -25,6 +25,8 @@ export interface UIContextValue {
   setFocusMode: (mode: boolean | ((prev: boolean) => boolean)) => void;
   isLivePreviewMode: boolean;
   setIsLivePreviewMode: (mode: boolean | ((prev: boolean) => boolean)) => void;
+  splitPreviewMode: boolean;
+  setSplitPreviewMode: (mode: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 const UIContext = createContext<UIContextValue | null>(null);
@@ -98,10 +100,10 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
   }, [appLayout]);
 
   const [appFontSize, setAppFontSize] = useState<number>(() => {
-    return parseInt(localStorage.getItem('appFontSize')!) || 14;
+    return getLocalStorage('appFontSize', 14);
   });
   useEffect(() => {
-    document.documentElement.style.fontSize = `${appFontSize}px`;
+    document.documentElement.style.setProperty('--font-size-base', `${appFontSize}px`);
     setLocalStorage('appFontSize', appFontSize);
   }, [appFontSize]);
 
@@ -119,6 +121,11 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [focusMode, setFocusMode] = useState(false);
   const [isLivePreviewMode, setIsLivePreviewMode] = useState(false);
+  const [splitPreviewMode, setSplitPreviewMode] = useState<boolean>(() => localStorage.getItem('splitPreviewMode') === 'true');
+
+  useEffect(() => {
+    localStorage.setItem('splitPreviewMode', String(splitPreviewMode));
+  }, [splitPreviewMode]);
 
   const value = useMemo<UIContextValue>(() => ({
     viewMode, setViewMode: handleSetViewMode,
@@ -130,7 +137,8 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
     compactMode, setCompactMode,
     focusMode, setFocusMode,
     isLivePreviewMode, setIsLivePreviewMode,
-  }), [viewMode, appTheme, appColor, appLayout, appFontSize, performanceMode, compactMode, focusMode, isLivePreviewMode]);
+    splitPreviewMode, setSplitPreviewMode,
+  }), [viewMode, appTheme, appColor, appLayout, appFontSize, performanceMode, compactMode, focusMode, isLivePreviewMode, splitPreviewMode]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 };

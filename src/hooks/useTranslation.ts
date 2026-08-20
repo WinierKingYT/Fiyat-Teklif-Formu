@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { translations as pdfTranslations } from '../utils/translations';
-import Logger from '../utils/logger';
+import Logger from '@/utils/logger';
+import { translations as pdfTranslations } from '@/utils/translations';
 
 const uiTranslations: { [key: string]: Record<string, string> } = {
   tr: {
@@ -1805,11 +1805,11 @@ const uiTranslations: { [key: string]: Record<string, string> } = {
 
 export function useTranslation(language = 'tr') {
   const lang = language || 'tr';
-  const validLang = ['tr', 'en', 'de'].includes(lang) ? lang : 'tr';
+  const validLang = (['tr', 'en', 'de'].includes(lang) ? lang : 'tr') as keyof typeof uiTranslations;
 
   return useMemo(() => {
-    const ui = uiTranslations[validLang] || uiTranslations.tr;
-    const pdf = pdfTranslations[validLang] || pdfTranslations.tr;
+    const ui = ((uiTranslations as Record<string, Record<string, string>>)[validLang] || uiTranslations.tr) as Record<string, string>;
+    const pdf = ((pdfTranslations as Record<string, Record<string, string>>)[validLang] || pdfTranslations.tr) as Record<string, string>;
 
     const t = (key: string) => {
       if (ui[key] !== undefined) return ui[key];

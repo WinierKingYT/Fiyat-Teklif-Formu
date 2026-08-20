@@ -1,8 +1,8 @@
-﻿import React from 'react';
-import type { QuoteItem } from '../../context/quote/types';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const BoldTheme = ({
+const BoldTheme: React.FC<PdfThemeProps> = ({
     id,
     containerStyles,
     config,
@@ -27,14 +27,14 @@ const BoldTheme = ({
 }) => {
     // Helper for editable fields
     const layoutMap = useMemo(() => {
-        const map = {};
+        const map: Record<string, boolean> = {};
         (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
         return map;
     }, [activeLayout]);
-    const showSection = (id) => layoutMap[id] !== false;
+    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
 
-    const renderEditable = (value, fieldKey, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{value}</span>;
+    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
+        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
 
         return (
             <span
@@ -45,7 +45,7 @@ const BoldTheme = ({
                 }}
                 title={t.clickToEdit}
             >
-                {value || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
+                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
             </span>
         );
     };
@@ -502,7 +502,7 @@ const BoldTheme = ({
         return chunks;
     }, [items, itemsPerPage]);
 
-    const renderTable = (tableItems, startIndex) => (
+    const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="pdf-items-table">
             <thead>
                 <tr>
@@ -534,14 +534,14 @@ const BoldTheme = ({
                         )}
                         <td>
                             <div className="item-name">{item.name}</div>
-                            <div className="item-desc">{item.description}</div>
+                            {item.description && <div className="item-desc">{item.description}</div>}
                         </td>
                         {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center' }}>{item.unit}</td>}
-                        <td className="item-quantity" style={{ textAlign: 'center', fontWeight: '600' }}>{item.quantity}</td>
-                        <td className="item-price" style={{ textAlign: 'right' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#ef4444' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center' }}>%{item.taxRate}</td>}
-                        <td className="item-total" style={{ textAlign: 'right', fontWeight: '700' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        <td className="item-quantity" style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                        <td className="item-price" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                        <td className="item-total" style={{ textAlign: 'right', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -555,7 +555,7 @@ const BoldTheme = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '290mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
@@ -574,7 +574,7 @@ const BoldTheme = ({
                                 zIndex: 0,
                                 transform: `rotate(${config.watermarkRotation || -45}deg)`,
                                 opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 120}px`,
+                                fontSize: `${config.watermarkFontSize || 48}px`,
                                 fontWeight: 'bold',
                                 color: config.watermarkColor || '#000000',
                                 whiteSpace: 'nowrap'
@@ -586,35 +586,37 @@ const BoldTheme = ({
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div className="pdf-header">
+                        <div className="pdf-header" style={{ marginBottom: '1.25rem', paddingBottom: '0.75rem', paddingTop: '1.5rem', borderBottom: `3px solid ${color}` }}>
                             <div className="header-left">
-{config.showLogo && companyData.logo && (
-                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.4rem' }}>
-                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 50}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
+                                {config.showLogo && companyData.logo && (
+                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
+                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
                                     </div>
                                 )}
                                 <div className="company-info">
-                                    <div className="company-name">{renderEditable(companyData.name, 'companyName')}</div>
-                                    <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>
-                                        <div>{companyData.address}</div>
-                                        <div style={{ marginTop: '0.25em' }}>{companyData.phone}{companyData.email ? ` â€¢ ${companyData.email}` : ''}</div>
+                                    <div className="company-name" style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
+                                    <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.75rem', color: '#64748b' }}>
+                                        {companyData.address && <div>{companyData.address}</div>}
+                                        {(companyData.phone || companyData.email) && (
+                                            <div style={{ marginTop: '0.15rem' }}>{companyData.phone}{companyData.phone && companyData.email ? ' • ' : ''}{companyData.email}</div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="header-right">
-                                <div className="quote-title">{renderEditable(config.title, 'quoteTitle')}</div>
-                                <div className="quote-meta" style={{ fontSize: config.quoteMetaLabelFontSize || '0.8rem', color: '#4b5563', marginTop: '0.6rem' }}>
-                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                                        <span><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</span>
-                                        <span><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</span>
-                                        <span><strong>#</strong>{quoteData.number}</span>
-                                    </div>
+                            <div className="header-right" style={{ textAlign: 'right' }}>
+                                <div className="quote-title" style={{ fontSize: '1.35rem', fontWeight: '900', textTransform: 'uppercase', color: color }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ marginTop: '0.35rem', display: 'inline-flex', gap: '0.6rem', fontSize: '0.75rem', background: '#f8fafc', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                                    <span style={{ fontWeight: '700' }}>#{quoteData.number}</span>
+                                    <span>•</span>
+                                    <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
+                                    <span>•</span>
+                                    <span>{t.validUntil}: {formatDate(quoteData.validUntil, currentLocale)}</span>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: `3px solid ${color}` }}>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.8em', color: '#666' }}>
+                        <div className="pdf-header" style={{ marginBottom: '1rem', paddingBottom: '0.35rem', paddingTop: '1rem', borderBottom: `3px solid ${color}` }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '0.75em', color: '#666' }}>
                                 <span><strong>{companyData.name}</strong> - {config.title}</span>
                                 {config.showPageNumbers !== false && (
                                     <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
@@ -623,174 +625,169 @@ const BoldTheme = ({
                         </div>
                     ))}
 
-                    {/* Customer Section - Only Page 1 */}
+                    {/* Customer Section Single Box - Only Page 1 */}
                     {showSection('customer') && pageIndex === 0 && (
-                        <div className="customer-section">
-                            <div className="customer-box" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                <div className="section-title">{t.company}</div>
-                                <div className="info-grid">
-                                    <div className="info-line">
-                                        <span className="info-label">{t.company}:</span>
-                                        <span className="info-value"><strong>{renderEditable(companyData.name, 'companyName')}</strong></span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.authorized}:</span>
-                                        <span className="info-value">{companyData.authorizedPerson || '-'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="customer-box" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                <div className="section-title">{t.customer}</div>
-                                <div className="info-grid">
-                                    <div className="info-line">
-                                        <span className="info-label">{t.company}:</span>
-                                        <span className="info-value"><strong>{renderEditable(customerData.company, 'customerCompany')}</strong></span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.authorized}:</span>
-                                        <span className="info-value">{renderEditable(customerData.name, 'customerName')}</span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.phone}:</span>
-                                        <span className="info-value">{renderEditable(customerData.phone, 'customerPhone')}</span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.email}:</span>
-                                        <span className="info-value">{renderEditable(customerData.email, 'customerEmail')}</span>
-                                    </div>
+                        <div className="customer-section" style={{ display: 'block', marginBottom: '1.25rem' }}>
+                            <div className="customer-box" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.75rem 1rem' }}>
+                                <div className="section-title" style={{ fontSize: '0.75rem', fontWeight: '800', color: color, textTransform: 'uppercase', marginBottom: '0.35rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem' }}>{t.customer} / {t.to}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.4rem 1.5rem', alignItems: 'center' }}>
+                                    {customerData.company && (
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>
+                                            {renderEditable(customerData.company, 'customerCompany')}
+                                        </div>
+                                    )}
+                                    {customerData.name && (
+                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
+                                            <span style={{ color: '#64748b', fontWeight: '700' }}>{t.authorized}: </span>
+                                            <span>{renderEditable(customerData.name, 'customerName')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.phone && (
+                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
+                                            <span style={{ color: '#64748b', fontWeight: '700' }}>{t.phone}: </span>
+                                            <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.email && (
+                                        <div style={{ fontSize: '0.78rem', color: '#334155' }}>
+                                            <span style={{ color: '#64748b', fontWeight: '700' }}>{t.email}: </span>
+                                            <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.address && (
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#64748b' }}>
+                                            <span>{customerData.address}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {/* Items Table */}
-{showSection('items') && (
+                    {showSection('items') && (
                         <div style={{ flex: 1 }}>
                             {renderTable(chunk, pageIndex * itemsPerPage)}
                         </div>
-                        )}
+                    )}
 
                     {/* Summary, Notes, Signatures - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
                         <div style={{ marginTop: 'auto' }}>
                             {(config.showSummary || config.showBankInfo) && (
-                                <div className="bottom-section" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                    <div className="summary-section">
-                                        <div className="section-title" style={{ marginBottom: '1rem' }}>{t.summary}</div>
-                                        <div className="summary-row">
-                                            <span>{t.subtotal}:</span>
-                                            <span style={{ fontWeight: config.summaryValueFontWeight || '600', fontSize: config.summaryValueFontSize || 'inherit' }}>{formatCurrency(subtotal)}</span>
-                                        </div>
-                                        {discountAmount > 0 && (
-                                            <div className="summary-row discount">
-                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
-                                                <span>-{formatCurrency(discountAmount)}</span>
-                                            </div>
-                                        )}
-                                        {config.showTableTax && (
-                                            <div className="summary-row">
-                                                <span>{t.vat} (%20):</span>
-                                                <span>{formatCurrency(totalTax)}</span>
-                                            </div>
-                                        )}
-                                        <div className="summary-row">
-                                            <span>{t.total} {t.vat}:</span>
-                                            <span>{formatCurrency(totalTax)}</span>
-                                        </div>
-                                        <div className="summary-row grand-total">
-                                            <span>{t.generalTotal}:</span>
-                                            <span style={{ fontSize: 'inherit', fontWeight: 'inherit' }}>{formatCurrency(total)}</span>
-                                        </div>
-                                    </div>
+                                <div className="bottom-section" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1.5rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '1rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
                                     <div className="bank-section">
-                                        {config.showBankInfo && (
+                                        {config.showBankInfo && (bankData.bankName || bankData.iban) && (
                                             <div className="bank-info">
-                                                <div className="section-title" style={{ marginBottom: '1rem' }}>{t.bankInfo}</div>
-                                                <div className="bank-list">
-                                                    <div className="bank-row"><strong>{t.bank}:</strong> <span>{bankData.bankName}</span></div>
-                                                    <div className="bank-row"><strong>{t.branch}:</strong> <span>{bankData.branch}</span></div>
-                                                    <div className="bank-row"><strong>{t.accountNo}:</strong> <span>-</span></div>
-                                                    <div className="bank-row"><strong>{t.iban}:</strong> <span>{bankData.iban}</span></div>
-                                                    <div className="bank-row"><strong>{t.accountHolder}:</strong> <span>{bankData.accountHolder}</span></div>
+                                                <div className="section-title" style={{ fontSize: '0.75rem', fontWeight: '800', color: color, textTransform: 'uppercase', marginBottom: '0.4rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem' }}>{t.bankInfo}</div>
+                                                <div className="bank-list" style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.6' }}>
+                                                    {bankData.bankName && <div className="bank-row"><strong>{t.bank}:</strong> <span>{bankData.bankName}</span></div>}
+                                                    {bankData.branch && <div className="bank-row"><strong>{t.branch}:</strong> <span>{bankData.branch}</span></div>}
+                                                    {bankData.accountHolder && <div className="bank-row"><strong>{t.accountHolder}:</strong> <span>{bankData.accountHolder}</span></div>}
+                                                    {bankData.iban && <div className="bank-row" style={{ marginTop: '0.2rem' }}><strong>{t.iban}:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{bankData.iban}</span></div>}
                                                 </div>
                                             </div>
                                         )}
+                                        {/* Notes & Terms */}
+                                        {showSection('notes') && (config.showTerms || config.showNotes) && (
+                                            <div style={{ marginTop: '0.5rem' }}>
+                                                {quoteData.notes && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#475569', marginBottom: '0.4rem' }}>
+                                                        <div style={{ fontWeight: '700', color: '#64748b', fontSize: '0.75rem' }}>{t.notes}</div>
+                                                        <div>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
+                                                    </div>
+                                                )}
+                                                {config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.5' }}>
+                                                        {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                        {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
+                                                        {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="summary-section">
+                                        <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
+                                            <span>{t.subtotal}:</span>
+                                            <span style={{ fontWeight: '700', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
+                                        </div>
+                                        {discountAmount > 0 && (
+                                            <div className="summary-row discount" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#ef4444' }}>
+                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
+                                            </div>
+                                        )}
+                                        {config.showTableTax && (
+                                            <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.8rem', color: '#475569' }}>
+                                                <span>{t.total} {t.vat}:</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
+                                            </div>
+                                        )}
+                                        <div className="summary-row grand-total" style={{ display: 'flex', justifyContent: 'space-between', borderTop: `3px solid ${color}`, marginTop: '0.35rem', paddingTop: '0.35rem', fontSize: '1.1rem', fontWeight: '900', color: '#0f172a' }}>
+                                            <span>{t.generalTotal}:</span>
+                                            <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'right' }}>
+                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Notes & Terms */}
-                            {showSection('notes') && (config.showTerms || config.showNotes) && (
-                                <>
-                                    {quoteData.notes && (
-                                        <div className="notes-section">
-                                            <div className="notes-title">{t.notes}</div>
-                                            <div className="notes-content">{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
-                                        </div>
-                                    )}
-                                    {config.showTerms && (
-                                        <div className="terms-box">
-                                            <div className="notes-title" style={{ marginBottom: '0.5rem' }}>{t.terms}</div>
-                                            <div className="notes-content">
-                                                <div><strong>{t.payment}:</strong> {renderEditable(quoteData.warrantyTerms, 'terms', 'textarea')}</div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="signatures-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem' }}>
+                                <div className="signatures-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '1rem', marginBottom: '0.5rem' }}>
                                     <div className="signature-col" style={{ textAlign: 'center' }}>
                                         <div className="signature-line" style={{
-                                            height: 'auto',
-                                            minHeight: '80px',
+                                            minHeight: '48px',
                                             display: 'flex',
                                             alignItems: 'flex-end',
                                             justifyContent: 'center',
-                                            paddingBottom: '5px'
+                                            gap: '1rem',
+                                            borderBottom: '2px solid #0f172a',
+                                            paddingBottom: '4px'
                                         }}>
                                             {(signature || companyData.signature) && (
                                                 <img
-                                                    src={signature || companyData.signature}
+                                                    src={(signature || companyData.signature) as string}
                                                     alt="Signature"
                                                     style={{
-                                                        maxHeight: '60px',
-                                                        maxWidth: '150px',
+                                                        maxHeight: '45px',
+                                                        maxWidth: '120px',
                                                         objectFit: 'contain'
                                                     }}
                                                 />
                                             )}
-                                        </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.5rem' }}>
-                                            {t.signature}
-                                        </div>
-                                    </div>
-                                    <div className="signature-col" style={{ textAlign: 'center' }}>
-                                        <div className="signature-line" style={{
-                                            height: 'auto',
-                                            minHeight: '80px',
-                                            display: 'flex',
-                                            alignItems: 'flex-end',
-                                            justifyContent: 'center',
-                                            paddingBottom: '5px'
-                                        }}>
                                             {companyData.stamp && (
                                                 <img
                                                     src={companyData.stamp}
                                                     alt="Stamp"
                                                     style={{
-                                                        maxHeight: '60px',
-                                                        maxWidth: '150px',
+                                                        maxHeight: '45px',
+                                                        maxWidth: '90px',
                                                         objectFit: 'contain',
-                                                        opacity: 0.8
+                                                        opacity: 0.85
                                                     }}
                                                 />
                                             )}
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.5rem' }}>
-                                            {t.companyStamp}
+                                        <div className="signature-label" style={{ paddingTop: '0.3rem', fontSize: '0.78rem', fontWeight: '800', color: '#0f172a' }}>
+                                            {t.seller} (Kaşe & İmza)
+                                        </div>
+                                    </div>
+                                    <div className="signature-col" style={{ textAlign: 'center' }}>
+                                        <div className="signature-line" style={{
+                                            minHeight: '48px',
+                                            display: 'flex',
+                                            alignItems: 'flex-end',
+                                            justifyContent: 'center',
+                                            borderBottom: '2px solid #0f172a',
+                                            paddingBottom: '4px'
+                                        }}>
+                                        </div>
+                                        <div className="signature-label" style={{ paddingTop: '0.3rem', fontSize: '0.78rem', fontWeight: '800', color: '#0f172a' }}>
+                                            {t.customer} (Onay / İmza)
                                         </div>
                                     </div>
                                 </div>
@@ -798,36 +795,31 @@ const BoldTheme = ({
                         </div>
                     )}
 
-                    {/* Footer - Only Last Page */}
+                    {/* Footer - Only Last Page (Clean Single Line) */}
                     {showSection('footer') && pageIndex === itemChunks.length - 1 && (
-                        <div className="pdf-footer">
-                            <div className="footer-info" style={{ marginBottom: '0.5rem' }}>
-                                <div className="footer-item">
-                                    <i className="fas fa-phone"></i> {companyData.phone}
-                                </div>
-                                <div className="footer-item">
-                                    <i className="fas fa-envelope"></i> {companyData.email}
-                                </div>
-                                <div className="footer-item">
-                                    <i className="fas fa-globe"></i> {companyData.website}
-                                </div>
+                        <div className="pdf-footer" style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>
+                            <div className="footer-info" style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                <span><strong>{companyData.name}</strong></span>
+                                {companyData.phone && <span>• {companyData.phone}</span>}
+                                {companyData.email && <span>• {companyData.email}</span>}
+                                {companyData.website && <span>• {companyData.website}</span>}
                             </div>
-                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '1rem' }}>
-                                <div style={{ marginBottom: '0.25rem', fontWeight: '700', color: color }}>{t.thankYou}</div>
-                                <div style={{ marginBottom: '0.25rem' }}>{t.regards}, {companyData.name}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                                <span>{t.thankYou} • {t.regards}</span>
                             </div>
                         </div>
                     )}
                     {config.customFooter && (
-                        <div className="custom-footer">
+                        <div className="custom-footer" style={{ marginTop: '0.25rem', textAlign: 'center', fontSize: '0.65rem', color: '#64748b' }}>
                             {config.customFooter}
                         </div>
                     )}
 
                     {/* Page Number */}
                     {config.showPageNumbers && (
-                        <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.65rem', color: '#94a3b8' }}>
-                            {t.page} {pageIndex + 1} / {itemChunks.length}
+                        <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '0.25rem' }}>
+                            <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
+                            <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                         </div>
                     )}
                 </div>

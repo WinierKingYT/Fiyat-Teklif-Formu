@@ -1,5 +1,5 @@
 // IndexedDB Manager Utility
-import Logger from './logger';
+import Logger from '@/utils/logger';
 
 class IndexedDBManager {
     private dbName: string;
@@ -12,7 +12,7 @@ class IndexedDBManager {
 
     constructor() {
         this.dbName = 'TeklifMasterDB';
-        this.version = this.calculateVersion('2.3.1'); // Bumped version for new store
+        this.version = this.calculateVersion('2.4.0'); // Bumped version for quoteVersions store
         this.db = null;
         this.isInitialized = false;
         this.initializationPromise = null;
@@ -21,12 +21,12 @@ class IndexedDBManager {
     }
 
 
-    calculateVersion(appVersion) {
+    calculateVersion(appVersion: string): number {
         const parts = appVersion.split('.').map(Number);
         return parts[0] * 10000 + parts[1] * 100 + parts[2];
     }
 
-    async initialize() {
+    async initialize(): Promise<IDBDatabase | null> {
         if (this.isInitialized && this.isConnectionOpen) return this.db;
 
         if (this.initializationPromise) {
@@ -76,16 +76,17 @@ class IndexedDBManager {
         return this.initializationPromise;
     }
 
-    handleUpgrade(db, oldVersion) {
+    handleUpgrade(db: IDBDatabase, oldVersion: number): void {
         Logger.log(`Database upgrading from version ${oldVersion} to ${this.version}`);
 
         const migrations = [
-            { version: 1, migrate: (db) => this.createInitialStores(db) },
-            { version: 2, migrate: (db) => this.addPreviewDataStore(db) },
-            { version: 3, migrate: (db) => this.addFormStateStore(db) },
-            { version: 4, migrate: (db) => this.addSettingsStore(db) },
-            { version: 5, migrate: (db) => this.addBankInfoStore(db) },
-            { version: 20300, migrate: (db) => this.addRecycleBinStore(db) },
+            { version: 1, migrate: (d: IDBDatabase) => this.createInitialStores(d) },
+            { version: 2, migrate: (d: IDBDatabase) => this.addPreviewDataStore(d) },
+            { version: 3, migrate: (d: IDBDatabase) => this.addFormStateStore(d) },
+            { version: 4, migrate: (d: IDBDatabase) => this.addSettingsStore(d) },
+            { version: 5, migrate: (d: IDBDatabase) => this.addBankInfoStore(d) },
+            { version: 20300, migrate: (d: IDBDatabase) => this.addRecycleBinStore(d) },
+            { version: 20400, migrate: (d: IDBDatabase) => this.addQuoteVersionsStore(d) },
         ];
 
 
@@ -102,7 +103,7 @@ class IndexedDBManager {
             });
     }
 
-    createInitialStores(db) {
+    createInitialStores(db: IDBDatabase): void {
         const stores = [
             { name: 'customers', indexes: ['name', 'company', 'email', 'lastUsed'] },
             { name: 'products', indexes: ['name', 'category', 'price'] },
@@ -122,7 +123,7 @@ class IndexedDBManager {
         });
     }
 
-    addPreviewDataStore(db) {
+    addPreviewDataStore(db: IDBDatabase): void {
         if (!db.objectStoreNames.contains('previewData')) {
             const store = db.createObjectStore('previewData', { keyPath: 'id' });
             store.createIndex('timestamp', 'timestamp', { unique: false });
@@ -130,7 +131,7 @@ class IndexedDBManager {
         }
     }
 
-    addFormStateStore(db) {
+    addFormStateStore(db: IDBDatabase): void {
         if (!db.objectStoreNames.contains('formState')) {
             const store = db.createObjectStore('formState', { keyPath: 'id' });
             store.createIndex('timestamp', 'timestamp', { unique: false });
@@ -138,7 +139,7 @@ class IndexedDBManager {
         }
     }
 
-    addSettingsStore(db) {
+    addSettingsStore(db: IDBDatabase): void {
         if (!db.objectStoreNames.contains('settings')) {
             const store = db.createObjectStore('settings', { keyPath: 'id' });
             store.createIndex('key', 'key', { unique: true });
@@ -146,7 +147,7 @@ class IndexedDBManager {
         }
     }
 
-    addBankInfoStore(db) {
+    addBankInfoStore(db: IDBDatabase): void {
         if (!db.objectStoreNames.contains('bankInfo')) {
             const store = db.createObjectStore('bankInfo', { keyPath: 'id' });
             store.createIndex('bankName', 'bankName', { unique: false });
@@ -154,13 +155,22 @@ class IndexedDBManager {
         }
     }
 
-    addRecycleBinStore(db) {
+    addRecycleBinStore(db: IDBDatabase): void {
         if (!db.objectStoreNames.contains('recycle_bin')) {
             const store = db.createObjectStore('recycle_bin', { keyPath: 'id', autoIncrement: true });
             store.createIndex('originalStore', 'originalStore', { unique: false });
             store.createIndex('deletedAt', 'deletedAt', { unique: false });
             store.createIndex('name', 'name', { unique: false });
             Logger.log('RecycleBin store oluşturuldu');
+        }
+    }
+
+    addQuoteVersionsStore(db: IDBDatabase): void {
+        if (!db.objectStoreNames.contains('quoteVersions')) {
+            const store = db.createObjectStore('quoteVersions', { keyPath: 'versionId' });
+            store.createIndex('quoteId', 'quoteId', { unique: false });
+            store.createIndex('createdAt', 'createdAt', { unique: false });
+            Logger.log('QuoteVersions store oluşturuldu');
         }
     }
 
@@ -214,6 +224,30 @@ class IndexedDBManager {
                 };
             } catch (error) {
                 Logger.error(`${storeName} getByIndex işlemi exception:`, error);
+                reject(error);
+            }
+        });
+    }
+
+    async getAllByIndex<T = unknown>(storeName: string, indexName: string, query?: IDBValidKey | IDBKeyRange): Promise<T[]> {
+        await this.ensureConnection();
+
+        return new Promise((resolve, reject) => {
+            try {
+                const transaction = this.db!.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const index = store.index(indexName);
+                const request = query !== undefined ? index.getAll(query) : index.getAll();
+
+                request.onsuccess = () => {
+                    resolve(request.result || []);
+                };
+                request.onerror = () => {
+                    Logger.error(`${storeName} getAllByIndex işlemi hatası:`, request.error);
+                    reject(request.error);
+                };
+            } catch (error) {
+                Logger.error(`${storeName} getAllByIndex işlemi exception:`, error);
                 reject(error);
             }
         });
@@ -358,15 +392,16 @@ class IndexedDBManager {
         });
     }
 
-    validateData(storeName, data) {
+    validateData(storeName: string, data: unknown): boolean {
         // Validation logic can be expanded here
-        return true;
+        return !!storeName && !!data;
     }
 
-    sanitizeData(data) {
-        const sanitized = { ...data };
-        // Basic sanitization
-        return sanitized;
+    sanitizeData<T>(data: T): T {
+        if (typeof data === 'object' && data !== null) {
+            return { ...data };
+        }
+        return data;
     }
 }
 

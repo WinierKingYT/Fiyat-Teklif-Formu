@@ -1,14 +1,13 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import Sidebar from './Sidebar';
-import TabBar from './TabBar';
-import StatusBar from './StatusBar';
+import Sidebar from '@/components/Sidebar';
+import TabBar from '@/components/TabBar';
 
-const PdfPreviewPanel = lazy(() => import('./PdfPreviewPanel'));
-import { useQuoteData, useTab } from '../context/QuoteContext';
-import { useUI } from '../context/UIContext';
-import { useTranslation } from '../hooks/useTranslation';
-import { Sun, Moon, Smartphone, Monitor, Download, Menu } from 'lucide-react';
-import AutoSaveIndicator from './AutoSaveIndicator';
+const PdfPreviewPanel = lazy(() => import('@/components/PdfPreviewPanel'));
+import { useQuoteData, useTab } from '@/context/QuoteContext';
+import { useUI } from '@/context/UIContext';
+import { useTranslation } from '@/hooks/useTranslation';
+import { Sun, Moon, Download, Menu } from 'lucide-react';
+import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 
 interface TopBarProps {
   currentView: string;
@@ -16,8 +15,7 @@ interface TopBarProps {
 }
 
 const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
-  const { viewMode, setViewMode, isLivePreviewMode, setIsLivePreviewMode, appTheme, setAppTheme } = useUI();
-  const { saveQuote } = useQuoteData();
+  const { isLivePreviewMode, setIsLivePreviewMode, appTheme, setAppTheme } = useUI();
   const { t } = useTranslation();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
@@ -40,13 +38,6 @@ const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
       <div className="top-bar-right">
         <AutoSaveIndicator />
         <div className="top-bar-divider" />
-        <button type="button"
-          onClick={() => setViewMode(prev => prev === 'mobile' ? 'desktop' : 'mobile')}
-          className="top-bar-btn" title={viewMode === 'mobile' ? 'Masaüstü Görünümü' : 'Mobil Görünüm'}
-          aria-label={viewMode === 'mobile' ? 'Masaüstü Görünümü' : 'Mobil Görünüm'}
-        >
-          {viewMode === 'mobile' ? <Monitor size={15} /> : <Smartphone size={15} />}
-        </button>
         <button type="button"
           onClick={() => setAppTheme(prev => prev === 'light' ? 'dark' : 'light')}
           className="top-bar-btn" title={appTheme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
@@ -90,7 +81,7 @@ const Layout = React.memo(({
   onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
   onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin, onOpenAnalytics,
 }: LayoutProps) => {
-  const { viewMode, focusMode, setFocusMode, isLivePreviewMode } = useUI();
+  const { focusMode, setFocusMode, isLivePreviewMode } = useUI();
   const { addTab } = useTab();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -152,8 +143,6 @@ const Layout = React.memo(({
             </Suspense>
           )}
         </div>
-
-        <StatusBar />
       </div>
     </div>
   );

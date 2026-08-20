@@ -1,8 +1,8 @@
-﻿import React from "react";
-import { Save, Building } from "lucide-react";
-import CompanyInfoForm from "../CompanyInfoForm";
-import { useTranslation } from "../../hooks/useTranslation";
-import { useQuoteData } from "../../context/QuoteContext";
+﻿import { Save, Building } from "lucide-react";
+import React from "react";
+import CompanyInfoForm from '@/components/CompanyInfoForm';
+import { useQuoteData } from '@/context/QuoteContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface CompanyDefaultsProps {
   settings: {

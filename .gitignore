@@ -119,6 +119,11 @@ dist
 # Build output
 dev-dist/
 
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
 # Local MCP config with secrets
 .mcp/config.json
 

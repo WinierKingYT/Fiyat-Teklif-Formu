@@ -1,21 +1,21 @@
-﻿import React from 'react';
+import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, FileText, PenTool, Layers, Edit2, Zap, ZapOff, RefreshCcw, Power, PowerOff, Printer, Share2, Settings2, Ruler, AlertTriangle, History, BookmarkPlus } from 'lucide-react';
+import React from 'react';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FileDown, Palette, LayoutTemplate, Eye, Type, Table, Layout, Stamp, Sparkles, Trash2, AlignLeft, AlignCenter, AlignRight, FileSpreadsheet, FileText, PenTool, Layers, Edit2, Zap, ZapOff, RefreshCcw, Power, PowerOff, Printer, Share2, Settings2, Ruler, AlertTriangle } from 'lucide-react';
-import { calculateQuoteTotals } from '../utils/calculations';
-import { generatePDF, printQuote, loadPdfFonts, getPdfMetadata, PAGE_SIZE_OPTIONS, QUALITY_OPTIONS, type PageSize, type PdfQuality } from '../utils/pdfGenerator';
-import { shareQuote } from '../utils/emailService';
-import { exportQuoteToExcel, exportQuoteToCSV } from '../utils/excelExporter';
-import PrintableQuote from './PrintableQuoteV2';
-import PopupEditor from './PopupEditor';
-import { useQuoteData, usePdfConfig } from '../context/QuoteContext';
-import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
-import Logger from '../utils/logger';
-import useDebounce from '../hooks/useDebounce';
-import { deepEqual } from '../utils/deepEqual';
-import PdfSectionsTab from './pdf-tabs/PdfSectionsTab';
+import PdfSectionsTab from '@/components/pdf-tabs/PdfSectionsTab';
+import PopupEditor from '@/components/PopupEditor';
+import PrintableQuote from '@/components/PrintableQuoteV2';
+import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
+import useDebounce from '@/hooks/useDebounce';
+import { useTranslation } from '@/hooks/useTranslation';
+import { calculateQuoteTotals } from '@/utils/calculations';
+import { deepEqual } from '@/utils/deepEqual';
+import { shareQuote } from '@/utils/emailService';
+import { exportQuoteToExcel, exportQuoteToCSV } from '@/utils/excelExporter';
+import Logger from '@/utils/logger';
+import { generatePDF, printQuote, loadPdfFonts, getPdfMetadata, PAGE_SIZE_OPTIONS, QUALITY_OPTIONS, type PageSize, type PdfQuality } from '@/utils/pdfGenerator';
+import type { PdfConfig } from '@/context/quote/types';
 import type html2pdfType from 'html2pdf.js';
-import type { PdfConfig } from '../context/quote/types';
 
 type Html2PdfOptions = NonNullable<Parameters<typeof html2pdfType>[1]>;
 
@@ -41,14 +41,17 @@ const PdfPreviewPanel = React.memo(() => {
         discount,
         updateQuoteData,
         updateCustomerData,
-        updateCompanyData
+        updateCompanyData,
+        saveVersion,
     } = useQuoteData();
     const { pdfLayout, pdfConfig, setPdfConfig } = usePdfConfig();
     const { t } = useTranslation(quoteData?.language);
 
-    const [activeTab, setActiveTab] = useState('sections');
+    const [activeTab, setActiveTab] = useState('design');
     const [savedTemplates, setSavedTemplates] = useState<SavedPdfTemplate[]>([]);
     const [templateName, setTemplateName] = useState('');
+    const [versionNameInput, setVersionNameInput] = useState('');
+    const [showVersionModal, setShowVersionModal] = useState(false);
     const [signature, setSignature] = useState<string | null>(null);
     const [performanceMode, setPerformanceMode] = useState(false);
     const [manualRefreshMode, setManualRefreshMode] = useState(false);
@@ -283,7 +286,7 @@ const PdfPreviewPanel = React.memo(() => {
         options: []
     });
 
-    const openEditor = useCallback((title, initialValue, onSave, type = 'text', options = []) => {
+    const openEditor = useCallback((title: string, initialValue: string, onSave: (val: string) => void, type = 'text', options: { value: string; label: string }[] = []) => {
         setEditConfig({
             title,
             initialValue,
@@ -294,7 +297,7 @@ const PdfPreviewPanel = React.memo(() => {
         setIsEditorOpen(true);
     }, []);
 
-    const fieldLabels = {
+    const fieldLabels: Record<string, string> = {
         quoteTitle: t('documentTitle'),
         companyName: t('company'),
         customerCompany: t('customerCompany'),
@@ -308,15 +311,17 @@ const PdfPreviewPanel = React.memo(() => {
         deliveryTerms: t('deliveryTerms')
     };
 
-    const handleConfigChange = useCallback((key, value) => {
+    const handleConfigChange = useCallback((key: string, value: unknown) => {
         setPdfConfig(prev => ({ ...prev, [key]: value }));
     }, [setPdfConfig]);
 
-    const handleFieldEdit = useCallback((fieldKey, value, type = 'text') => {
+    const handleFieldEdit = useCallback((fieldKey: string, value: unknown, type = 'text') => {
         setEditConfig({
             title: fieldLabels[fieldKey] || fieldKey,
-            initialValue: value,
-            onSave: (newValue) => {
+            initialValue: String(value ?? ''),
+            type,
+            options: [],
+            onSave: (newValue: string) => {
                 switch (fieldKey) {
                     case 'quoteTitle':
                         handleConfigChange('title', newValue);
@@ -354,9 +359,7 @@ const PdfPreviewPanel = React.memo(() => {
                     default:
                         break;
                 }
-            },
-            type,
-            options: []
+            }
         });
         setIsEditorOpen(true);
     }, [quoteData, customerData, companyData, updateQuoteData, updateCustomerData, updateCompanyData, handleConfigChange, fieldLabels]);
@@ -398,6 +401,18 @@ const PdfPreviewPanel = React.memo(() => {
         localStorage.setItem('pdfTemplates', JSON.stringify(updatedTemplates));
         toast.success(t('templateDeleted'));
     }, [savedTemplates]);
+
+    const handleSaveVersion = useCallback(async () => {
+        if (!versionNameInput.trim()) {
+            toast.error('Lütfen bir sürüm adı girin');
+            return;
+        }
+        const verId = await saveVersion(versionNameInput.trim());
+        if (verId) {
+            setVersionNameInput('');
+            setShowVersionModal(false);
+        }
+    }, [versionNameInput, saveVersion]);
 
     const sanitizeFileNamePart = useCallback((value: string) => {
         const trMap: Record<string, string> = {
@@ -449,7 +464,7 @@ const PdfPreviewPanel = React.memo(() => {
                 title: pdfConfig.title,
                 author: companyData.name || 'TeklifApp',
                 language: quoteData.language || 'tr',
-                fontFamilies: [pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily],
+                fontFamilies: [pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily].filter((f): f is string => Boolean(f)),
                 backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
                 onStage: (stage) => setGenerationStage(generationStageLabels[stage] || t('pdfPreparing'))
             });
@@ -476,7 +491,7 @@ const PdfPreviewPanel = React.memo(() => {
             const element = document.getElementById('printable-quote-container-panel');
             if (!element) { toast.error(t('pdfAreaNotFound')); return; }
             const { default: html2pdf } = await import('html2pdf.js');
-            await loadPdfFonts([pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily]);
+            await loadPdfFonts([pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily].filter((f): f is string => Boolean(f)));
             const isLandscape = pdfConfig.pageOrientation === 'landscape';
             const shareFormat = pageSize === 'a4' && !isLandscape ? 'a4' : isLandscape ? 'a4' : pageSize;
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
@@ -555,77 +570,80 @@ const PdfPreviewPanel = React.memo(() => {
     };
 
     const tabs = [
-        { id: 'appearance', label: t('tabAppearance'), icon: Palette },
-        { id: 'sections', label: t('tabSections'), icon: Layout },
-        { id: 'typography', label: t('tabTypography'), icon: Type },
-        { id: 'layout', label: t('tabLayout'), icon: Layout },
-        { id: 'table', label: t('tabTable'), icon: Table },
-        { id: 'texts', label: t('tabTexts'), icon: AlignLeft },
-        { id: 'content', label: t('tabContent'), icon: Eye },
-        { id: 'extras', label: t('tabExtras'), icon: Sparkles },
-        { id: 'signature', label: t('tabSignature'), icon: PenTool }
+        { id: 'design', label: t('tabAppearance') || 'Tasarım', icon: Palette },
+        { id: 'layout', label: t('tabLayout') || 'Düzen', icon: Layout },
+        { id: 'texts', label: t('tabTexts') || 'Metinler', icon: AlignLeft }
     ];
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-bg-card)] border-l border-[var(--color-border)]">
             {/* Header */}
-            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-bg-muted)]">
-                <h3 className="font-semibold text-[var(--color-text)] flex items-center gap-2">
-                    <FileDown size={20} className="text-[var(--color-info)]" />
+            <div className="px-3.5 py-2.5 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-bg-muted)]">
+                <h3 className="font-semibold text-xs text-[var(--color-text)] flex items-center gap-2">
+                    <FileDown size={16} className="text-[var(--color-info)]" />
                     {t('livePreview')}
                 </h3>
                 <div className="flex items-center gap-1">
+                    <div className="flex items-center bg-[var(--color-bg-card)] rounded-lg p-0.5 border border-[var(--color-border)]">
+                        <button type="button"
+                            onClick={handleExcelExport}
+                            className="p-1.5 text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
+                            title={t('downloadExcel')}
+                        >
+                            <FileSpreadsheet size={15} />
+                        </button>
+                        <button type="button"
+                            onClick={handleCsvExport}
+                            className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
+                            title={t('downloadCSV')}
+                        >
+                            <FileText size={15} />
+                        </button>
+                        <button type="button"
+                            onClick={handlePrint}
+                            className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
+                            title={t('print')}
+                        >
+                            <Printer size={15} />
+                        </button>
+                        <button type="button"
+                            onClick={handleShare}
+                            className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-info)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
+                            title={t('share')}
+                        >
+                            <Share2 size={15} />
+                        </button>
+                    </div>
+
                     <button type="button"
-                        onClick={handleExcelExport}
-                        className="flex items-center gap-1.5 p-2 text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-                        title={t('downloadExcel')}
+                        onClick={() => setShowVersionModal(true)}
+                        className="flex items-center gap-1 px-2 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-[var(--color-bg-hover)] rounded-lg border border-indigo-200 dark:border-indigo-800/40 transition-colors font-medium"
+                        title="Versiyon Olarak Kaydet"
                     >
-                        <FileSpreadsheet size={18} />
-                        <span className="hidden sm:inline text-xs">{t('downloadExcel')}</span>
+                        <BookmarkPlus size={14} />
+                        <span className="hidden sm:inline">Sürüm</span>
                     </button>
-                    <button type="button"
-                        onClick={handlePrint}
-                        className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-                        title={t('print')}
-                    >
-                        <Printer size={18} />
-                        <span className="hidden sm:inline text-xs">{t('print')}</span>
-                    </button>
-                    <button type="button"
-                        onClick={handleShare}
-                        className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-info)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-                        title={t('share')}
-                    >
-                        <Share2 size={18} />
-                        <span className="hidden sm:inline text-xs">{t('share')}</span>
-                    </button>
-                    <button type="button"
-                        onClick={handleCsvExport}
-                        className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-                        title={t('downloadCSV')}
-                    >
-                        <FileText size={18} />
-                        <span className="hidden sm:inline text-xs">{t('downloadCSV')}</span>
-                    </button>
+
                     <button type="button"
                         onClick={handleDownload}
                         disabled={isGenerating}
-                        className={`flex items-center gap-2 px-4 py-2 text-white rounded-[var(--radius)] shadow hover:shadow-[var(--shadow-lg)] transition-all font-semibold ${isGenerating ? 'bg-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-info)] hover:opacity-90'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-white rounded-[var(--radius)] shadow-sm hover:shadow transition-all text-xs font-semibold ${isGenerating ? 'bg-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-info)] hover:opacity-95'}`}
                         title={t('downloadPdf')}
                     >
                         {isGenerating ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
                         ) : (
-                            <FileDown size={18} />
+                            <FileDown size={14} />
                         )}
                         <span>{isGenerating ? t('generating') : t('downloadPdf')}</span>
                     </button>
+
                     <button type="button"
                         onClick={() => setShowControls(!showControls)}
-                        className="flex items-center gap-1.5 p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors md:hidden"
+                        className="p-1.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors md:hidden"
                         title={showControls ? t('hideControls') : t('showControls')}
                     >
-                        <Settings2 size={18} />
+                        <Settings2 size={16} />
                     </button>
                 </div>
             </div>
@@ -633,23 +651,23 @@ const PdfPreviewPanel = React.memo(() => {
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 {/* Left: Controls (Collapsible on mobile) */}
                 <div className={`${showControls ? 'flex' : 'hidden'} md:flex w-full md:w-80 flex-shrink-0 border-r border-[var(--color-border)] flex-col bg-[var(--color-bg-card)]`}>
-                    {/* Tabs */}
-                    <div className="flex overflow-x-auto border-b border-[var(--color-border)] scrollbar-hide">
+                    {/* Segmented Control Tabs */}
+                    <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-muted)]/50 p-1 gap-1">
                         {tabs.map(tab => (
                             <button type="button"
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 min-w-[60px] flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium transition-colors border-b-2 ${activeTab === tab.id ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]/50' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-semibold rounded-md transition-all ${activeTab === tab.id ? 'bg-[var(--color-bg-card)] text-[var(--color-info)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-card)]/50'}`}
                             >
-                                <tab.icon size={16} />
-                                {tab.label}
+                                <tab.icon size={13} />
+                                <span>{tab.label}</span>
                             </button>
                         ))}
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
-                        {/* APPEARANCE (THEME) TAB */}
-                        {activeTab === 'appearance' && (
+                        {/* 🎨 DESIGN TAB */}
+                        {activeTab === 'design' && (
                             <>
                                 {/* Template Management */}
                                 <div className="space-y-3 mb-4 pb-4 border-b border-[var(--color-border)]">
@@ -697,17 +715,18 @@ const PdfPreviewPanel = React.memo(() => {
                                             { id: 'minimal', name: 'Minimal', thumb: () => (<div className="absolute inset-0"><div className="h-2 w-1/3 mt-1 ml-1 bg-slate-200" /><div className="h-1 w-1/4 mt-2 ml-1 bg-slate-100" /><div className="w-5/6 mx-auto mt-3 border-t border-slate-200" /><div className="h-1 w-3/4 mx-auto mt-2 bg-slate-100" /></div>) },
                                             { id: 'corporate', name: 'Kurumsal', thumb: (c: string) => (<div className="absolute inset-0"><div className="h-3 w-full" style={{ background: c }} /><div className="h-2 w-2/3 mt-1 ml-1 rounded-sm bg-slate-200" /><div className="h-1 w-1/2 mt-1 ml-1 bg-slate-100" /><div className="h-3 w-4/5 mt-2 mx-auto rounded-sm bg-slate-100" /></div>) },
                                             { id: 'pro', name: 'Premium (Pro)', thumb: (c: string) => (<div className="absolute inset-0 flex gap-1 p-1"><div className="w-1 h-full rounded-sm" style={{ background: c }} /><div className="flex-1"><div className="h-1.5 w-full rounded-sm bg-slate-200" /><div className="h-1.5 w-4/5 mt-1 rounded-sm bg-slate-100" /><div className="h-3 w-full mt-2 rounded-sm border border-slate-200" /></div></div>) },
-                                            { id: 'bold', name: 'Bold', thumb: (c: string) => (<div className="absolute inset-0"><div className="h-2.5 w-full" style={{ background: c }} /><div className="h-1 w-1/2 mt-1 ml-1 bg-slate-200" /><div className="h-4 w-11/12 mt-1 mx-auto border-2 rounded-sm" style={{ borderColor: c }} /></div>) }
-                                        ].map((t) => (
+                                            { id: 'bold', name: 'Bold', thumb: (c: string) => (<div className="absolute inset-0"><div className="h-2.5 w-full" style={{ background: c }} /><div className="h-1 w-1/2 mt-1 ml-1 bg-slate-200" /><div className="h-4 w-11/12 mt-1 mx-auto border-2 rounded-sm" style={{ borderColor: c }} /></div>) },
+                                            { id: 'invoice', name: 'Fatura / Invoice', thumb: (c: string) => (<div className="absolute inset-0 p-1"><div className="h-1.5 w-1/2 rounded-sm" style={{ background: c }} /><div className="h-0.5 w-full my-1 bg-slate-200" /><div className="h-1 w-full bg-slate-100" /><div className="h-1 w-full mt-0.5 bg-slate-100" /><div className="h-1.5 w-1/3 mt-1 ml-auto rounded-sm" style={{ background: c }} /></div>) }
+                                        ].map((thm) => (
                                             <button type="button"
-                                                key={t.id}
-                                                onClick={() => handleConfigChange('theme', t.id)}
-                                                className={`flex flex-col items-start gap-1 p-1.5 rounded border transition-all ${pdfConfig.theme === t.id ? 'bg-[var(--color-primary-muted)] border-[var(--color-info)]' : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'}`}
+                                                key={thm.id}
+                                                onClick={() => handleConfigChange('theme', thm.id)}
+                                                className={`flex flex-col items-start gap-1 p-1.5 rounded border transition-all ${pdfConfig.theme === thm.id ? 'bg-[var(--color-primary-muted)] border-[var(--color-info)]' : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'}`}
                                             >
                                                 <div className="w-full aspect-[21/12] rounded overflow-hidden border border-[var(--color-border)] relative bg-white">
-                                                    {t.thumb(pdfConfig.color)}
+                                                    {thm.thumb(pdfConfig.color || '#3b82f6')}
                                                 </div>
-                                                <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{t.name}</span>
+                                                <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{thm.name}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -730,7 +749,7 @@ const PdfPreviewPanel = React.memo(() => {
                                 </div>
 
                                 {/* Main Color */}
-                                <div>
+                                <div className="mt-4">
                                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('primaryColor')}</label>
                                     <div className="flex gap-2 items-center">
                                         <input
@@ -743,127 +762,8 @@ const PdfPreviewPanel = React.memo(() => {
                                     </div>
                                 </div>
 
-                                {/* Page Background Color */}
-                                <div className="mt-3">
-                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageBackground')}</label>
-                                    <div className="flex gap-2 items-center">
-                                        <input
-                                            type="color"
-                                            value={pdfConfig.pageBackgroundColor || '#ffffff'}
-                                            onChange={(e) => handleConfigChange('pageBackgroundColor', e.target.value)}
-                                            className="w-8 h-8 p-0 border-0 rounded cursor-pointer"
-                                        />
-                                        <span className="text-xs text-[var(--color-text-muted)] uppercase">{pdfConfig.pageBackgroundColor || '#ffffff'}</span>
-                                    </div>
-                                </div>
-
-                                {/* Page Background Pattern */}
-                                <div className="mt-3">
-                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageBgPattern')}</label>
-                                    <select
-                                        value={pdfConfig.pageBgPattern || 'none'}
-                                        onChange={(e) => handleConfigChange('pageBgPattern', e.target.value)}
-                                        className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                    >
-                                        <option value="none">{t('patternNone')}</option>
-                                        <option value="dots">{t('patternDots')}</option>
-                                        <option value="grid">{t('patternGrid')}</option>
-                                        <option value="gradient">{t('patternGradient')}</option>
-                                    </select>
-                                </div>
-
-                                {/* Logo Appearance */}
-                                <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
-                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1.5">{t('logoAppearance')}</label>
-                                    <div className="grid grid-cols-3 gap-1 mb-2">
-                                        {(['left', 'center', 'right'] as const).map(pos => (
-                                            <button type="button"
-                                                key={pos}
-                                                onClick={() => handleConfigChange('logoPosition', pos)}
-                                                className={`py-1 text-[10px] border rounded transition-colors ${pdfConfig.logoPosition === pos ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
-                                            >
-                                                {t(`logoPos${pos.charAt(0).toUpperCase() + pos.slice(1)}`)}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 mb-2">
-                                        {(['square', 'rounded', 'circle'] as const).map(s => (
-                                            <button type="button"
-                                                key={s}
-                                                onClick={() => handleConfigChange('logoStyle', s)}
-                                                className={`py-1 text-[10px] border rounded transition-colors ${pdfConfig.logoStyle === s ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
-                                            >
-                                                {t(`logoStyle${s.charAt(0).toUpperCase() + s.slice(1)}`)}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-[var(--color-text-muted)] mb-0.5">{t('logoMaxHeight')}: {pdfConfig.logoMaxHeight || 50}px</label>
-                                        <input
-                                            type="range"
-                                            min={20}
-                                            max={120}
-                                            value={pdfConfig.logoMaxHeight || 50}
-                                            onChange={(e) => handleConfigChange('logoMaxHeight', parseInt(e.target.value, 10))}
-                                            className="w-full accent-[var(--color-info)]"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Page Size & Quality */}
-                                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--color-border)] mt-4">
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageSize')}</label>
-                                        <select
-                                            value={pageSize}
-                                            onChange={(e) => setPageSize(e.target.value as PageSize)}
-                                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        >
-                                            {PAGE_SIZE_OPTIONS.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('orientation')}</label>
-                                        <div className="grid grid-cols-2 gap-1">
-                                            <button type="button"
-                                                onClick={() => handleConfigChange('pageOrientation', 'portrait')}
-                                                className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.pageOrientation === 'portrait' ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
-                                            >
-                                                {t('portrait')}
-                                            </button>
-                                            <button type="button"
-                                                onClick={() => handleConfigChange('pageOrientation', 'landscape')}
-                                                className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.pageOrientation === 'landscape' ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
-                                            >
-                                                {t('landscape')}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('quality')}</label>
-                                        <select
-                                            value={quality}
-                                            onChange={(e) => setQuality(e.target.value as PdfQuality)}
-                                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        >
-                                            {QUALITY_OPTIONS.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        {/* TYPOGRAPHY TAB */}
-                        {activeTab === 'typography' && (
-                            <div className="space-y-4">
-                                {/* Font Families */}
-                                <div className="space-y-3">
+                                {/* Typography & Fonts */}
+                                <div className="space-y-3 mt-4 pt-4 border-t border-[var(--color-border)]">
                                     <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('fontFamilies')}</h4>
                                     <div>
                                         <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('generalFont')}</label>
@@ -881,64 +781,42 @@ const PdfPreviewPanel = React.memo(() => {
                                             <option value="'Merriweather', serif">Klasik (Merriweather)</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('titleFont')}</label>
-                                        <select
-                                            value={pdfConfig.titleFontFamily || ''}
-                                            onChange={(e) => handleConfigChange('titleFontFamily', e.target.value)}
-                                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        >
-                                            <option value="">{t('sameAsGeneral')}</option>
-                                            <option value="'Inter', sans-serif">Modern (Inter)</option>
-                                            <option value="'Montserrat', sans-serif">Geometrik (Montserrat)</option>
-                                            <option value="'Playfair Display', serif">Zarif (Playfair)</option>
-                                            <option value="'Oswald', sans-serif">{t('strong')} (Oswald)</option>
-                                            <option value="'Roboto Slab', serif">Robotik (Roboto Slab)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('labelFont')}</label>
-                                        <select
-                                            value={pdfConfig.labelFontFamily || ''}
-                                            onChange={(e) => handleConfigChange('labelFontFamily', e.target.value)}
-                                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        >
-                                            <option value="">{t('sameAsGeneral')}</option>
-                                            <option value="'Inter', sans-serif">Modern (Inter)</option>
-                                            <option value="'Roboto', sans-serif">Standart (Roboto)</option>
-                                            <option value="'Open Sans', sans-serif">Okunaklı (Open Sans)</option>
-                                            <option value="'Lato', sans-serif">Dengeli (Lato)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('contentFont')}</label>
-                                        <select
-                                            value={pdfConfig.bodyFontFamily || ''}
-                                            onChange={(e) => handleConfigChange('bodyFontFamily', e.target.value)}
-                                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        >
-                                            <option value="">{t('sameAsGeneral')}</option>
-                                            <option value="'Inter', sans-serif">Modern (Inter)</option>
-                                            <option value="'Roboto', sans-serif">Standart (Roboto)</option>
-                                            <option value="'Open Sans', sans-serif">Okunaklı (Open Sans)</option>
-                                            <option value="'Merriweather', serif">Klasik (Merriweather)</option>
-                                            <option value="'Courier New', monospace">Daktilo (Courier)</option>
-                                        </select>
-                                    </div>
                                 </div>
-                            </div>
+
+                                {/* Watermark & Effects */}
+                                <div className="space-y-3 mt-4 pt-4 border-t border-[var(--color-border)]">
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('watermark')}</h4>
+                                    <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
+                                        <span className="text-[var(--color-text)]">{t('watermark')}</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={pdfConfig.showWatermark}
+                                            onChange={(e) => handleConfigChange('showWatermark', e.target.checked)}
+                                            className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
+                                        />
+                                    </label>
+                                    {pdfConfig.showWatermark && (
+                                        <div className="space-y-2 mt-2">
+                                            <input
+                                                type="text"
+                                                value={pdfConfig.watermarkText}
+                                                onChange={(e) => handleConfigChange('watermarkText', e.target.value)}
+                                                className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                                                placeholder={t('watermarkText')}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
 
-                        {/* SECTIONS TAB (Granular Typography) */}
-                        {activeTab === 'sections' && (
-                            <PdfSectionsTab pdfConfig={pdfConfig} handleConfigChange={handleConfigChange} t={t} />
-                        )}
-
-                        {/* LAYOUT TAB */}
+                        {/* 📐 LAYOUT TAB */}
                         {activeTab === 'layout' && (
                             <div className="space-y-4">
-                                {/* Spacing */}
-                                <div className="space-y-3">
+                                <PdfSectionsTab pdfConfig={pdfConfig} handleConfigChange={handleConfigChange} t={t} />
+
+                                {/* Spacing & Margins */}
+                                <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
                                     <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('spacing')}</h4>
                                     <div>
                                         <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageMargin')}</label>
@@ -946,194 +824,24 @@ const PdfPreviewPanel = React.memo(() => {
                                             {[
                                                 { val: 'compact', label: 'Dar' },
                                                 { val: 'normal', label: 'Normal' },
-                                                { val: 'wide', label: 'Geni' }
+                                                { val: 'wide', label: 'Geniş' }
                                             ].map(opt => (
                                                 <button type="button"
                                                     key={opt.val}
-                                                    onClick={() => handleConfigChange('margins', opt.val)}
-                                                    className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.margins === opt.val ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
+                                                    onClick={() => handleConfigChange('pageMargin', opt.val)}
+                                                    className={`py-1.5 text-xs rounded border transition-colors ${pdfConfig.pageMargin === opt.val ? 'bg-[var(--color-info)] text-white border-[var(--color-info)]' : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'}`}
                                                 >
                                                     {opt.label}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                            <span>{t('sectionSpacing')}</span>
-                                            <span className="text-[var(--color-text-muted)]">{pdfConfig.sectionSpacing || '1rem'}</span>
-                                        </label>
-                                        <select
-                                            value={pdfConfig.sectionSpacing || '1rem'}
-                                            onChange={(e) => handleConfigChange('sectionSpacing', e.target.value)}
-                                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        >
-                                            <option value="0.5rem">{t('small')} (0.5rem)</option>
-                                            <option value="1rem">Normal (1rem)</option>
-                                            <option value="1.5rem">{t('wide')} (1.5rem)</option>
-                                            <option value="2rem">{t('veryWide')} (2rem)</option>
-                                        </select>
-                                    </div>
                                 </div>
 
-                                {/* Shapes */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('shapes')}</h4>
-                                    <div>
-                                        <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                            <span>{t('borderRadius')}</span>
-                                            <span className="text-[var(--color-text-muted)]">{pdfConfig.borderRadius || 6}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="20"
-                                            step="2"
-                                            value={pdfConfig.borderRadius !== undefined ? pdfConfig.borderRadius : 6}
-                                            onChange={(e) => handleConfigChange('borderRadius', parseInt(e.target.value))}
-                                            className="w-full h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('logoPosition')}</label>
-                                        <div className="flex bg-[var(--color-bg-muted)] rounded p-1">
-                                            {[
-                                                { val: 'left', icon: AlignLeft },
-                                                { val: 'center', icon: AlignCenter },
-                                                { val: 'right', icon: AlignRight }
-                                            ].map(opt => (
-                                                <button type="button"
-                                                    key={opt.val}
-                                                    onClick={() => handleConfigChange('logoPosition', opt.val)}
-                                                    className={`flex-1 py-1 flex justify-center rounded transition-colors ${pdfConfig.logoPosition === opt.val ? 'bg-[var(--color-bg-card)] shadow text-[var(--color-info)]' : 'text-[var(--color-text-muted)]'}`}
-                                                >
-                                                    <opt.icon size={14} />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('borderStyle')}</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {[
-                                                { val: 'solid', label: t('solid') },
-                                                { val: 'dashed', label: t('dashed') },
-                                                { val: 'dotted', label: t('dotted') }
-                                            ].map(opt => (
-                                                <button type="button"
-                                                    key={opt.val}
-                                                    onClick={() => handleConfigChange('boxBorderStyle', opt.val)}
-                                                    className={`py-1.5 text-[10px] border rounded transition-colors ${pdfConfig.boxBorderStyle === opt.val ? 'border-[var(--color-info)] bg-[var(--color-primary-muted)] text-[var(--color-info)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Density */}
-                                    <div className="space-y-3">
-                                        <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('density')}</h4>
-                                        <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">{t('compactMode')} ({t('small')})</span>
-                                            <input
-                                                type="checkbox"
-                                                checked={pdfConfig.tableDensity === 'compact'}
-                                                onChange={(e) => handleConfigChange('tableDensity', e.target.checked ? 'compact' : 'normal')}
-                                                className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
-                                            />
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* CONTENT TAB */}
-                        {activeTab === 'content' && (
-                            <div className="space-y-2">
-                                {[
-                                    { key: 'showLogo', label: t('companyLogo') },
-                                    { key: 'showBankInfo', label: t('bankInfo') },
-                                    { key: 'showSignatures', label: t('signatureStampArea') },
-                                    { key: 'showTerms', label: t('terms') },
-                                    { key: 'showNotes', label: t('notes') },
-                                    { key: 'showSummary', label: t('priceSummary') }
-                                ].map((item) => (
-                                    <label key={item.key} className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                        <span className="text-[var(--color-text)]">{item.label}</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={pdfConfig[item.key]}
-                                            onChange={(e) => handleConfigChange(item.key, e.target.checked)}
-                                            className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
-                                        />
-                                    </label>
-                                ))}
-
-                                <div className="pt-3 border-t border-[var(--color-border)] mt-3">
-                                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">
-                                        {t('documentTitle')}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={pdfConfig.title}
-                                        onChange={(e) => handleConfigChange('title', e.target.value)}
-                                        className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                        placeholder={t('titlePlaceholder')}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TABLE TAB */}
-                        {activeTab === 'table' && (
-                            <div className="space-y-4">
-                                {/* Table Style Options */}
-                                <div className="space-y-3">
+                                {/* Table Options */}
+                                <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
                                     <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('tableStyle')}</h4>
-
-                                    {/* Header Colors */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('headerBackground')}</label>
-                                            <div className="flex gap-2 items-center">
-                                                <input
-                                                    type="color"
-                                                    value={pdfConfig.tableHeaderBg || '#f1f5f9'}
-                                                    onChange={(e) => handleConfigChange('tableHeaderBg', e.target.value)}
-                                                    className="w-8 h-8 p-0 border-0 rounded cursor-pointer"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('headerText')}</label>
-                                            <div className="flex gap-2 items-center">
-                                                <input
-                                                    type="color"
-                                                    value={pdfConfig.tableHeaderColor || '#475569'}
-                                                    onChange={(e) => handleConfigChange('tableHeaderColor', e.target.value)}
-                                                    className="w-8 h-8 p-0 border-0 rounded cursor-pointer"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Border Color */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('borderColor')}</label>
-                                        <div className="flex gap-2 items-center">
-                                            <input
-                                                type="color"
-                                                value={pdfConfig.tableBorderColor || '#e2e8f0'}
-                                                onChange={(e) => handleConfigChange('tableBorderColor', e.target.value)}
-                                                className="w-8 h-8 p-0 border-0 rounded cursor-pointer"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Toggles */}
-                                    <div className="space-y-2 pt-2">
+                                    <div className="space-y-2">
                                         <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
                                             <span className="text-[var(--color-text)]">{t('stripedRows')}</span>
                                             <input
@@ -1143,22 +851,6 @@ const PdfPreviewPanel = React.memo(() => {
                                                 className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
                                             />
                                         </label>
-                                        <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                            <span className="text-[var(--color-text)]">{t('verticalLines')}</span>
-                                            <input
-                                                type="checkbox"
-                                                checked={pdfConfig.tableShowVerticalLines}
-                                                onChange={(e) => handleConfigChange('tableShowVerticalLines', e.target.checked)}
-                                                className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
-                                            />
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {/* Column Visibility */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('columns')}</h4>
-                                    <div className="space-y-1">
                                         {[
                                             { key: 'showTableImages', label: t('productImages') },
                                             { key: 'showTableUnit', label: t('unitColumn') },
@@ -1168,7 +860,7 @@ const PdfPreviewPanel = React.memo(() => {
                                                 <span className="text-[var(--color-text)]">{item.label}</span>
                                                 <input
                                                     type="checkbox"
-                                                    checked={pdfConfig[item.key]}
+                                                    checked={Boolean((pdfConfig as Record<string, unknown>)[item.key])}
                                                     onChange={(e) => handleConfigChange(item.key, e.target.checked)}
                                                     className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
                                                 />
@@ -1176,28 +868,10 @@ const PdfPreviewPanel = React.memo(() => {
                                         ))}
                                     </div>
                                 </div>
-
-                                {/* Row Height */}
-                                <div>
-                                    <label className="flex justify-between text-xs font-medium text-[var(--color-text)] mb-1">
-                                        <span>{t('rowHeight')}</span>
-                                        <span className="text-[var(--color-text-muted)]">{pdfConfig.tableRowHeight}px</span>
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min="20"
-                                        max="80"
-                                        step="5"
-                                        value={pdfConfig.tableRowHeight}
-                                        onChange={(e) => handleConfigChange('tableRowHeight', parseInt(e.target.value))}
-                                        className="w-full h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
                             </div>
                         )}
 
-                        {/* EXTRAS TAB */}
-                        {/* TEXTS TAB */}
+                        {/* ✍️ TEXTS & SIGNATURE TAB */}
                         {activeTab === 'texts' && (
                             <div className="space-y-4">
                                 <div className="space-y-3">
@@ -1223,240 +897,40 @@ const PdfPreviewPanel = React.memo(() => {
                                                 className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('unitHeader')}</label>
-                                                <input
-                                                    type="text"
-                                                    value={pdfConfig.textUnit || ''}
-                                                    onChange={(e) => handleConfigChange('textUnit', e.target.value)}
-                                                    placeholder={t('unit')}
-                                                    className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('quantityHeader')}</label>
-                                                <input
-                                                    type="text"
-                                                    value={pdfConfig.textQuantity || ''}
-                                                    onChange={(e) => handleConfigChange('textQuantity', e.target.value)}
-                                                    placeholder={t('quantity')}
-                                                    className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('priceHeader')}</label>
-                                                <input
-                                                    type="text"
-                                                    value={pdfConfig.textUnitPrice || ''}
-                                                    onChange={(e) => handleConfigChange('textUnitPrice', e.target.value)}
-                                                    placeholder={t('unitPrice')}
-                                                    className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('vatHeader')}</label>
-                                                <input
-                                                    type="text"
-                                                    value={pdfConfig.textVat || ''}
-                                                    onChange={(e) => handleConfigChange('textVat', e.target.value)}
-                                                    placeholder={t('vat')}
-                                                    className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('totalHeader')}</label>
-                                            <input
-                                                type="text"
-                                                value={pdfConfig.textTotal || ''}
-                                                onChange={(e) => handleConfigChange('textTotal', e.target.value)}
-                                                placeholder={t('total')}
-                                                className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                            />
-                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
 
-                        {/* EXTRAS TAB */}
-                        {activeTab === 'extras' && (
-                            <div className="space-y-4">
-                                {/* Visual Effects */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('visualEffects')}</h4>
-                                    <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                        <span className="text-[var(--color-text)]">{t('shadow')}</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={pdfConfig.enableShadows}
-                                            onChange={(e) => handleConfigChange('enableShadows', e.target.checked)}
-                                            className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
-                                        />
-                                    </label>
-                                </div>
-
-                                {/* Performance Mode */}
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1 flex items-center gap-2">
-                                        <Zap size={14} className={performanceMode ? "text-[var(--color-warning)]" : ""} />
-                                        {t('performanceSettings')}
-                                    </h4>
-                                    <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                        <div className="flex flex-col">
-                                            <span className="text-[var(--color-text)] font-medium flex items-center gap-2">
-                                                {performanceMode ? <Zap size={12} className="text-[var(--color-warning)]" /> : <ZapOff size={12} />}
-                                                {t('performanceMode')}
-                                            </span>
-                                            <span className="text-[10px] text-[var(--color-text-muted)]">
-                                                {t('performanceDesc')}
-                                            </span>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            checked={performanceMode}
-                                            onChange={(e) => setPerformanceMode(e.target.checked)}
-                                            className="rounded border-[var(--color-border)] text-[var(--color-warning)] focus:ring-[var(--color-warning)] w-4 h-4"
-                                        />
-                                    </label>
-                                    <label className="flex items-center justify-between p-2 rounded hover:bg-[var(--color-bg-muted)] cursor-pointer text-xs">
-                                        <div className="flex flex-col">
-                                            <span className="text-[var(--color-text)] font-medium flex items-center gap-2">
-                                                <RefreshCcw size={12} />
-                                                {t('manualRefresh')}
-                                            </span>
-                                            <span className="text-[10px] text-[var(--color-text-muted)]">
-                                                {t('manualRefreshDesc')}
-                                            </span>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            checked={manualRefreshMode}
-                                            onChange={(e) => setManualRefreshMode(e.target.checked)}
-                                            className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
-                                        />
-                                    </label>
-                                </div>
-
-                                {/* Watermark */}
-                                <div>
-                                    <label className="flex items-center justify-between mb-2 text-xs font-medium text-[var(--color-text)]">
-                                        <span>{t('watermark')}</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={pdfConfig.showWatermark}
-                                            onChange={(e) => handleConfigChange('showWatermark', e.target.checked)}
-                                            className="rounded border-[var(--color-border)] text-[var(--color-info)] focus:ring-[var(--color-info)] w-4 h-4"
-                                        />
-                                    </label>
-                                    {pdfConfig.showWatermark && (
-                                        <div className="space-y-3 pl-2 border-l-2 border-[var(--color-border)] mt-2">
-                                            <div>
-                                                <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('watermarkText')}</label>
-                                                <input
-                                                    type="text"
-                                                    value={pdfConfig.watermarkText}
-                                                    onChange={(e) => handleConfigChange('watermarkText', e.target.value)}
-                                                    className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
-                                                    placeholder={t('watermarkText')}
-                                                />
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('color')}</label>
-                                                    <div className="flex gap-2 items-center">
-                                                        <input
-                                                            type="color"
-                                                            value={pdfConfig.watermarkColor || '#000000'}
-                                                            onChange={(e) => handleConfigChange('watermarkColor', e.target.value)}
-                                                            className="w-full h-6 p-0 border-0 rounded cursor-pointer"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('size')} ({pdfConfig.watermarkFontSize || 120}px)</label>
-                                                    <input
-                                                        type="range"
-                                                        min="40"
-                                                        max="200"
-                                                        step="10"
-                                                        value={pdfConfig.watermarkFontSize || 120}
-                                                        onChange={(e) => handleConfigChange('watermarkFontSize', parseInt(e.target.value))}
-                                                        className="w-full h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('opacity')} ({pdfConfig.watermarkOpacity || 0.1})</label>
-                                                    <input
-                                                        type="range"
-                                                        min="0.05"
-                                                        max="0.5"
-                                                        step="0.05"
-                                                        value={pdfConfig.watermarkOpacity || 0.1}
-                                                        onChange={(e) => handleConfigChange('watermarkOpacity', parseFloat(e.target.value))}
-                                                        className="w-full h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('rotation')} ({pdfConfig.watermarkRotation || -45})</label>
-                                                    <input
-                                                        type="range"
-                                                        min="-90"
-                                                        max="90"
-                                                        step="15"
-                                                        value={pdfConfig.watermarkRotation || -45}
-                                                        onChange={(e) => handleConfigChange('watermarkRotation', parseInt(e.target.value))}
-                                                        className="w-full h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Footer */}
-                                <div>
+                                {/* Custom Footer */}
+                                <div className="pt-3 border-t border-[var(--color-border)]">
                                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">
                                         {t('footer')}
                                     </label>
                                     <input
                                         type="text"
-                                        value={pdfConfig.customFooter}
+                                        value={pdfConfig.customFooter || ''}
                                         onChange={(e) => handleConfigChange('customFooter', e.target.value)}
                                         className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                                         placeholder={t('footer')}
                                     />
                                 </div>
-                            </div>
-                        )}
 
-                        {/* SIGNATURE TAB */}
-                        {activeTab === 'signature' && (
-                            <div className="space-y-4">
-                                <h4 className="font-semibold text-xs text-[var(--color-text)]">{t('digitalSignature')}</h4>
-
-                                {signature ? (
-                                    <div className="space-y-2">
-                                        <div className="border border-[var(--color-border)] rounded p-4 bg-[var(--color-bg-card)] flex justify-center items-center h-32">
-                                            <img src={signature} alt="Signature" className="max-h-full max-w-full object-contain" />
+                                {/* Digital Signature */}
+                                <div className="pt-3 border-t border-[var(--color-border)] space-y-3">
+                                    <h4 className="font-semibold text-xs text-[var(--color-text)]">{t('digitalSignature')}</h4>
+                                    {signature ? (
+                                        <div className="space-y-2">
+                                            <div className="border border-[var(--color-border)] rounded p-4 bg-[var(--color-bg-card)] flex justify-center items-center h-28">
+                                                <img src={signature} alt="Signature" className="max-h-full max-w-full object-contain" />
+                                            </div>
+                                            <button type="button"
+                                                onClick={() => setSignature(null)}
+                                                className="w-full py-1.5 text-xs text-[var(--color-error)] hover:text-[var(--color-error)] font-medium border border-[var(--color-border)] hover:border-[var(--color-error)] rounded bg-[var(--color-error)]/10 transition-colors"
+                                            >
+                                                {t('removeSignature')}
+                                            </button>
                                         </div>
-                                        <button type="button"
-                                            onClick={() => setSignature(null)}
-                                            className="w-full py-2 text-xs text-[var(--color-error)] hover:text-[var(--color-error)] font-medium border border-[var(--color-border)] hover:border-[var(--color-error)] rounded bg-[var(--color-error)]/10 hover:bg-[var(--color-error)]/10 transition-colors"
-                                        >
-                                            {t('removeSignature')}
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <div className="border-2 border-dashed border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center justify-center text-center hover:border-[var(--color-info)] transition-colors bg-[var(--color-bg-muted)]/50">
+                                    ) : (
+                                        <div className="border-2 border-dashed border-[var(--color-border)] rounded-lg p-4 flex flex-col items-center justify-center text-center hover:border-[var(--color-info)] transition-colors bg-[var(--color-bg-muted)]/50">
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -1475,28 +949,16 @@ const PdfPreviewPanel = React.memo(() => {
                                             />
                                             <label
                                                 htmlFor="signature-upload"
-                                                className="cursor-pointer flex flex-col items-center gap-2"
+                                                className="cursor-pointer flex flex-col items-center gap-1.5"
                                             >
-                                                <div className="w-10 h-10 rounded-full bg-[var(--color-primary-muted)] flex items-center justify-center text-[var(--color-info)]">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                        <polyline points="17 8 12 3 7 8" />
-                                                        <line x1="12" y1="3" x2="12" y2="15" />
-                                                    </svg>
-                                                </div>
-                                                <span className="text-sm font-medium text-[var(--color-text)]">
+                                                <PenTool size={20} className="text-[var(--color-info)]" />
+                                                <span className="text-xs font-medium text-[var(--color-text)]">
                                                     {t('uploadSignature')}
-                                                </span>
-                                                <span className="text-[10px] text-[var(--color-text-muted)]">
-                                                    {t('imageHint')}
                                                 </span>
                                             </label>
                                         </div>
-                                    </div>
-                                )}
-                                <p className="text-[10px] text-[var(--color-text-muted)]">
-                                    {t('signatureUploadHint')}
-                                </p>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1504,17 +966,6 @@ const PdfPreviewPanel = React.memo(() => {
 
                 {/* Right: Preview (Zoomable) */}
                 <div className="flex-1 bg-[var(--color-bg-muted)] overflow-hidden flex flex-col relative">
-                    <div className={`absolute top-4 right-4 z-10 flex items-center gap-1.5 p-1.5 rounded-[var(--radius)] shadow border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] font-medium ${performanceMode ? 'bg-[var(--color-bg-card)]' : 'bg-[var(--color-bg-card)]/80 backdrop-blur'}`}>
-                        <span>{pageSize.toUpperCase()}</span>
-                        <span className="text-[var(--color-border)]">|</span>
-                        <span>{pdfConfig.pageOrientation === 'landscape' ? t('landscape') : t('portrait')}</span>
-                        <span className="text-[var(--color-border)]">|</span>
-                        <span className="flex items-center gap-1">
-                            <FileDown size={10} />
-                            {estimatedPages}
-                        </span>
-                    </div>
-
                     {/* Manual Refresh Button Overlay */}
                     {manualRefreshMode && hasPendingChanges && (
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
@@ -1566,50 +1017,20 @@ const PdfPreviewPanel = React.memo(() => {
                             <div ref={marginGuidesRef} className="absolute inset-0 z-[5] pointer-events-none"></div>
                         </div>
                     </div>
-                    {/* Zoom Slider */}
-                    <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--color-border)] bg-[var(--color-bg-muted)] flex-wrap">
-                        <div className="flex items-center gap-1">
-                            <button type="button" onClick={() => setZoomLevel(z => Math.max(0.3, z - 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label={t('zoomOut')}>−</button>
-                            <input
-                                type="range"
-                                min="0.3"
-                                max="2"
-                                step="0.05"
-                                value={zoomLevel}
-                                onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
-                                className="w-20 h-1 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                                aria-label={t('zoomSlider')}
-                            />
-                            <button type="button" onClick={() => setZoomLevel(z => Math.min(2, z + 0.1))} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label={t('zoomIn')}>+</button>
-                            <span className="text-xs text-[var(--color-text-muted)] w-10 text-right tabular-nums">{Math.round(zoomLevel * 100)}%</span>
-                        </div>
-                        <button type="button"
-                            onClick={() => setZoomLevel(0.7)}
-                            className={`px-1.5 py-0.5 text-[10px] rounded border transition-colors ${zoomLevel === 0.7 ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}`}
-                            title={t('defaultZoom')}
-                        >
-                            %70
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowMarginGuides(v => !v)}
-                            aria-pressed={showMarginGuides}
-                            title={t('marginGuides')}
-                            className={`px-1.5 py-0.5 text-[10px] rounded border transition-colors ${showMarginGuides ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}`}
-                        >
-                            <Ruler size={10} />
-                        </button>
-                        <button type="button"
-                            onClick={() => setZoomLevel(1)}
-                            className={`px-1.5 py-0.5 text-[10px] rounded border transition-colors ${zoomLevel === 1 ? 'border-[var(--color-info)] text-[var(--color-info)] bg-[var(--color-primary-muted)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}`}
-                            title={t('actualSize')}
-                        >
-                            %100
-                        </button>
+                    {/* Floating Zoom & Tool Bar */}
+                    <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 px-2.5 py-1 bg-[var(--color-bg-card)]/90 backdrop-blur-md rounded-full shadow-lg border border-[var(--color-border)] text-xs">
+                        <span className="text-[10px] font-medium text-[var(--color-text-muted)] pr-1">{pageSize.toUpperCase()} • {estimatedPages} {t('page')}</span>
+                        <div className="w-[1px] h-3 bg-[var(--color-border)] mr-0.5"></div>
+                        <button type="button" onClick={() => setZoomLevel(z => Math.max(0.3, z - 0.1))} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text)] font-bold text-xs" aria-label={t('zoomOut')}>−</button>
+                        <span className="text-[11px] font-mono font-semibold text-[var(--color-text)] w-8 text-center">{Math.round(zoomLevel * 100)}%</span>
+                        <button type="button" onClick={() => setZoomLevel(z => Math.min(2, z + 0.1))} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text)] font-bold text-xs" aria-label={t('zoomIn')}>+</button>
+                        <div className="w-[1px] h-3 bg-[var(--color-border)] mx-0.5"></div>
+                        <button type="button" onClick={() => setZoomLevel(0.7)} className={`px-1.5 py-0.5 text-[10px] rounded font-semibold transition-colors ${zoomLevel === 0.7 ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`} title={t('defaultZoom')}>%70</button>
+                        <button type="button" onClick={() => setZoomLevel(1)} className={`px-1.5 py-0.5 text-[10px] rounded font-semibold transition-colors ${zoomLevel === 1 ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`} title={t('actualSize')}>%100</button>
+                        <button type="button" onClick={() => setShowMarginGuides(v => !v)} aria-pressed={showMarginGuides} title={t('marginGuides')} className={`p-1 rounded transition-colors ${showMarginGuides ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}><Ruler size={11} /></button>
                         {isGenerating && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-info)] ml-auto bg-[var(--color-primary-muted)]/30 px-1.5 py-0.5 rounded whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-[10px] text-[var(--color-info)] pl-1">
                                 <div className="animate-spin rounded-full h-2.5 w-2.5 border-2 border-[var(--color-border)] border-t-[var(--color-info)]"></div>
-                                <span>{generationStage || t('pdfGenerating')}</span>
                             </div>
                         )}
                     </div>
@@ -1641,6 +1062,49 @@ const PdfPreviewPanel = React.memo(() => {
                 </div>
             </div>
 
+
+            {/* Version Save Modal */}
+            {showVersionModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] shadow-xl max-w-sm w-full p-5 space-y-4">
+                        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                            <BookmarkPlus size={20} />
+                            <h3 className="font-semibold text-sm text-[var(--color-text)]">Teklif Sürümü Kaydet</h3>
+                        </div>
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                            Mevcut teklif verilerini gelecekte geri dönebileceğiniz kalıcı bir snapshot (sürüm) olarak saklayın.
+                        </p>
+                        <input
+                            type="text"
+                            value={versionNameInput}
+                            onChange={(e) => setVersionNameInput(e.target.value)}
+                            placeholder="Sürüm adı (örn: Müşteri Revizesi 1)"
+                            className="w-full px-3 py-2 text-xs border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-[var(--color-bg-card)] text-[var(--color-text)]"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveVersion();
+                                if (e.key === 'Escape') setShowVersionModal(false);
+                            }}
+                        />
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowVersionModal(false)}
+                                className="px-3 py-1.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
+                            >
+                                {t('cancel')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSaveVersion}
+                                className="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm"
+                            >
+                                {t('save')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Popup Editor (Global) */}
             <PopupEditor

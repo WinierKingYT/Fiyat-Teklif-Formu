@@ -1,22 +1,22 @@
 import React, { createContext, useContext, useCallback, useMemo, useRef, useEffect } from 'react';
-import Logger from '../../utils/logger';
 import toast from 'react-hot-toast';
-import cleanupService from '../../utils/cleanupService';
-import { sanitizeInput, sanitizeObject } from '../../utils/sanitize';
-import { getLocalDateString, getLocalDateTimeString } from '../../utils/dateUtils';
-import { calculateQuoteTotals } from '../../utils/calculations';
-import { useDatabase } from './DatabaseContext';
-import { useTab } from './TabContext';
-import { useConfirm } from './ConfirmContext';
-import { useSaveStatusSetter } from './SaveStatusContext';
+import { useConfirm } from '@/context/quote/ConfirmContext';
+import { useDatabase } from '@/context/quote/DatabaseContext';
+import {
+    getInitialQuoteData, getInitialBankData,
+} from '@/context/quote/initialState';
+import { useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
+import { useTab } from '@/context/quote/TabContext';
 import {
     type QuoteData, type CustomerData, type CompanyData, type BankData,
     type QuoteItem, type Discount, type PdfConfig, type Quote, type SaveStatus,
-    type IndexedDBManager, type TabData, type DbQuote,
-} from './types';
-import {
-    getInitialQuoteData, getInitialBankData,
-} from './initialState';
+    type IndexedDBManager, type TabData, type DbQuote, type QuoteVersion,
+} from '@/context/quote/types';
+import { calculateQuoteTotals } from '@/utils/calculations';
+import cleanupService from '@/utils/cleanupService';
+import { getLocalDateString, getLocalDateTimeString } from '@/utils/dateUtils';
+import Logger from '@/utils/logger';
+import { sanitizeInput, sanitizeObject } from '@/utils/sanitize';
 
 export interface QuoteDataContextValue {
     quoteData: QuoteData;
@@ -38,6 +38,8 @@ export interface QuoteDataContextValue {
     fillTestData: () => Promise<void>;
     createBackup: () => Promise<void>;
     restoreBackup: (file: File) => Promise<void>;
+    saveVersion: (versionName?: string) => Promise<string | null>;
+    revertToVersion: (versionId: string) => Promise<void>;
     currentQuoteId: number | null;
     setCurrentQuoteId: (id: number | null) => void;
     validateQuote: (isFinal?: boolean) => string[];
@@ -256,6 +258,22 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
                 setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: quote.id } : tab));
                 toast.success('Teklif kaydedildi');
             }
+
+            // Otomatik versiyon snapshot'ı
+            try {
+                const versionId = `ver_${quote.id}_${Date.now()}`;
+                const version: QuoteVersion = {
+                    versionId,
+                    quoteId: quote.id,
+                    createdAt: Date.now(),
+                    snapshot: JSON.parse(JSON.stringify(quote)) as DbQuote,
+                    versionName: isFinal ? 'Final Sürüm' : 'Otomatik Kayıt'
+                };
+                await db.put('quoteVersions', version);
+            } catch (e) {
+                Logger.warn('Version snapshot error:', e);
+            }
+
             Logger.log('Quote saved successfully', quote);
             setSaveStatus({ status: 'saved', lastSaved: Date.now() });
             setTimeout(() => { setSaveStatus(prev => prev.status === 'saved' ? { status: 'idle', lastSaved: prev.lastSaved } : prev); }, 3000);
@@ -263,7 +281,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             Logger.error('Error saving quote', error);
             toast.error('Teklif kaydedilemedi');
             setSaveStatus({ status: 'error', lastSaved: null });
-            setTimeout(() => { setSaveStatus({ status: 'idle', lastSaved: null }); }, 5000);
+            setTimeout(() => { setSaveStatus(prev => prev.status === 'error' ? { status: 'idle', lastSaved: null } : prev); }, 5000);
         }
     }, [isReady, tabs, activeTabId, validateQuote, items, discount, quoteData, customerData, companyData, bankData, db, setTabs, setSaveStatus]);
 
@@ -278,6 +296,76 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         else if (quote.discountRate) setDiscount({ type: 'percentage', value: quote.discountRate });
         toast.success('Teklif yüklendi');
     }, [activeTabId, setTabs, updateQuoteData, updateCustomerData, updateCompanyData, updateBankData, setItems, setDiscount]);
+
+    const saveVersion = useCallback(async (versionName?: string): Promise<string | null> => {
+        if (!isReady || !db) {
+            toast.error('Veritabanı hazır değil');
+            return null;
+        }
+        const activeTab = tabs.find(t => t.id === activeTabId);
+        const quoteId = activeTab?.savedQuoteId || Date.now();
+        const { subtotalMinor, taxTotalMinor, grandTotalMinor } = (() => {
+            try {
+                const calc = calculateQuoteTotals(items, discount, { currency: quoteData.currency });
+                return { subtotalMinor: Math.round(calc.subtotal * 100), taxTotalMinor: Math.round(calc.taxTotal * 100), grandTotalMinor: Math.round(calc.grandTotal * 100) };
+            } catch { return { subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0 }; }
+        })();
+        const snapshot: DbQuote = {
+            id: quoteId,
+            quoteNumber: quoteData.number,
+            customerName: customerData.name,
+            customerCompany: customerData.company,
+            status: 'saved',
+            currency: quoteData.currency,
+            subtotalMinor,
+            taxTotalMinor,
+            grandTotalMinor,
+            quoteData,
+            customerData,
+            companyData,
+            items,
+            discount,
+            bankData,
+            createdAt: getLocalDateTimeString(),
+            updatedAt: getLocalDateTimeString()
+        };
+        const versionId = `ver_${quoteId}_${Date.now()}`;
+        const version: QuoteVersion = {
+            versionId,
+            quoteId,
+            createdAt: Date.now(),
+            snapshot: JSON.parse(JSON.stringify(snapshot)) as DbQuote,
+            versionName: versionName?.trim() || undefined
+        };
+        try {
+            await db.put('quoteVersions', version);
+            toast.success(versionName ? `"${versionName}" sürümü kaydedildi` : 'Sürüm snapshot kaydedildi');
+            return versionId;
+        } catch (error) {
+            Logger.error('Error saving quote version:', error);
+            toast.error('Sürüm kaydedilemedi');
+            return null;
+        }
+    }, [isReady, db, tabs, activeTabId, items, discount, quoteData, customerData, companyData, bankData]);
+
+    const revertToVersion = useCallback(async (versionId: string) => {
+        if (!isReady || !db) {
+            toast.error('Veritabanı hazır değil');
+            return;
+        }
+        try {
+            const version = await db.get<QuoteVersion>('quoteVersions', versionId);
+            if (!version || !version.snapshot) {
+                toast.error('Sürüm bulunamadı');
+                return;
+            }
+            loadQuote(version.snapshot);
+            toast.success(version.versionName ? `"${version.versionName}" sürümüne geri dönüldü` : 'Sürüme geri dönüldü');
+        } catch (error) {
+            Logger.error('Error reverting to version:', error);
+            toast.error('Sürüme dönülemedi');
+        }
+    }, [isReady, db, loadQuote]);
 
     const resetQuote = useCallback(() => {
         setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: null } : tab));
@@ -347,6 +435,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         companyData, updateCompanyData, items, setItems, discount, setDiscount,
         bankData, updateBankData, setBankData,
         saveQuote, loadQuote, resetQuote, fillTestData, createBackup, restoreBackup,
+        saveVersion, revertToVersion,
         currentQuoteId, setCurrentQuoteId, validateQuote,
         db, isReady,
     }), [
@@ -354,6 +443,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         companyData, updateCompanyData, items, setItems, discount, setDiscount,
         bankData, updateBankData, setBankData,
         saveQuote, loadQuote, resetQuote, fillTestData, createBackup, restoreBackup,
+        saveVersion, revertToVersion,
         currentQuoteId, setCurrentQuoteId, validateQuote,
         db, isReady,
     ]);

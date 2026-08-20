@@ -1,13 +1,13 @@
-﻿import React from 'react';
-import { useState, useEffect } from 'react';
-import Modal from './Modal';
-import ConfirmDialog from './ConfirmDialog';
-import { useIndexedDB } from '../hooks/useIndexedDB';
 import { Plus, Trash, Edit, Save, X } from 'lucide-react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import Logger from '../utils/logger';
-import { useTranslation } from '../hooks/useTranslation';
-import type { BankData } from '../context/quote/types';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import Modal from '@/components/Modal';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import Logger from '@/utils/logger';
+import type { BankData } from '@/context/quote/types';
 
 interface StoredBank extends BankData {
     id: number;
@@ -50,12 +50,12 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankMa
         }
     };
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             if (editingBank) {

@@ -1,7 +1,7 @@
 // Performance Monitor Utility
 // Tracks memory usage, storage size, and application performance metrics
-import Logger from './logger';
-import type { Tab } from '../context/quote/types';
+import Logger from '@/utils/logger';
+import type { Tab } from '@/context/quote/types';
 
 interface MemoryUsage {
     usedJSHeapSize: number;

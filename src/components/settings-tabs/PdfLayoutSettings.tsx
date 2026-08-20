@@ -1,7 +1,3 @@
-import React from "react";
-import { GripVertical } from "lucide-react";
-import { useTranslation } from "../../hooks/useTranslation";
-import { useQuoteData } from "../../context/QuoteContext";
 import {
   DndContext,
   closestCenter,
@@ -18,6 +14,10 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
+import React from "react";
+import { useQuoteData } from '@/context/QuoteContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface SortableItemProps {
   id: string;

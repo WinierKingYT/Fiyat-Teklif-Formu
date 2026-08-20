@@ -1,6 +1,6 @@
+import { X, Save } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { X, Save } from 'lucide-react';
 
 interface OptionType {
     value: string;
@@ -43,7 +43,7 @@ const PopupEditor = ({ isOpen, onClose, onSave, initialValue, title, type = 'tex
         return () => document.removeEventListener('keydown', handler);
     }, [isOpen, onClose]);
 
-    const handleSubmit = (e) => { e.preventDefault(); onSave(value); onClose(); };
+    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave(value); onClose(); };
     if (!isOpen) return null;
 
     const inputClass = "w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--color-bg-card)] text-[var(--color-text)] text-sm focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-muted)] transition-all";

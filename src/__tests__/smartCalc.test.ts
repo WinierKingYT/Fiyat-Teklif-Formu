@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateMathExpression } from '../utils/smartCalc';
+import { evaluateMathExpression } from '@/utils/smartCalc';
 
 describe('evaluateMathExpression', () => {
   it('returns the value as-is for null/undefined/empty', () => {

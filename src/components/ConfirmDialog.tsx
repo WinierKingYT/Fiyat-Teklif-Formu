@@ -1,8 +1,8 @@
-﻿import React, { useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { AlertTriangle, Info, X } from 'lucide-react';
-import { useDialogBehavior } from '../hooks/useDialogBehavior';
-import { useTranslation } from '../hooks/useTranslation';
+import React, { useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { useDialogBehavior } from '@/hooks/useDialogBehavior';
+import { useTranslation } from '@/hooks/useTranslation';
 
 const variantConfig: Record<string, { icon: React.FC<{ size: number }>; iconColor: string; btnColor: string; label: string }> = {
     danger: { icon: AlertTriangle, iconColor: 'var(--color-error)', btnColor: 'var(--color-error)', label: 'danger' },
@@ -71,32 +71,32 @@ const ConfirmDialog = ({
             onTouchEnd={mobile ? handleTouchEnd : undefined}
         >
             <div ref={dialogRef} className={contentClass} style={{
-                maxWidth: mobile ? '100%' : '500px',
+                maxWidth: mobile ? '100%' : '360px',
                 borderRadius: mobile ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
                 transition: 'transform 0.3s ease-out',
             }} role="dialog" aria-modal="true" aria-labelledby={titleId}>
                 {mobile && <div className="modal-drag-handle" />}
-                <div className={`flex items-center justify-between p-5 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : ''}`}>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-[var(--radius)] bg-[var(--color-bg-muted)]" style={{ color: config.iconColor }}>
-                            <Icon size={22} />
+                <div className={`flex items-center justify-between p-3.5 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : ''}`}>
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-[var(--radius)] bg-[var(--color-bg-muted)]" style={{ color: config.iconColor }}>
+                            <Icon size={18} />
                         </div>
-                        <h3 id={titleId} className="text-lg font-bold text-[var(--color-text)]">{dialogTitle}</h3>
+                        <h3 id={titleId} className="text-sm font-bold text-[var(--color-text)]">{dialogTitle}</h3>
                     </div>
-                    <button type="button" onClick={handleClose} className="p-1.5 rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors" aria-label={t('close')}>
-                        <X size={18} />
+                    <button type="button" onClick={handleClose} className="p-1 rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors" aria-label={t('close')}>
+                        <X size={16} />
                     </button>
                 </div>
 
-                <div className="p-5">
-                    <p className="text-sm text-[var(--color-text-secondary)]">{dialogMessage}</p>
+                <div className="p-3.5">
+                    <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">{dialogMessage}</p>
                 </div>
 
-                <div className="flex gap-3 p-5 border-t border-[var(--color-border)]">
-                    <button type="button" onClick={handleClose} className="btn btn-outline flex-1">{dialogCancelText}</button>
+                <div className="flex gap-2 p-3 border-t border-[var(--color-border)]">
+                    <button type="button" onClick={handleClose} className="btn btn-outline btn-xs flex-1">{dialogCancelText}</button>
                     <button type="button"
                         onClick={handleConfirm}
-                        className="btn flex-1 text-white"
+                        className="btn btn-xs flex-1 text-white font-semibold"
                         style={{ background: config.btnColor }}
                     >
                         {dialogConfirmText}

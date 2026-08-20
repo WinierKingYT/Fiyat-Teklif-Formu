@@ -1,4 +1,4 @@
-import Logger from './logger';
+import Logger from '@/utils/logger';
 
 const CACHE_KEY = 'exchange_rates_cache';
 const CACHE_DURATION = 60 * 60 * 1000;

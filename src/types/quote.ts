@@ -6,4 +6,4 @@ export {
   quoteDataSchema,
   type QuoteData,
   type Quote,
-} from '../context/quote/types';
+} from '@/context/quote/types';

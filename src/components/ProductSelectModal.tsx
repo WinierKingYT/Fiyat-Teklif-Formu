@@ -1,16 +1,16 @@
+import { Search, Package, Plus, Filter, CheckSquare, Square } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import Modal from './Modal';
-import Pagination from './Pagination';
-import { Search, Package, Plus, Filter, CheckSquare, Square } from 'lucide-react';
-import { useIndexedDB } from '../hooks/useIndexedDB';
-import useDebounce from '../hooks/useDebounce';
-import Logger from '../utils/logger';
-import Skeleton from './Skeleton';
-import EmptyState from './EmptyState';
+import EmptyState from '@/components/EmptyState';
+import Modal from '@/components/Modal';
+import Pagination from '@/components/Pagination';
+import Skeleton from '@/components/Skeleton';
+import useDebounce from '@/hooks/useDebounce';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import Logger from '@/utils/logger';
 
 interface SelectableProduct {
-    id?: string;
+    id: string | number;
     name: string;
     price: number;
     unit?: string;
@@ -18,14 +18,20 @@ interface SelectableProduct {
     image?: string | null;
 }
 
-const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
+interface ProductSelectModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (products: SelectableProduct | SelectableProduct[]) => void;
+}
+
+const ProductSelectModal: React.FC<ProductSelectModalProps> = ({ isOpen, onClose, onSelect }) => {
     const { db, isReady } = useIndexedDB();
     const [products, setProducts] = useState<SelectableProduct[]>([]);
     const [categories, setCategories] = useState(['Genel']);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
     const [loading, setLoading] = useState(false);
-    const [selectedProducts, setSelectedProducts] = useState(new Set());
+    const [selectedProducts, setSelectedProducts] = useState<Set<string | number>>(new Set());
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
 
@@ -59,7 +65,7 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
         }
     };
 
-    const toggleProductSelection = (product) => {
+    const toggleProductSelection = (product: SelectableProduct) => {
         const newSelected = new Set(selectedProducts);
         if (newSelected.has(product.id)) newSelected.delete(product.id);
         else newSelected.add(product.id);
@@ -109,68 +115,66 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
     const hasFilter = searchTerm || selectedCategory !== 'Tümü';
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Ürün/Hizmet Seç" size="lg">
-            <div className="space-y-4 flex flex-col h-[70vh]">
-                <div className="flex flex-col gap-3">
-                    <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
-                            <input type="text" className="form-control pl-9" placeholder="Ürün adı veya kategori ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        </div>
-                        <select className="form-control w-40" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                            <option value="Tümü">Tüm Kategoriler</option>
-                            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
+        <Modal isOpen={isOpen} onClose={onClose} title="Katalogdan Ürün Ekle" size="lg">
+            <div className="space-y-3 flex flex-col h-[65vh]">
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
+                        <input type="text" className="form-control pl-8 text-xs" placeholder="Ürün adı veya kategori ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
+                    <select className="form-control text-xs w-36 cursor-pointer" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                        <option value="Tümü">Tüm Kategoriler</option>
+                        {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
                 </div>
 
                 <div className="border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden flex-1 overflow-y-auto relative">
                     {loading ? (
-                        <div className="p-4 space-y-3">
-                            <Skeleton variant="row" count={5} />
+                        <div className="p-4 space-y-2">
+                            <Skeleton variant="row" count={4} />
                         </div>
                     ) : filteredProducts.length === 0 ? (
                         <EmptyState
-                            icon={<Package size={32} />}
+                            icon={<Package size={24} />}
                             title={hasFilter ? 'Sonuç bulunamadı' : 'Henüz kayıtlı ürün yok'}
-                            text={hasFilter ? 'Farklı bir arama terimi veya kategori deneyin.' : 'Ürün yöneticisinden ürün ekleyebilirsiniz.'}
+                            text={hasFilter ? 'Farklı bir arama terimi deneyin.' : 'Ürün yöneticisinden ürün ekleyebilirsiniz.'}
                         />
                     ) : (
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10">
+                        <table className="w-full text-xs text-left">
+                            <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10 font-semibold border-b border-[var(--color-border)]">
                                 <tr>
-                                    <th className="p-3 w-10">
+                                    <th className="p-2.5 w-8">
                                         <button type="button" onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]">
                                             {selectedProducts.size === filteredProducts.length && filteredProducts.length > 0 ?
-                                                <CheckSquare size={18} className="text-[var(--color-primary)]" /> :
-                                                <Square size={18} className="text-[var(--color-text-muted)]" />
+                                                <CheckSquare size={14} className="text-[var(--color-primary)]" /> :
+                                                <Square size={14} className="text-[var(--color-text-muted)]" />
                                             }
                                         </button>
                                     </th>
-                                    <th className="p-3 font-medium">Ürün Adı</th>
-                                    <th className="p-3 font-medium">Kategori</th>
-                                    <th className="p-3 font-medium text-right">Birim Fiyat</th>
+                                    <th className="p-2.5">Ürün Adı</th>
+                                    <th className="p-2.5">Kategori</th>
+                                    <th className="p-2.5 text-right">Birim Fiyat</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[var(--color-border)]">
+                            <tbody className="divide-y divide-[var(--color-border)]/50">
                                 {paginatedProducts.map((product) => {
                                     const isSelected = selectedProducts.has(product.id);
                                     return (
                                         <tr key={product.id} className={`hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer ${isSelected ? 'bg-[var(--color-primary-muted)]' : ''}`} onClick={() => toggleProductSelection(product)}>
-                                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                            <td className="p-2.5" onClick={(e) => e.stopPropagation()}>
                                                 {isSelected ?
-                                                    <CheckSquare size={18} className="text-[var(--color-primary)]" /> :
-                                                    <Square size={18} className="text-[var(--color-text-muted)]" />
+                                                    <CheckSquare size={14} className="text-[var(--color-primary)]" /> :
+                                                    <Square size={14} className="text-[var(--color-text-muted)]" />
                                                 }
                                             </td>
-                                            <td className="p-3 font-medium text-[var(--color-text)]">
+                                            <td className="p-2.5 font-medium text-[var(--color-text)]">
                                                 <div className="flex items-center gap-2">
-                                                    {product.image && <img src={product.image} alt="" className="w-8 h-8 rounded-[var(--radius-sm)] object-cover border border-[var(--color-border)]" />}
-                                                    {product.name}
+                                                    {product.image && <img src={product.image} alt="" className="w-6 h-6 rounded object-cover border border-[var(--color-border)]" />}
+                                                    <span>{product.name}</span>
                                                 </div>
                                             </td>
-                                            <td className="p-3 text-[var(--color-text-muted)]">{product.category || '-'}</td>
-                                            <td className="p-3 font-mono text-right text-[var(--color-text)]">
+                                            <td className="p-2.5 text-[var(--color-text-muted)]">{product.category || '-'}</td>
+                                            <td className="p-2.5 font-mono font-semibold text-right text-[var(--color-text)]">
                                                 {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(product.price)}
                                             </td>
                                         </tr>
@@ -190,14 +194,14 @@ const ProductSelectModal = ({ isOpen, onClose, onSelect }) => {
                     )}
                 </div>
 
-                <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
-                    <div className="text-sm text-[var(--color-text-muted)]">
-                        {selectedProducts.size} ürün seçildi
+                <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]/50">
+                    <div className="text-xs text-[var(--color-text-muted)]">
+                        {selectedProducts.size > 0 ? `${selectedProducts.size} ürün seçildi` : 'Seçmek için satıra tıklayın'}
                     </div>
                     <div className="flex gap-2">
-                        <button type="button" className="btn btn-outline" onClick={onClose}>İptal</button>
-                        <button type="button" className="btn btn-primary" onClick={handleAddSelected} disabled={selectedProducts.size === 0}>
-                            <Plus size={16} /> Seçilenleri Ekle ({selectedProducts.size})
+                        <button type="button" className="btn btn-outline btn-xs" onClick={onClose}>Kapat</button>
+                        <button type="button" className="btn btn-primary btn-xs" onClick={handleAddSelected} disabled={selectedProducts.size === 0}>
+                            <Plus size={13} /> Ekle ({selectedProducts.size})
                         </button>
                     </div>
                 </div>

@@ -1,3 +1,3 @@
-export * from './quote';
-export * from './entities';
-export * from './settings';
+export * from '@/types/quote';
+export * from '@/types/entities';
+export * from '@/types/settings';

@@ -1,11 +1,11 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Landmark, CreditCard, User, Building, Hash, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Landmark, CreditCard, User, Building, Hash } from 'lucide-react';
-import { useQuoteData } from '../context/QuoteContext';
-import { useTranslation } from '../hooks/useTranslation';
-import { InputField } from './ui';
+import { InputField } from '@/components/ui';
+import { useQuoteData } from '@/context/QuoteContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 const bankInfoSchema = z.object({
   bankName: z.string().optional(),
@@ -24,8 +24,27 @@ interface BankInfoFormProps {
 }
 
 const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpenManager }) => {
-  const { quoteData } = useQuoteData();
+  const { quoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
+  const [showExtra, setShowExtra] = useState(Boolean(data.branch || data.accountNumber));
+  const [savedBanks, setSavedBanks] = useState<Array<Record<string, string>>>([]);
+
+  useEffect(() => {
+    if (!db) return;
+    db.getAll<Record<string, string>>('bank_accounts')
+      .then((banks) => {
+        if (banks && banks.length > 0) setSavedBanks(banks);
+      })
+      .catch(() => {});
+  }, [db]);
+
+  const selectBank = (bank: Record<string, string>) => {
+    if (bank.bankName) onChange('bankName', bank.bankName);
+    if (bank.iban) onChange('iban', bank.iban);
+    if (bank.accountHolder) onChange('accountHolder', bank.accountHolder);
+    if (bank.branch) onChange('branch', bank.branch);
+    if (bank.accountNumber) onChange('accountNumber', bank.accountNumber);
+  };
 
   const {
     register,
@@ -47,51 +66,88 @@ const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpen
   };
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between pb-1 border-b border-[var(--color-border)]/50">
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs text-[var(--color-text-secondary)]"
+          onClick={() => setShowExtra(!showExtra)}
+        >
+          {showExtra ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          <span>{showExtra ? 'Ek Alanları Gizle' : 'Şube & Hesap No Ekle'}</span>
+        </button>
+        {onOpenManager && (
+          <button type="button" className="btn btn-outline btn-xs" onClick={onOpenManager}>
+            <Landmark size={12} /> {t('bankInfo')}
+          </button>
+        )}
+      </div>
+
+      {savedBanks.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap pb-1 border-b border-[var(--color-border)]/40">
+          <span className="text-[11px] text-[var(--color-text-muted)] font-medium">Kayıtlı:</span>
+          {savedBanks.map((b, i) => (
+            <button
+              key={b.id || i}
+              type="button"
+              onClick={() => selectBank(b)}
+              className="px-2 py-0.5 text-xs bg-[var(--color-bg-muted)] hover:bg-[var(--color-primary-muted)] hover:text-[var(--color-primary)] text-[var(--color-text)] border border-[var(--color-border)] rounded-full transition-colors truncate max-w-[140px]"
+              title={`${b.bankName || ''} - ${b.iban || ''}`}
+            >
+              {b.bankName || b.accountHolder || 'Banka'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         <InputField
           id="bankName"
           name="bankName"
           register={register}
-          icon={<Building size={15} />}
+          icon={<Building size={14} />}
           placeholder={t('bankName')}
-          onChange={handleChange}
-        />
-        <InputField
-          id="bankBranch"
-          name="branch"
-          register={register}
-          icon={<Hash size={15} />}
-          placeholder={t('branch')}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <InputField
-          id="accountNumber"
-          name="accountNumber"
-          register={register}
-          icon={<CreditCard size={15} />}
-          placeholder={t('accountNumber')}
           onChange={handleChange}
         />
         <InputField
           id="iban"
           name="iban"
           register={register}
-          icon={<Landmark size={15} />}
+          icon={<Landmark size={14} />}
           placeholder={t('iban')}
           onChange={handleChange}
         />
       </div>
+
       <InputField
         id="accountHolder"
         name="accountHolder"
         register={register}
-        icon={<User size={15} />}
+        icon={<User size={14} />}
         placeholder={t('accountHolder')}
         onChange={handleChange}
       />
+
+      {showExtra && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1 animate-in fade-in">
+          <InputField
+            id="bankBranch"
+            name="branch"
+            register={register}
+            icon={<Hash size={14} />}
+            placeholder={t('branch')}
+            onChange={handleChange}
+          />
+          <InputField
+            id="accountNumber"
+            name="accountNumber"
+            register={register}
+            icon={<CreditCard size={14} />}
+            placeholder={t('accountNumber')}
+            onChange={handleChange}
+          />
+        </div>
+      )}
     </div>
   );
 };

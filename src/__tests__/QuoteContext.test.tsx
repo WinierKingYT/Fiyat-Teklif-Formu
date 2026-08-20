@@ -1,9 +1,9 @@
-﻿import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act, renderHook } from '@testing-library/react';
 import { screen, waitFor } from '@testing-library/dom';
-import { QuoteProvider, useQuote } from '../context/QuoteContext';
-import { getLocalDateString } from '../utils/dateUtils';
+import { render, act, renderHook } from '@testing-library/react';
+import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QuoteProvider, useQuote } from '@/context/QuoteContext';
+import { getLocalDateString } from '@/utils/dateUtils';
 
 // Mock useIndexedDB
 const mockDb = {
@@ -125,12 +125,95 @@ describe('QuoteContext Hook Direct', () => {
         // We might need to wait for the effect in React 18+
         // But renderHook usually handles this.
 
-        // The effect calculates new validUntil
-        // date + 5 days
         const dateObj = new Date(initialDate + 'T00:00:00');
         dateObj.setDate(dateObj.getDate() + 5);
         const expectedDate = getLocalDateString(dateObj);
 
         expect(result.current.quoteData.validUntil).toBe(expectedDate);
+    });
+
+    it('should save a version snapshot and revert to it', async () => {
+        const { result } = renderHook(() => useQuote(), { wrapper: QuoteProvider });
+
+        await act(async () => {
+            result.current.updateQuoteData('title', 'İlk Başlık');
+        });
+
+        let savedVersionId: string | null = null;
+        await act(async () => {
+            savedVersionId = await result.current.saveVersion('Sürüm 1');
+        });
+
+        expect(savedVersionId).toBeTruthy();
+        expect(mockDb.put).toHaveBeenCalledWith('quoteVersions', expect.objectContaining({
+            versionName: 'Sürüm 1',
+            snapshot: expect.objectContaining({
+                quoteData: expect.objectContaining({
+                    title: 'İlk Başlık'
+                })
+            })
+        }));
+
+        // Now change title
+        await act(async () => {
+            result.current.updateQuoteData('title', 'İkinci Değiştirilmiş Başlık');
+        });
+        expect(result.current.quoteData.title).toBe('İkinci Değiştirilmiş Başlık');
+
+        // Mock db.get for revert
+        mockDb.get.mockImplementation(async (store: string) => {
+            if (store === 'quoteVersions') {
+                return {
+                    versionId: savedVersionId,
+                    versionName: 'Sürüm 1',
+                    snapshot: {
+                        id: 123,
+                        quoteData: { title: 'İlk Başlık', number: 'T-001', currency: 'TRY', language: 'tr' },
+                        customerData: { name: 'Müşteri 1' },
+                        companyData: { name: 'Firma 1' },
+                        items: [],
+                        discount: { type: 'percentage', value: 0 },
+                        bankData: { bankName: 'Banka 1' }
+                    }
+                };
+            }
+            return null;
+        });
+
+        // Revert to version
+        await act(async () => {
+            await result.current.revertToVersion(savedVersionId!);
+        });
+
+        expect(result.current.quoteData.title).toBe('İlk Başlık');
+    });
+
+    it('should automatically create a snapshot in quoteVersions when saveQuote is executed', async () => {
+        const { result } = renderHook(() => useQuote(), { wrapper: QuoteProvider });
+
+        await act(async () => {
+            result.current.updateCompanyData('name', 'Örnek Firma A.Ş.');
+            result.current.updateCustomerData('name', 'Ahmet Müşteri');
+            result.current.updateQuoteData('number', 'TK-2026-01');
+            result.current.updateQuoteData('currency', 'TRY');
+            result.current.updateQuoteData('title', 'Otomatik Kaydedilen Teklif');
+            result.current.setItems([
+                { id: '1', name: 'Ürün A', quantity: 2, price: 100, taxRate: 20, total: 200, unit: 'Adet' }
+            ]);
+        });
+
+        await act(async () => {
+            await result.current.saveQuote(false);
+        });
+
+        expect(mockDb.add).toHaveBeenCalledWith('quotes', expect.any(Object));
+        expect(mockDb.put).toHaveBeenCalledWith('quoteVersions', expect.objectContaining({
+            versionName: 'Otomatik Kayıt',
+            snapshot: expect.objectContaining({
+                quoteData: expect.objectContaining({
+                    title: 'Otomatik Kaydedilen Teklif'
+                })
+            })
+        }));
     });
 });

@@ -4,6 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import { importX as pluginImportX } from 'eslint-plugin-import-x'
 
 export default defineConfig([
   globalIgnores(['dist', 'dev-dist', 'node_modules', 'modules', '*.config.js', 'playwright.config.ts']),
@@ -15,6 +16,17 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    plugins: {
+      'import-x': pluginImportX,
+    },
+    settings: {
+      'import-x/core-modules': ['virtual:pwa-register'],
+      'import-x/resolver': {
+        typescript: { alwaysTryTypes: true },
+        node: true,
+      },
+      'import-x/ignore': ['\\.(css|scss|less|svg|png|jpg|jpeg|gif|webp|ico|woff2?|pdf|json)$'],
+    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: { ...globals.browser, process: 'readonly', IDBValidKey: 'readonly' },
@@ -25,6 +37,7 @@ export default defineConfig([
       },
     },
     rules: {
+      'import-x/no-unresolved': 'error',
       'no-unused-vars': 'off',
       'react-refresh/only-export-components': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
@@ -46,6 +59,19 @@ export default defineConfig([
         message: "'as any' kullanimi yasak: tip guvenli cast kullan (dogru tip veya `as unknown as X`)",
       }],
       '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'as' }],
+      'import-x/order': ['warn', {
+        groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index'], 'type'],
+        'newlines-between': 'ignore',
+        alphabetize: { order: 'asc', caseInsensitive: true },
+        pathGroups: [
+          {
+            pattern: '@/**',
+            group: 'internal',
+            position: 'before',
+          },
+        ],
+        pathGroupsExcludedImportTypes: ['builtin', 'type'],
+      }],
     },
   },
 ])

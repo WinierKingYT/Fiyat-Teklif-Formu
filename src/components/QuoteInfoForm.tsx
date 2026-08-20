@@ -1,10 +1,10 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Hash, Calendar, Clock, AlignLeft, DollarSign, Globe } from 'lucide-react';
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Hash, Calendar, Clock, AlignLeft, DollarSign, Globe } from 'lucide-react';
-import { InputField, SelectField, TextAreaField } from './ui';
-import type { QuoteData } from '../context/quote/types';
+import { InputField, SelectField, TextAreaField } from '@/components/ui';
+import type { QuoteData } from '@/context/quote/types';
 
 const quoteInfoSchema = z.object({
   title: z.string().min(1, 'Teklif başlığı zorunludur'),

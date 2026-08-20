@@ -1,5 +1,5 @@
-import Logger from './logger';
 import toast from 'react-hot-toast';
+import Logger from '@/utils/logger';
 import type html2pdfType from 'html2pdf.js';
 
 type Html2PdfOptions = NonNullable<Parameters<typeof html2pdfType>[1]>;

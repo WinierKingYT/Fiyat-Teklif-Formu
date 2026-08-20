@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
-import ConfirmDialog from '../../components/ConfirmDialog';
-import type { ConfirmState } from './types';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import type { ConfirmState } from '@/context/quote/types';
 
 type ConfirmVariant = 'info' | 'warning' | 'danger';
 

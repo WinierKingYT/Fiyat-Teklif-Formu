@@ -1,4 +1,4 @@
-import { QuoteItem, Discount } from '../context/quote/types';
+import { QuoteItem, Discount } from '@/context/quote/types';
 
 interface CalculatedItem extends QuoteItem {
   quantity: number;
@@ -13,6 +13,7 @@ interface CalculatedItem extends QuoteItem {
 
 interface CalculateOptions {
   currency?: string;
+  taxMode?: 'exclusive' | 'inclusive';
 }
 
 interface TaxBreakdown {
@@ -35,8 +36,8 @@ export interface QuoteTotals {
 /**
  * Unified financial calculation engine for quotes.
  *
- * Handles line-item discounts, global discounts (percentage/fixed),
- * proportional tax base reduction, and tax breakdown by rate.
+ * Handles line-item discounts (percentage/fixed), global discounts (percentage/fixed),
+ * KDV dahil/hariç modes, proportional tax base reduction, and tax breakdown by rate.
  */
 export const calculateQuoteTotals = (
   items: QuoteItem[] = [],
@@ -44,15 +45,31 @@ export const calculateQuoteTotals = (
   options: CalculateOptions = {}
 ): QuoteTotals => {
   const currency = options.currency || 'TRY';
+  const isTaxInclusive = options.taxMode === 'inclusive';
 
   const calculatedItems: CalculatedItem[] = items.map(item => {
     const quantity = Number(item.quantity) || 0;
-    const price = Number(item.price) || 0;
+    let price = Number(item.price) || 0;
     const taxRate = Number(item.taxRate) || 0;
-    const lineDiscountRate = Math.min(Math.max(Number(item.discountRate) || 0, 0), 100);
+    const isFixedDiscount = (item as unknown as { discountType?: string }).discountType === 'fixed';
+    const discountVal = Number(item.discountRate) || 0;
+
+    if (isTaxInclusive && taxRate > 0) {
+      price = price / (1 + taxRate / 100);
+    }
 
     const grossTotal = quantity * price;
-    const lineDiscount = grossTotal * (lineDiscountRate / 100);
+    let lineDiscount = 0;
+    let lineDiscountRate = 0;
+
+    if (isFixedDiscount) {
+      lineDiscount = Math.min(grossTotal, Math.max(0, discountVal));
+      lineDiscountRate = grossTotal > 0 ? (lineDiscount / grossTotal) * 100 : 0;
+    } else {
+      lineDiscountRate = Math.min(Math.max(discountVal, 0), 100);
+      lineDiscount = grossTotal * (lineDiscountRate / 100);
+    }
+
     const netTotal = grossTotal - lineDiscount;
     const tax = netTotal * (taxRate / 100);
 
@@ -127,11 +144,30 @@ function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-export function calculateLineTotal(item: { quantity: number | string; price: number | string; discountRate?: number | string }): number {
+export function calculateLineTotal(item: {
+  quantity: number | string;
+  price: number | string;
+  discountRate?: number | string;
+  discountType?: 'percentage' | 'fixed';
+  taxRate?: number | string;
+  taxMode?: 'exclusive' | 'inclusive';
+}): number {
   const quantity = parseFloat(String(item.quantity)) || 0;
-  const price = parseFloat(String(item.price)) || 0;
-  const discountRate = parseFloat(String(item.discountRate)) || 0;
-  return quantity * price * (1 - discountRate / 100);
+  let price = parseFloat(String(item.price)) || 0;
+  const taxRate = parseFloat(String(item.taxRate)) || 0;
+
+  if (item.taxMode === 'inclusive' && taxRate > 0) {
+    price = price / (1 + taxRate / 100);
+  }
+
+  const gross = quantity * price;
+  const discountVal = parseFloat(String(item.discountRate)) || 0;
+
+  if (item.discountType === 'fixed') {
+    return Math.max(0, gross - discountVal);
+  }
+
+  return gross * (1 - Math.min(Math.max(discountVal, 0), 100) / 100);
 }
 
 export function formatCurrency(amount: number, currency: string = 'TRY'): string {

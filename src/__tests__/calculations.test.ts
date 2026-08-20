@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calculateQuoteTotals, calculateLineTotal, formatCurrency } from '../utils/calculations';
-import { QuoteItem } from '../context/quote/types';
+import { QuoteItem } from '@/context/quote/types';
+import { calculateQuoteTotals, calculateLineTotal, formatCurrency } from '@/utils/calculations';
 
 describe('calculateLineTotal', () => {
     it('should calculate basic line total', () => {

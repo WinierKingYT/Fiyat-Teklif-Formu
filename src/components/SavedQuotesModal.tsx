@@ -1,13 +1,41 @@
-﻿import React from 'react'; import { useState, useEffect, useMemo, useCallback } from 'react'; import Modal from './Modal'; import Pagination from './Pagination'; import ConfirmDialog from './ConfirmDialog'; import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react'; import { useIndexedDB } from '../hooks/useIndexedDB'; import { useQuoteData } from '../context/QuoteContext'; import useDebounce from '../hooks/useDebounce'; import Logger from '../utils/logger'; import { calculateQuoteTotals, formatCurrency } from '../utils/calculations'; import { toast } from 'react-hot-toast'; import Skeleton from './Skeleton'; import EmptyState from './EmptyState'; import { useTranslation } from '../hooks/useTranslation'; import type { DbQuote } from '../context/quote/types';
+import { Search, FileText, Trash, Eye, Clock, Save, PlusCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import Modal from '@/components/Modal';
+import Pagination from '@/components/Pagination';
+import Skeleton from '@/components/Skeleton';
+import { useQuoteData } from '@/context/QuoteContext';
+import useDebounce from '@/hooks/useDebounce';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import { calculateQuoteTotals, formatCurrency } from '@/utils/calculations';
+import Logger from '@/utils/logger';
+import type { DbQuote, Quote } from '@/context/quote/types';
 
-const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language = 'tr' }) => {
+interface SavedQuotesModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onLoadQuote: (quote: Quote) => void;
+    onNewQuote: () => void;
+    language?: string;
+}
+
+const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, onLoadQuote, onNewQuote, language = 'tr' }) => {
     const { t } = useTranslation(language);
     const { db, isReady } = useIndexedDB();
     const { saveQuote, currentQuoteId, setCurrentQuoteId } = useQuoteData();
     const [quotes, setQuotes] = useState<DbQuote[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        variant: 'info' | 'warning' | 'danger';
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
 
@@ -79,82 +107,74 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language =
     }, [debouncedSearch]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={t('quoteActions')} size="xl">
-            <div className="space-y-4 h-[70vh] flex flex-col">
-                <div className="flex flex-wrap gap-2 p-3 bg-[var(--color-bg-muted)] rounded-[var(--radius)] border border-[var(--color-border)]">
-                    <button type="button" className="btn btn-primary flex-1 py-3" onClick={handleSaveCurrent} title={t('saveCurrentQuote')}>
-                        <Save size={20} className="mb-1 mx-auto block" />
-                        <span className="text-sm font-medium">{t('saveQuoteAction')}</span>
+        <Modal isOpen={isOpen} onClose={onClose} title={t('quoteActions')} size="lg">
+            <div className="space-y-2.5 h-[65vh] flex flex-col">
+                <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
+                        <input type="text" className="form-control pl-8 text-xs" placeholder={t('searchQuotes')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    </div>
+                    <button type="button" className="btn btn-outline btn-xs whitespace-nowrap" onClick={handleSaveCurrent} title={t('saveCurrentQuote')}>
+                        <Save size={13} /> Kaydet
                     </button>
-                    <button type="button" className="btn btn-outline flex-1 py-3" onClick={handleNew} title={t('createNewQuote')}>
-                        <PlusCircle size={20} className="mb-1 mx-auto block" />
-                        <span className="text-sm font-medium">{t('newQuoteAction')}</span>
+                    <button type="button" className="btn btn-primary btn-xs whitespace-nowrap" onClick={handleNew} title={t('createNewQuote')}>
+                        <PlusCircle size={13} /> Yeni Teklif
                     </button>
-                    {currentQuoteId && (
-                        <button type="button" className="btn btn-danger flex-1 py-3" onClick={handleDeleteCurrent} title={t('deleteCurrentQuote')}>
-                            <Trash2 size={20} className="mb-1 mx-auto block" />
-                            <span className="text-sm font-medium">{t('deleteQuoteAction')}</span>
-                        </button>
-                    )}
-                </div>
-
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
-                    <input type="text" className="form-control pl-9" placeholder={t('searchQuotes')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
 
                 <div className="border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden flex-1 flex flex-col">
                     {loading ? (
-                        <div className="p-4 space-y-3">
+                        <div className="p-4 space-y-2">
                             <Skeleton variant="row" count={4} />
                         </div>
                     ) : filteredQuotes.length === 0 ? (
-                        <div className="flex items-center justify-center h-full p-8">
+                        <div className="flex items-center justify-center h-full p-6">
                             <EmptyState
-                                icon={<FileText size={32} />}
+                                icon={<FileText size={24} />}
                                 title={searchTerm ? t('noQuotesFound') : t('noSavedQuotes')}
                                 text={searchTerm ? t('tryDifferentSearch') : t('startBySaving')}
                             />
                         </div>
                     ) : (
                         <div className="overflow-y-auto flex-1">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10">
+                            <table className="w-full text-xs text-left">
+                                <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10 font-semibold border-b border-[var(--color-border)]">
                                     <tr>
-                                        <th className="p-3 font-medium">{t('quoteDate')}</th>
-                                        <th className="p-3 font-medium">{t('quoteNumber')}</th>
-                                        <th className="p-3 font-medium">{t('customerLabel')}</th>
-                                        <th className="p-3 font-medium">{t('amountQuote')}</th>
-                                        <th className="p-3 font-medium w-24"></th>
+                                        <th className="p-2.5">{t('quoteDate')}</th>
+                                        <th className="p-2.5">{t('quoteNumber')}</th>
+                                        <th className="p-2.5">{t('customerLabel')}</th>
+                                        <th className="p-2.5 text-right">{t('amountQuote')}</th>
+                                        <th className="p-2.5 w-16 text-right"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[var(--color-border)]">
+                                <tbody className="divide-y divide-[var(--color-border)]/50">
                                     {paginatedQuotes.map((quote) => {
                                         const quoteCurrency = quote.quoteData?.currency || 'TRY';
                                         const calc = calculateQuoteTotals(quote.items || [], quote.discount || {}, { currency: quoteCurrency });
                                         return (
-                                            <tr key={quote.id} className="hover:bg-[var(--color-bg-hover)] transition-colors">
-                                                <td className="p-3 text-[var(--color-text-muted)] whitespace-nowrap">
+                                            <tr
+                                                key={quote.id}
+                                                onClick={() => { onLoadQuote(quote); onClose(); }}
+                                                className="hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer group"
+                                            >
+                                                <td className="p-2.5 text-[var(--color-text-muted)] whitespace-nowrap">
                                                     <div className="flex items-center gap-1">
-                                                        <Clock size={14} />
+                                                        <Clock size={12} />
                                                         {quote.createdAt ? new Date(quote.createdAt).toLocaleDateString('tr-TR') : '-'}
                                                     </div>
                                                 </td>
-                                                <td className="p-3 font-medium text-[var(--color-text)]">{quote.quoteData?.number || '-'}</td>
-                                                <td className="p-3">
-                                                    <div className="font-medium text-[var(--color-text)]">{quote.customerData?.company}</div>
-                                                    <div className="text-xs text-[var(--color-text-muted)]">{quote.customerData?.name}</div>
+                                                <td className="p-2.5 font-mono font-semibold text-[var(--color-text)]">{quote.quoteData?.number || '-'}</td>
+                                                <td className="p-2.5">
+                                                    <div className="font-medium text-[var(--color-text)]">{quote.customerData?.company || quote.customerData?.name || '-'}</div>
+                                                    {quote.customerData?.company && quote.customerData?.name && (
+                                                        <div className="text-[10px] text-[var(--color-text-muted)]">{quote.customerData?.name}</div>
+                                                    )}
                                                 </td>
-                                                <td className="p-3 font-mono text-[var(--color-text)]">{formatCurrency(calc.grandTotal, quoteCurrency)}</td>
-                                                <td className="p-3 text-right">
-                                                    <div className="flex justify-end gap-1">
-                                                        <button type="button" className="btn btn-sm btn-outline p-1" title={t('viewLoad')} onClick={() => { onLoadQuote(quote); onClose(); }}>
-                                                            <Eye size={16} />
-                                                        </button>
-                                                        <button type="button" className="btn btn-sm btn-danger p-1" title={t('deleteQuoteAction')} onClick={(e) => handleDelete(quote.id, e)}>
-                                                            <Trash size={16} />
-                                                        </button>
-                                                    </div>
+                                                <td className="p-2.5 font-mono font-bold text-right text-[var(--color-text)]">{formatCurrency(calc.grandTotal, quoteCurrency)}</td>
+                                                <td className="p-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                                                    <button type="button" className="btn btn-xs btn-danger p-1" title={t('deleteQuoteAction')} onClick={(e) => handleDelete(quote.id, e)}>
+                                                        <Trash size={12} />
+                                                    </button>
                                                 </td>
                                             </tr>
                                         );
@@ -163,16 +183,16 @@ const SavedQuotesModal = ({ isOpen, onClose, onLoadQuote, onNewQuote, language =
                             </table>
                         </div>
                     )}
-                    {filteredQuotes.length > PAGE_SIZE && (
-                        <Pagination
-                            currentPage={page}
-                            totalPages={totalPages}
-                            totalItems={filteredQuotes.length}
-                            pageSize={PAGE_SIZE}
-                            onPageChange={handlePageChange}
-                        />
-                    )}
                 </div>
+                {filteredQuotes.length > PAGE_SIZE && (
+                    <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        totalItems={filteredQuotes.length}
+                        pageSize={PAGE_SIZE}
+                        onPageChange={handlePageChange}
+                    />
+                )}
             </div>
             <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
         </Modal>

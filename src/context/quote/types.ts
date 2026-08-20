@@ -6,12 +6,16 @@ export const quoteItemSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Ürün/hizmet adı gerekli'),
   description: z.string().optional(),
+  note: z.string().optional(),
+  isRecurring: z.boolean().optional(),
+  billingPeriod: z.enum(['one-time', 'monthly', 'yearly', 'weekly']).optional(),
   quantity: z.union([z.number().positive(), z.string()]).transform((v) => Number(v)),
   unit: z.string().optional(),
   price: z.union([z.number().nonnegative(), z.string()]).transform((v) => Number(v)),
   taxRate: z.union([z.number().nonnegative(), z.string()]).transform((v) => Number(v)),
   discountRate: z.union([z.number().nonnegative(), z.string()]).transform((v) => Number(v)).optional(),
-  image: z.string().url().optional(),
+  discountType: z.enum(['percentage', 'fixed']).optional(),
+  image: z.string().optional(),
   total: z.number().optional(),
 });
 
@@ -41,6 +45,9 @@ export const quoteDataSchema = z.object({
   language: z.string().optional(),
   createdAt: z.string().optional(),
   status: z.string().optional(),
+  watermark: z.string().optional(),
+  taxMode: z.enum(['exclusive', 'inclusive']).optional(),
+  showAmountInWords: z.boolean().optional(),
 });
 
 export type QuoteData = z.infer<typeof quoteDataSchema>;
@@ -58,6 +65,19 @@ export const customerDataSchema = z.object({
 });
 
 export type CustomerData = z.infer<typeof customerDataSchema>;
+export type Customer = CustomerData;
+
+export interface Product {
+  id?: string | number;
+  name: string;
+  description?: string;
+  price: number | string;
+  unit?: string;
+  taxRate?: number;
+  category?: string;
+  image?: string | null;
+  createdAt?: string;
+}
 
 // ─── Company Data ───────────────────────────────────────────────────────────
 export const companyDataSchema = z.object({
@@ -113,6 +133,15 @@ export interface DbQuote extends Quote {
   currency?: string;
 }
 
+// ─── Quote Version (Snapshot) ─────────────────────────────────────────────
+export interface QuoteVersion {
+  versionId: string;
+  quoteId: number;
+  createdAt: number;
+  snapshot: DbQuote;
+  versionName?: string;
+}
+
 // ─── Tab Data ───────────────────────────────────────────────────────────────
 export interface TabData {
   quoteData: QuoteData;
@@ -143,7 +172,7 @@ export const pdfConfigSchema = z.object({
   showSummary: z.boolean(),
   title: z.string(),
   fontFamily: z.string(),
-  fontSize: z.number(),
+  fontSize: z.union([z.number(), z.string()]),
   tableHeaderFontSize: z.number(),
   tableHeaderFontWeight: z.string().optional(),
   tableRowHeight: z.number(),
@@ -215,13 +244,40 @@ export const pdfConfigSchema = z.object({
   enableShadows: z.boolean().optional(),
 });
 
-export type PdfConfig = z.infer<typeof pdfConfigSchema>;
+export type PdfConfig = Partial<z.infer<typeof pdfConfigSchema>> & Record<string, unknown>;
 
 // ─── PDF Layout Item ────────────────────────────────────────────────────────
 export interface PdfLayoutItem {
   id: string;
   label: string;
   enabled: boolean;
+  order?: number;
+}
+
+// ─── PDF Theme Component Props ──────────────────────────────────────────────
+export interface PdfThemeProps {
+  id?: string;
+  containerStyles?: React.CSSProperties & { pageMinHeight?: string };
+  config: PdfConfig;
+  color?: string;
+  companyData: CompanyData;
+  quoteData: QuoteData;
+  customerData: CustomerData;
+  items: QuoteItem[];
+  bankData: BankData;
+  signature?: string | null;
+  t: Record<string, string>;
+  formatDate: (dateString?: string, locale?: string) => string;
+  formatCurrency: (amount: number) => string;
+  subtotal: number;
+  discount?: Discount;
+  discountAmount: number;
+  totalTax: number;
+  total: number;
+  currentLocale: string;
+  hasLineItemDiscounts?: boolean;
+  onEdit?: (fieldKey: string, value: unknown, type?: string) => void;
+  activeLayout?: PdfLayoutItem[];
 }
 
 // ─── Company Defaults ───────────────────────────────────────────────────────
@@ -244,6 +300,7 @@ export interface SaveStatus {
 
 export interface IndexedDBManager {
   getAll: <T = unknown>(storeName: string, indexName?: string | null) => Promise<T[]>;
+  getAllByIndex?: <T = unknown>(storeName: string, indexName: string, query?: IDBValidKey | IDBKeyRange) => Promise<T[]>;
   get: <T = unknown>(storeName: string, key: IDBValidKey) => Promise<T | undefined>;
   add: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
   put: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
@@ -294,6 +351,8 @@ export interface QuoteContextValue {
   loadQuote: (quote: Quote) => void;
   resetQuote: () => void;
   fillTestData: () => Promise<void>;
+  saveVersion: (versionName?: string) => Promise<string | null>;
+  revertToVersion: (versionId: string) => Promise<void>;
 
   // Settings
   saveCompanyDefaults: (data: CompanyData) => Promise<void>;

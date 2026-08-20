@@ -5,4 +5,4 @@ export {
   type CompanyData,
   bankDataSchema,
   type BankData,
-} from '../context/quote/types';
+} from '@/context/quote/types';

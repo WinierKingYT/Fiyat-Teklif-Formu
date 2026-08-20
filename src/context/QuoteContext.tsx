@@ -1,12 +1,12 @@
 import React from 'react';
-import { DatabaseProvider, useDatabase } from './quote/DatabaseContext';
-import { ConfirmProvider, useConfirm, useConfirmState } from './quote/ConfirmContext';
-import { CompanyDefaultsProvider, useCompanyDefaults } from './quote/CompanyDefaultsContext';
-import { TabProvider, useTab } from './quote/TabContext';
-import { QuoteDataProvider, useQuoteData } from './quote/QuoteDataContext';
-import { SaveStatusProvider, useSaveStatus, useSaveStatusSetter } from './quote/SaveStatusContext';
-import { PdfConfigProvider, usePdfConfig } from './quote/PdfConfigContext';
-import type { QuoteContextValue } from './quote/types';
+import { CompanyDefaultsProvider, useCompanyDefaults } from '@/context/quote/CompanyDefaultsContext';
+import { ConfirmProvider, useConfirm, useConfirmState } from '@/context/quote/ConfirmContext';
+import { DatabaseProvider, useDatabase } from '@/context/quote/DatabaseContext';
+import { PdfConfigProvider, usePdfConfig } from '@/context/quote/PdfConfigContext';
+import { QuoteDataProvider, useQuoteData } from '@/context/quote/QuoteDataContext';
+import { SaveStatusProvider, useSaveStatus, useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
+import { TabProvider, useTab } from '@/context/quote/TabContext';
+import type { QuoteContextValue } from '@/context/quote/types';
 
 export const QuoteProvider = ({ children }: { children: React.ReactNode }) => {
     return (
@@ -56,10 +56,10 @@ export const useQuote = (): QuoteContextValue => {
 };
 
 // Re-exports for consumers
-export { useTab } from './quote/TabContext';
-export { useQuoteData } from './quote/QuoteDataContext';
-export { usePdfConfig } from './quote/PdfConfigContext';
-export { useSaveStatus, useSaveStatusSetter } from './quote/SaveStatusContext';
-export { useConfirm, useConfirmState } from './quote/ConfirmContext';
-export { useCompanyDefaults } from './quote/CompanyDefaultsContext';
-export { useDatabase } from './quote/DatabaseContext';
+export { useTab } from '@/context/quote/TabContext';
+export { useQuoteData } from '@/context/quote/QuoteDataContext';
+export { usePdfConfig } from '@/context/quote/PdfConfigContext';
+export { useSaveStatus, useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
+export { useConfirm, useConfirmState } from '@/context/quote/ConfirmContext';
+export { useCompanyDefaults } from '@/context/quote/CompanyDefaultsContext';
+export { useDatabase } from '@/context/quote/DatabaseContext';

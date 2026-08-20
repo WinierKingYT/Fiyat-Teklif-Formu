@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import indexedDBManager from '../utils/indexedDBManager';
-import Logger from '../utils/logger';
+import indexedDBManager from '@/utils/indexedDBManager';
+import Logger from '@/utils/logger';
 
 export function useIndexedDB() {
     const [isReady, setIsReady] = useState(false);

@@ -1,15 +1,17 @@
-import React, { useRef, memo } from "react";
-import { GripVertical, ImageIcon, Trash, Copy, CheckSquare, Square } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { calculateLineTotal } from "../../utils/calculations";
-import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from "./shared";
-import type { QuoteItem } from "../../context/quote/types";
+import { GripVertical, ImageIcon, Trash, Copy, CheckSquare, Square } from "lucide-react";
+import React, { useRef, memo } from "react";
+import ProductTypeahead, { type ProductTypeaheadItem } from '@/components/items/ProductTypeahead';
+import { UNIT_OPTIONS, handleImageUpload as handleImageUploadFn } from '@/components/items/shared';
+import { calculateLineTotal } from '@/utils/calculations';
+import type { QuoteItem } from '@/context/quote/types';
 
 interface SortableRowCardProps {
   item: QuoteItem;
   index: number;
   handleItemChange: (index: number, field: string, value: unknown) => void;
+  onSelectProduct?: (index: number, product: ProductTypeaheadItem) => void;
   removeItem: (index: number) => void;
   duplicateItem: (index: number) => void;
   formatCurrency: (amount: number) => string;
@@ -19,10 +21,12 @@ interface SortableRowCardProps {
   rowErrors?: Record<string, string>;
   selected?: boolean;
   toggleSelectItem: (index: number) => void;
+  products?: ProductTypeaheadItem[];
+  currency?: string;
 }
 
 const SortableRowCard = memo(
-  ({ item, index, handleItemChange, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem }: SortableRowCardProps) => {
+  ({ item, index, handleItemChange, onSelectProduct, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem, products = [], currency = 'TRY' }: SortableRowCardProps) => {
     const {
       attributes,
       listeners,
@@ -44,26 +48,58 @@ const SortableRowCard = memo(
       <div
         ref={setNodeRef}
         style={style as React.CSSProperties}
-        className="card p-4 relative group"
+        className="card p-3 relative group space-y-2.5 border border-[var(--color-border)] shadow-2xs"
       >
-        {" "}
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute top-3 right-3 p-1.5 cursor-grab active:cursor-grabbing rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors"
-        >
-          {" "}
-          <GripVertical size={15} />{" "}
-        </div>{" "}
-        <div className="flex gap-3 mb-3">
-          {" "}
+        <div className="flex items-center justify-between gap-2 pb-1 border-b border-[var(--color-border)]/40">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
+              className={`p-0.5 rounded transition-colors ${selected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+              aria-label={selected ? t('selectItem') + ' (seçili)' : t('selectItem')}
+              aria-pressed={selected}
+            >
+              {selected ? <CheckSquare size={13} /> : <Square size={13} />}
+            </button>
+            <span className="text-xs font-mono font-bold text-[var(--color-text-muted)]">#{index + 1}</span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+              onClick={() => duplicateItem(index)}
+              title="Çoğalt"
+              aria-label={t('duplicateItem')}
+            >
+              <Copy size={12} />
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs p-1 text-[var(--color-text-muted)] hover:text-[var(--color-error)]"
+              onClick={() => removeItem(index)}
+              title={t('deleteItem')}
+              aria-label={t('deleteItem')}
+            >
+              <Trash size={12} />
+            </button>
+            <div
+              {...attributes}
+              {...listeners}
+              className="p-1 cursor-grab active:cursor-grabbing text-[var(--color-text-muted)]"
+            >
+              <GripVertical size={13} />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2.5 items-start">
           <div
-            className="w-16 h-16 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center cursor-pointer overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center cursor-pointer overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors flex-shrink-0"
             onClick={() => fileInputRef.current?.click()}
             role="button"
             aria-label="Ürün görseli yükle"
           >
-            {" "}
             {item.image ? (
               <img
                 src={item.image}
@@ -71,59 +107,72 @@ const SortableRowCard = memo(
                 className="w-full h-full object-cover"
               />
             ) : (
-              <ImageIcon size={20} className="text-[var(--color-text-muted)]" />
-            )}{" "}
+              <ImageIcon size={14} className="text-[var(--color-text-muted)]" />
+            )}
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleImage}
               accept="image/*"
               className="hidden"
-            />{" "}
-          </div>{" "}
+            />
+          </div>
           <div className="flex-1 min-w-0">
-            {" "}
-            <input
-              type="text"
-              className={getFieldClass(item.id, "name", item) + " mb-1.5 font-semibold"}
+            <ProductTypeahead
+              className={getFieldClass(item.id, "name", item) + " mb-1 text-sm font-semibold"}
               placeholder={t("productName")}
-              aria-label={t("productName")}
+              ariaLabel={t("productName")}
               value={item.name}
-              onChange={(e) => handleItemChange(index, "name", e.target.value)}
+              onChange={(val) => handleItemChange(index, "name", val)}
+              onSelectProduct={(product) => {
+                if (onSelectProduct) {
+                  onSelectProduct(index, product);
+                } else {
+                  handleItemChange(index, "name", product.name);
+                  if (product.price !== undefined) handleItemChange(index, "price", product.price);
+                  if (product.unit) handleItemChange(index, "unit", product.unit);
+                  if (product.taxRate !== undefined) handleItemChange(index, "taxRate", product.taxRate);
+                  if (product.description) handleItemChange(index, "description", product.description);
+                  if (product.image) handleItemChange(index, "image", product.image);
+                }
+              }}
               onBlur={() => handleRowBlur(item.id, "name")}
-            />{" "}
+              dataRow={index}
+              dataField="name"
+              products={products}
+              currency={currency}
+            />
             {rowErrors?.name && <div className="field-error-text mb-1">{rowErrors.name}</div>}
             <textarea
-              className="form-control text-xs resize-none"
+              className="form-control text-xs resize-none py-1 min-h-[26px]"
               placeholder={t("description")}
               aria-label={t("description")}
-              rows={2}
+              rows={item.description && item.description.length > 30 ? 2 : 1}
               value={item.description}
               onChange={(e) =>
                 handleItemChange(index, "description", e.target.value)
               }
-            />{" "}
-          </div>{" "}
-        </div>{" "}
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          {" "}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            {" "}
             <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-qty-${index}`}>
               {t("quantity")}
-            </label>{" "}
+            </label>
             <div className="flex gap-1">
-              {" "}
-          <input
+              <input
                 id={`card-qty-${index}`}
                 type="text"
-                className={(getFieldClass(item.id, "quantity", item)) + " flex-1"}
+                inputMode="decimal"
+                className={getFieldClass(item.id, "quantity", item) + " flex-1"}
                 value={item.quantity}
                 onChange={(e) =>
                   handleItemChange(index, "quantity", e.target.value)
                 }
                 onBlur={() => handleRowBlur(item.id, "quantity")}
-              />{" "}
+              />
               {rowErrors?.quantity && <div className="field-error-text">{rowErrors.quantity}</div>}
               <select
                 className="form-control form-select text-sm w-20"
@@ -136,99 +185,68 @@ const SortableRowCard = memo(
                 {UNIT_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
                 ))}
-              </select>{" "}
-            </div>{" "}
-          </div>{" "}
+              </select>
+            </div>
+          </div>
           <div>
-            {" "}
             <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-price-${index}`}>
               {t("unitPrice")}
-            </label>{" "}
+            </label>
             <input
               id={`card-price-${index}`}
               type="text"
+              inputMode="decimal"
               className={getFieldClass(item.id, "price", item)}
               value={item.price}
               onChange={(e) => handleItemChange(index, "price", e.target.value)}
               onBlur={() => handleRowBlur(item.id, "price")}
-            />{" "}
+            />
             {rowErrors?.price && <div className="field-error-text">{rowErrors.price}</div>}
-          </div>{" "}
-        </div>{" "}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {" "}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[var(--color-border)]/40 items-center">
           <div>
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-tax-${index}`}>
+            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5 block" htmlFor={`card-tax-${index}`}>
               {t("vatRate")}
-            </label>{" "}
+            </label>
             <input
               id={`card-tax-${index}`}
               type="text"
-              className={getFieldClass(item.id, "taxRate", item)}
+              inputMode="decimal"
+              className={getFieldClass(item.id, "taxRate", item) + " text-center"}
               value={item.taxRate}
               onChange={(e) =>
                 handleItemChange(index, "taxRate", e.target.value)
               }
               onBlur={() => handleRowBlur(item.id, "taxRate")}
-            />{" "}
-            {rowErrors?.taxRate && <div className="field-error-text">{rowErrors.taxRate}</div>}
-          </div>{" "}
+            />
+          </div>
           <div>
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block" htmlFor={`card-disc-${index}`}>
+            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5 block" htmlFor={`card-disc-${index}`}>
               {t("discountRate")}
-            </label>{" "}
+            </label>
             <input
               id={`card-disc-${index}`}
               type="text"
-              className="form-control text-sm"
+              inputMode="decimal"
+              className="form-control text-sm text-center"
               value={item.discountRate || 0}
               onChange={(e) =>
                 handleItemChange(index, "discountRate", e.target.value)
               }
-            />{" "}
-          </div>{" "}
-          <div className="flex flex-col justify-end">
-            {" "}
-            <label className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide mb-1 block text-right">
+            />
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide block">
               {t("total")}
-            </label>{" "}
-            <div className="text-right font-bold text-[var(--color-primary)] text-sm pt-1">
-              {" "}
+            </span>
+            <span className="text-sm font-bold text-[var(--color-primary)]">
               {formatCurrency(
                 calculateLineTotal({ quantity: item.quantity, price: item.price, discountRate: item.discountRate }),
-              )}{" "}
-            </div>{" "}
-          </div>{" "}
-        </div>{" "}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); toggleSelectItem(index); }}
-            className={`p-1.5 rounded-lg transition-colors ${selected ? 'text-[var(--color-primary)] bg-[var(--color-primary-muted)]' : 'text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100'}`}
-            title={selected ? t('selectItem') + ' (seçili)' : t('selectItem')}
-            aria-label={selected ? t('selectItem') + ' (seçili)' : t('selectItem')}
-            aria-pressed={selected}
-          >
-            {selected ? <CheckSquare size={14} /> : <Square size={14} />}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => duplicateItem(index)}
-            title={t('duplicateItem')}
-            aria-label={t('duplicateItem')}
-          >
-            <Copy size={14} />
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger btn-sm flex-1 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => removeItem(index)}
-          >
-            <Trash size={13} /> {t("deleteProduct")}
-          </button>
+              )}
+            </span>
+          </div>
         </div>
       </div>
     );

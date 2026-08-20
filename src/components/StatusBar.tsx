@@ -1,11 +1,11 @@
-﻿import React, { useMemo } from 'react';
-import { Save, Download, Plus, FileSpreadsheet } from 'lucide-react';
-import { useQuoteData, useSaveStatus } from '../context/QuoteContext';
-import { useUI } from '../context/UIContext';
-import { useTranslation } from '../hooks/useTranslation';
+﻿import { Save, Download, Plus, FileSpreadsheet } from 'lucide-react';
+import React, { useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { exportQuoteToExcel } from '../utils/excelExporter';
-import { calculateQuoteTotals } from '../utils/calculations';
+import { useQuoteData, useSaveStatus } from '@/context/QuoteContext';
+import { useUI } from '@/context/UIContext';
+import { useTranslation } from '@/hooks/useTranslation';
+import { calculateQuoteTotals } from '@/utils/calculations';
+import { exportQuoteToExcel } from '@/utils/excelExporter';
 
 const StatusBar = () => {
   const { items, quoteData, companyData, customerData, bankData, discount, saveQuote, setItems } = useQuoteData();

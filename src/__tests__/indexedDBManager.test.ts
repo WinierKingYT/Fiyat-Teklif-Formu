@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import indexedDBManager from '../utils/indexedDBManager';
+import indexedDBManager from '@/utils/indexedDBManager';
 
 // Internal state erişimi için daraltılmış test tipi
 type TestableManager = {
@@ -94,8 +94,8 @@ describe('IndexedDBManager', () => {
             onerror: null as ((...args: unknown[]) => void) | null,
         });
 
-        const simulateRequest = (method, resultVal) => {
-            mockStore[method].mockImplementation(() => {
+        const simulateRequest = (method: string, resultVal: unknown) => {
+            (mockStore as Record<string, ReturnType<typeof vi.fn>>)[method].mockImplementation(() => {
                 const req = { ...mockRequestSuccess(resultVal) };
                 setTimeout(() => {
                     req.onsuccess?.();
@@ -151,5 +151,25 @@ describe('IndexedDBManager', () => {
         // Verify upgrade was triggered - migrations ran
         expect(currentRequest).not.toBeNull();
         expect(currentRequest!.onupgradeneeded).toBeDefined();
+    });
+
+    it('should save and query quoteVersions with versionId and quoteId index', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const versionData = {
+            versionId: 'ver_1_12345',
+            quoteId: 1,
+            createdAt: 12345,
+            snapshot: { id: 1, quoteData: { title: 'Test' } },
+            versionName: 'V1'
+        };
+
+        await indexedDBManager.put('quoteVersions', versionData);
+        expect(mockStore.put).toHaveBeenCalledWith(expect.objectContaining(versionData));
+
+        await indexedDBManager.get('quoteVersions', 'ver_1_12345');
+        expect(mockStore.get).toHaveBeenCalledWith('ver_1_12345');
     });
 });

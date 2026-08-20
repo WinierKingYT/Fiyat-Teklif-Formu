@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize } from '../utils/themeHelpers';
+import { getAdjustedFontSize } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {

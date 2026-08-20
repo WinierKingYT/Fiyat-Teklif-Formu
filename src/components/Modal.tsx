@@ -1,7 +1,7 @@
-﻿import React from 'react';
-import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { useDialogBehavior } from '../hooks/useDialogBehavior';
+import React from 'react';
+import { createPortal } from 'react-dom';
+import { useDialogBehavior } from '@/hooks/useDialogBehavior';
 
 const sizeMap: Record<string, string> = {
     sm: '350px',
@@ -60,19 +60,19 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) =>
                 aria-labelledby="modal-title"
             >
                 {mobile && <div className="modal-drag-handle" />}
-                <div className={`flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : 'sm:px-5 sm:py-5'}`}>
-                    <h2 id="modal-title" className="text-sm sm:text-base font-semibold text-[var(--color-text)] flex items-center gap-2 truncate pr-2">
+                <div className={`flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : ''}`}>
+                    <h2 id="modal-title" className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 truncate pr-2">
                         {title}
                     </h2>
                     <button type="button"
                         onClick={handleClose}
-                        className="p-2 rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text)] transition-colors shrink-0"
+                        className="p-1.5 rounded-[var(--radius)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text)] transition-colors shrink-0"
                         aria-label="Kapat"
                     >
-                        <X size={18} />
+                        <X size={16} />
                     </button>
                 </div>
-                <div className="px-4 py-4 sm:px-5 sm:py-5 overflow-y-auto flex-1 overscroll-contain">
+                <div className="p-4 overflow-y-auto flex-1 overscroll-contain">
                     {children}
                 </div>
             </div>

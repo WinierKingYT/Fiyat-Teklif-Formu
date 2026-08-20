@@ -1,16 +1,17 @@
 import React, { useMemo, useCallback } from 'react';
-import { translations } from '../utils/translations';
-import { calculateQuoteTotals } from '../utils/calculations';
-import ModernTheme from './pdf-themes/ModernTheme';
-import ClassicTheme from './pdf-themes/ClassicTheme';
-import ProTheme from './pdf-themes/ProTheme';
-import MinimalTheme from './pdf-themes/MinimalTheme';
-import CorporateTheme from './pdf-themes/CorporateTheme';
-import BoldTheme from './pdf-themes/BoldTheme';
-import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '../context/quote/types';
+import BoldTheme from '@/components/pdf-themes/BoldTheme';
+import ClassicTheme from '@/components/pdf-themes/ClassicTheme';
+import CorporateTheme from '@/components/pdf-themes/CorporateTheme';
+import InvoiceTheme from '@/components/pdf-themes/InvoiceTheme';
+import MinimalTheme from '@/components/pdf-themes/MinimalTheme';
+import ModernTheme from '@/components/pdf-themes/ModernTheme';
+import ProTheme from '@/components/pdf-themes/ProTheme';
+import { calculateQuoteTotals } from '@/utils/calculations';
+import { translations } from '@/utils/translations';
+import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '@/context/quote/types';
 
 // Helper functions defined outside component to avoid recreation
-const formatDate = (dateString, locale = 'tr-TR') => {
+const formatDate = (dateString?: string, locale = 'tr-TR') => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString(locale);
 };
@@ -54,15 +55,15 @@ const PrintableQuote = React.memo(({
     const discount = useMemo(() => (_discount || {}) as Discount, [_discount]);
 
     const language = quoteData.language || 'tr';
-    const t = translations[language] || translations['tr'];
+    const t = (translations as Record<string, typeof translations.tr>)[language] || translations['tr'];
 
-    const localeMap = {
+    const localeMap: Record<string, string> = {
         'tr': 'tr-TR',
         'en': 'en-US',
         'de': 'de-DE'
     };
     const currentLocale = localeMap[language] || 'tr-TR';
-    const formatCurrency = useCallback((amount) => {
+    const formatCurrency = useCallback((amount: number) => {
         const currency = quoteData.currency || 'TRY';
         return new Intl.NumberFormat(currentLocale, { style: 'currency', currency: currency }).format(amount);
     }, [quoteData.currency, currentLocale]);
@@ -252,14 +253,14 @@ const PrintableQuote = React.memo(({
     const containerStyles = getContainerStyles();
 
     // Default layout if none provided (for Modern Theme)
-    const defaultLayout = [
-        { id: 'header', enabled: true, order: 0 },
-        { id: 'customer', enabled: true, order: 1 },
-        { id: 'items', enabled: true, order: 2 },
-        { id: 'summary', enabled: true, order: 3 },
-        { id: 'signatures', enabled: true, order: 4 },
-        { id: 'terms', enabled: true, order: 5 },
-        { id: 'footer', enabled: true, order: 6 }
+    const defaultLayout: PdfLayoutItem[] = [
+        { id: 'header', label: 'Başlık', enabled: true, order: 0 },
+        { id: 'customer', label: 'Müşteri Bilgileri', enabled: true, order: 1 },
+        { id: 'items', label: 'Kalemler', enabled: true, order: 2 },
+        { id: 'summary', label: 'Özet', enabled: true, order: 3 },
+        { id: 'signatures', label: 'İmzalar', enabled: true, order: 4 },
+        { id: 'terms', label: 'Şartlar ve Notlar', enabled: true, order: 5 },
+        { id: 'footer', label: 'Altbilgi', enabled: true, order: 6 }
     ];
 
     const activeLayout = useMemo(() => {
@@ -295,32 +296,39 @@ const PrintableQuote = React.memo(({
         onEdit // Pass the handler to all themes
     };
 
-    if (theme === 'modern') {
+    const renderThemeContent = () => {
+        if (theme === 'modern') return <ModernTheme {...commonProps} activeLayout={activeLayout} />;
+        if (theme === 'classic') return <ClassicTheme {...commonProps} activeLayout={activeLayout} />;
+        if (theme === 'minimal') return <MinimalTheme {...commonProps} activeLayout={activeLayout} />;
+        if (theme === 'corporate') return <CorporateTheme {...commonProps} activeLayout={activeLayout} />;
+        if (theme === 'pro') return <ProTheme {...commonProps} discount={discount} activeLayout={activeLayout} />;
+        if (theme === 'bold') return <BoldTheme {...commonProps} activeLayout={activeLayout} />;
+        if (theme === 'invoice') return <InvoiceTheme {...commonProps} activeLayout={activeLayout} />;
         return <ModernTheme {...commonProps} activeLayout={activeLayout} />;
-    }
+    };
 
-    if (theme === 'classic') {
-        return <ClassicTheme {...commonProps} activeLayout={activeLayout} />;
-    }
+    const watermarkLabel = useMemo(() => {
+        const wm = (quoteData as Record<string, unknown>).watermark as string;
+        if (!wm || wm === 'none') return null;
+        if (wm === 'draft') return 'TASLAK';
+        if (wm === 'preview') return 'ÖN TEKLİF';
+        if (wm === 'confidential') return 'GİZLİDİR';
+        if (wm === 'approved') return 'ONAYLANDI';
+        return wm.toUpperCase();
+    }, [quoteData]);
 
-    if (theme === 'minimal') {
-        return <MinimalTheme {...commonProps} activeLayout={activeLayout} />;
-    }
-
-    if (theme === 'corporate') {
-        return <CorporateTheme {...commonProps} activeLayout={activeLayout} />;
-    }
-
-    if (theme === 'pro') {
-        return <ProTheme {...commonProps} discount={discount} activeLayout={activeLayout} />;
-    }
-
-    if (theme === 'bold') {
-        return <BoldTheme {...commonProps} activeLayout={activeLayout} />;
-    }
-
-    // Fallback to modern if theme not found
-    return <ModernTheme {...commonProps} activeLayout={activeLayout} />;
+    return (
+        <div className="relative">
+            {watermarkLabel && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden select-none">
+                    <span className="text-[54px] sm:text-[72px] font-black tracking-widest text-slate-400/20 dark:text-slate-500/25 rotate-[-30deg] uppercase border-4 sm:border-8 border-slate-400/20 px-8 py-3 rounded-2xl">
+                        {watermarkLabel}
+                    </span>
+                </div>
+            )}
+            {renderThemeContent()}
+        </div>
+    );
 });
 PrintableQuote.displayName = 'PrintableQuote';
 

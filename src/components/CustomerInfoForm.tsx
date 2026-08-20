@@ -1,13 +1,13 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, Plus, Clock } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, Plus } from 'lucide-react';
-import { useQuoteData } from '../context/QuoteContext';
-import { useTranslation } from '../hooks/useTranslation';
-import { InputField, TextAreaField } from './ui';
-import Logger from '../utils/logger';
-import type { CustomerData } from '../context/quote/types';
+import { InputField, TextAreaField } from '@/components/ui';
+import { useQuoteData } from '@/context/QuoteContext';
+import { useTranslation } from '@/hooks/useTranslation';
+import Logger from '@/utils/logger';
+import type { CustomerData } from '@/context/quote/types';
 
 const customerInfoSchema = z.object({
   name: z.string().min(1, 'Müşteri adı zorunludur'),
@@ -33,6 +33,7 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
   const { t } = useTranslation(quoteData?.language);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<CustomerData[]>([]);
+  const [recentCustomers, setRecentCustomers] = useState<CustomerData[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
   const [showDetails, setShowDetails] = useState(false);
@@ -55,6 +56,19 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
     },
     mode: 'onBlur',
   });
+
+  // Load recent customers for quick select
+  useEffect(() => {
+    if (!db) return;
+    db.getAll<CustomerData>('customers')
+      .then((all) => {
+        if (all && all.length > 0) {
+          const sorted = [...all].reverse().slice(0, 4);
+          setRecentCustomers(sorted);
+        }
+      })
+      .catch(() => {});
+  }, [db]);
 
   useEffect(() => {
     if (!db || searchQuery.length < 2) { setSearchResults([]); return; }
@@ -121,36 +135,55 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
   };
 
   return (
-    <div className="card">
-      <div className="card-header">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-            <User size={16} className="text-[var(--color-primary)]" />
-          </div>
-          <span className="card-title">{t('customerInfo')}</span>
-        </div>
+    <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] p-3 space-y-2.5">
+      <div className="flex items-center justify-between pb-1 border-b border-[var(--color-border)]/50">
         <div className="flex items-center gap-2">
-          {isFilled && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              {showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-              {showDetails ? t('hide') || 'Gizle' : t('details') || 'Detay'}
-            </button>
+          <User size={15} className="text-[var(--color-primary)]" />
+          <span className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wide">{t('customerInfo')}</span>
+          {data?.name && (
+            <span className="text-xs text-[var(--color-text-muted)] truncate max-w-[200px] hidden sm:inline">
+              ({data.name}{data.company ? ` - ${data.company}` : ''})
+            </span>
           )}
-          <button type="button" className="btn btn-outline btn-sm" onClick={onSelectCustomer}>
-            <Users size={15} />
-            {t('selectCustomer')}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs text-[var(--color-text-secondary)]"
+            onClick={() => setShowDetails(!showDetails)}
+          >
+            {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            <span>{showDetails ? (t('hide') || 'Gizle') : (t('details') || 'Detaylar')}</span>
+          </button>
+          <button type="button" className="btn btn-outline btn-xs" onClick={onSelectCustomer}>
+            <Users size={12} />
+            <span>{t('selectCustomer')}</span>
           </button>
         </div>
       </div>
-      <div className="card-body space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Recent Customers Quick Chips */}
+        {recentCustomers.length > 0 && !data.name && (
+          <div className="flex items-center gap-1.5 flex-wrap pb-1 border-b border-[var(--color-border)]/50">
+            <span className="text-[11px] text-[var(--color-text-muted)] flex items-center gap-1 font-medium">
+              <Clock size={11} /> Son:
+            </span>
+            {recentCustomers.map((c, i) => (
+              <button
+                key={c.id || c.name || i}
+                type="button"
+                onClick={() => selectCustomer(c)}
+                className="px-2 py-0.5 text-xs bg-[var(--color-bg-muted)] hover:bg-[var(--color-primary-muted)] hover:text-[var(--color-primary)] text-[var(--color-text)] border border-[var(--color-border)] rounded-full transition-colors truncate max-w-[150px]"
+                title={c.company ? `${c.name} (${c.company})` : c.name}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           <div className="relative" ref={searchRef}>
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
               <input
                 type="text"
                 id="customerName"
@@ -164,7 +197,7 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
                 onKeyDown={handleKeyDown}
                 placeholder={t('customerName')}
                 autoComplete="off"
-                className={`form-control pl-9 ${errors.name ? 'field-error' : ''}`}
+                className={`form-control pl-9 text-sm ${errors.name ? 'field-error' : ''}`}
                 aria-invalid={!!errors.name}
               />
             </div>
@@ -230,16 +263,16 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
           />
         </div>
 
-        {(!isFilled || showDetails) && (
-          <div className="space-y-3 pt-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {showDetails && (
+          <div className="space-y-2.5 pt-1 animate-in fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               <InputField
                 id="customerEmail"
                 name="email"
                 type="email"
                 register={register}
                 error={errors.email}
-                icon={<Mail size={15} />}
+                icon={<Mail size={14} />}
                 placeholder={t('email')}
                 autoComplete="email"
                 onChange={handleChange}
@@ -249,33 +282,27 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
                 name="phone"
                 type="tel"
                 register={register}
-                icon={<Phone size={15} />}
+                error={errors.phone}
+                icon={<Phone size={14} />}
                 placeholder={t('phone')}
                 autoComplete="tel"
                 onChange={handleChange}
               />
             </div>
-            <TextAreaField
-              id="customerAddress"
-              name="address"
-              register={register}
-              icon={<MapPin size={15} />}
-              placeholder={t('address')}
-              rows={2}
-              autoComplete="street-address"
-              onChange={handleChange}
-            />
+            <div className="relative">
+              <MapPin size={14} className="absolute left-3 top-2.5 text-[var(--color-text-muted)] pointer-events-none" />
+              <input
+                id="customerAddress"
+                {...register('address')}
+                placeholder={t('address')}
+                autoComplete="street-address"
+                onChange={handleChange}
+                className="form-control pl-9 text-xs py-1.5"
+              />
+            </div>
           </div>
         )}
-
-        {!isFilled && (
-          <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1.5 pt-0.5">
-            <Search size={12} />
-            İsim yazmaya başlayın — kayıtlı müşteriler otomatik önerilir
-          </p>
-        )}
       </div>
-    </div>
   );
 };
 

@@ -1,8 +1,8 @@
-﻿import React from 'react';
-import type { QuoteItem } from '../../context/quote/types';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const ModernTheme = ({
+const ModernTheme: React.FC<PdfThemeProps> = ({
     id,
     containerStyles,
     config,
@@ -27,14 +27,14 @@ const ModernTheme = ({
 }) => {
     // Helper for editable fields
     const layoutMap = useMemo(() => {
-        const map = {};
+        const map: Record<string, boolean> = {};
         (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
         return map;
     }, [activeLayout]);
-    const showSection = (id) => layoutMap[id] !== false;
+    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
 
-    const renderEditable = (value, fieldKey, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{value}</span>;
+    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
+        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
 
         return (
             <span
@@ -45,7 +45,7 @@ const ModernTheme = ({
                 }}
                 title={t.clickToEdit}
             >
-                {value || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
+                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
             </span>
         );
     };
@@ -514,7 +514,7 @@ const ModernTheme = ({
         return chunks;
     }, [items, itemsPerPage]);
 
-    const renderTable = (tableItems, startIndex) => (
+    const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="pdf-items-table">
             <thead>
                 <tr>
@@ -546,14 +546,14 @@ const ModernTheme = ({
                         )}
                         <td>
                             <div className="item-name">{item.name}</div>
-                            <div className="item-desc">{item.description}</div>
+                            {item.description && <div className="item-desc">{item.description}</div>}
                         </td>
                         {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center' }}>{item.unit}</td>}
-                        <td className="item-quantity" style={{ textAlign: 'center' }}>{item.quantity}</td>
-                        <td className="item-price" style={{ textAlign: 'right' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#ef4444' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center' }}>%{item.taxRate}</td>}
-                        <td className="item-total" style={{ textAlign: 'right' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
+                        <td className="item-quantity" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                        <td className="item-price" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
+                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                        <td className="item-total" style={{ textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
                     </tr>
                 ))}
             </tbody>
@@ -567,7 +567,7 @@ const ModernTheme = ({
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles.pageMinHeight || '290mm',
+                    minHeight: containerStyles?.pageMinHeight || '290mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
@@ -598,28 +598,37 @@ const ModernTheme = ({
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div className="pdf-header">
+                        <div className="pdf-header" style={{ marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: `2px solid ${color}` }}>
                             <div className="header-left">
                                 {config.showLogo && companyData.logo && (
-                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.4rem' }}>
-                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 50}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
+                                    <div className="company-logo" style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
+                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '100%', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '8px' : '0' }} />
                                     </div>
                                 )}
                                 <div className="company-info">
-                                    <div className="company-name">{renderEditable(companyData.name, 'companyName')}</div>
-                                    <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.8rem', color: '#4b5563' }}>
-                                        <div className="header-info-grid">
-                                            <div className="header-info-line">
-                                                <span>{companyData.address}</span>
+                                    <div className="company-name" style={{ fontSize: '1.15rem', fontWeight: '800', color: color }}>{renderEditable(companyData.name, 'companyName')}</div>
+                                    <div className="company-details" style={{ fontSize: config.headerInfoFontSize || '0.78rem', color: '#475569', marginTop: '0.2rem' }}>
+                                        {companyData.address && <div>{companyData.address}</div>}
+                                        {(companyData.phone || companyData.email || companyData.website) && (
+                                            <div style={{ marginTop: '0.15rem', color: '#64748b' }}>
+                                                {companyData.phone && <span>{companyData.phone}</span>}
+                                                {companyData.phone && companyData.email && <span> • </span>}
+                                                {companyData.email && <span>{companyData.email}</span>}
+                                                {(companyData.phone || companyData.email) && companyData.website && <span> • </span>}
+                                                {companyData.website && <span>{companyData.website}</span>}
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="header-right">
-                                <div className="quote-title">{renderEditable(config.title, 'quoteTitle')}</div>
-                                <div className="quote-meta" style={{ fontSize: config.quoteMetaLabelFontSize || '0.8rem', color: '#4b5563', marginTop: '0.5rem' }}>
-                                    <div>{t.date}: {formatDate(quoteData.date, currentLocale)} &nbsp; {t.validUntil}: {formatDate(quoteData.validUntil, currentLocale)} &nbsp; <strong>#{quoteData.number}</strong></div>
+                            <div className="header-right" style={{ textAlign: 'right' }}>
+                                <div className="quote-title" style={{ fontSize: '1.25rem', fontWeight: '800', color: color, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div className="quote-meta" style={{ fontSize: '0.78rem', color: '#475569', marginTop: '0.4rem', display: 'inline-flex', gap: '0.6rem', alignItems: 'center', background: '#f8fafc', padding: '0.3rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                    <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
+                                    <span>•</span>
+                                    <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
+                                    <span>•</span>
+                                    <span>{t.validUntil}: {formatDate(quoteData.validUntil, currentLocale)}</span>
                                 </div>
                             </div>
                         </div>
@@ -634,184 +643,172 @@ const ModernTheme = ({
                         </div>
                     ))}
 
-                    {/* Customer Section - Only Page 1 */}
+                    {/* Customer Section - Only Page 1 (Single Full-Width Clean Card) */}
                     {showSection('customer') && pageIndex === 0 && (
-                        <div className="customer-section">
-                            <div className="customer-box" style={{ backgroundColor: '#f8fafc', color: '#000000', border: '1px solid #e2e8f0', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                <div className="section-title">
-                                    <i className="fas fa-bookmark"></i> {t.company}
+                        <div className="customer-section" style={{ marginBottom: '1.25rem' }}>
+                            <div className="customer-box" style={{ width: '100%', backgroundColor: '#ffffff', color: '#000000', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem 1.25rem', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                <div className="section-title" style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.25rem' }}>
+                                    {t.customer} / {t.to}
                                 </div>
-                                <div className="info-grid">
-                                    <div className="info-line">
-                                        <span className="info-label">{t.company}:</span>
-                                        <span className="info-value"><strong>{renderEditable(companyData.name, 'companyName')}</strong></span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.authorized}:</span>
-                                        <span className="info-value">{companyData.authorizedPerson || '-'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="customer-box" style={{ backgroundColor: '#f8fafc', color: '#000000', border: '1px solid #e2e8f0', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                                <div className="section-title">
-                                    <i className="fas fa-user"></i> {t.customer}
-                                </div>
-                                <div className="info-grid">
-                                    <div className="info-line">
-                                        <span className="info-label">{t.company}:</span>
-                                        <span className="info-value"><strong>{renderEditable(customerData.company, 'customerCompany')}</strong></span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.authorized}:</span>
-                                        <span className="info-value">{renderEditable(customerData.name, 'customerName')}</span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.phone}:</span>
-                                        <span className="info-value">{renderEditable(customerData.phone, 'customerPhone')}</span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.email}:</span>
-                                        <span className="info-value">{renderEditable(customerData.email, 'customerEmail')}</span>
-                                    </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem 1.5rem', alignItems: 'center' }}>
+                                    {customerData.company && (
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '1rem', fontWeight: '700', color: '#0f172a' }}>
+                                            {renderEditable(customerData.company, 'customerCompany')}
+                                        </div>
+                                    )}
+                                    {customerData.name && (
+                                        <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
+                                            <span style={{ fontWeight: '500' }}>{renderEditable(customerData.name, 'customerName')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.phone && (
+                                        <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
+                                            <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.email && (
+                                        <div style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
+                                            <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.address && (
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '0.78rem', color: '#64748b' }}>
+                                            <span>{customerData.address}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {/* Items Table */}
-{showSection('items') && (
+                    {showSection('items') && (
                         <div style={{ flex: 1 }}>
                             {renderTable(chunk, pageIndex * itemsPerPage)}
                         </div>
-                        )}
+                    )}
 
                     {/* Summary, Notes, Signatures - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
                         <div style={{ marginTop: 'auto' }}>
                             {(config.showSummary || config.showBankInfo) && (
-                                <div className="bottom-section" style={{ backgroundColor: '#f8fafc', color: '#000000', border: '1px solid #e2e8f0', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                <div className="bottom-section" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1.5rem', backgroundColor: '#ffffff', color: '#000000', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem 1.25rem', marginBottom: '1.25rem', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                    <div className="bank-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
+                                        {config.showBankInfo && (bankData.bankName || bankData.iban) && (
+                                            <div className="bank-info">
+                                                <div className="section-title" style={{ marginBottom: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem', textTransform: 'uppercase', color: '#64748b', fontSize: '0.75rem', fontWeight: '700' }}>
+                                                    {t.bankInfo}
+                                                </div>
+                                                <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.6' }}>
+                                                    {bankData.bankName && (
+                                                        <div style={{ display: 'flex' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.bank}:</strong> <span style={{ color: '#0f172a', fontWeight: '500' }}>{bankData.bankName}</span></div>
+                                                    )}
+                                                    {bankData.branch && (
+                                                        <div style={{ display: 'flex' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.branch}:</strong> <span>{bankData.branch}</span></div>
+                                                    )}
+                                                    {bankData.accountHolder && (
+                                                        <div style={{ display: 'flex' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.accountHolder}:</strong> <span>{bankData.accountHolder}</span></div>
+                                                    )}
+                                                    {bankData.iban && (
+                                                        <div style={{ display: 'flex', marginTop: '0.2rem' }}><strong style={{ width: '80px', color: '#64748b' }}>{t.iban}:</strong> <span style={{ fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.03em', color: '#0f172a' }}>{bankData.iban}</span></div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="summary-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
-                                        <div className="section-title" style={{ marginBottom: '1rem', borderBottom: 'none', paddingBottom: '0', color: '#0f172a' }}>
-                                            <i className="fas fa-list-alt" style={{ color: '#000000' }}></i> {t.summary}
+                                        <div className="section-title" style={{ marginBottom: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.2rem', color: '#64748b', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase' }}>
+                                            {t.summary}
                                         </div>
-                                        <div className="summary-row" style={{ color: '#475569' }}>
-                                            <span style={{ color: '#475569' }}>{t.subtotal}:</span>
-                                            <span style={{ fontWeight: config.summaryValueFontWeight || '600', fontSize: config.summaryValueFontSize || 'inherit', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
+                                        <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#475569', fontSize: '0.8rem' }}>
+                                            <span>{t.subtotal}:</span>
+                                            <span style={{ fontWeight: '600', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div className="summary-row" style={{ color: '#ef4444' }}>
-                                                <span style={{ color: '#ef4444' }}>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
-                                                <span style={{ color: '#ef4444' }}>-{formatCurrency(discountAmount)}</span>
+                                            <div className="summary-row discount" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#ef4444', fontSize: '0.8rem' }}>
+                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
-                                            <div className="summary-row" style={{ color: '#475569' }}>
-                                                <span style={{ color: '#475569' }}>{t.vat} (%20):</span>
-                                                <span style={{ color: '#475569' }}>{formatCurrency(totalTax)}</span>
+                                            <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#475569', fontSize: '0.8rem' }}>
+                                                <span>{t.vat}:</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
                                             </div>
                                         )}
-                                        <div className="summary-row" style={{ color: '#475569' }}>
-                                            <span style={{ color: '#475569' }}>{t.total} {t.vat}:</span>
-                                            <span style={{ color: '#475569' }}>{formatCurrency(totalTax)}</span>
+                                        <div className="summary-row grand-total" style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0f172a', marginTop: '0.4rem', paddingTop: '0.4rem', color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>
+                                            <span>{t.generalTotal}:</span>
+                                            <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div className="summary-row grand-total" style={{ borderTop: 'none', marginTop: '0.5rem', paddingTop: '0.5rem', color: '#0f172a' }}>
-                                            <span style={{ color: '#0f172a' }}>{t.generalTotal}:</span>
-                                            <span style={{ color: '#0f172a', fontSize: 'inherit' }}>{formatCurrency(total)}</span>
+                                        <div style={{ fontSize: '0.68rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.25rem', textAlign: 'right' }}>
+                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
                                         </div>
-                                    </div>
-                                    <div className="bank-section" style={{ backgroundColor: 'transparent', color: '#000000' }}>
-                                        {config.showBankInfo && (
-                                            <div className="bank-info">
-                                                <div className="section-title" style={{ marginBottom: '1rem', borderBottom: 'none', paddingBottom: '0', textTransform: 'uppercase', color: '#0f172a' }}>
-                                                    {t.bankInfo}
-                                                </div>
-                                                <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: '1.8' }}>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.bank}:</strong> <span style={{ color: '#475569' }}>{bankData.bankName}</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.branch}:</strong> <span style={{ color: '#475569' }}>{bankData.branch}</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.accountNo}:</strong> <span style={{ color: '#475569' }}>-</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.iban}:</strong> <span style={{ color: '#475569' }}>{bankData.iban}</span></div>
-                                                    <div style={{ display: 'flex', color: '#475569' }}><strong style={{ width: '80px', color: '#475569' }}>{t.accountHolder}:</strong> <span style={{ color: '#475569' }}>{bankData.accountHolder}</span></div>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Notes & Terms */}
-                            {showSection('notes') && (config.showTerms || config.showNotes) && (
-                                <>
-                                    {quoteData.notes && (
-                                        <div className="notes-section">
-                                            <div className="notes-title">{t.notes}</div>
-                                            <div className="notes-content">{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
-                                        </div>
-                                    )}
-                                    {config.showTerms && (
-                                        <div className="terms-box">
-                                            <div className="notes-title" style={{ marginBottom: '0.5rem' }}>{t.terms}</div>
-                                            <div className="notes-content">
-                                                <div><strong>{t.payment}:</strong> {renderEditable(quoteData.warrantyTerms, 'terms', 'textarea')}</div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
+                            {/* Unified Notes & Terms */}
+                            {showSection('notes') && (config.showTerms || config.showNotes) && (quoteData.notes || quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                <div className="terms-box" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
+                                    <div className="notes-title" style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '0.35rem' }}>{t.terms} & {t.notes}</div>
+                                    <div className="notes-content" style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.5' }}>
+                                        {quoteData.notes && <div style={{ marginBottom: '0.25rem' }}><strong>{t.notes}:</strong> {renderEditable(quoteData.notes, 'notes', 'textarea')}</div>}
+                                        {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                        {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
+                                        {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
+                                    </div>
+                                </div>
                             )}
 
-                            {/* Signatures */}
+                            {/* Signatures - 2 Sütun (Teklifi Hazırlayan & Müşteri Onayı) */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="signatures-grid" style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem' }}>
+                                <div className="signatures-grid" style={{ marginTop: '2rem', marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem' }}>
                                     <div className="signature-col" style={{ textAlign: 'center' }}>
                                         <div className="signature-line" style={{
                                             height: 'auto',
-                                            minHeight: '80px',
+                                            minHeight: (signature || companyData.signature || companyData.stamp) ? '55px' : '35px',
                                             display: 'flex',
                                             alignItems: 'flex-end',
                                             justifyContent: 'center',
-                                            paddingBottom: '5px',
-                                            borderBottom: '1px solid #cbd5e1'
+                                            gap: '1rem',
+                                            paddingBottom: '4px',
+                                            borderBottom: '1px solid #94a3b8'
                                         }}>
                                             {(signature || companyData.signature) && (
                                                 <img
-                                                    src={signature || companyData.signature}
+                                                    src={(signature || companyData.signature) as string}
                                                     alt="Signature"
-                                                    style={{
-                                                        maxHeight: '60px',
-                                                        maxWidth: '150px',
-                                                        objectFit: 'contain'
-                                                    }}
+                                                    style={{ maxHeight: '50px', maxWidth: '120px', objectFit: 'contain' }}
                                                 />
                                             )}
-                                        </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.5rem', fontWeight: '600', color: '#0f172a' }}>
-                                            {t.signature}
-                                        </div>
-                                    </div>
-                                    <div className="signature-col" style={{ textAlign: 'center' }}>
-                                        <div className="signature-line" style={{
-                                            height: 'auto',
-                                            minHeight: '80px',
-                                            display: 'flex',
-                                            alignItems: 'flex-end',
-                                            justifyContent: 'center',
-                                            paddingBottom: '5px',
-                                            borderBottom: '1px solid #cbd5e1'
-                                        }}>
                                             {companyData.stamp && (
                                                 <img
                                                     src={companyData.stamp}
                                                     alt="Stamp"
-                                                    style={{
-                                                        maxHeight: '60px',
-                                                        maxWidth: '150px',
-                                                        objectFit: 'contain',
-                                                        opacity: 0.8
-                                                    }}
+                                                    style={{ maxHeight: '50px', maxWidth: '100px', objectFit: 'contain', opacity: 0.85 }}
                                                 />
                                             )}
                                         </div>
-                                        <div className="signature-label" style={{ paddingTop: '0.5rem', fontWeight: '600', color: '#0f172a' }}>
-                                            {t.companyStamp}
+                                        <div className="signature-label" style={{ paddingTop: '0.35rem', fontWeight: '600', color: '#0f172a', fontSize: '0.8rem' }}>
+                                            {t.seller} (Kaşe & İmza)
+                                        </div>
+                                    </div>
+                                    <div className="signature-col" style={{ textAlign: 'center' }}>
+                                        <div className="signature-line" style={{
+                                            height: 'auto',
+                                            minHeight: (signature || companyData.signature || companyData.stamp) ? '55px' : '35px',
+                                            display: 'flex',
+                                            alignItems: 'flex-end',
+                                            justifyContent: 'center',
+                                            paddingBottom: '4px',
+                                            borderBottom: '1px solid #94a3b8'
+                                        }}>
+                                        </div>
+                                        <div className="signature-label" style={{ paddingTop: '0.35rem', fontWeight: '600', color: '#0f172a', fontSize: '0.8rem' }}>
+                                            {t.customer} (Onay / İmza)
                                         </div>
                                     </div>
                                 </div>
@@ -819,38 +816,31 @@ const ModernTheme = ({
                         </div>
                     )}
 
-                    {/* Footer - Only Last Page */}
+                    {/* Footer - Only Last Page (Clean Single Line) */}
                     {showSection('footer') && pageIndex === itemChunks.length - 1 && (
-                        <div className="pdf-footer">
-                            <div className="footer-company" style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                                {companyData.address}
+                        <div className="pdf-footer" style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.75rem', color: '#64748b' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                <span><strong>{companyData.name}</strong></span>
+                                {companyData.phone && <span>• {companyData.phone}</span>}
+                                {companyData.email && <span>• {companyData.email}</span>}
+                                {companyData.website && <span>• {companyData.website}</span>}
                             </div>
-                            <div className="footer-info" style={{ marginBottom: '0.5rem' }}>
-                                <div className="footer-item">
-                                    <i className="fas fa-phone"></i> {companyData.phone}
-                                </div>
-                                <div className="footer-item">
-                                    <i className="fas fa-envelope"></i> {companyData.email}
-                                </div>
-                                <div className="footer-item">
-                                    <i className="fas fa-globe"></i> {companyData.website}
-                                </div>
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '1rem' }}>
-                                <div style={{ marginBottom: '0.25rem' }}>{t.thankYou}</div>
-                                <div style={{ marginBottom: '0.25rem' }}>{t.regards}, {companyData.name}</div>
-                                <div style={{ fontWeight: '600', color: color }}>{companyData.name} - {config.title}</div>
+                            <div style={{ marginTop: '0.25rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                                {t.thankYou} • {t.regards}
                             </div>
                         </div>
                     )}
                     {config.customFooter && (
-                        <div className="custom-footer">
+                        <div className="custom-footer" style={{ fontSize: '0.7rem', color: '#94a3b8', textAlign: 'center', marginTop: '0.25rem' }}>
                             {config.customFooter}
                         </div>
                     )}
+
+                    {/* Page Number */}
                     {config.showPageNumbers && (
-                        <div className="pdf-page-number" style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.65rem', color: '#94a3b8' }}>
-                            {t.page} {pageIndex + 1} / {itemChunks.length}
+                        <div style={{ marginTop: '0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '0.25rem' }}>
+                            <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
+                            <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                         </div>
                     )}
                 </div>

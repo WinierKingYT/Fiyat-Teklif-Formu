@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeInput, sanitizeHtml, sanitizeUrl, sanitizeObject, escapeHtml } from '../utils/sanitize';
+import { sanitizeInput, sanitizeHtml, sanitizeUrl, sanitizeObject, escapeHtml } from '@/utils/sanitize';
 
 describe('sanitize', () => {
   describe('escapeHtml', () => {

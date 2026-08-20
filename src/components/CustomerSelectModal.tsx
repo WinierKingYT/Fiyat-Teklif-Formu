@@ -1,14 +1,14 @@
+import { Search, User, Plus, Users } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import Modal from './Modal';
-import Pagination from './Pagination';
-import { Search, User, Plus, Users } from 'lucide-react';
-import { useIndexedDB } from '../hooks/useIndexedDB';
-import useDebounce from '../hooks/useDebounce';
-import Logger from '../utils/logger';
-import Skeleton from './Skeleton';
-import EmptyState from './EmptyState';
-import type { CustomerData } from '../context/quote/types';
+import EmptyState from '@/components/EmptyState';
+import Modal from '@/components/Modal';
+import Pagination from '@/components/Pagination';
+import Skeleton from '@/components/Skeleton';
+import useDebounce from '@/hooks/useDebounce';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import Logger from '@/utils/logger';
+import type { CustomerData } from '@/context/quote/types';
 
 interface CustomerSelectModalProps {
     isOpen: boolean;
@@ -66,54 +66,53 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: Custome
     }, [debouncedSearch]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Müşteri Seç" size="lg">
-            <div className="space-y-4">
+        <Modal isOpen={isOpen} onClose={onClose} title="Müşteri Seç" size="md">
+            <div className="space-y-2.5 flex flex-col h-[60vh]">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
-                        <input type="text" className="form-control pl-9" placeholder="Müşteri veya firma ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
+                        <input type="text" className="form-control pl-8 text-xs" placeholder="Müşteri veya firma ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
-                    <button type="button" className="btn btn-primary whitespace-nowrap" onClick={() => { onClose(); onCreateNew?.(); }}>
-                        <Plus size={16} /> Yeni Müşteri
-                    </button>
+                    {onCreateNew && (
+                        <button type="button" className="btn btn-primary btn-xs whitespace-nowrap" onClick={() => { onClose(); onCreateNew(); }}>
+                            <Plus size={13} /> Yeni
+                        </button>
+                    )}
                 </div>
 
-                <div className="border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
+                <div className="border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden flex-1 overflow-y-auto">
                     {loading ? (
-                        <div className="p-4 space-y-3">
+                        <div className="p-4 space-y-2">
                             <Skeleton variant="row" count={4} />
                         </div>
                     ) : filteredCustomers.length === 0 ? (
                         <EmptyState
-                            icon={<Users size={32} />}
+                            icon={<Users size={24} />}
                             title={searchTerm ? 'Sonuç bulunamadı' : 'Henüz kayıtlı müşteri yok'}
                             text={searchTerm ? 'Farklı bir arama terimi deneyin.' : 'Yeni müşteri ekleyerek başlayın.'}
                         />
                     ) : (
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)]">
-                                <tr>
-                                    <th className="p-3 font-medium">Müşteri Adı</th>
-                                    <th className="p-3 font-medium">Firma</th>
-                                    <th className="p-3 font-medium">E-posta</th>
-                                    <th className="p-3 font-medium w-20"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--color-border)]">
-                                {paginatedCustomers.map((customer) => (
-                                    <tr key={customer.id} className="hover:bg-[var(--color-bg-hover)] transition-colors">
-                                        <td className="p-3 font-medium text-[var(--color-text)]">{customer.name}</td>
-                                        <td className="p-3 text-[var(--color-text)]">{customer.company}</td>
-                                        <td className="p-3 text-[var(--color-text-muted)]">{customer.email}</td>
-                                        <td className="p-3 text-right">
-                                            <button type="button" className="btn btn-sm btn-outline" onClick={() => { onSelect(customer); onClose(); }}>
-                                                Seç
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div className="divide-y divide-[var(--color-border)]/50">
+                            {paginatedCustomers.map((customer) => (
+                                <div
+                                    key={customer.id}
+                                    onClick={() => { onSelect(customer); onClose(); }}
+                                    className="p-2.5 hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-semibold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors truncate">
+                                            {customer.name}
+                                        </div>
+                                        <div className="text-[11px] text-[var(--color-text-muted)] truncate">
+                                            {customer.company || customer.email || customer.phone || 'Detay yok'}
+                                        </div>
+                                    </div>
+                                    <span className="text-[11px] font-medium text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Seç →
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                     )}
                     {!loading && filteredCustomers.length > PAGE_SIZE && (
                         <Pagination

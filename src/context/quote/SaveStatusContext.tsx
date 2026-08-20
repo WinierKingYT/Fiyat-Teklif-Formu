@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import type { SaveStatus } from './types';
+import type { SaveStatus } from '@/context/quote/types';
 
 type SetSaveStatus = React.Dispatch<React.SetStateAction<SaveStatus>>;
 

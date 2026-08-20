@@ -1,17 +1,17 @@
+import { Trash2, Edit, Plus, Search, Image as ImageIcon, Grid, List, Filter, CheckSquare, Square, Download, Upload, X } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import Modal from './Modal';
-import Pagination from './Pagination';
-import ConfirmDialog from './ConfirmDialog';
-import { useIndexedDB } from '../hooks/useIndexedDB';
-import useDebounce from '../hooks/useDebounce';
-import { useTranslation } from '../hooks/useTranslation';
-import { useQuote } from '../context/QuoteContext';
-import { Trash2, Edit, Plus, Search, Image as ImageIcon, Grid, List, Filter, CheckSquare, Square, Download, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ImageOptimizer from '../utils/imageOptimizer';
-import { parseExcelFile, type ImportedProduct } from '../utils/excelParser';
-import Logger from '../utils/logger';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import Modal from '@/components/Modal';
+import Pagination from '@/components/Pagination';
+import { useQuote } from '@/context/QuoteContext';
+import useDebounce from '@/hooks/useDebounce';
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import { parseExcelFile, type ImportedProduct } from '@/utils/excelParser';
+import ImageOptimizer from '@/utils/imageOptimizer';
+import Logger from '@/utils/logger';
 
 interface Product {
     id: string | number;
@@ -24,7 +24,12 @@ interface Product {
     image?: string | null;
 }
 
-const ProductManagerModal = ({ isOpen, onClose }) => {
+interface ProductManagerModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const { db } = useIndexedDB();
     const [products, setProducts] = useState<Product[]>([]);
@@ -37,7 +42,13 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     // Edit/Add State
     const [isEditing, setIsEditing] = useState(false);
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        variant: 'info' | 'warning' | 'danger';
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 20;
     const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -96,17 +107,17 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         toast.success(t('savedSuccess'));
     };
 
-    const handleDeleteCategory = async (categoryToDelete) => {
+    const handleDeleteCategory = async (categoryToDelete: string) => {
         setConfirmDialog({ isOpen: true, title: t('delete'), message: `${categoryToDelete} kategorisini silmek istediğinize emin misiniz?`, onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const updatedCategories = categories.filter(c => c !== categoryToDelete); setCategories(updatedCategories); db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories }); toast.success(t('deletedSuccess')); }, variant: 'danger' });
     };
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleImageUpload = async (e) => {
-        const file = e.target.files[0];
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             try {
                 const optimizer = new ImageOptimizer();
@@ -119,7 +130,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         }
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!formData.name || !formData.price) {
@@ -165,12 +176,12 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         }
     };
 
-    const handleEdit = (product) => {
+    const handleEdit = (product: Product) => {
         setCurrentProduct(product);
         setFormData({
             name: product.name || '',
             description: product.description || '',
-            price: product.price || '',
+            price: product.price ? String(product.price) : '',
             unit: product.unit || 'Adet',
             taxRate: product.taxRate || 20,
             category: product.category || 'Genel',
@@ -179,11 +190,11 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         setIsEditing(true);
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: number | string) => {
         setConfirmDialog({ isOpen: true, title: t('deleteProduct'), message: 'Bu ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performDelete(id); }, variant: 'danger' });
     };
 
-    const performDelete = async (id) => {
+    const performDelete = async (id: number | string) => {
         try {
             const productToDelete = products.find(p => p.id === id);
             if (productToDelete) {
@@ -193,7 +204,7 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                     deletedAt: new Date().toISOString(),
                     originalId: id
                 });
-                await db.delete('products', id);
+                await db.delete('products', id as IDBValidKey);
                 toast.success(t('deletedSuccess'));
                 loadProducts();
                 if (selectedProducts.has(id)) {
@@ -209,10 +220,10 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
     };
 
     const handleBulkDelete = async () => {
-        setConfirmDialog({ isOpen: true, title: t('delete'), message: `${selectedProducts.size} adet ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const id of selectedProducts) { const productToDelete = products.find(p => p.id === id); if (productToDelete) { await db.add('recycle_bin', { ...productToDelete, originalStore: 'products', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('products', id); } } toast.success(t('deletedSuccess')); setSelectedProducts(new Set()); loadProducts(); } catch (error) { Logger.error(error); toast.error(t('error')); } }, variant: 'danger' });
+        setConfirmDialog({ isOpen: true, title: t('delete'), message: `${selectedProducts.size} adet ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const id of selectedProducts) { const productToDelete = products.find(p => p.id === id); if (productToDelete) { await db.add('recycle_bin', { ...productToDelete, originalStore: 'products', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('products', id as IDBValidKey); } } toast.success(t('deletedSuccess')); setSelectedProducts(new Set()); loadProducts(); } catch (error) { Logger.error(error); toast.error(t('error')); } }, variant: 'danger' });
     };
 
-    const toggleProductSelection = (id) => {
+    const toggleProductSelection = (id: number | string) => {
         const newSelected = new Set(selectedProducts);
         if (newSelected.has(id)) {
             newSelected.delete(id);
@@ -287,8 +298,8 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
         linkElement.click();
     };
 
-    const handleImport = async (e) => {
-        const file = e.target.files[0];
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
 
         try {
@@ -340,48 +351,46 @@ const ProductManagerModal = ({ isOpen, onClose }) => {
                 <div className="w-full md:w-3/5 flex flex-col border-r border-[var(--color-border)] pr-4">
 
                     {/* Toolbar */}
-                    <div className="flex flex-col gap-3 mb-4">
-                        <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 mb-3">
+                        <div className="flex items-center gap-1.5">
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-3 text-[var(--color-text-muted)]" size={18} />
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
                                 <input
                                     type="text"
-                                    className="form-control pl-10"
+                                    className="form-control pl-8 text-xs"
                                     placeholder={t('search')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <div className="flex bg-[var(--color-bg-muted)] rounded-lg p-1 border border-[var(--color-border)]">
+                            <div className="flex bg-[var(--color-bg-muted)] rounded p-0.5 border border-[var(--color-border)]">
                                 <button type="button"
-                                    className={`p-2 rounded ${viewMode === 'list' ? 'bg-[var(--color-bg-card)] shadow-sm' : 'text-[var(--color-text-muted)]'}`}
+                                    className={`p-1 rounded ${viewMode === 'list' ? 'bg-[var(--color-bg-card)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`}
                                     onClick={() => setViewMode('list')}
                                     title={t('tableView')}
                                 >
-                                    <List size={18} />
+                                    <List size={14} />
                                 </button>
                                 <button type="button"
-                                    className={`p-2 rounded ${viewMode === 'grid' ? 'bg-[var(--color-bg-card)] shadow-sm' : 'text-[var(--color-text-muted)]'}`}
+                                    className={`p-1 rounded ${viewMode === 'grid' ? 'bg-[var(--color-bg-card)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`}
                                     onClick={() => setViewMode('grid')}
                                     title={t('galleryView')}
                                 >
-                                    <Grid size={18} />
+                                    <Grid size={14} />
                                 </button>
                             </div>
 
-                            <div className="flex gap-1 ml-2 items-center">
-                                <label className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] cursor-pointer transition-colors" title={t('importExcel')}>
-                                    <Upload size={18} />
-                                    <input type="file" className="hidden" accept=".json, .xlsx, .xls, .csv" onChange={handleImport} />
-                                </label>
-                                <button type="button"
-                                    className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-                                    onClick={handleExport}
-                                    title={t('exportExcel')}
-                                >
-                                    <Download size={18} />
-                                </button>
-                            </div>
+                            <label className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] cursor-pointer transition-colors" title={t('importExcel')}>
+                                <Upload size={14} />
+                                <input type="file" className="hidden" accept=".json, .xlsx, .xls, .csv" onChange={handleImport} />
+                            </label>
+                            <button type="button"
+                                className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                onClick={handleExport}
+                                title={t('exportExcel')}
+                            >
+                                <Download size={14} />
+                            </button>
                         </div>
 
                         <div className="flex justify-between items-center">

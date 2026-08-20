@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import Logger from '../../utils/logger';
-import { useDatabase } from './DatabaseContext';
-import type { CompanyData } from './types';
+import { useDatabase } from '@/context/quote/DatabaseContext';
+import Logger from '@/utils/logger';
+import type { CompanyData } from '@/context/quote/types';
 
 interface CompanyDefaultsContextValue {
     companyDefaults: CompanyData | null;
