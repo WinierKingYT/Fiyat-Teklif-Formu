@@ -785,5 +785,8 @@
   "fieldsFilledOf": "{filled}/{total}",
   "templates_2": "Vorlagen",
   "clickRowToSelect": "Klicken Sie auf die Zeile, um auszuwählen",
-  "customFieldsTitle": "Benutzerdefinierte Felder"
+  "customFieldsTitle": "Benutzerdefinierte Felder",
+  "to": "An",
+  "sellerSignature": "Autorisierte Unterschrift",
+  "customerApproval": "Kundenbestätigung"
 }

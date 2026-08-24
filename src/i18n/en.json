@@ -785,5 +785,8 @@
   "fieldsFilledOf": "{filled}/{total}",
   "templates_2": "Templates",
   "clickRowToSelect": "Click row to select",
-  "customFieldsTitle": "Custom Fields"
+  "customFieldsTitle": "Custom Fields",
+  "to": "To",
+  "sellerSignature": "Authorized Signature",
+  "customerApproval": "Customer Approval"
 }

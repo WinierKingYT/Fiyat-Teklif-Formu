@@ -170,7 +170,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (item.quantity || 0) * (item.price || 0);
-                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
+                    const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + index}>
@@ -219,15 +219,13 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Header Section - Grid Layout */}
                     {showSection('header') && (pageIndex === 0 ? (
-                        <div className="classic-header-box" style={{ display: 'grid', gridTemplateColumns: '130px 1fr 180px' }}>
+                        <div className="classic-header-box" style={{ display: 'grid', gridTemplateColumns: config.showLogo && companyData.logo ? '130px 1fr 180px' : '1fr 180px' }}>
                             {/* Logo Area */}
-                            <div style={{ borderRight: '1.5px solid #334155', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
-                                {config.showLogo && companyData.logo ? (
-                                    <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: `${config.logoMaxHeight || 60}px`, objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
-                                ) : (
-                                    <span style={{ fontSize: '11pt', fontWeight: 'bold', color: '#475569' }}>{t.logo}</span>
-                                )}
-                            </div>
+                            {config.showLogo && companyData.logo && (
+                                <div style={{ borderRight: '1.5px solid #334155', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start' }}>
+                                    <img src={companyData.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: `${config.logoMaxHeight || 60}px`, objectFit: config.logoStyle === 'circle' ? 'cover' : 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
+                                </div>
+                            )}
 
                             {/* Company Info */}
                             <div style={{ borderRight: '1.5px solid #334155', padding: '8px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
@@ -270,7 +268,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                     ) : (
                         <div style={{ borderBottom: '1.5px solid #334155', marginBottom: '0.75rem', paddingBottom: '0.35rem' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#475569' }}>
-                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
+                                <span><strong>{companyData.name ? `${companyData.name} - ` : ''}</strong>{quoteData.title || config.title || t.quoteTitle}{quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}

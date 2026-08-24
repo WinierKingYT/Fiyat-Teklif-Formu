@@ -195,8 +195,8 @@ export const usePdfExport = ({
                         }
                     },
                     pagebreak: {
-                        mode: ['css', 'legacy'],
-                        before: ['.pdf-page:not(:first-child)', '.pdf-page-break', '[class*="pdf-page-break"]'],
+                        mode: ['css'],
+                        after: ['.pdf-page:not(:last-child)', '.pdf-page-break', '[class*="pdf-page-break"]'],
                         avoid: [
                             '.pdf-footer',
                             '[class*="pdf-footer"]',

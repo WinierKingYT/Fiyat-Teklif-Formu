@@ -5,6 +5,8 @@ interface PdfCustomFieldsProps {
     customFields?: CustomField[];
     themeColor?: string;
     variant?: 'chips' | 'grid' | 'inline';
+    language?: string;
+    t?: Record<string, string>;
     className?: string;
     style?: React.CSSProperties;
 }
@@ -13,6 +15,8 @@ export const PdfCustomFields: React.FC<PdfCustomFieldsProps> = ({
     customFields = [],
     themeColor = '#3b82f6',
     variant = 'grid',
+    language = 'tr',
+    t,
     className = '',
     style = {}
 }) => {
@@ -24,6 +28,11 @@ export const PdfCustomFields: React.FC<PdfCustomFieldsProps> = ({
 
     const formatFieldValue = (val: unknown): string => {
         if (typeof val === 'boolean') {
+            if (t?.yes && t?.no) {
+                return val ? t.yes : t.no;
+            }
+            if (language === 'en') return val ? 'Yes' : 'No';
+            if (language === 'de') return val ? 'Ja' : 'Nein';
             return val ? 'Evet' : 'Hayır';
         }
         return String(val ?? '');

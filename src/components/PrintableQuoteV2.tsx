@@ -325,6 +325,7 @@ const PrintableQuote = React.memo(({
         items,
         bankData,
         signature,
+        discount,
         t,
         formatDate,
         formatCurrency,
@@ -342,7 +343,7 @@ const PrintableQuote = React.memo(({
         if (theme === 'classic') return <ClassicTheme {...commonProps} activeLayout={activeLayout} />;
         if (theme === 'minimal') return <MinimalTheme {...commonProps} activeLayout={activeLayout} />;
         if (theme === 'corporate') return <CorporateTheme {...commonProps} activeLayout={activeLayout} />;
-        if (theme === 'pro') return <ProTheme {...commonProps} discount={discount} activeLayout={activeLayout} />;
+        if (theme === 'pro') return <ProTheme {...commonProps} activeLayout={activeLayout} />;
         if (theme === 'bold') return <BoldTheme {...commonProps} activeLayout={activeLayout} />;
         if (theme === 'invoice') return <InvoiceTheme {...commonProps} activeLayout={activeLayout} />;
         return <ModernTheme {...commonProps} activeLayout={activeLayout} />;

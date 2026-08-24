@@ -142,7 +142,9 @@ const injectPageBreakStyles = (containerId?: string) => {
     const style = document.createElement('style');
     style.id = PAGE_BREAK_STYLE_ID;
     style.textContent = `
-        ${prefix}.pdf-page { margin-bottom: 0 !important; }
+        ${prefix} { padding: 0 !important; margin: 0 !important; }
+        ${prefix}.pdf-page { margin: 0 !important; margin-bottom: 0 !important; padding: 0 !important; page-break-after: always !important; break-after: page !important; page-break-before: auto !important; break-before: auto !important; }
+        ${prefix}.pdf-page:last-child { page-break-after: auto !important; break-after: auto !important; }
         ${prefix}.pdf-section, ${prefix}[class*="pdf-section"] { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-header, ${prefix}[class*="pdf-header"], ${prefix}.header-container { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-customer, ${prefix}[class*="pdf-customer"], ${prefix}.customer-section, ${prefix}.customer-seller-grid { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -151,7 +153,6 @@ const injectPageBreakStyles = (containerId?: string) => {
         ${prefix}.pdf-signatures, ${prefix}.signatures-grid, ${prefix}.signature-section { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-terms-section, ${prefix}.terms-box, ${prefix}.notes-section { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-footer, ${prefix}[class*="pdf-footer"] { page-break-inside: avoid !important; break-inside: avoid !important; }
-        ${prefix}.pdf-page:not(:first-child) { page-break-before: always !important; break-before: page !important; }
         ${prefix}.pdf-page-break { page-break-before: always !important; break-before: page !important; }
         ${prefix} table { page-break-inside: auto; }
         ${prefix} tr, ${prefix} tbody tr { page-break-inside: avoid !important; break-inside: avoid !important; page-break-after: auto; }
@@ -383,8 +384,8 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                     },
                 },
                 pagebreak: {
-                    mode: ['css', 'legacy'],
-                    before: ['.pdf-page:not(:first-child)', '.pdf-page-break', '[class*="pdf-page-break"]'],
+                    mode: ['css'],
+                    after: ['.pdf-page:not(:last-child)', '.pdf-page-break', '[class*="pdf-page-break"]'],
                     avoid: [
                         '.pdf-footer',
                         '[class*="pdf-footer"]',

@@ -219,7 +219,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (item.quantity || 0) * (item.price || 0);
-                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
+                    const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + index}>
@@ -308,7 +308,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: `2px solid ${color}`, paddingBottom: '4px', fontSize: '8pt', color: '#64748b' }}>
-                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
+                            <span><strong>{companyData.name ? `${companyData.name} - ` : ''}</strong>{quoteData.title || config.title || t.quoteTitle}{quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                             {config.showPageNumbers !== false && (
                                 <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             )}
@@ -321,7 +321,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                         <div className="bold-parties-grid">
                             {/* Customer Box */}
                             <div className="bold-party-box">
-                                <div className="bold-party-title">{t.customer} / {t.to}</div>
+                                <div className="bold-party-title">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
                                 {customerData.company && (
                                     <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '2px' }}>
                                         {renderEditable(customerData.company, 'customerCompany')}

@@ -118,6 +118,8 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
             font-size: ${config.tableBodyFontSize || '8.5pt'};
             color: #1e293b;
             vertical-align: middle;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .invoice-table tbody tr:nth-child(even) td {
@@ -207,7 +209,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (Number(item.quantity) || 0) * (Number(item.price) || 0);
-                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
+                    const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + idx}>
@@ -296,7 +298,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b', paddingBottom: '4px', marginBottom: '8px', borderBottom: '1px solid #cbd5e1' }}>
-                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
+                            <span><strong>{companyData.name ? `${companyData.name} - ` : ''}</strong>{quoteData.title || config.title || t.quoteTitle}{quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                             {config.showPageNumbers !== false && (
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             )}
@@ -325,7 +327,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Customer / Alıcı Box */}
                             <div className="invoice-party-card">
-                                <div className="invoice-party-label">{t.customer} / {t.to}</div>
+                                <div className="invoice-party-label">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
                                 <div style={{ fontWeight: 700, fontSize: '9.5pt', color: '#0f172a', marginBottom: '2px' }}>
                                     {renderEditable(customerData.company || customerData.name, 'customerCompany')}
                                 </div>
@@ -380,9 +382,10 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                             <div style={{ whiteSpace: 'pre-wrap' }}>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
                                         </div>
                                     )}
-                                    {config.showTerms && (quoteData.deliveryTerms || quoteData.terms) && (
+                                    {config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
                                         <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.3' }}>
                                             {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                            {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
                                             {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                         </div>
                                     )}

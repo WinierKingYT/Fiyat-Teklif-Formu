@@ -9,6 +9,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
         id,
         containerStyles,
         config,
+        color = '#0f172a',
         companyData,
         quoteData,
         customerData,
@@ -28,7 +29,6 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
         activeLayout
     } = props;
     const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
-
 
     const minimalStyles = useMemo(() => `
         .minimal-theme-container {
@@ -145,7 +145,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (item.quantity || 0) * (item.price || 0);
-                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
+                    const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + index}>
@@ -229,7 +229,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', fontSize: '7.5pt', color: '#94a3b8' }}>
-                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
+                            <span><strong>{companyData.name ? `${companyData.name} - ` : ''}</strong>{quoteData.title || config.title || t.quoteTitle}{quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                             {config.showPageNumbers !== false && (
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             )}
@@ -239,7 +239,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                     {/* Customer Info Box - Only Page 1 */}
                     {showSection('customer') && pageIndex === 0 && (
                         <div className="minimal-box" style={{ marginBottom: '10px' }}>
-                            <div className="minimal-box-title">{t.customer} / {t.to}</div>
+                            <div className="minimal-box-title">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '3px 12px', alignItems: 'center' }}>
                                 {customerData.company && <div style={{ gridColumn: '1 / -1', fontSize: '9pt', fontWeight: '700', color: '#0f172a' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
                                 {customerData.name && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>{renderEditable(customerData.name, 'customerName')}</div>}
@@ -282,9 +282,10 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                                 <div>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
                                             </div>
                                         )}
-                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.terms) && (
+                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
                                             <div style={{ marginTop: '4px', fontSize: '7pt', color: '#64748b', lineHeight: '1.3' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
                                                 {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
@@ -319,7 +320,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                                 )}
                                             </>
                                         )}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1.5px solid #0f172a', marginTop: '3px', paddingTop: '3px', fontSize: '9.5pt', fontWeight: '800', color: '#0f172a' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1.5px solid ${color || '#0f172a'}`, marginTop: '3px', paddingTop: '3px', fontSize: '9.5pt', fontWeight: '800', color: '#0f172a' }}>
                                             <span>{t.generalTotal}</span>
                                             <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
@@ -335,7 +336,10 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                 <div style={{ display: 'grid', gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '260px', margin: config.showCustomerSignature ? '8px 0 4px 0' : '8px auto 4px auto', gap: '16px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                                     <div style={{ textAlign: 'center' }}>
                                         <div style={{ minHeight: '40px', borderBottom: '1px solid #cbd5e1', paddingBottom: '2px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px' }}>
-                                            {(signature || companyData.signature) && <img src={(signature !== undefined ? signature : companyData.signature) as string} alt="" style={{ maxHeight: '36px', maxWidth: '90px', objectFit: 'contain' }} />}
+                                            {(() => {
+                                                const effectiveSig = (signature === null || signature === '') ? null : (signature || companyData.signature);
+                                                return effectiveSig ? <img src={effectiveSig as string} alt="" style={{ maxHeight: '36px', maxWidth: '90px', objectFit: 'contain' }} /> : null;
+                                            })()}
                                             {companyData.stamp && <img src={companyData.stamp} alt="" style={{ maxHeight: '36px', maxWidth: '70px', objectFit: 'contain', opacity: 0.85 }} />}
                                         </div>
                                         <div style={{ fontSize: '7pt', fontWeight: '600', color: '#0f172a', paddingTop: '2px' }}>{t.seller} ({t.deliveredBy})</div>

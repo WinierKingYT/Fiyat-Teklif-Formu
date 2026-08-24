@@ -218,7 +218,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (item.quantity || 0) * (item.price || 0);
-                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
+                    const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + index}>
@@ -303,7 +303,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ) : (
                         <div style={{ marginBottom: '8px', paddingBottom: '4px', borderBottom: `1.5px solid ${color}`, display: 'flex', justifyContent: 'space-between', fontSize: '8pt', color: '#64748b' }}>
-                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
+                            <span><strong>{companyData.name ? `${companyData.name} - ` : ''}</strong>{quoteData.title || config.title || t.quoteTitle}{quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                             <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                         </div>
                     ))}

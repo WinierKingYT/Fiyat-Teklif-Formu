@@ -420,7 +420,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (item.quantity || 0) * (item.price || 0);
-                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
+                    const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + index}>
@@ -514,7 +514,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     ) : (
                         <div className="pdf-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.35rem', borderBottom: `1.5px solid ${color}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '8pt', color: '#64748b' }}>
-                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
+                                <span><strong>{companyData.name ? `${companyData.name} - ` : ''}</strong>{quoteData.title || config.title || t.quoteTitle}{quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -527,7 +527,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                         <div className="customer-section">
                             <div className="customer-box">
                                 <div className="section-title">
-                                    {t.customer} / {t.to}
+                                    {[t.customer, t.to].filter(Boolean).join(' / ')}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.35rem 1.25rem', alignItems: 'baseline' }}>
                                     {customerData.company && (
