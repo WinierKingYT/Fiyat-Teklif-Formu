@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { formatIban } from '@/utils/themeHelpers';
-import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
+import { PdfWatermark, PdfPageNumber, PdfCustomFields, PdfSignatures } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
@@ -26,6 +26,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         hasLineItemDiscounts,
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
+    const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
 
     const invoiceStyles = useMemo(() => `
         .invoice-theme-container {
@@ -306,7 +307,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                     ))}
 
                     {/* Customer & Seller Information Grid - Page 1 */}
-                    {showSection('customer') && pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && hasCustomerData && (
                         <>
                         <div className="invoice-parties-grid">
                             {/* Seller / Düzenleyen Box */}
@@ -318,7 +319,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                     <div>{companyData.phone} | {companyData.email}</div>
                                     {(companyData.taxOffice || companyData.taxNumber) && (
                                         <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '2px' }}>
-                                            {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                            {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
                                             {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -344,7 +345,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                     {customerData.address && <div>{customerData.address}</div>}
                                     {(customerData.taxOffice || customerData.taxNumber) && (
                                         <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '2px' }}>
-                                            {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                            {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
                                             {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -357,9 +358,14 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Items Table */}
                     {showSection('items') && (
-                        <div style={{ flex: 1 }}>
-                            {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
-                        </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
+                        {pageIndex < itemChunks.length - 1 && (
+                            <div style={{ marginTop: 'auto', paddingTop: '0.5rem', paddingBottom: '0.2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic' }}>
+                                <span>{t.continuedOnNextPage || 'Teklif devamı sonraki sayfadadır ➔'}</span>
+                            </div>
+                        )}
+                    </div>
                     )}
 
                     {/* Summary & Footer on Last Page */}
@@ -411,7 +417,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                                         .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} className="invoice-summary-row" style={{ fontSize: '7.5pt' }}>
-                                                                <span>{t.vat || t.tax} (%{rate}):</span>
+                                                                <span>{t.vat || t.tax} ({(currentLocale || 'tr').startsWith('tr') ? `%${rate}` : `${rate}%`}):</span>
                                                                 <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
                                                             </div>
                                                         ))
@@ -436,34 +442,14 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="invoice-signatures" style={{ gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '280px', margin: config.showCustomerSignature ? '8px 0 6px 0' : '8px auto 6px auto' }}>
-                                    <div className="invoice-sig-box">
-                                        <div className="invoice-sig-area">
-                                            {(() => {
-                                                const effectiveSig = (signature === null || signature === '') ? null : (signature || companyData.signature);
-                                                return effectiveSig ? <img src={effectiveSig as string}
-                                                    alt="Signature"
-                                                    style={{ maxHeight: '36px', maxWidth: '100px', objectFit: 'contain' }}
-                                                /> : null;
-                                            })()}
-                                            {companyData.stamp && (
-                                                <img
-                                                    src={companyData.stamp}
-                                                    alt="Stamp"
-                                                    style={{ maxHeight: '36px', maxWidth: '75px', objectFit: 'contain', opacity: 0.85 }}
-                                                />
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: '7pt', fontWeight: 700, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '2px' }}>{t.seller} ({t.deliveredBy})</div>
-                                    </div>
-                                    {config.showCustomerSignature && (
-                                        <div className="invoice-sig-box">
-                                            <div className="invoice-sig-area">
-                                            </div>
-                                            <div style={{ fontSize: '7pt', fontWeight: 700, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '2px' }}>{t.customer} ({t.receivedBy})</div>
-                                        </div>
-                                    )}
-                                </div>
+                                <PdfSignatures
+                                    companyData={companyData}
+                                    customerData={customerData}
+                                    signature={signature}
+                                    config={config}
+                                    t={t}
+                                    className="invoice-signatures"
+                                />
                             )}
 
                             {/* Footer */}

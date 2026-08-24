@@ -28,6 +28,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         onEdit
     } = props;
     const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
+    const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
 
 
     const modernStyles = useMemo(() => `
@@ -499,7 +500,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                         )}
                                         {(companyData.taxOffice || companyData.taxNumber) && (
                                             <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '1px' }}>
-                                                {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                                {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
                                                 {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                             </div>
                                         )}
@@ -527,7 +528,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     ))}
 
                     {/* Customer Section - Only Page 1 */}
-                    {showSection('customer') && pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && hasCustomerData && (
                         <div className="customer-section">
                             <div className="customer-box">
                                 <div className="section-title">
@@ -564,7 +565,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                     )}
                                     {(customerData.taxOffice || customerData.taxNumber) && (
                                         <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#94a3b8' }}>
-                                            {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                            {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
                                             {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -624,7 +625,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                                         .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} className="summary-row" style={{ fontSize: '7.5pt' }}>
-                                                                <span>{t.vat || t.tax} (%{rate}):</span>
+                                                                <span>{t.vat || t.tax} ({(currentLocale || 'tr').startsWith('tr') ? `%${rate}` : `${rate}%`}):</span>
                                                                 <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
                                                             </div>
                                                         ))

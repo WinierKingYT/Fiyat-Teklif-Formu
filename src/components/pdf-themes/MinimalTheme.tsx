@@ -29,6 +29,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
         activeLayout
     } = props;
     const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
+    const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
 
     const minimalStyles = useMemo(() => `
         .minimal-theme-container {
@@ -211,7 +212,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                 </div>
                                 {(companyData.taxOffice || companyData.taxNumber) && (
                                     <div style={{ fontSize: '7pt', color: '#94a3b8' }}>
-                                        {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                        {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
                                         {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -237,7 +238,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                     ))}
 
                     {/* Customer Info Box - Only Page 1 */}
-                    {showSection('customer') && pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && hasCustomerData && (
                         <div className="minimal-box" style={{ marginBottom: '10px' }}>
                             <div className="minimal-box-title">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '3px 12px', alignItems: 'center' }}>
@@ -248,7 +249,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                 {customerData.address && <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#64748b' }}>{customerData.address}</div>}
                                 {(customerData.taxOffice || customerData.taxNumber) && (
                                     <div style={{ gridColumn: '1 / -1', fontSize: '7pt', color: '#94a3b8' }}>
-                                        {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                        {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
                                         {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                     </div>
                                 )}

@@ -26,6 +26,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
         hasLineItemDiscounts,
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
+    const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
 
     const corporateStyles = useMemo(() => `
         .corporate-theme-container {
@@ -335,7 +336,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                 {(companyData.phone || companyData.email) && <div style={{ fontSize: '8pt', color: '#64748b' }}>{[companyData.phone, companyData.email].filter(v => typeof v === 'string' && v.trim().length > 0).join(' | ')}</div>}
                                 {(companyData.taxOffice || companyData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8' }}>
-                                        {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                        {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
                                         {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -363,7 +364,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                     ))}
 
                     {/* Customer & Company Details - 2 Column Cards */}
-                    {showSection('customer') && pageIndex === 0 && (
+                    {showSection('customer') && pageIndex === 0 && hasCustomerData && (
                         <>
                         <div className="corporate-parties-grid">
                             {/* Customer Card */}
@@ -395,7 +396,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                 )}
                                 {(customerData.taxOffice || customerData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                        {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
+                                        {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
                                         {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -422,8 +423,13 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Items */}
                     {showSection('items') && (
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                         {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
+                        {pageIndex < itemChunks.length - 1 && (
+                            <div style={{ marginTop: 'auto', paddingTop: '0.5rem', paddingBottom: '0.2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic' }}>
+                                <span>{t.continuedOnNextPage || 'Teklif devamı sonraki sayfadadır ➔'}</span>
+                            </div>
+                        )}
                     </div>
                     )}
 
@@ -469,7 +475,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                                         .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} className="corporate-total-row" style={{ fontSize: '7.5pt' }}>
-                                                                <span>{t.vat || t.tax} (%{rate}):</span>
+                                                                <span>{t.vat || t.tax} ({(currentLocale || 'tr').startsWith('tr') ? `%${rate}` : `${rate}%`}):</span>
                                                                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(data.tax)}</span>
                                                             </div>
                                                         ))

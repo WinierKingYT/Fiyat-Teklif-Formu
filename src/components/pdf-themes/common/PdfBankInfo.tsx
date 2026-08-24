@@ -22,7 +22,7 @@ export const PdfBankInfo: React.FC<PdfBankInfoProps> = ({ bankData, t, className
                     </div>
                 )}
                 {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a', letterSpacing: '0.02em' }}>{formatIban(bankData.iban)}</span></div>}
-                {bankData.accountNumber && !bankData.iban && <div><span style={{ color: '#64748b' }}>{t.accountNo || 'Hesap No'}: </span><span style={{ fontFamily: 'monospace', fontWeight: '600', color: '#0f172a' }}>{bankData.accountNumber}</span></div>}
+                {bankData.accountNumber && <div><span style={{ color: '#64748b' }}>{t.accountNo || 'Hesap No'}: </span><span style={{ fontFamily: 'monospace', fontWeight: '600', color: '#0f172a' }}>{bankData.accountNumber}</span></div>}
                 {bankData.accountHolder && <div style={{ color: '#64748b', fontSize: '7.5pt' }}>{bankData.accountHolder}</div>}
             </div>
         </div>

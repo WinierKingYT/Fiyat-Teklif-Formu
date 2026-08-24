@@ -265,12 +265,13 @@ const PrintableQuote = React.memo(({
             minHeight: 'auto',
             maxWidth: pageWidth,
             pageMinHeight,
-            fontFamily: config.fontFamily === 'Playfair Display' ? "'Playfair Display', serif" :
-                config.fontFamily === 'Roboto' ? "'Roboto', sans-serif" :
-                    config.fontFamily === 'Open Sans' ? "'Open Sans', sans-serif" :
-                        config.fontFamily === 'Lato' ? "'Lato', sans-serif" :
-                            config.fontFamily === 'Montserrat' ? "'Montserrat', sans-serif" :
-                                "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+            fontFamily: config.fontFamily ? (
+                config.fontFamily.includes(',')
+                    ? config.fontFamily
+                    : (['Playfair Display', 'Merriweather', 'Roboto Slab', 'Georgia', 'Times New Roman'].includes(config.fontFamily)
+                        ? `"${config.fontFamily}", serif`
+                        : `"${config.fontFamily}", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`)
+            ) : "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             fontSize: typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize === 'small' ? '12px' : config.fontSize === 'large' ? '16px' : '14px'),
             padding: `${paddingPx}px`,
             backgroundColor: config.pageBackgroundColor || 'white',

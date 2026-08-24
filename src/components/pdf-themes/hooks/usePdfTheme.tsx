@@ -81,7 +81,12 @@ export function usePdfTheme(props: PdfThemeProps) {
     }, [items, props.discount, quoteData.currency, quoteData.taxMode]);
 
     const amountInWords = useMemo(() => {
-        return numberToWords(total, quoteData.currency || 'TRY', quoteData.language || 'tr');
+        if (typeof total !== 'number' || !Number.isFinite(total) || isNaN(total)) return '';
+        try {
+            return numberToWords(total, quoteData.currency || 'TRY', quoteData.language || 'tr');
+        } catch {
+            return '';
+        }
     }, [total, quoteData.currency, quoteData.language]);
 
     const renderEditable = useCallback((value: unknown, fieldKey: string, type = 'text', className = '') => {

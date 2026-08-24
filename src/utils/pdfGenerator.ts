@@ -60,7 +60,7 @@ const loadedFonts = new Set<string>();
 
 const extractFontName = (value: string): string => {
     if (!value) return '';
-    const match = value.match(/['"]?([A-Za-z][A-Za-z\s]+)['"]?/);
+    const match = value.match(/['"]?([A-Za-z0-9\s-]+)['"]?/);
     return match ? match[1].trim() : value.trim();
 };
 
@@ -251,7 +251,11 @@ const replaceImagesWithCanvas = (container: HTMLElement, scale: number): (() => 
 
     return () => {
         restored.forEach(({ img, canvas }) => {
-            canvas.parentNode?.replaceChild(img, canvas);
+            if (typeof canvas.replaceWith === 'function') {
+                canvas.replaceWith(img);
+            } else if (canvas.parentNode) {
+                canvas.parentNode.replaceChild(img, canvas);
+            }
         });
     };
 };
@@ -321,11 +325,13 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         // Ensure all images are fully loaded before capturing
         await waitForAllImages(element);
 
-        // Calculate max allowed scale based on actual DOM pixel dimensions (HTML5 canvas limit max 16384px)
+        // Calculate max allowed scale based on actual DOM pixel dimensions (HTML5 canvas limit max 16384px, iOS Safari max 4096px)
+        const isIos = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+        const maxCanvasDim = isIos ? 4096 : 16384;
         const domWidthPx = element.offsetWidth || 800;
         const domHeightPx = element.offsetHeight || 1130;
         const maxDomDim = Math.max(domWidthPx, domHeightPx);
-        const lowerScale = Math.min(qual.scale, Math.floor(16384 / Math.max(1, maxDomDim)));
+        const lowerScale = Math.min(qual.scale, Math.floor(maxCanvasDim / Math.max(1, maxDomDim)));
         const effectiveScale = Math.max(0.5, lowerScale);
 
         // PdfPreviewCanvas zoom/scale transform cleanup (handle all nested ancestors)
@@ -540,11 +546,12 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
     iframe = document.createElement('iframe');
     iframe.id = iframeId;
     iframe.style.position = 'fixed';
-    iframe.style.left = '-9999px';
-    iframe.style.top = '-9999px';
-    iframe.style.width = '1px';
-    iframe.style.height = '1px';
-    iframe.style.opacity = '0';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.visibility = 'hidden';
+    iframe.style.zIndex = '-9999';
     iframe.style.border = '0';
     document.body.appendChild(iframe);
 
