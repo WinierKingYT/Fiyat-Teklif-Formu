@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type RefObject } from 'react';
 import useDebounce from '@/hooks/useDebounce';
+import { PAGE_SIZES } from '@/utils/pdfGenerator';
 import type { PdfConfig, QuoteItem } from '@/context/quote/types';
 
 interface UsePdfPageObserverProps {
@@ -38,15 +39,16 @@ export const usePdfPageObserver = ({
         if (!el) return;
         const obs = new ResizeObserver(() => {
             const isLandscape = pdfConfig.pageOrientation === 'landscape';
-            const pageWidthMm = isLandscape ? 297 : 210;
-            const pageHeightMm = isLandscape ? 210 : 297;
+            const baseSize = PAGE_SIZES[pdfConfig.pageSize || 'a4'] || PAGE_SIZES.a4;
+            const pageWidthMm = isLandscape ? baseSize.height : baseSize.width;
+            const pageHeightMm = isLandscape ? baseSize.width : baseSize.height;
             const pxPerMm = el.offsetWidth / pageWidthMm;
             const pageHeightPx = pageHeightMm * pxPerMm;
             setEstimatedPages(Math.max(1, Math.ceil(el.scrollHeight / pageHeightPx)));
         });
         obs.observe(el);
         return () => obs.disconnect();
-    }, [pdfConfig.pageOrientation, items.length, renderedConfig, contentRef]);
+    }, [pdfConfig.pageOrientation, pdfConfig.pageSize, items.length, renderedConfig, contentRef]);
 
     // Real page count from rendered .pdf-page blocks
     useEffect(() => {
@@ -115,7 +117,8 @@ export const usePdfPageObserver = ({
         const first = pages[0] as HTMLElement;
         const pageWidth = first.offsetWidth || 794;
         const isLandscape = pdfConfig.pageOrientation === 'landscape';
-        const pageWidthMm = isLandscape ? 297 : 210;
+        const baseSize = PAGE_SIZES[pdfConfig.pageSize || 'a4'] || PAGE_SIZES.a4;
+        const pageWidthMm = isLandscape ? baseSize.height : baseSize.width;
         const pxPerMm = pageWidth / pageWidthMm;
         const marginPx = marginMm * pxPerMm;
         pages.forEach((page) => {
@@ -124,7 +127,7 @@ export const usePdfPageObserver = ({
             guide.style.cssText = `position:absolute;left:${marginPx}px;top:${el.offsetTop + marginPx}px;width:${pageWidth - marginPx * 2}px;height:${el.offsetHeight - marginPx * 2}px;border:1px dashed var(--color-info);opacity:0.55;pointer-events:none;border-radius:2px;`;
             overlay.appendChild(guide);
         });
-    }, [showMarginGuides, pageCount, renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, marginGuidesRef, contentRef]);
+    }, [showMarginGuides, pageCount, renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, pdfConfig.pageSize, marginGuidesRef, contentRef]);
 
     // Build scaled thumbnail clones of each page
     const debouncedItems = useDebounce(items, 500);
@@ -139,7 +142,8 @@ export const usePdfPageObserver = ({
         const thumbWidth = 56;
         const scale = thumbWidth / pageWidth;
         const isLandscape = pdfConfig.pageOrientation === 'landscape';
-        const aspectRatio = isLandscape ? 210 / 297 : 297 / 210;
+        const baseSize = PAGE_SIZES[pdfConfig.pageSize || 'a4'] || PAGE_SIZES.a4;
+        const aspectRatio = isLandscape ? baseSize.width / baseSize.height : baseSize.height / baseSize.width;
         const thumbHeight = Math.round(pageWidth * aspectRatio * scale);
         pages.forEach((page, i) => {
             const box = document.createElement('div');
@@ -148,6 +152,8 @@ export const usePdfPageObserver = ({
             box.style.height = `${thumbHeight}px`;
             box.title = `${t('page')} ${i + 1}`;
             box.setAttribute('aria-label', `${t('page')} ${i + 1}`);
+            box.setAttribute('role', 'button');
+            box.tabIndex = 0;
             const clone = page.cloneNode(true) as HTMLElement;
             clone.style.position = 'absolute';
             clone.style.top = '0';
@@ -163,9 +169,15 @@ export const usePdfPageObserver = ({
             label.textContent = String(i + 1);
             box.appendChild(label);
             box.addEventListener('click', () => scrollToPage(i + 1));
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    scrollToPage(i + 1);
+                }
+            });
             container.appendChild(box);
         });
-    }, [pageCount, renderedConfig, debouncedItems, pdfConfig.theme, pdfConfig.color, scrollToPage, t, thumbnailsRef, contentRef]);
+    }, [pageCount, renderedConfig, debouncedItems, pdfConfig.theme, pdfConfig.color, pdfConfig.pageSize, scrollToPage, t, thumbnailsRef, contentRef]);
 
     return {
         estimatedPages,

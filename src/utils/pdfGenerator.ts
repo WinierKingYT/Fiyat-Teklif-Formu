@@ -325,7 +325,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         const domHeightPx = element.offsetHeight || 1130;
         const maxDomDim = Math.max(domWidthPx, domHeightPx);
         const lowerScale = Math.min(qual.scale, Math.floor(16384 / Math.max(1, maxDomDim)));
-        const effectiveScale = Math.max(1, lowerScale);
+        const effectiveScale = Math.max(0.5, lowerScale);
 
         // PdfPreviewCanvas zoom/scale transform cleanup (handle all nested ancestors)
         const scaledAncestors: { el: HTMLElement; originalTransform: string; originalZoom: string }[] = [];
@@ -477,6 +477,7 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
         <!DOCTYPE html>
         <html>
         <head>
+            <base href="${document.baseURI}">
             <title>${meta.printTitle}</title>
             ${styles}
             <style>

@@ -87,7 +87,7 @@ export const usePdfExport = ({
                 quality,
                 orientation: pdfConfig.pageOrientation || 'portrait',
                 margin: 0,
-                title: pdfConfig.title,
+                title: quoteData.title || pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
                 author: companyData.name || 'TeklifApp',
                 language: quoteData.language || 'tr',
                 fontFamilies: [pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily].filter((f): f is string => Boolean(f)),

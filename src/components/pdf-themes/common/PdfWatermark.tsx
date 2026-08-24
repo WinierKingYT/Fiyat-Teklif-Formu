@@ -21,7 +21,8 @@ export const PdfWatermark: React.FC<PdfWatermarkProps> = ({ config, className })
                 alignItems: 'center',
                 justifyContent: 'center',
                 pointerEvents: 'none',
-                zIndex: 0,
+                zIndex: 1,
+                mixBlendMode: 'multiply',
                 overflow: 'hidden'
             }}
         >

@@ -475,9 +475,10 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                 <div className="pro-signatures" style={{ gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '280px', margin: config.showCustomerSignature ? '10px 0 8px 0' : '10px auto 8px auto' }}>
                                     <div className="pro-sig-box">
                                         <div className="pro-sig-area">
-                                            {(signature || companyData.signature) && (
-                                                <img src={(signature !== undefined ? signature : companyData.signature) as string} alt={t.signature} style={{ maxHeight: '38px', maxWidth: '110px', objectFit: 'contain' }} />
-                                            )}
+                                            {(() => {
+                                                const effectiveSig = (signature === null || signature === '') ? null : (signature || companyData.signature);
+                                                return effectiveSig ? <img src={effectiveSig as string} alt={t.signature} style={{ maxHeight: '38px', maxWidth: '110px', objectFit: 'contain' }} /> : null;
+                                            })()}
                                             {companyData.stamp && (
                                                 <img src={companyData.stamp} alt={t.companyStamp} style={{ maxHeight: '38px', maxWidth: '80px', objectFit: 'contain', opacity: 0.85 }} />
                                             )}

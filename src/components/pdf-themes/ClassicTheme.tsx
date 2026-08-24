@@ -460,9 +460,10 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                             {t.seller} ({t.deliveredBy})
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '4px', minHeight: '40px' }}>
-                                            {(signature || companyData.signature) && (
-                                                <img src={(signature !== undefined ? signature : companyData.signature) as string} alt="Signature" style={{ maxHeight: '38px', maxWidth: '100px', objectFit: 'contain' }} />
-                                            )}
+                                            {(() => {
+                                                const effectiveSig = (signature === null || signature === '') ? null : (signature || companyData.signature);
+                                                return effectiveSig ? <img src={effectiveSig as string} alt="Signature" style={{ maxHeight: '38px', maxWidth: '100px', objectFit: 'contain' }} /> : null;
+                                            })()}
                                             {companyData.stamp && (
                                                 <img src={companyData.stamp} alt="Stamp" style={{ maxHeight: '38px', maxWidth: '75px', objectFit: 'contain', opacity: 0.85 }} />
                                             )}

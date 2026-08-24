@@ -88,8 +88,7 @@ export const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], local
     rows.push([`${t.bank}:`, safe(bank.bankName), `${t.branch}:`, safe(bank.branch)]);
     rows.push([`${t.accountNo}:`, safe(bank.accountNumber), `${t.iban}:`, safe(bank.iban)]);
     rows.push([`${t.accountHolder}:`, safe(bank.accountHolder)]);
-    rows.push([]);
-
+    const currency = quoteData?.currency || 'TRY';
     rows.push([t.item, t.description, t.quantity, t.unit, t.unitPrice, t.discount, t.vat, t.total]);
 
     (items || []).forEach(item => {
@@ -104,7 +103,7 @@ export const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], local
         const lineTotal = item.netTotal != null ? item.netTotal : (item.total != null ? item.total : discounted);
 
         const discountText = discountRate > 0
-            ? (isFixedDiscount ? toLocale(discountRate, locale) : `%${discountRate}`)
+            ? (isFixedDiscount ? `${toLocale(discountRate, locale)} ${currency}` : `%${discountRate}`)
             : '';
 
         rows.push([

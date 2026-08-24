@@ -87,7 +87,11 @@ const PrintableQuote = React.memo(({
     const formatCurrency = useCallback((amount: number) => {
         const currency = (quoteData.currency || 'TRY').trim().toUpperCase();
         if (amount === undefined || amount === null || isNaN(amount)) {
-            return `0,00 ${currency}`;
+            try {
+                return new Intl.NumberFormat(currentLocale, { style: 'currency', currency: currency }).format(0);
+            } catch {
+                return `0,00 ${currency}`;
+            }
         }
         try {
             return new Intl.NumberFormat(currentLocale, { style: 'currency', currency: currency }).format(amount);
@@ -255,7 +259,7 @@ const PrintableQuote = React.memo(({
         const pageWidth = `${widthMm}mm`;
         const paddingPx = config.margins === 'compact' ? 16 : config.margins === 'wide' ? 36 : 24;
         const marginOffsetMm = config.margins === 'compact' ? 9 : config.margins === 'wide' ? 19 : 13;
-        const pageMinHeight = `${Math.max(100, heightMm - marginOffsetMm)}mm`;
+        const pageMinHeight = `${Math.max(100, heightMm - marginOffsetMm - 2)}mm`;
 
         const baseStyles = {
             minHeight: 'auto',

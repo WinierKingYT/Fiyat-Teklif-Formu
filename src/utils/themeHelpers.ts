@@ -18,7 +18,11 @@ export const getAdjustedFontSize = (size: unknown, factor: number = 0.9, default
  */
 export function formatIban(iban?: string | null): string {
     if (!iban) return '';
-    const clean = iban.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 34);
+    const clean = iban
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[^A-Za-z0-9]/g, '')
+        .toUpperCase()
+        .slice(0, 34);
     if (!clean) return '';
     return clean.match(/.{1,4}/g)?.join(' ') || clean;
 }
@@ -72,6 +76,8 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
 
     const isLandscape = !!options.isLandscape;
     const isCompact = options.margins === 'compact';
+    const isSpacious = options.margins === 'spacious' || options.margins === 'wide';
+    const marginFactor = isSpacious ? 1.15 : (isCompact ? 0.9 : 1);
     const baseHeightFactor = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
         ? Math.min(1.6, Math.max(0.7, options.tableRowHeight / 35))
         : 1;
@@ -89,10 +95,15 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         totalContentWeight += weight;
     }
     const avgItemWeight = items.length > 0 ? totalContentWeight / items.length : 1;
-    const heightFactor = baseHeightFactor * Math.min(1.8, Math.max(1.0, avgItemWeight));
+    const heightFactor = baseHeightFactor * Math.min(1.8, Math.max(1.0, avgItemWeight)) * marginFactor;
+
+    // Check if bottom sections are active
+    const hasBottomSections = options.showSummary !== false || options.showBankInfo || options.showSignatures || options.showTerms;
 
     // Capacity for a standalone single-page quote — güvenli tek sayfa
-    const singlePageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor));
+    const singlePageLimit = hasBottomSections
+        ? Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor))
+        : Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : 20) / heightFactor));
 
     if (items.length <= singlePageLimit) {
         return [items];
