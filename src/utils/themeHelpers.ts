@@ -100,10 +100,10 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
     // Check if bottom sections are active
     const hasBottomSections = options.showSummary !== false || options.showBankInfo || options.showSignatures || options.showTerms;
 
-    // Capacity for a standalone single-page quote — güvenli tek sayfa
+    // Capacity for a standalone single-page quote — güvenli tek sayfa (20 ürün hedefi)
     const singlePageLimit = hasBottomSections
-        ? Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor))
-        : Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : 20) / heightFactor));
+        ? Math.max(4, Math.floor((isLandscape ? (isCompact ? 14 : 12) : (isCompact ? 22 : 20)) / heightFactor))
+        : Math.max(6, Math.floor((isLandscape ? (isCompact ? 20 : 18) : (isCompact ? 28 : 26)) / heightFactor));
 
     if (items.length <= singlePageLimit) {
         return [items];
@@ -111,11 +111,11 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
 
     // Capacity limits — maksimum hedef, sayfa bütünlüğü korunarak
     // Page 1: Header + Customer + Table (No bottom sections)
-    const firstPageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : 20) / heightFactor));
+    const firstPageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 26 : 24)) / heightFactor));
     // Middle pages: Compact Header + Table
-    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 22 : 20)) / heightFactor));
+    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 22 : 20) : (isCompact ? 30 : 28)) / heightFactor));
     // Last page: Compact Header + Table + Summary + Bank + Terms + Signatures
-    const lastPageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor));
+    const lastPageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 14 : 12) : (isCompact ? 20 : 18)) / heightFactor));
 
     // If it fits across exactly 2 pages:
     if (items.length <= firstPageLimit + lastPageLimit) {

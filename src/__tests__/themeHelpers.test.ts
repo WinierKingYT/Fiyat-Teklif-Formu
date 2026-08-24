@@ -41,26 +41,19 @@ describe('chunkQuoteItems', () => {
         expect(chunkQuoteItems([])).toEqual([[]]);
     });
 
-    it('should keep single page quote when items count is within singlePageLimit (<= 12)', () => {
-        const items = [1, 2, 3, 4, 5];
+    it('should keep single page quote when items count is within singlePageLimit (<= 20)', () => {
+        const items = Array.from({ length: 20 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items);
         expect(chunks.length).toBe(1);
-        expect(chunks[0]).toEqual([1, 2, 3, 4, 5]);
+        expect(chunks[0]).toEqual(items);
     });
 
-    it('should split into multi-page when items exceed singlePageLimit (> 12)', () => {
-        const items = Array.from({ length: 13 }, (_, i) => i + 1);
+    it('should split into multi-page when items exceed singlePageLimit (> 20)', () => {
+        const items = Array.from({ length: 21 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items);
         expect(chunks.length).toBe(2);
         expect(chunks[0].length).toBeGreaterThan(0);
         expect(chunks[1].length).toBeGreaterThan(0);
-        expect(chunks.flat()).toEqual(items);
-    });
-
-    it('should handle 14 items across 2 pages with new limits (first 20 / last 12)', () => {
-        const items = Array.from({ length: 14 }, (_, i) => i + 1);
-        const chunks = chunkQuoteItems(items);
-        expect(chunks.length).toBe(2);
         expect(chunks.flat()).toEqual(items);
     });
 
