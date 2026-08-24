@@ -3,7 +3,8 @@ import {
   Users, Package, LayoutTemplate, Database, Landmark, Trash2,
   Settings, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const navItems = [
@@ -48,6 +49,39 @@ const Sidebar = React.memo(({
   isCollapsed = false, onToggleCollapse
 }: SidebarProps) => {
   const { t } = useTranslation();
+  const { quoteData, customerData, companyData, items } = useQuoteData();
+
+  const completion = useMemo(() => {
+    const check = (v: unknown) => v !== undefined && v !== null && v !== '';
+    // Teklif bilgileri: title, number, date, validUntil, currency
+    const quoteFields = [quoteData.title, quoteData.number, quoteData.date, quoteData.validUntil, quoteData.currency];
+    const quoteFilled = quoteFields.filter(check).length;
+    // Müşteri: name, company, email, phone
+    const custFields = [customerData.name, customerData.company, customerData.email, customerData.phone];
+    const custFilled = custFields.filter(check).length;
+    // Firma: name, authorized, phone, email
+    const compFields = [companyData.name, companyData.authorized, companyData.phone, companyData.email];
+    const compFilled = compFields.filter(check).length;
+    // Kalemler: en az 1 kalem ve tamamının ismi var mı
+    const itemsFilled = items.length > 0 ? items.filter(i => check(i.name)).length : 0;
+    const itemsTotal = Math.max(items.length, 1);
+    // Şartlar & notlar: terms, notes
+    const termsFields = [quoteData.terms, quoteData.notes];
+    const termsFilled = termsFields.filter(check).length;
+
+    const totalFilled = quoteFilled + custFilled + compFilled + itemsFilled + termsFilled;
+    const totalFields = quoteFields.length + custFields.length + compFields.length + itemsTotal + termsFields.length;
+    const pct = totalFields > 0 ? Math.round((totalFilled / totalFields) * 100) : 0;
+
+    return {
+      quote: { filled: quoteFilled, total: quoteFields.length },
+      customer: { filled: custFilled, total: custFields.length },
+      company: { filled: compFilled, total: compFields.length },
+      items: { filled: itemsFilled, total: itemsTotal },
+      terms: { filled: termsFilled, total: termsFields.length },
+      pct,
+    };
+  }, [quoteData, customerData, companyData, items]);
 
   const handleNav = (id: string) => {
     if (id === 'builder') { onNewQuote(); }
@@ -78,8 +112,8 @@ const Sidebar = React.memo(({
             type="button"
             onClick={onToggleCollapse}
             className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] transition-colors"
-            title="Menüyü Daralt"
-            aria-label="Menüyü Daralt"
+            title={t('collapseMenu') || 'Menüyü Daralt'}
+            aria-label={t('collapseMenu') || 'Menüyü Daralt'}
           >
             <ChevronLeft size={16} />
           </button>
@@ -88,7 +122,7 @@ const Sidebar = React.memo(({
 
       {/* ── Section 1: Ana Menü ── */}
       <div className="sidebar-nav">
-        {!isCollapsed && <div className="sidebar-section-label">Ana Menü</div>}
+        {!isCollapsed && <div className="sidebar-section-label">{t('navMainMenu') || 'Ana Menü'}</div>}
         {navItems.map(item => (
           <button type="button"
             key={item.id}
@@ -107,7 +141,7 @@ const Sidebar = React.memo(({
 
       {/* ── Section 2: Tanımlar & Katalog ── */}
       <div className="sidebar-nav">
-        {!isCollapsed && <div className="sidebar-section-label">Tanımlar & Katalog</div>}
+        {!isCollapsed && <div className="sidebar-section-label">{t('navCatalog') || 'Tanımlar & Katalog'}</div>}
         {catalogItems.map((item) => (
           <button type="button"
             key={item.labelKey}
@@ -126,7 +160,7 @@ const Sidebar = React.memo(({
 
       {/* ── Section 3: Sistem & Araçlar ── */}
       <div className="sidebar-nav">
-        {!isCollapsed && <div className="sidebar-section-label">Sistem & Araçlar</div>}
+        {!isCollapsed && <div className="sidebar-section-label">{t('navSystem') || 'Sistem & Araçlar'}</div>}
         {systemItems.map((item) => (
           <button type="button"
             key={item.labelKey}
@@ -142,6 +176,44 @@ const Sidebar = React.memo(({
       </div>
 
       <div className="sidebar-spacer" />
+
+      {/* Faz4: Sidebar completion indicator — gerçek form doluluk rozetleri */}
+      {!isCollapsed && currentView === 'builder' && (
+        <div className="px-3 pb-2 space-y-1.5" aria-label={t('completionRate') || 'Doluluk göstergesi'}>
+          <div className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+            {t('completionRate') || 'Doluluk'} — {completion.pct}%
+          </div>
+          {/* Progress bar */}
+          <div className="w-full h-1 rounded-full bg-[var(--color-bg-muted)] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${completion.pct}%`,
+                backgroundColor: completion.pct === 100 ? 'var(--color-success)' : 'var(--color-primary)',
+              }}
+            />
+          </div>
+          {/* Section mini badges */}
+          <div className="space-y-0.5" role="status" aria-live="polite">
+            {([
+              { key: 'quoteInfoCompletion', data: completion.quote },
+              { key: 'customerCompletion', data: completion.customer },
+              { key: 'companyCompletion', data: completion.company },
+              { key: 'itemsCompletion', data: completion.items },
+              { key: 'termsCompletion', data: completion.terms },
+            ] as const).map(({ key, data }) => (
+              <div key={key} className="flex items-center justify-between text-[9px] text-[var(--color-text-muted)]">
+                <span>{t(key)}</span>
+                {data.filled === data.total ? (
+                  <span className="text-[var(--color-success)] font-semibold">✓</span>
+                ) : (
+                  <span className="font-mono tabular-nums">{data.filled}/{data.total}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="sidebar-nav">
         <button type="button"
@@ -159,8 +231,8 @@ const Sidebar = React.memo(({
             type="button"
             onClick={onToggleCollapse}
             className="sidebar-nav-item mt-2 text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)]"
-            title="Menüyü Genişlet"
-            aria-label="Menüyü Genişlet"
+            title={t('expandMenu') || 'Menüyü Genişlet'}
+            aria-label={t('expandMenu') || 'Menüyü Genişlet'}
           >
             <ChevronRight size={17} />
           </button>

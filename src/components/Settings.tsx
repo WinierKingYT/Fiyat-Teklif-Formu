@@ -83,7 +83,7 @@ const Settings = () => {
   };
 
   const handleCompanyChange = (name: string, value: string | null) => {
-    setCompanySettings((prev) => ({ ...prev, [name]: value ?? undefined }));
+    setCompanySettings((prev) => ({ ...prev, [name]: value ?? null }));
   };
 
   const handleSave = async () => {
@@ -99,7 +99,9 @@ const Settings = () => {
   };
 
   useEffect(() => {
-    localStorage.setItem("pdfLayout", JSON.stringify(pdfLayout));
+    if (pdfLayout) {
+      localStorage.setItem("pdfLayout", JSON.stringify(pdfLayout));
+    }
   }, [pdfLayout]);
 
   if (loading)

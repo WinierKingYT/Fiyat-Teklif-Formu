@@ -103,7 +103,7 @@ describe('getDefaultPdfConfig', () => {
     expect(config.pageOrientation).toBe('portrait');
     expect(config.theme).toBe('modern');
     expect(config.fontFamily).toBe('Inter');
-    expect(config.itemsPerPage).toBe(14);
+    expect(config.itemsPerPage).toBe(20);
   });
 
   it('should have all font size properties', () => {

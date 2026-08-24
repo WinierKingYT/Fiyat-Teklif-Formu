@@ -30,7 +30,10 @@ describe('dateUtils', () => {
       expect(formatLocalDate('')).toBe('-');
     });
     it('returns original string on invalid input', () => {
-      expect(formatLocalDate('not-a-date')).toBe('NaN.NaN.NaN');
+      expect(formatLocalDate('not-a-date')).toBe('not-a-date');
+    });
+    it('formats ISO datetime strings to DD.MM.YYYY', () => {
+      expect(formatLocalDate('2025-01-15T14:30:00.000Z')).toBe('15.01.2025');
     });
   });
 });

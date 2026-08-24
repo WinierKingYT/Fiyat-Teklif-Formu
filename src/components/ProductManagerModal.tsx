@@ -1,11 +1,17 @@
-import { Trash2, Edit, Plus, Search, Image as ImageIcon, Grid, List, Filter, CheckSquare, Square, Download, Upload, X } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Modal from '@/components/Modal';
 import Pagination from '@/components/Pagination';
-import { useQuote } from '@/context/QuoteContext';
+import {
+    ProductToolbar,
+    ProductListView,
+    ProductGridView,
+    ProductFormPanel,
+    type Product,
+    type ProductFormData
+} from '@/components/products';
 import useDebounce from '@/hooks/useDebounce';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -13,21 +19,20 @@ import { parseExcelFile, type ImportedProduct } from '@/utils/excelParser';
 import ImageOptimizer from '@/utils/imageOptimizer';
 import Logger from '@/utils/logger';
 
-interface Product {
-    id: string | number;
-    name: string;
-    description?: string;
-    price: number;
-    unit?: string;
-    taxRate?: number;
-    category?: string;
-    image?: string | null;
-}
-
 interface ProductManagerModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
+
+const INITIAL_FORM_DATA: ProductFormData = {
+    name: '',
+    description: '',
+    price: '',
+    unit: 'Adet',
+    taxRate: 20,
+    category: 'Genel',
+    image: null
+};
 
 const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
@@ -36,7 +41,7 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
     const [categories, setCategories] = useState(['Genel']);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
-    const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
+    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [selectedProducts, setSelectedProducts] = useState<Set<string | number>>(new Set());
 
     // Edit/Add State
@@ -55,35 +60,21 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
     const [newCategoryName, setNewCategoryName] = useState('');
 
     // Form State
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        price: '',
-        unit: 'Adet',
-        taxRate: 20,
-        category: 'Genel',
-        image: null as string | null
-    });
+    const [formData, setFormData] = useState<ProductFormData>(INITIAL_FORM_DATA);
 
-    useEffect(() => {
-        if (isOpen && db) {
-            loadProducts();
-            loadCategories();
-        }
-    }, [isOpen, db]);
-
-    const loadProducts = async () => {
+    const loadProducts = useCallback(async () => {
+        if (!db) return;
         const allProducts = await db.getAll<Product>('products');
         setProducts(allProducts);
-    };
+    }, [db]);
 
-    const loadCategories = async () => {
+    const loadCategories = useCallback(async () => {
+        if (!db) return;
         try {
             const storedCategories = await db.get<{ id?: string; key?: string; value: string[] }>('settings', 'product_categories');
             if (storedCategories && storedCategories.value) {
                 setCategories(storedCategories.value);
             } else {
-                // Initialize default categories if not found
                 const defaults = ['Genel', 'Hizmet', 'Elektronik', 'Giyim'];
                 await db.put('settings', { id: 'product_categories', key: 'product_categories', value: defaults });
                 setCategories(defaults);
@@ -91,16 +82,24 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         } catch (error) {
             Logger.error('Error loading categories:', error);
         }
-    };
+    }, [db]);
+
+    useEffect(() => {
+        if (isOpen && db) {
+            loadProducts();
+            loadCategories();
+        }
+    }, [isOpen, db, loadProducts, loadCategories]);
 
     const handleAddCategory = async () => {
-        if (!newCategoryName.trim()) return;
-        if (categories.includes(newCategoryName.trim())) {
+        const trimmed = newCategoryName.trim();
+        if (!trimmed) return;
+        if (categories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
             toast.error('Bu kategori zaten mevcut');
             return;
         }
 
-        const updatedCategories = [...categories, newCategoryName.trim()];
+        const updatedCategories = [...categories, trimmed];
         setCategories(updatedCategories);
         await db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories });
         setNewCategoryName('');
@@ -108,7 +107,27 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
     };
 
     const handleDeleteCategory = async (categoryToDelete: string) => {
-        setConfirmDialog({ isOpen: true, title: t('delete'), message: `${categoryToDelete} kategorisini silmek istediğinize emin misiniz?`, onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const updatedCategories = categories.filter(c => c !== categoryToDelete); setCategories(updatedCategories); db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories }); toast.success(t('deletedSuccess')); }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('delete'),
+            message: `${categoryToDelete} kategorisini silmek istediğinize emin misiniz?`,
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                const updatedCategories = categories.filter(c => c !== categoryToDelete);
+                setCategories(updatedCategories);
+                if (selectedCategory === categoryToDelete) {
+                    setSelectedCategory('Tümü');
+                }
+                try {
+                    await db.put('settings', { id: 'product_categories', key: 'product_categories', value: updatedCategories });
+                    toast.success(t('deletedSuccess'));
+                } catch (err) {
+                    Logger.error('Kategori silinemedi:', err);
+                    toast.error(t('error'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -121,36 +140,15 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         if (file) {
             try {
                 const optimizer = new ImageOptimizer();
-                const optimizedImage = await optimizer.optimizeImage(file);
-                setFormData(prev => ({ ...prev, image: optimizedImage as string | null }));
-            } catch (error) {
-                Logger.error("Image upload error:", error);
+                const base64 = await optimizer.optimizeImage(file);
+                setFormData(prev => ({ ...prev, image: base64 as string | null }));
+            } catch (err) {
+                Logger.error('Görsel optimizasyon hatası:', err);
                 toast.error(t('error'));
+            } finally {
+                e.target.value = '';
             }
         }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.name || !formData.price) {
-            toast.error('Ürün adı ve fiyatı zorunludur.');
-            return;
-        }
-
-        // Duplicate Check
-        if (!isEditing) {
-            const isDuplicate = products.some(p =>
-                p.name && p.name.trim().toLowerCase() === formData.name.trim().toLowerCase()
-            );
-
-            if (isDuplicate) {
-                setConfirmDialog({ isOpen: true, title: 'Mükerrer Ürün', message: 'Bu isimde bir ürün zaten kayıtlı. Yine de kaydetmek istiyor musunuz?', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performSave(); }, variant: 'warning' });
-                return;
-            }
-        }
-
-        performSave();
     };
 
     const performSave = async () => {
@@ -176,6 +174,43 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         }
     };
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formData.name || !formData.price) {
+            toast.error(t('productNameRequired'));
+            return;
+        }
+
+        const priceNum = parseFloat(formData.price);
+        if (isNaN(priceNum) || priceNum < 0) {
+            toast.error(t('error'));
+            return;
+        }
+
+        if (!isEditing) {
+            const isDuplicate = products.some(p =>
+                p.name && p.name.trim().toLowerCase() === formData.name.trim().toLowerCase()
+            );
+
+            if (isDuplicate) {
+                setConfirmDialog({
+                    isOpen: true,
+                    title: 'Mükerrer Ürün',
+                    message: 'Bu isimde bir ürün zaten kayıtlı. Yine de kaydetmek istiyor musunuz?',
+                    onConfirm: () => {
+                        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                        performSave();
+                    },
+                    variant: 'warning'
+                });
+                return;
+            }
+        }
+
+        performSave();
+    };
+
     const handleEdit = (product: Product) => {
         setCurrentProduct(product);
         setFormData({
@@ -188,10 +223,6 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
             image: product.image || null
         });
         setIsEditing(true);
-    };
-
-    const handleDelete = async (id: number | string) => {
-        setConfirmDialog({ isOpen: true, title: t('deleteProduct'), message: 'Bu ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)', onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); performDelete(id); }, variant: 'danger' });
     };
 
     const performDelete = async (id: number | string) => {
@@ -212,6 +243,9 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
                     newSelected.delete(id);
                     setSelectedProducts(newSelected);
                 }
+                if (currentProduct?.id === id) {
+                    resetForm();
+                }
             }
         } catch (error) {
             Logger.error(error);
@@ -219,8 +253,52 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         }
     };
 
+    const handleDelete = async (id: number | string) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: t('deleteProduct'),
+            message: 'Bu ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)',
+            onConfirm: () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                performDelete(id);
+            },
+            variant: 'danger'
+        });
+    };
+
     const handleBulkDelete = async () => {
-        setConfirmDialog({ isOpen: true, title: t('delete'), message: `${selectedProducts.size} adet ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`, onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { for (const id of selectedProducts) { const productToDelete = products.find(p => p.id === id); if (productToDelete) { await db.add('recycle_bin', { ...productToDelete, originalStore: 'products', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('products', id as IDBValidKey); } } toast.success(t('deletedSuccess')); setSelectedProducts(new Set()); loadProducts(); } catch (error) { Logger.error(error); toast.error(t('error')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('delete'),
+            message: `${selectedProducts.size} ürünü silmek istediğinize emin misiniz? (Geri Dönüşüm Kutusuna taşınacak)`,
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    for (const id of selectedProducts) {
+                        const productToDelete = products.find(p => p.id === id);
+                        if (productToDelete) {
+                            await db.add('recycle_bin', {
+                                ...productToDelete,
+                                originalStore: 'products',
+                                deletedAt: new Date().toISOString(),
+                                originalId: id
+                            });
+                        }
+                        await db.delete('products', id as IDBValidKey);
+                    }
+                    if (currentProduct && selectedProducts.has(currentProduct.id)) {
+                        resetForm();
+                    }
+                    toast.success(t('deletedSuccess'));
+                    setSelectedProducts(new Set());
+                    loadProducts();
+                } catch (error) {
+                    Logger.error(error);
+                    toast.error(t('error'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const toggleProductSelection = (id: number | string) => {
@@ -233,6 +311,17 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         setSelectedProducts(newSelected);
     };
 
+    const debouncedSearch = useDebounce(searchTerm, 250);
+    const filteredProducts = useMemo(() =>
+        products.filter(p => {
+            const q = debouncedSearch.toLowerCase();
+            const matchesSearch = p.name && p.name.toLowerCase().includes(q);
+            const matchesCategory = selectedCategory === 'Tümü' || selectedCategory === t('all') || p.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        }),
+        [products, debouncedSearch, selectedCategory, t]
+    );
+
     const toggleAllSelection = () => {
         if (selectedProducts.size === filteredProducts.length) {
             setSelectedProducts(new Set());
@@ -243,29 +332,10 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
     };
 
     const resetForm = () => {
-        setFormData({
-            name: '',
-            description: '',
-            price: '',
-            unit: 'Adet',
-            taxRate: 20,
-            category: 'Genel',
-            image: null
-        });
+        setFormData(INITIAL_FORM_DATA);
         setIsEditing(false);
         setCurrentProduct(null);
     };
-
-    const debouncedSearch = useDebounce(searchTerm, 250);
-    const filteredProducts = useMemo(() =>
-        products.filter(p => {
-            const q = debouncedSearch.toLowerCase();
-            const matchesSearch = p.name && p.name.toLowerCase().includes(q);
-            const matchesCategory = selectedCategory === 'Tümü' || p.category === selectedCategory;
-            return matchesSearch && matchesCategory;
-        }),
-        [products, debouncedSearch, selectedCategory]
-    );
 
     const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
     const paginatedProducts = useMemo(() =>
@@ -277,25 +347,28 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         setPage(newPage);
     }, []);
 
-    // Reset page on search/filter change
     useEffect(() => {
         setPage(1);
     }, [debouncedSearch, selectedCategory]);
 
-    const handleCancelEdit = () => {
-        resetForm();
-    };
-
     const handleExport = () => {
-        const dataStr = JSON.stringify(products, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
-        const exportFileDefaultName = `urunler_${new Date().toISOString().slice(0, 10)}.json`;
-
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', exportFileDefaultName);
-        linkElement.click();
+        try {
+            const dataStr = JSON.stringify(products, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const exportFileDefaultName = `urunler_${new Date().toISOString().slice(0, 10)}.json`;
+            const linkElement = document.createElement('a');
+            linkElement.href = url;
+            linkElement.download = exportFileDefaultName;
+            document.body.appendChild(linkElement);
+            linkElement.click();
+            document.body.removeChild(linkElement);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            toast.success(t('savedSuccess'));
+        } catch (error) {
+            Logger.error('Export error:', error);
+            toast.error(t('error'));
+        }
     };
 
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -346,88 +419,22 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t('productManagement')} size="xl">
             <div className="flex flex-col md:flex-row gap-6 h-[75vh]">
-
                 {/* Left: List/Grid */}
                 <div className="w-full md:w-3/5 flex flex-col border-r border-[var(--color-border)] pr-4">
-
-                    {/* Toolbar */}
-                    <div className="flex flex-col gap-2 mb-3">
-                        <div className="flex items-center gap-1.5">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
-                                <input
-                                    type="text"
-                                    className="form-control pl-8 text-xs"
-                                    placeholder={t('search')}
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex bg-[var(--color-bg-muted)] rounded p-0.5 border border-[var(--color-border)]">
-                                <button type="button"
-                                    className={`p-1 rounded ${viewMode === 'list' ? 'bg-[var(--color-bg-card)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`}
-                                    onClick={() => setViewMode('list')}
-                                    title={t('tableView')}
-                                >
-                                    <List size={14} />
-                                </button>
-                                <button type="button"
-                                    className={`p-1 rounded ${viewMode === 'grid' ? 'bg-[var(--color-bg-card)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`}
-                                    onClick={() => setViewMode('grid')}
-                                    title={t('galleryView')}
-                                >
-                                    <Grid size={14} />
-                                </button>
-                            </div>
-
-                            <label className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] cursor-pointer transition-colors" title={t('importExcel')}>
-                                <Upload size={14} />
-                                <input type="file" className="hidden" accept=".json, .xlsx, .xls, .csv" onChange={handleImport} />
-                            </label>
-                            <button type="button"
-                                className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-                                onClick={handleExport}
-                                title={t('exportExcel')}
-                            >
-                                <Download size={14} />
-                            </button>
-                        </div>
-
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                                <button type="button"
-                                    className={`px-3 py-1 text-sm rounded-full whitespace-nowrap transition-colors ${selectedCategory === 'Tümü' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`}
-                                    onClick={() => setSelectedCategory('Tümü')}
-                                >
-                                    Tümü
-                                </button>
-                                {categories.map(cat => (
-                                    <button type="button"
-                                        key={cat}
-                                        className={`px-3 py-1 text-sm rounded-full whitespace-nowrap transition-colors ${selectedCategory === cat ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-muted)] text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]'}`}
-                                        onClick={() => setSelectedCategory(cat)}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Bulk Actions Bar */}
-                        {selectedProducts.size > 0 && (
-                            <div className="flex justify-between items-center bg-[var(--color-error)]/10 p-2 rounded-lg border border-[var(--color-error)]/20">
-                                <span className="text-sm text-[var(--color-error)] font-medium px-2">
-                                    {selectedProducts.size} ürün seçildi
-                                </span>
-                                <button type="button"
-                                    className="btn btn-sm btn-danger flex items-center gap-1"
-                                    onClick={handleBulkDelete}
-                                >
-                                    <Trash2 size={14} /> {t('delete')}
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <ProductToolbar
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        viewMode={viewMode}
+                        onViewModeChange={setViewMode}
+                        categories={categories}
+                        selectedCategory={selectedCategory}
+                        onSelectCategory={setSelectedCategory}
+                        selectedCount={selectedProducts.size}
+                        onBulkDelete={handleBulkDelete}
+                        onImport={handleImport}
+                        onExport={handleExport}
+                        t={t}
+                    />
 
                     {/* Content Area */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
@@ -435,104 +442,30 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
                             <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)]">
                                 <p>{t('noData')}</p>
                             </div>
+                        ) : viewMode === 'list' ? (
+                            <ProductListView
+                                products={paginatedProducts}
+                                selectedProducts={selectedProducts}
+                                currentProductId={currentProduct?.id}
+                                onSelectAll={toggleAllSelection}
+                                onToggleSelect={toggleProductSelection}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                t={t}
+                            />
                         ) : (
-                            <>
-                                {viewMode === 'list' ? (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                                            <button type="button" onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]" aria-label={t('selectAllProducts')}>
-                                                {selectedProducts.size === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
-                                            </button>
-                                            <span className="flex-1">{t('productName')}</span>
-                                            <span className="w-24 text-right">{t('unitPrice')}</span>
-                                            <span className="w-8"></span>
-                                        </div>
-                                        {paginatedProducts.map(product => (
-                                            <div
-                                                key={product.id}
-                                                className={`p-3 border rounded-lg flex justify-between items-center group transition-colors cursor-pointer ${currentProduct?.id === product.id
-                                                    ? 'bg-[var(--color-bg-hover)] border-[var(--color-primary)]'
-                                                    : 'border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]'
-                                                    }`}
-                                                onClick={() => handleEdit(product)}
-                                            >
-                                                <div className="flex items-center gap-3 flex-1">
-                                                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }} className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]" aria-label={`${t('selectItem')}: ${product.name}`} aria-pressed={selectedProducts.has(product.id)}>
-                                                        {selectedProducts.has(product.id) ? <CheckSquare size={18} /> : <Square size={18} />}
-                                                    </button>
-                                                    {product.image ? (
-                                                        <img src={product.image} alt={product.name} className="w-10 h-10 object-cover rounded" />
-                                                    ) : (
-                                                        <div className="w-10 h-10 bg-[var(--color-bg-muted)] rounded flex items-center justify-center text-[var(--color-text-muted)] border border-[var(--color-border)]">
-                                                            <ImageIcon size={20} />
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <div className="font-medium text-[var(--color-text)]">{product.name}</div>
-                                                        <div className="text-xs text-[var(--color-text-muted)]">{product.category || 'Genel'}</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="font-semibold text-[var(--color-text)]">{product.price} ₺</div>
-                                                    <button
-                                                        type="button"
-                                                        className="p-2 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors md:opacity-0 md:group-hover:opacity-100"
-                                                        onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }}
-                                                        aria-label={`${t('deleteProduct')}: ${product.name}`}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {paginatedProducts.map(product => (
-                                            <div
-                                                key={product.id}
-                                                className={`border rounded-lg overflow-hidden group transition-all cursor-pointer flex flex-col ${currentProduct?.id === product.id
-                                                    ? 'ring-2 ring-[var(--color-primary)] border-transparent'
-                                                    : 'border-[var(--color-border)] hover:shadow-md'
-                                                    }`}
-                                                onClick={() => handleEdit(product)}
-                                            >
-                                                <div className="relative aspect-square bg-[var(--color-bg-muted)]">
-                                                    {product.image ? (
-                                                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[var(--color-text-muted)]">
-                                                            <ImageIcon size={32} />
-                                                        </div>
-                                                    )}
-                                                    <button type="button" className="absolute top-2 left-2" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }} aria-label={`${t('selectItem')}: ${product.name}`} aria-pressed={selectedProducts.has(product.id)}>
-                                                        <div className={`bg-[var(--color-bg-card)] rounded p-1 ${selectedProducts.has(product.id) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>
-                                                            {selectedProducts.has(product.id) ? <CheckSquare size={18} /> : <Square size={18} />}
-                                                        </div>
-                                                    </button>
-                                                    <div className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                                        <button
-                                                            type="button"
-                                                            className="p-1.5 bg-[var(--color-bg-card)] text-[var(--color-error)] hover:text-[var(--color-error)] rounded shadow-sm"
-                                                            onClick={(e) => { e.stopPropagation(); handleDelete(product.id); }}
-                                                            aria-label={`${t('deleteProduct')}: ${product.name}`}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="p-3 flex flex-col flex-1">
-                                                    <div className="font-medium text-[var(--color-text)] line-clamp-1" title={product.name}>{product.name}</div>
-                                                    <div className="text-xs text-[var(--color-text-muted)] mb-2">{product.category || 'Genel'}</div>
-                                                    <div className="mt-auto font-bold text-[var(--color-primary)]">{product.price} ₺</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </>
+                            <ProductGridView
+                                products={paginatedProducts}
+                                selectedProducts={selectedProducts}
+                                currentProductId={currentProduct?.id}
+                                onToggleSelect={toggleProductSelection}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                t={t}
+                            />
                         )}
                     </div>
+
                     {filteredProducts.length > PAGE_SIZE && (
                         <Pagination
                             currentPage={page}
@@ -542,181 +475,37 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
                             onPageChange={handlePageChange}
                         />
                     )}
-                </div >
+                </div>
 
                 {/* Right: Form */}
-                < div className="w-full md:w-2/5 pl-2 overflow-y-auto custom-scrollbar" >
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                            {isEditing ? t('edit') : t('addProduct')}
-                        </h3>
-                        <div className="flex gap-2">
-                            {isEditing ? (
-                                <button type="button" className="btn btn-sm btn-ghost text-[var(--color-text-muted)]" onClick={handleCancelEdit}>
-                                    {t('cancel')}
-                                </button>
-                            ) : (
-                                <button type="button"
-                                    className="btn btn-sm btn-ghost text-[var(--color-primary)]"
-                                    onClick={resetForm}
-                                    title="Formu Temizle"
-                                >
-                                    <Plus size={16} /> {t('add')}
-                                </button>
-                            )}
-                        </div>
-
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="form-group">
-                            <label className="form-label" htmlFor="productName">{t('productName')} <span className="text-[var(--color-error)]">*</span></label>
-                            <input type="text" className="form-control" id="productName" name="name" value={formData.name} onChange={handleInputChange} autoComplete="off" required />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="productPrice">{t('unitPrice')} (₺) <span className="text-[var(--color-error)]">*</span></label>
-                                <input type="number" className="form-control" id="productPrice" name="price" value={formData.price} onChange={handleInputChange} min="0" step="0.01" required />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="productUnit">Birim</label>
-                                <select className="form-control form-select" id="productUnit" name="unit" value={formData.unit} onChange={handleInputChange}>
-                                    <option value="Adet">{t('unitPiece')}</option>
-                                    <option value="Metre">{t('unitMeter')}</option>
-                                    <option value="Kg">{t('unitKg')}</option>
-                                    <option value="Litre">Litre</option>
-                                    <option value="Saat">{t('unitHour')}</option>
-                                    <option value="Gün">{t('unitDay')}</option>
-                                    <option value="Ay">{t('unitMonth')}</option>
-                                    <option value="Yıl">Yıl</option>
-                                    <option value="Paket">Paket</option>
-                                    <option value="Koli">{t('unitBox')}</option>
-                                    <option value="Set">Set</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label" htmlFor="productTax">{t('vatRate')} (%)</label>
-                            <select className="form-control form-select" id="productTax" name="taxRate" value={formData.taxRate} onChange={handleInputChange}>
-                                <option value="0">%0</option>
-                                <option value="1">%1</option>
-                                <option value="8">%8</option>
-                                <option value="10">%10</option>
-                                <option value="18">%18</option>
-                                <option value="20">%20</option>
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <div className="flex justify-between items-center mb-1">
-                                <label className="form-label mb-0" htmlFor="productCategory">{t('category')}</label>
-                                <button
-                                    type="button"
-                                    className="text-xs text-[var(--color-primary)] hover:underline"
-                                    onClick={() => setShowCategoryManager(!showCategoryManager)}
-                                >
-                                    {showCategoryManager ? t('close') : 'Yönet'}
-                                </button>
-                            </div>
-
-                            {showCategoryManager && (
-                                <div className="mb-3 p-3 bg-[var(--color-bg-muted)] rounded-lg border border-[var(--color-border)]">
-                                    <div className="flex gap-2 mb-2">
-                                        <input
-                                            type="text"
-                                            className="form-control text-sm"
-                                            placeholder="Yeni Kategori..."
-                                            value={newCategoryName}
-                                            onChange={(e) => setNewCategoryName(e.target.value)}
-                                        />
-                                        <button type="button" className="btn btn-sm btn-primary" onClick={handleAddCategory}>{t('add')}</button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                                        {categories.map(cat => (
-                                            <div key={cat} className="flex items-center gap-1 bg-[var(--color-bg-card)] px-2 py-1 rounded text-xs border border-[var(--color-border)]">
-                                                <span>{cat}</span>
-                                                {cat !== 'Genel' && (
-                                                    <button type="button" onClick={() => handleDeleteCategory(cat)} className="text-[var(--color-error)] hover:text-[var(--color-error)]">
-                                                        <X size={12} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <select
-                                className="form-control form-select"
-                                id="productCategory"
-                                name="category"
-                                value={formData.category}
-                                onChange={handleInputChange}
-                            >
-                                {categories.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label" htmlFor="productDescription">{t('description')}</label>
-                            <textarea
-                                className="form-control"
-                                id="productDescription"
-                                name="description"
-                                value={formData.description}
-                                onChange={handleInputChange}
-                                rows={3}
-                                placeholder="Ürün özellikleri, detaylar vb."
-                            ></textarea>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">{t('image')}</label>
-                            <div className="flex items-center gap-4">
-                                {formData.image ? (
-                                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-[var(--color-border)] group">
-                                        <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
-                                        <button
-                                            type="button"
-                                            className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                                            onClick={() => setFormData(prev => ({ ...prev, image: null }))}
-                                            aria-label={t('removeImage')}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)]">
-                                        <ImageIcon size={24} />
-                                    </div>
-                                )}
-                                <div className="flex-1">
-                                    <label className="btn btn-outline btn-sm cursor-pointer inline-flex items-center gap-2">
-                                        <Upload size={16} />
-                                        {t('addImage')}
-                                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                                    </label>
-                                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                                        PNG, JPG, WEBP (Max 2MB)
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-4">
-                            <button type="submit" className="btn btn-primary w-full">
-                                {isEditing ? t('save') : t('addProduct')}
-                            </button>
-                        </div>
-                    </form>
-                </div >
-            </div >
-            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
-        </Modal >
+                <ProductFormPanel
+                    isEditing={isEditing}
+                    formData={formData}
+                    categories={categories}
+                    showCategoryManager={showCategoryManager}
+                    newCategoryName={newCategoryName}
+                    onInputChange={handleInputChange}
+                    onImageUpload={handleImageUpload}
+                    onRemoveImage={() => setFormData(prev => ({ ...prev, image: null }))}
+                    onSubmit={handleSubmit}
+                    onCancelEdit={() => resetForm()}
+                    onResetForm={resetForm}
+                    onToggleCategoryManager={() => setShowCategoryManager(!showCategoryManager)}
+                    onNewCategoryNameChange={setNewCategoryName}
+                    onAddCategory={handleAddCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                    t={t}
+                />
+            </div>
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                onConfirm={confirmDialog.onConfirm}
+                onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                variant={confirmDialog.variant}
+            />
+        </Modal>
     );
 };
 

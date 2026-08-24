@@ -12,6 +12,7 @@ interface SortableRowCardProps {
   index: number;
   handleItemChange: (index: number, field: string, value: unknown) => void;
   onSelectProduct?: (index: number, product: ProductTypeaheadItem) => void;
+  onCreateProduct?: (index: number, name: string) => void;
   removeItem: (index: number) => void;
   duplicateItem: (index: number) => void;
   formatCurrency: (amount: number) => string;
@@ -23,10 +24,11 @@ interface SortableRowCardProps {
   toggleSelectItem: (index: number) => void;
   products?: ProductTypeaheadItem[];
   currency?: string;
+  taxMode?: 'exclusive' | 'inclusive';
 }
 
 const SortableRowCard = memo(
-  ({ item, index, handleItemChange, onSelectProduct, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem, products = [], currency = 'TRY' }: SortableRowCardProps) => {
+  ({ item, index, handleItemChange, onSelectProduct, onCreateProduct, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem, products = [], currency = 'TRY', taxMode = 'exclusive' }: SortableRowCardProps) => {
     const {
       attributes,
       listeners,
@@ -229,11 +231,11 @@ const SortableRowCard = memo(
               </label>
               <button
                 type="button"
-                onClick={() => handleItemChange(index, "discountType", (item as unknown as { discountType?: string }).discountType === 'fixed' ? 'percentage' : 'fixed')}
+                onClick={() => handleItemChange(index, "discountType", item.discountType === 'fixed' ? 'percentage' : 'fixed')}
                 className="text-[9px] font-bold text-[var(--color-primary)] px-1 py-0.5 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded hover:bg-[var(--color-bg-hover)]"
                 title="İskonto Tipi"
               >
-                {(item as unknown as { discountType?: string }).discountType === 'fixed' ? getCurrencySymbol(currency) : '%'}
+                {item.discountType === 'fixed' ? getCurrencySymbol(currency) : '%'}
               </button>
             </div>
             <input
@@ -241,7 +243,7 @@ const SortableRowCard = memo(
               type="text"
               inputMode="decimal"
               className="form-control text-sm text-center"
-              value={item.discountRate || 0}
+              value={item.discountRate ?? 0}
               onChange={(e) =>
                 handleItemChange(index, "discountRate", e.target.value)
               }
@@ -253,7 +255,14 @@ const SortableRowCard = memo(
             </span>
             <span className="text-sm font-bold text-[var(--color-primary)]">
               {formatCurrency(
-                calculateLineTotal({ quantity: item.quantity, price: item.price, discountRate: item.discountRate }),
+                calculateLineTotal({
+                  quantity: item.quantity,
+                  price: item.price,
+                  discountRate: item.discountRate,
+                  discountType: item.discountType,
+                  taxRate: item.taxRate,
+                  taxMode: taxMode
+                }),
               )}
             </span>
           </div>

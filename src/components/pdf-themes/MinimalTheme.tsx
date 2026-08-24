@@ -1,53 +1,33 @@
 import React, { useMemo } from 'react';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const MinimalTheme: React.FC<PdfThemeProps> = ({
-    id,
-    containerStyles,
-    config,
-    companyData,
-    quoteData,
-    customerData,
-    items,
-    bankData,
-    signature,
-    t,
-    formatDate,
-    formatCurrency,
-    subtotal,
-    discountAmount,
-    totalTax,
-    total,
-    currentLocale,
-    hasLineItemDiscounts,
-    onEdit,
-    activeLayout
-}) => {
-    // Helper for editable fields
-    const layoutMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
-        return map;
-    }, [activeLayout]);
-    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
+const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
+    const {
+        id,
+        containerStyles,
+        config,
+        companyData,
+        quoteData,
+        customerData,
+        items,
+        bankData,
+        signature,
+        t,
+        formatDate,
+        formatCurrency,
+        subtotal,
+        discountAmount,
+        totalTax,
+        total,
+        currentLocale,
+        hasLineItemDiscounts,
+        onEdit,
+        activeLayout
+    } = props;
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
-    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
-
-        return (
-            <span
-                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(fieldKey, value, type);
-                }}
-                title={t.clickToEdit}
-            >
-                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
-            </span>
-        );
-    };
 
     const minimalStyles = useMemo(() => `
         .minimal-theme-container {
@@ -141,18 +121,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
         }
     `, [config]);
 
-    const itemsPerPage = config.itemsPerPage || 15;
-    const itemChunks = useMemo(() => {
-        const chunks: QuoteItem[][] = [];
-        if (items.length === 0) {
-            chunks.push([]);
-        } else {
-            for (let i = 0; i < items.length; i += itemsPerPage) {
-                chunks.push(items.slice(i, i + itemsPerPage));
-            }
-        }
-        return chunks;
-    }, [items, itemsPerPage]);
+
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="minimal-table">
@@ -208,27 +177,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
                     pageBreakAfter: pageIndex < itemChunks.length - 1 ? 'always' : 'auto'
                 }}>
                     {/* Watermark */}
-                    {config.showWatermark && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                transform: `rotate(${config.watermarkRotation || -45}deg)`,
-                                opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 48}px`,
-                                fontWeight: 'bold',
-                                color: config.watermarkColor || '#000000',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {config.watermarkText}
-                        </div>
-                    )}
+                    <PdfWatermark config={config} />
 
                     {/* Header Section */}
                     {showSection('header') && (pageIndex === 0 ? (
@@ -255,7 +204,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
                                 )}
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.02em', color: '#0f172a' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.02em', color: '#0f172a' }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div style={{ marginTop: '3px', display: 'inline-flex', gap: '6px', fontSize: '7.5pt', background: '#f8fafc', padding: '2px 6px', borderRadius: '3px', border: '1px solid #e2e8f0' }}>
                                     <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
                                     <span>•</span>
@@ -267,7 +216,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', fontSize: '7.5pt', color: '#94a3b8' }}>
-                            <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
+                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
                             {config.showPageNumbers !== false && (
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             )}
@@ -291,12 +240,13 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
                                     </div>
                                 )}
                             </div>
+                            <PdfCustomFields customFields={quoteData.customFields} themeColor="#0f172a" />
                         </div>
                     )}
 
                     {/* Items Table */}
                     <div style={{ flex: 1 }}>
-                        {showSection('items') && renderTable(chunk, pageIndex * itemsPerPage)}
+                        {showSection('items') && renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                     </div>
 
                     {/* Totals Section & Footer - Only Last Page */}
@@ -348,7 +298,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
                                             <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
                                         <div style={{ fontSize: '6.5pt', color: '#64748b', fontStyle: 'italic', marginTop: '2px', textAlign: 'right' }}>
-                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                            {amountInWords}
                                         </div>
                                     </div>
                                 </div>
@@ -387,20 +337,10 @@ const MinimalTheme: React.FC<PdfThemeProps> = ({
                             </div>
                             )}
 
-                            {/* Custom Footer */}
-                            {config.customFooter && (
-                                <div style={{ marginTop: '2px', textAlign: 'center', fontSize: '6.5pt', color: '#94a3b8' }}>
-                                    {config.customFooter}
-                                </div>
-                            )}
+                            
 
                             {/* Page Number */}
-                            {config.showPageNumbers && (
-                                <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f8fafc', paddingTop: '2px' }}>
-                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                                </div>
-                            )}
+                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
                 </div>

@@ -1,54 +1,34 @@
 import React, { useMemo } from 'react';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const CorporateTheme: React.FC<PdfThemeProps> = ({
-    id,
-    containerStyles,
-    config,
-    color = '#1e3a8a',
-    companyData,
-    quoteData,
-    customerData,
-    items,
-    bankData,
-    signature,
-    t,
-    formatDate,
-    formatCurrency,
-    subtotal,
-    discountAmount,
-    totalTax,
-    total,
-    currentLocale,
-    hasLineItemDiscounts,
-    onEdit,
-    activeLayout
-}) => {
-    // Helper for editable fields
-    const layoutMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
-        return map;
-    }, [activeLayout]);
-    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
+const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
+    const {
+        id,
+        containerStyles,
+        config,
+        color = '#1e3a8a',
+        companyData,
+        quoteData,
+        customerData,
+        items,
+        bankData,
+        signature,
+        t,
+        formatDate,
+        formatCurrency,
+        subtotal,
+        discountAmount,
+        totalTax,
+        total,
+        currentLocale,
+        hasLineItemDiscounts,
+        onEdit,
+        activeLayout
+    } = props;
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
-    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
-
-        return (
-            <span
-                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(fieldKey, value, type);
-                }}
-                title={t.clickToEdit}
-            >
-                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
-            </span>
-        );
-    };
 
     const corporateStyles = useMemo(() => `
         .corporate-theme-container {
@@ -272,37 +252,9 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
         }
     `, [color, config]);
 
-    const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = useMemo(() => {
-        const chunks: QuoteItem[][] = [];
-        if (items.length === 0) {
-            chunks.push([]);
-        } else {
-            for (let i = 0; i < items.length; i += itemsPerPage) {
-                chunks.push(items.slice(i, i + itemsPerPage));
-            }
-        }
-        return chunks;
-    }, [items, itemsPerPage]);
 
-    const vatBreakdown = useMemo(() => {
-        const map: Record<number, { taxable: number; tax: number }> = {};
-        items.forEach((item) => {
-            const qty = Number(item.quantity) || 0;
-            const price = Number(item.price) || 0;
-            const discRate = Number(item.discountRate) || 0;
-            const rate = Number(item.taxRate) || 0;
-            const lineTotal = qty * price * (1 - discRate / 100);
-            const lineTax = (lineTotal * rate) / 100;
-            if (!map[rate]) {
-                map[rate] = { taxable: 0, tax: 0 };
-            }
-            map[rate].taxable += lineTotal;
-            map[rate].tax += lineTax;
-        });
-        return map;
-    }, [items]);
 
+    
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="corporate-table">
             <thead>
@@ -365,27 +317,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                     <div className="corporate-top-bar" />
 
                     {/* Watermark - Per Page */}
-                    {config.showWatermark && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                transform: `rotate(${config.watermarkRotation || -45}deg)`,
-                                opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 48}px`,
-                                fontWeight: 'bold',
-                                color: config.watermarkColor || '#000000',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {config.watermarkText}
-                        </div>
-                    )}
+                    <PdfWatermark config={config} />
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
@@ -407,7 +339,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                                 )}
                             </div>
                             <div className="corporate-title-box" style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div className="corporate-title" style={{ fontSize: '1.2rem', fontWeight: '800', color: color, textTransform: 'uppercase' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div className="corporate-title" style={{ fontSize: '1.2rem', fontWeight: '800', color: color, textTransform: 'uppercase' }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div className="corporate-meta" style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                     <div><strong>{t.quoteNo}:</strong> #{quoteData.number}</div>
                                     <span>•</span>
@@ -420,7 +352,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                     ) : (
                         <div className="corporate-header" style={{ borderBottom: '1px solid #e2e8f0', marginBottom: '8px', paddingBottom: '4px' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b' }}>
-                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
+                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -430,6 +362,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Customer & Company Details - 2 Column Cards */}
                     {showSection('customer') && pageIndex === 0 && (
+                        <>
                         <div className="corporate-parties-grid">
                             {/* Customer Card */}
                             <div className="corporate-party-card">
@@ -481,12 +414,14 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                                 </div>
                             </div>
                         </div>
+                        <PdfCustomFields customFields={quoteData.customFields} themeColor={color} />
+                    </>
                     )}
 
                     {/* Items */}
                     {showSection('items') && (
                     <div style={{ flex: 1 }}>
-                        {renderTable(chunk, pageIndex * itemsPerPage)}
+                        {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                     </div>
                     )}
 
@@ -509,7 +444,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                                         {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
                                             <div style={{ marginTop: '4px', fontSize: '7.5pt', color: '#64748b', lineHeight: '1.35' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                                {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'terms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
                                                 {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
@@ -549,7 +484,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
                                         <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
-                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                            {amountInWords}
                                         </div>
                                     </div>
                                 </div>
@@ -592,20 +527,10 @@ const CorporateTheme: React.FC<PdfThemeProps> = ({
                             </div>
                             )}
 
-                            {/* Custom Footer */}
-                            {config.customFooter && (
-                                <div style={{ marginTop: '2px', textAlign: 'center', fontSize: '6.5pt', color: '#64748b' }}>
-                                    {config.customFooter}
-                                </div>
-                            )}
+                            
 
                             {/* Page Number */}
-                            {config.showPageNumbers && (
-                                <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                                </div>
-                            )}
+                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
                 </div>

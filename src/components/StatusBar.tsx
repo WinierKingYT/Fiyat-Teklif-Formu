@@ -1,10 +1,10 @@
-﻿import { Save, Download, Plus, FileSpreadsheet } from 'lucide-react';
+import { Save, Download, Plus, FileSpreadsheet } from 'lucide-react';
 import React, { useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useQuoteData, useSaveStatus } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import { useTranslation } from '@/hooks/useTranslation';
-import { calculateQuoteTotals } from '@/utils/calculations';
+import { formatCurrency, calculateQuoteTotals } from '@/utils/calculations';
 import { exportQuoteToExcel } from '@/utils/excelExporter';
 
 const StatusBar = () => {
@@ -15,13 +15,13 @@ const StatusBar = () => {
 
   const itemCount = items?.length || 0;
   const calc = useMemo(() => calculateQuoteTotals(items || [], discount || {}, { currency: quoteData?.currency || 'TRY' }), [items, discount, quoteData?.currency]);
-  const total = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: quoteData?.currency || 'TRY' }).format(itemCount > 0 ? calc.grandTotal : 0);
+  const total = formatCurrency(itemCount > 0 ? calc.grandTotal : 0, quoteData?.currency || 'TRY');
 
   const isSaving = saveStatus?.status === 'saving';
 
   const handleAddItem = () => {
     const newItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       name: '',
       description: '',
       quantity: 1,
@@ -32,7 +32,7 @@ const StatusBar = () => {
       total: 0,
       image: undefined,
     };
-    setItems([...items, newItem]);
+    setItems((prev) => [...prev, newItem]);
   };
 
   const handleExcelExport = async () => {
@@ -62,7 +62,7 @@ const StatusBar = () => {
     <div className="status-bar">
       <div className="status-bar-left">
         {itemCount > 0 && (
-          <span className="status-item">{itemCount} kalem</span>
+          <span className="status-item">{itemCount} {t('itemsCount') || 'kalem'}</span>
         )}
         {saveStatus?.status && (
           <span className={`status-item status-${saveStatus.status}`} aria-live="polite" aria-atomic="true">
@@ -83,7 +83,7 @@ const StatusBar = () => {
           <button type="button" onClick={handleAddItem} className="status-action-btn status-pdf-btn" title={t('addItemBtn')}>
             <Plus size={14} />
           </button>
-          <button type="button" onClick={handleExcelExport} className="status-action-btn status-pdf-btn" title="Excel">
+          <button type="button" onClick={handleExcelExport} className="status-action-btn status-pdf-btn" title={t('exportExcel') || 'Excel'}>
             <FileSpreadsheet size={14} />
           </button>
         </div>

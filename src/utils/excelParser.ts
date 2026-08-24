@@ -8,6 +8,49 @@ export interface ImportedProduct {
     taxRate?: number;
 }
 
+const parseNumericValue = (val: unknown): number | undefined => {
+    if (val === undefined || val === null || val === '') return undefined;
+    if (typeof val === 'number' && Number.isFinite(val)) return val;
+    const str = String(val).trim();
+    let clean = str.replace(/[^0-9.,-]/g, '');
+    if (!clean) return undefined;
+
+    const hasDot = clean.includes('.');
+    const hasComma = clean.includes(',');
+
+    if (hasDot && hasComma) {
+        const lastDot = clean.lastIndexOf('.');
+        const lastComma = clean.lastIndexOf(',');
+        if (lastComma > lastDot) {
+            // Turkish: 1.000.000,50 -> 1000000.50
+            clean = clean.replace(/\./g, '').replace(',', '.');
+        } else {
+            // English: 1,000,000.50 -> 1000000.50
+            clean = clean.replace(/,/g, '');
+        }
+    } else if (hasDot) {
+        const dotCount = (clean.match(/\./g) || []).length;
+        if (dotCount > 1) {
+            clean = clean.replace(/\./g, '');
+        } else {
+            // Single dot: e.g. "1.000" vs "1.5"
+            const parts = clean.split('.');
+            if (parts[1] && parts[1].length === 3 && Number(parts[0]) > 0) {
+                clean = clean.replace('.', '');
+            }
+        }
+    } else if (hasComma) {
+        const commaCount = (clean.match(/,/g) || []).length;
+        if (commaCount > 1) {
+            clean = clean.replace(/,/g, '');
+        } else {
+            clean = clean.replace(',', '.');
+        }
+    }
+    const num = Number(clean);
+    return Number.isFinite(num) ? num : undefined;
+};
+
 /**
  * Parses an Excel or CSV file and returns a list of normalized products.
  * @param file - The file object to parse.
@@ -40,8 +83,8 @@ export const parseExcelFile = async (file: File): Promise<ImportedProduct[]> => 
                     return;
                 }
 
-                // Extract headers and map to standardized keys
-                const headers = jsonData[0].map(h => String(h ?? '').trim().toLowerCase());
+                // Extract headers and map to standardized keys using Turkish locale
+                const headers = jsonData[0].map(h => String(h ?? '').trim().toLocaleLowerCase('tr-TR'));
                 const rows = jsonData.slice(1);
 
                 const products: ImportedProduct[] = [];
@@ -54,11 +97,11 @@ export const parseExcelFile = async (file: File): Promise<ImportedProduct[]> => 
                         if (value === undefined || value === null) return;
 
                         // Map common Turkish and English headers to internal keys
-                        if (['ürün adı', 'urun adi', 'ürün', 'name', 'product name'].includes(header)) {
+                        if (['ürün adı', 'urun adi', 'ürün', 'urun', 'name', 'product name', 'kalem'].includes(header)) {
                             product.name = String(value).trim();
-                        } else if (['fiyat', 'birim fiyat', 'price', 'unit price'].includes(header)) {
-                            const parsed = Number(value);
-                            if (Number.isFinite(parsed)) product.price = parsed;
+                        } else if (['fiyat', 'birim fiyat', 'birim fiyati', 'price', 'unit price'].includes(header)) {
+                            const parsed = parseNumericValue(value);
+                            if (parsed !== undefined) product.price = parsed;
                         } else if (['birim', 'unit'].includes(header)) {
                             product.unit = String(value).trim();
                         } else if (['açıklama', 'aciklama', 'description', 'desc'].includes(header)) {
@@ -66,16 +109,26 @@ export const parseExcelFile = async (file: File): Promise<ImportedProduct[]> => 
                         } else if (['kategori', 'category'].includes(header)) {
                             product.category = String(value).trim();
                         } else if (['miktar', 'adet', 'quantity', 'qty'].includes(header)) {
-                            const parsed = Number(value);
-                            if (Number.isFinite(parsed)) product.quantity = parsed;
+                            const parsed = parseNumericValue(value);
+                            if (parsed !== undefined) product.quantity = parsed;
                         } else if (['kdv', 'kdv %', 'vat', 'tax rate', 'vergi'].includes(header)) {
-                            const parsed = Number(value);
-                            if (Number.isFinite(parsed)) product.taxRate = parsed;
+                            const parsed = parseNumericValue(value);
+                            if (parsed !== undefined) product.taxRate = parsed;
                         }
                     });
 
                     // Only return if it has at least a name
-                    if (product.name) products.push(product as ImportedProduct);
+                    if (product.name) {
+                        products.push({
+                            name: product.name,
+                            price: product.price ?? 0,
+                            unit: product.unit,
+                            description: product.description,
+                            category: product.category,
+                            quantity: product.quantity,
+                            taxRate: product.taxRate
+                        });
+                    }
                 });
 
                 resolve(products);

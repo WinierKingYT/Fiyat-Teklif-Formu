@@ -1,4 +1,4 @@
-﻿import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 
 interface ContextMenuItem {
   icon?: React.ReactNode;
@@ -19,11 +19,18 @@ const ContextMenu = ({ x, y, items: menuItems, onClose }: ContextMenuProps) => {
   const [pos, setPos] = useState({ x, y });
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handleMouseDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [onClose]);
 
   useEffect(() => {
@@ -38,7 +45,7 @@ const ContextMenu = ({ x, y, items: menuItems, onClose }: ContextMenuProps) => {
     }
   }, [x, y]);
 
-  if (!x && !y) return null;
+  if (x < 0 || y < 0 || menuItems.length === 0) return null;
 
   return (
     <div

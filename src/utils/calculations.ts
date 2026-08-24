@@ -51,11 +51,11 @@ export const calculateQuoteTotals = (
     const quantity = Number(item.quantity) || 0;
     let price = Number(item.price) || 0;
     const taxRate = Number(item.taxRate) || 0;
-    const isFixedDiscount = (item as unknown as { discountType?: string }).discountType === 'fixed';
+    const isFixedDiscount = item.discountType === 'fixed';
     const discountVal = Number(item.discountRate) || 0;
 
     if (isTaxInclusive && taxRate > 0) {
-      price = price / (1 + taxRate / 100);
+      price = roundMoney(price / (1 + taxRate / 100));
     }
 
     const grossTotal = quantity * price;
@@ -112,7 +112,7 @@ export const calculateQuoteTotals = (
 
     taxTotal += discountedTax;
 
-    if (item.taxRate > 0) {
+    if (item.taxRate !== 0) {
       const rateKey = String(item.taxRate);
       taxBreakdown[rateKey] = (taxBreakdown[rateKey] || 0) + discountedTax;
     }
@@ -144,6 +144,30 @@ function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function parseTrNumber(val: unknown): number {
+  const s = String(val ?? '').trim();
+  if (!s) return 0;
+  const normalized = s.replace(/[^\d.,-]/g, '');
+  if (!normalized) return 0;
+  const hasDot = normalized.includes('.');
+  const hasComma = normalized.includes(',');
+  let out = normalized;
+  if (hasDot && hasComma) {
+    out = normalized.lastIndexOf(',') > normalized.lastIndexOf('.') ? normalized.replace(/\./g, '').replace(',', '.') : normalized.replace(/,/g, '');
+  } else if (hasComma) {
+    const c = (normalized.match(/,/g) || []).length;
+    out = c > 1 ? normalized.replace(/,/g, '') : normalized.replace(',', '.');
+  } else if (hasDot) {
+    const d = (normalized.match(/\./g) || []).length;
+    if (d > 1) out = normalized.replace(/\./g, '');
+    else {
+      const parts = normalized.split('.');
+      if (parts[1]?.length === 3 && parts[0].length <= 3 && Number(parts[0]) > 0) out = normalized.replace('.', '');
+    }
+  }
+  const n = Number(out);
+  return Number.isFinite(n) ? n : 0;
+}
 export function calculateLineTotal(item: {
   quantity: number | string;
   price: number | string;
@@ -152,35 +176,87 @@ export function calculateLineTotal(item: {
   taxRate?: number | string;
   taxMode?: 'exclusive' | 'inclusive';
 }): number {
-  const quantity = parseFloat(String(item.quantity)) || 0;
-  let price = parseFloat(String(item.price)) || 0;
-  const taxRate = parseFloat(String(item.taxRate)) || 0;
-
-  if (item.taxMode === 'inclusive' && taxRate > 0) {
-    price = price / (1 + taxRate / 100);
+  const quantity = parseTrNumber(item.quantity);
+  let price = parseTrNumber(item.price);
+  const taxRate = parseTrNumber(item.taxRate);
+  const safeTax = Number.isFinite(taxRate) ? Math.min(Math.max(taxRate, 0), 100) : 0;
+  if (item.taxMode === 'inclusive' && safeTax > 0) {
+    price = roundMoney(price / (1 + safeTax / 100));
   }
-
-  const gross = quantity * price;
-  const discountVal = parseFloat(String(item.discountRate)) || 0;
-
+  const gross = (Number.isFinite(quantity) ? quantity : 0) * (Number.isFinite(price) ? price : 0);
+  const discountVal = parseTrNumber(item.discountRate);
   if (item.discountType === 'fixed') {
-    return Math.max(0, gross - discountVal);
+    return roundMoney(Math.max(0, gross - Math.max(0, discountVal)));
   }
-
-  return gross * (1 - Math.min(Math.max(discountVal, 0), 100) / 100);
+  return roundMoney(gross * (1 - Math.min(Math.max(discountVal, 0), 100) / 100));
 }
 
+const CURRENCY_LOCALES: Record<string, string> = {
+  TRY: 'tr-TR',
+  USD: 'en-US',
+  EUR: 'de-DE',
+  GBP: 'en-GB',
+  JPY: 'ja-JP',
+  CHF: 'de-CH',
+  CAD: 'en-CA',
+  AUD: 'en-AU',
+  CNY: 'zh-CN',
+  RUB: 'ru-RU',
+  SAR: 'ar-SA',
+  AED: 'ar-AE',
+  // Faz5: localeMap genişlet (para/tarih uyumu)
+  PLN: 'pl-PL',
+  SEK: 'sv-SE',
+  NOK: 'nb-NO',
+  DKK: 'da-DK',
+  HUF: 'hu-HU',
+  CZK: 'cs-CZ',
+  RON: 'ro-RO',
+  BGN: 'bg-BG',
+  HRK: 'hr-HR',
+  ILS: 'he-IL',
+  BRL: 'pt-BR',
+  MXN: 'es-MX',
+  SGD: 'en-SG',
+  HKD: 'zh-HK',
+  INR: 'en-IN',
+  ZAR: 'en-ZA',
+};
+
 export function formatCurrency(amount: number, currency: string = 'TRY'): string {
-  const locale = currency === 'TRY' ? 'tr-TR' : 'en-US';
-  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
+  const code = (currency || 'TRY').toUpperCase();
+  // Faz5: EUR locale de-DE (virgül ondalık), fallback güvenli
+  const locale = CURRENCY_LOCALES[code] ?? (code === 'TRY' ? 'tr-TR' : code === 'EUR' ? 'de-DE' : 'en-US');
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: code }).format(amount);
+  } catch {
+    // vat/tax fallback – güvenli fallback format
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(amount);
+    } catch {
+      return `${amount.toFixed(2)} ${code}`;
+    }
+  }
 }
 
 export function getCurrencySymbol(currency: string = 'TRY'): string {
-  switch (currency.toUpperCase()) {
+  // Faz5: currency kelime USD için de sembol tutarlı
+  switch ((currency ?? 'TRY').toUpperCase()) {
     case 'TRY': return '₺';
     case 'USD': return '$';
     case 'EUR': return '€';
     case 'GBP': return '£';
-    default: return currency;
+    case 'JPY': return '¥';
+    case 'CHF': return 'CHF';
+    case 'CAD': return 'CA$';
+    case 'AUD': return 'AU$';
+    case 'RUB': return '₽';
+    case 'SAR': return '﷼';
+    case 'AED': return 'د.إ';
+    case 'PLN': return 'zł';
+    case 'SEK': return 'kr';
+    case 'NOK': return 'kr';
+    case 'DKK': return 'kr';
+    default: return currency ?? 'TRY';
   }
 }

@@ -38,7 +38,7 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
     const { db } = useIndexedDB();
     const {
         quoteData, customerData, companyData, items, discount, bankData,
-        updateQuoteData, updateCustomerData, updateCompanyData, setItems, setDiscount, setBankData
+        loadQuote
     } = useQuoteData();
 
     const [templates, setTemplates] = useState<SavedTemplate[]>([]);
@@ -80,16 +80,18 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
             title: t('loadTemplateTitle'),
             message: t('loadTemplateConfirm').replace('{name}', template.name),
             onConfirm: () => {
-                setConfirmDialog({ ...confirmDialog, isOpen: false });
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 const { data } = template;
-                if (data.quoteData) Object.entries(data.quoteData).forEach(([k, v]) => updateQuoteData(k, v));
-                if (data.customerData) Object.entries(data.customerData).forEach(([k, v]) => updateCustomerData(k, v));
-                if (data.companyData) Object.entries(data.companyData).forEach(([k, v]) => updateCompanyData(k, v));
-                if (data.items) setItems(data.items);
-                if (data.discount) setDiscount(data.discount);
-                else if (data.discountRate) setDiscount({ type: 'percentage', value: data.discountRate });
-                if (data.bankData) setBankData(data.bankData);
-                toast.success(t('templateLoaded'));
+                loadQuote({
+                    id: undefined,
+                    quoteData: data.quoteData,
+                    customerData: data.customerData,
+                    companyData: data.companyData,
+                    bankData: data.bankData,
+                    items: data.items,
+                    discount: data.discount,
+                    discountRate: data.discountRate
+                });
                 onClose();
             },
             variant: 'warning'
@@ -97,8 +99,23 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
     };
 
     const handleDeleteTemplate = async (id: number) => {
-        setConfirmDialog({ isOpen: true, title: t('deleteTemplateTitle'), message: t('deleteTemplateConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('templates', id); toast.success(t('templateDeleted')); loadTemplates(); } catch (error) { Logger.error(error);
-                toast.error(t('templateDeleteError')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('deleteTemplateTitle'),
+            message: t('deleteTemplateConfirm'),
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    await db.delete('templates', id);
+                    toast.success(t('templateDeleted'));
+                    loadTemplates();
+                } catch (error) {
+                    Logger.error(error);
+                    toast.error(t('templateDeleteError'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const handleExportTemplate = (template: SavedTemplate) => {
@@ -108,10 +125,13 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `sablon_${template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+            const safeName = template.name.replace(/[/\\?%*:|"<>]/g, '_').toLowerCase();
+            const prefix = language === 'de' ? 'vorlage_' : language === 'en' ? 'template_' : 'sablon_';
+            link.download = `${prefix}${safeName}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
             toast.success(t('templateExported'));
         } catch (error) {
             Logger.error('Export error:', error);
@@ -119,22 +139,32 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
         }
     };
 
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
     const handleImportTemplate = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        const inputEl = e.target;
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
                 const importedTemplate = JSON.parse((event.target as FileReader).result as string);
                 if (!importedTemplate.data || !importedTemplate.name) throw new Error('Invalid template format');
-                const newTemplate = { ...importedTemplate, id: Date.now(), name: `${importedTemplate.name} (İçe Aktarıldı)` };
+                const suffix = t('importedSuffix') || 'İçe Aktarıldı';
+                const newTemplate = { ...importedTemplate, id: Date.now(), name: `${importedTemplate.name} (${suffix})` };
                 await db.add('templates', newTemplate);
                 toast.success(t('templateImported'));
                 loadTemplates();
             } catch (error) {
                 Logger.error('Import error:', error);
                 toast.error(t('templateImportError'));
+            } finally {
+                inputEl.value = '';
             }
+        };
+        reader.onerror = () => {
+            toast.error(t('templateImportError'));
+            inputEl.value = '';
         };
         reader.readAsText(file);
     };
@@ -156,10 +186,10 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-sm font-semibold text-[var(--color-text)]">{t('savedTemplates')}</h3>
                         <div className="flex gap-2">
-                            <button type="button" className="btn btn-sm btn-outline" onClick={() => document.getElementById('importTemplateInput')?.click()} title={t('importTemplate')}>
-                                <Upload size={14} /> İçe Aktar
+                            <button type="button" className="btn btn-sm btn-outline" onClick={() => fileInputRef.current?.click()} title={t('importTemplate')}>
+                                <Upload size={14} /> {t('import') || 'İçe Aktar'}
                             </button>
-                            <input type="file" id="importTemplateInput" accept=".json" style={{ display: 'none' }} onChange={handleImportTemplate} />
+                            <input type="file" ref={fileInputRef} accept=".json" style={{ display: 'none' }} onChange={handleImportTemplate} />
                         </div>
                     </div>
                     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
@@ -172,11 +202,11 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
                                 <div key={template.id} className="flex items-center justify-between p-3 border border-[var(--color-border)] rounded-[var(--radius)] hover:bg-[var(--color-bg-hover)] transition-colors">
                                     <div>
                                         <div className="font-medium text-[var(--color-text)]">{template.name}</div>
-                                        <div className="text-xs text-[var(--color-text-muted)]">{template.createdAt ? new Date(template.createdAt).toLocaleDateString('tr-TR') : ''}</div>
+                                        <div className="text-xs text-[var(--color-text-muted)]">{template.createdAt ? new Date(template.createdAt).toLocaleDateString() : ''}</div>
                                     </div>
                                     <div className="flex gap-2">
                                         <button type="button" className="btn btn-sm btn-outline" onClick={() => handleLoadTemplate(template)} title={t('loadTemplate')}>
-                                            <FileInput size={14} /> Yükle
+                                            <FileInput size={14} /> {t('load') || 'Yükle'}
                                         </button>
                                         <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDeleteTemplate(template.id)} title={t('deleteTemplate')}>
                                             <Trash2 size={14} />
@@ -191,7 +221,7 @@ const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({ isOpen, onC
                     </div>
                 </div>
             </div>
-            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} variant={confirmDialog.variant} />
+            <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} variant={confirmDialog.variant} />
         </Modal>
     );
 };

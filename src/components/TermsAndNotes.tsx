@@ -1,52 +1,71 @@
 import { FileText, Truck, Shield, StickyNote, Stamp } from 'lucide-react';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { QuoteData } from '@/context/quote/types';
 
-const fields = [
-    {
-        id: 'terms',
-        icon: FileText,
-        labelKey: 'paymentTerms',
-        presets: ['%50 Peşin, %50 Teslimatta', 'Peşin Ödeme', '30 Gün Vade']
-    },
-    {
-        id: 'deliveryTerms',
-        icon: Truck,
-        labelKey: 'deliveryTerms',
-        presets: ['3 İş Günü', '1 Hafta İçinde', 'Stoktan Hemen Teslim']
-    },
-    {
-        id: 'warrantyTerms',
-        icon: Shield,
-        labelKey: 'warrantyTerms',
-        presets: ['2 Yıl Garanti', '1 Yıl Birebir Değişim', 'Üretici Garantili']
-    },
-    {
-        id: 'notes',
-        icon: StickyNote,
-        labelKey: 'extraNotes',
-        presets: ['Fiyatlarımıza KDV dahildir.', 'Teklif 15 gün geçerlidir.']
-    },
-];
+const WATERMARK_PRESETS_BY_LANG: Record<string, Record<string, string>> = {
+  tr: { draft: 'TASLAK', preview: 'ÖN TEKLİF', confidential: 'GİZLİDİR', approved: 'ONAYLANDI' },
+  en: { draft: 'DRAFT', preview: 'PREVIEW', confidential: 'CONFIDENTIAL', approved: 'APPROVED' },
+  de: { draft: 'ENTWURF', preview: 'VORSCHAU', confidential: 'VERTRAULICH', approved: 'GENEHMIGT' },
+};
+
+const getPresetFields = (lang: string = 'tr') => {
+  if (lang === 'en') {
+    return [
+      { id: 'terms', icon: FileText, labelKey: 'paymentTerms', presets: ['50% Advance, 50% on Delivery', 'Cash Payment', 'Net 30 Days'] },
+      { id: 'deliveryTerms', icon: Truck, labelKey: 'deliveryTerms', presets: ['3 Business Days', 'Within 1 Week', 'Immediate Ex-Stock'] },
+      { id: 'warrantyTerms', icon: Shield, labelKey: 'warrantyTerms', presets: ['2 Years Warranty', '1 Year Replacement', 'Manufacturer Warranty'] },
+      { id: 'notes', icon: StickyNote, labelKey: 'extraNotes', presets: ['Prices include applicable taxes.', 'Quote valid for 15 days.'] },
+    ];
+  }
+  if (lang === 'de') {
+    return [
+      { id: 'terms', icon: FileText, labelKey: 'paymentTerms', presets: ['50% Anzahlung, 50% bei Lieferung', 'Barzahlung', '30 Tage Zahlungsziel'] },
+      { id: 'deliveryTerms', icon: Truck, labelKey: 'deliveryTerms', presets: ['3 Werktage', 'Innerhalb von 1 Woche', 'Sofort ab Lager'] },
+      { id: 'warrantyTerms', icon: Shield, labelKey: 'warrantyTerms', presets: ['2 Jahre Garantie', '1 Jahr Direktersatz', 'Herstellergarantie'] },
+      { id: 'notes', icon: StickyNote, labelKey: 'extraNotes', presets: ['Preise verstehen sich inklusive MwSt.', 'Angebot 15 Tage gültig.'] },
+    ];
+  }
+  return [
+    { id: 'terms', icon: FileText, labelKey: 'paymentTerms', presets: ['%50 Peşin, %50 Teslimatta', 'Peşin Ödeme', '30 Gün Vade'] },
+    { id: 'deliveryTerms', icon: Truck, labelKey: 'deliveryTerms', presets: ['3 İş Günü', '1 Hafta İçinde', 'Stoktan Hemen Teslim'] },
+    { id: 'warrantyTerms', icon: Shield, labelKey: 'warrantyTerms', presets: ['2 Yıl Garanti', '1 Yıl Birebir Değişim', 'Üretici Garantili'] },
+    { id: 'notes', icon: StickyNote, labelKey: 'extraNotes', presets: ['Fiyatlarımıza KDV dahildir.', 'Teklif 15 gün geçerlidir.'] },
+  ];
+};
 
 interface TermsAndNotesProps {
     data: Partial<QuoteData>;
     onChange: (field: string, value: string) => void;
 }
 
-const watermarkMap: Record<string, string> = {
-    draft: 'TASLAK',
-    preview: 'ÖN TEKLİF',
-    confidential: 'GİZLİDİR',
-    approved: 'ONAYLANDI'
-};
-
 const TermsAndNotes: React.FC<TermsAndNotesProps> = ({ data, onChange }) => {
     const { quoteData } = useQuoteData();
-    const { setPdfConfig } = usePdfConfig();
-    const { t } = useTranslation(quoteData?.language);
+    const { pdfConfig, setPdfConfig } = usePdfConfig();
+    const currentLang = quoteData?.language || 'tr';
+    const { t } = useTranslation(currentLang);
+
+    const watermarkMap = useMemo(() =>
+        WATERMARK_PRESETS_BY_LANG[currentLang] || WATERMARK_PRESETS_BY_LANG.tr,
+        [currentLang]
+    );
+
+    const fields = useMemo(() => getPresetFields(currentLang), [currentLang]);
+
+    const activeWatermark = useMemo(() => {
+        if (!pdfConfig.showWatermark) return 'none';
+        const txt = (pdfConfig.watermarkText || '').toUpperCase();
+        for (const [key, val] of Object.entries(watermarkMap)) {
+            if (val === txt) return key;
+        }
+        for (const langMap of Object.values(WATERMARK_PRESETS_BY_LANG)) {
+            for (const [key, val] of Object.entries(langMap)) {
+                if (val === txt) return key;
+            }
+        }
+        return 'draft';
+    }, [pdfConfig.showWatermark, pdfConfig.watermarkText, watermarkMap]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -76,20 +95,20 @@ const TermsAndNotes: React.FC<TermsAndNotesProps> = ({ data, onChange }) => {
             <div className="flex items-center justify-between p-2 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded-[var(--radius)] text-xs">
                 <div className="flex items-center gap-1.5 font-medium text-[var(--color-text)]">
                     <Stamp size={14} className="text-[var(--color-primary)]" />
-                    <span>PDF Filigranı:</span>
+                    <span>{t('watermarkLabel') || 'PDF Filigranı'}:</span>
                 </div>
                 <select
                     name="watermark"
-                    value={data.watermark || 'none'}
+                    value={activeWatermark}
                     onChange={handleWatermarkChange}
-                    aria-label="PDF Filigranı"
+                    aria-label={t('watermarkLabel') || 'PDF Filigranı'}
                     className="text-xs bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text)] outline-none cursor-pointer"
                 >
-                    <option value="none">Filigran Yok</option>
-                    <option value="draft">TASLAK</option>
-                    <option value="preview">ÖN TEKLİF</option>
-                    <option value="confidential">GİZLİDİR</option>
-                    <option value="approved">ONAYLANDI</option>
+                    <option value="none">{t('watermarkNoWatermark') || 'Filigran Yok'}</option>
+                    <option value="draft">{watermarkMap.draft}</option>
+                    <option value="preview">{watermarkMap.preview}</option>
+                    <option value="confidential">{watermarkMap.confidential}</option>
+                    <option value="approved">{watermarkMap.approved}</option>
                 </select>
             </div>
 

@@ -37,6 +37,8 @@ export default defineConfig([
       },
     },
     rules: {
+      // Faz6: no-console – prod log sızıntısını engelle
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       'import-x/no-unresolved': 'error',
       'no-unused-vars': 'off',
       'react-refresh/only-export-components': 'off',
@@ -73,5 +75,9 @@ export default defineConfig([
         pathGroupsExcludedImportTypes: ['builtin', 'type'],
       }],
     },
+  },
+  {
+    files: ['src/utils/logger.ts'],
+    rules: { 'no-console': 'off' },
   },
 ])

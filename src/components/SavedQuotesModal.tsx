@@ -56,9 +56,37 @@ const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, on
         }
     };
 
-    const handleDelete = async (id: number, e?: React.MouseEvent) => {
+    const handleDelete = async (id: number, e?: React.MouseEvent, onAfterDelete?: () => void) => {
         if (e) e.stopPropagation();
-        setConfirmDialog({ isOpen: true, title: t('deleteQuote'), message: t('deleteQuoteConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); const quoteToDelete = quotes.find(q => q.id === id); try { if (quoteToDelete) { await (db).add('recycle_bin', { originalStore: 'quotes', originalId: id, deletedAt: new Date().toISOString(), deletedBy: 'user', data: quoteToDelete }); } await (db).delete('quotes', id); toast.success(t('quoteMovedToBin')); loadQuotes(); if (currentQuoteId === id) setCurrentQuoteId(null); } catch (error) { Logger.error('Error deleting quote:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('deleteQuote'),
+            message: t('deleteQuoteConfirm'),
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                const quoteToDelete = quotes.find(q => q.id === id);
+                try {
+                    if (quoteToDelete) {
+                        await (db).add('recycle_bin', {
+                            originalStore: 'quotes',
+                            originalId: id,
+                            deletedAt: new Date().toISOString(),
+                            deletedBy: 'user',
+                            data: quoteToDelete
+                        });
+                    }
+                    await (db).delete('quotes', id);
+                    toast.success(t('quoteMovedToBin'));
+                    loadQuotes();
+                    if (currentQuoteId === id) setCurrentQuoteId(null);
+                    if (onAfterDelete) onAfterDelete();
+                } catch (error) {
+                    Logger.error('Error deleting quote:', error);
+                    toast.error(t('deleteFailedQuote'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const handleSaveCurrent = async () => {
@@ -72,22 +100,35 @@ const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, on
         if (!currentQuoteId) return;
         const currentQuote = quotes.find(q => q.id === currentQuoteId);
         if (currentQuote && (currentQuote.status === 'sent' || currentQuote.status === 'accepted')) {
-            setConfirmDialog({ isOpen: true, title: t('deleteSentQuote'), message: t('deleteSentQuoteConfirm'), onConfirm: () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); handleDelete(currentQuoteId!); onClose(); onNewQuote(); }, variant: 'danger' });
+            setConfirmDialog({
+                isOpen: true,
+                title: t('deleteSentQuote'),
+                message: t('deleteSentQuoteConfirm'),
+                onConfirm: () => {
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    handleDelete(currentQuoteId!, undefined, () => {
+                        onClose();
+                        onNewQuote();
+                    });
+                },
+                variant: 'danger'
+            });
             return;
         }
-        handleDelete(currentQuoteId);
-        onClose();
-        onNewQuote();
+        handleDelete(currentQuoteId, undefined, () => {
+            onClose();
+            onNewQuote();
+        });
     };
 
     const debouncedSearch = useDebounce(searchTerm, 250);
     const filteredQuotes = useMemo(() =>
         quotes.filter(q => {
-            const qs = debouncedSearch.toLowerCase();
-            return q.quoteData?.title?.toLowerCase().includes(qs) ||
-                q.quoteData?.number?.toLowerCase().includes(qs) ||
-                q.customerData?.name?.toLowerCase().includes(qs) ||
-                q.customerData?.company?.toLowerCase().includes(qs);
+            const qs = debouncedSearch.toLocaleLowerCase('tr-TR');
+            return (q.quoteData?.title || '').toLocaleLowerCase('tr-TR').includes(qs) ||
+                (q.quoteData?.number || '').toLocaleLowerCase('tr-TR').includes(qs) ||
+                (q.customerData?.name || '').toLocaleLowerCase('tr-TR').includes(qs) ||
+                (q.customerData?.company || '').toLocaleLowerCase('tr-TR').includes(qs);
         }),
         [quotes, debouncedSearch]
     );
@@ -106,6 +147,14 @@ const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, on
         setPage(1);
     }, [debouncedSearch]);
 
+    const formatDate = (dateStr?: string) => {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '-';
+        const locale = language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : 'tr-TR';
+        return d.toLocaleDateString(locale);
+    };
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={t('quoteActions')} size="lg">
             <div className="space-y-2.5 h-[65vh] flex flex-col">
@@ -115,10 +164,10 @@ const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, on
                         <input type="text" className="form-control pl-8 text-xs" placeholder={t('searchQuotes')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                     <button type="button" className="btn btn-outline btn-xs whitespace-nowrap" onClick={handleSaveCurrent} title={t('saveCurrentQuote')}>
-                        <Save size={13} /> Kaydet
+                        <Save size={13} /> {t('save')}
                     </button>
                     <button type="button" className="btn btn-primary btn-xs whitespace-nowrap" onClick={handleNew} title={t('createNewQuote')}>
-                        <PlusCircle size={13} /> Yeni Teklif
+                        <PlusCircle size={13} /> {t('newQuote')}
                     </button>
                 </div>
 
@@ -149,8 +198,9 @@ const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, on
                                 </thead>
                                 <tbody className="divide-y divide-[var(--color-border)]/50">
                                     {paginatedQuotes.map((quote) => {
-                                        const quoteCurrency = quote.quoteData?.currency || 'TRY';
-                                        const calc = calculateQuoteTotals(quote.items || [], quote.discount || {}, { currency: quoteCurrency });
+                                        const quoteCurrency = quote.quoteData?.currency || quote.currency || 'TRY';
+                                        const quoteDiscount = quote.discount || (quote.discountRate ? { type: (quote.discountType || 'percentage') as 'percentage' | 'fixed', value: quote.discountRate } : { type: 'percentage' as const, value: 0 });
+                                        const calc = calculateQuoteTotals(quote.items || [], quoteDiscount, { currency: quoteCurrency });
                                         return (
                                             <tr
                                                 key={quote.id}
@@ -160,7 +210,7 @@ const SavedQuotesModal: React.FC<SavedQuotesModalProps> = ({ isOpen, onClose, on
                                                 <td className="p-2.5 text-[var(--color-text-muted)] whitespace-nowrap">
                                                     <div className="flex items-center gap-1">
                                                         <Clock size={12} />
-                                                        {quote.createdAt ? new Date(quote.createdAt).toLocaleDateString('tr-TR') : '-'}
+                                                        {formatDate(quote.createdAt)}
                                                     </div>
                                                 </td>
                                                 <td className="p-2.5 font-mono font-semibold text-[var(--color-text)]">{quote.quoteData?.number || '-'}</td>

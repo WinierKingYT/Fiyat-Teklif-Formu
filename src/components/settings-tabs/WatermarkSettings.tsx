@@ -12,6 +12,13 @@ interface WatermarkSettingsProps {
 const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) => {
   const { quoteData } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
+  const watermarkPresets = React.useMemo(() => {
+    const lang = quoteData?.language || 'tr';
+    if (lang === 'en') return ['DRAFT', 'PREVIEW', 'CONFIDENTIAL', 'APPROVED'];
+    if (lang === 'de') return ['ENTWURF', 'ANGEBOT', 'VERTRAULICH', 'GENEHMIGT'];
+    return ['TASLAK', 'ÖN TEKLİF', 'GİZLİ', 'ONAYLANDI'];
+  }, [quoteData?.language]);
+
   return (
     <div className="card">
       <div className="card-header">
@@ -56,7 +63,7 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
                 <div className="flex items-center justify-between mb-1">
                   <label className="form-label mb-0">{t('watermarkTextLabel')}</label>
                   <div className="flex gap-1">
-                    {['TASLAK', 'ÖN TEKLİF', 'GİZLİ', 'ONAYLANDI'].map((preset) => (
+                    {watermarkPresets.map((preset) => (
                       <button
                         type="button"
                         key={preset}

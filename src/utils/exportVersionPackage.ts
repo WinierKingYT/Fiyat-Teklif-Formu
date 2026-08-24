@@ -9,6 +9,16 @@ export interface VersionPackageResult {
     fileName: string;
 }
 
+const escapeHtml = (text: unknown): string => {
+    if (text == null) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
 export const generatePrintableHtml = (quote: DbQuote, version: QuoteVersion): string => {
     const quoteCurrency = quote.quoteData?.currency || 'TRY';
     const calc = calculateQuoteTotals(quote.items || [], quote.discount || {}, { currency: quoteCurrency });
@@ -16,18 +26,18 @@ export const generatePrintableHtml = (quote: DbQuote, version: QuoteVersion): st
     const comp = quote.companyData || {};
     const bank = quote.bankData || {};
 
-    const rows = (quote.items || []).map((item, idx) => `
+    const rows = calc.items.map((item, idx) => `
         <tr>
             <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;">${idx + 1}</td>
             <td style="padding:8px;border-bottom:1px solid #e2e8f0;">
-                <strong>${item.name || '-'}</strong>
-                ${item.description ? `<div style="font-size:12px;color:#64748b;">${item.description}</div>` : ''}
+                <strong>${escapeHtml(item.name || '-')}</strong>
+                ${item.description ? `<div style="font-size:12px;color:#64748b;">${escapeHtml(item.description)}</div>` : ''}
             </td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${item.quantity || 0} ${item.unit || ''}</td>
+            <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${item.quantity || 0} ${escapeHtml(item.unit || '')}</td>
             <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">${Number(item.price || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
             <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">%${item.discountRate || 0}</td>
             <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">%${item.taxRate || 0}</td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${Number(item.total ?? item.quantity * item.price).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+            <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${Number(item.netTotal).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
         </tr>
     `).join('');
 
@@ -36,7 +46,7 @@ export const generatePrintableHtml = (quote: DbQuote, version: QuoteVersion): st
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${quote.quoteData?.title || 'Fiyat Teklifi'} - ${version.versionName || 'Sürüm'}</title>
+    <title>${escapeHtml(quote.quoteData?.title || 'Fiyat Teklifi')} - ${escapeHtml(version.versionName || 'Sürüm')}</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 24px; color: #1e293b; background: #fff; line-height: 1.5; }
         .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px; }
@@ -55,11 +65,11 @@ export const generatePrintableHtml = (quote: DbQuote, version: QuoteVersion): st
 <body>
     <div class="header">
         <div>
-            <h1 style="margin:0 0 4px 0; font-size: 22px;">${quote.quoteData?.title || 'FİYAT TEKLİFİ'}</h1>
-            <div style="color: #64748b; font-size: 14px;">Teklif No: <strong>${quote.quoteData?.number || '-'}</strong> | Tarih: ${quote.quoteData?.date || '-'}</div>
+            <h1 style="margin:0 0 4px 0; font-size: 22px;">${escapeHtml(quote.quoteData?.title || 'FİYAT TEKLİFİ')}</h1>
+            <div style="color: #64748b; font-size: 14px;">Teklif No: <strong>${escapeHtml(quote.quoteData?.number || '-')}</strong> | Tarih: ${escapeHtml(quote.quoteData?.date || '-')}</div>
         </div>
         <div style="text-align: right;">
-            <span class="badge">Sürüm: ${version.versionName || 'Snapshot'}</span>
+            <span class="badge">Sürüm: ${escapeHtml(version.versionName || 'Snapshot')}</span>
             <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Kayıt: ${new Date(version.createdAt).toLocaleString('tr-TR')}</div>
         </div>
     </div>
@@ -67,18 +77,18 @@ export const generatePrintableHtml = (quote: DbQuote, version: QuoteVersion): st
     <div class="grid">
         <div class="box">
             <h3>Müşteri Bilgileri</h3>
-            <strong>${c.company || c.name || '-'}</strong>
-            ${c.company && c.name ? `<div>Yetkili: ${c.name}</div>` : ''}
-            ${c.email ? `<div>E-posta: ${c.email}</div>` : ''}
-            ${c.phone ? `<div>Tel: ${c.phone}</div>` : ''}
-            ${c.address ? `<div>Adres: ${c.address}</div>` : ''}
+            <strong>${escapeHtml(c.company || c.name || '-')}</strong>
+            ${c.company && c.name ? `<div>Yetkili: ${escapeHtml(c.name)}</div>` : ''}
+            ${c.email ? `<div>E-posta: ${escapeHtml(c.email)}</div>` : ''}
+            ${c.phone ? `<div>Tel: ${escapeHtml(c.phone)}</div>` : ''}
+            ${c.address ? `<div>Adres: ${escapeHtml(c.address)}</div>` : ''}
         </div>
         <div class="box">
             <h3>Teklifi Hazırlayan</h3>
-            <strong>${comp.name || '-'}</strong>
-            ${comp.authorized ? `<div>Yetkili: ${comp.authorized}</div>` : ''}
-            ${comp.email ? `<div>E-posta: ${comp.email}</div>` : ''}
-            ${comp.phone ? `<div>Tel: ${comp.phone}</div>` : ''}
+            <strong>${escapeHtml(comp.name || '-')}</strong>
+            ${comp.authorized ? `<div>Yetkili: ${escapeHtml(comp.authorized)}</div>` : ''}
+            ${comp.email ? `<div>E-posta: ${escapeHtml(comp.email)}</div>` : ''}
+            ${comp.phone ? `<div>Tel: ${escapeHtml(comp.phone)}</div>` : ''}
         </div>
     </div>
 

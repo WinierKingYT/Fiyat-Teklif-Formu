@@ -1,66 +1,88 @@
 import { Eraser, Check, Upload, X } from 'lucide-react';
-import React from 'react';
-import { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { useTranslation } from '@/hooks/useTranslation';
+import ImageOptimizer from '@/utils/imageOptimizer';
 
 interface SignatureCanvasProps {
     onSave: (dataUrl: string) => void;
     onClear?: () => void;
     savedSignature?: string;
+    language?: string;
 }
 
-const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasProps) => {
+const SignatureCanvas = ({ onSave, onClear, savedSignature, language = 'tr' }: SignatureCanvasProps) => {
+    const { t } = useTranslation(language);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const lastSavedUrlRef = useRef<string | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasSignature, setHasSignature] = useState(false);
     const [lineWidth, setLineWidth] = useState(2);
 
+    // Initialize canvas dimensions on mount
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const parent = canvas.parentElement;
+        if (parent) {
+            canvas.width = parent.clientWidth || 300;
+            canvas.height = 200;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#000000';
+            }
+        }
+    }, []);
+
+    // Update stroke style and line width dynamically
     useEffect(() => {
         const canvas = canvasRef.current;
         if (canvas) {
             const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = lineWidth;
-
-            // Set canvas size based on parent
-            const resizeCanvas = () => {
-                const parent = canvas.parentElement;
-                if (parent) {
-                    canvas.width = parent.clientWidth;
-                    canvas.height = 200; // Fixed height
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.strokeStyle = '#000000';
-                    ctx.lineWidth = lineWidth;
-
-                    // Redraw saved signature if exists
-                    if (savedSignature) {
-                        const img = new Image();
-                        img.onload = () => {
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            const scale = Math.min(
-                                canvas.width / img.width,
-                                canvas.height / img.height
-                            ) * 0.8;
-                            const w = img.width * scale;
-                            const h = img.height * scale;
-                            const x = (canvas.width - w) / 2;
-                            const y = (canvas.height - h) / 2;
-                            ctx.drawImage(img, x, y, w, h);
-                        };
-                        img.src = savedSignature;
-                    }
-                }
-            };
-
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-
-            return () => window.removeEventListener('resize', resizeCanvas);
+            if (ctx) {
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = lineWidth;
+            }
         }
-    }, [lineWidth, savedSignature]);
+    }, [lineWidth]);
+
+    // Redraw external saved signature only when changed from outside
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Skip redraw if this is the signature we just generated from user drawing
+        if (savedSignature && savedSignature === lastSavedUrlRef.current) {
+            return;
+        }
+
+        if (savedSignature) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const scale = Math.min(
+                    canvas.width / img.width,
+                    canvas.height / img.height
+                ) * 0.8;
+                const w = img.width * scale;
+                const h = img.height * scale;
+                const x = (canvas.width - w) / 2;
+                const y = (canvas.height - h) / 2;
+                ctx.drawImage(img, x, y, w, h);
+                setHasSignature(true);
+            };
+            img.src = savedSignature;
+        } else if (!savedSignature && lastSavedUrlRef.current) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            setHasSignature(false);
+            lastSavedUrlRef.current = null;
+        }
+    }, [savedSignature]);
 
     const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
@@ -113,6 +135,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
         if (ctx) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             setHasSignature(false);
+            lastSavedUrlRef.current = null;
             onClear?.();
         }
     };
@@ -172,14 +195,47 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
         if (canvas) {
             const trimmedCanvas = trimCanvas(canvas);
             if (trimmedCanvas) {
-                onSave(trimmedCanvas.toDataURL('image/png'));
+                const dataUrl = trimmedCanvas.toDataURL('image/png');
+                lastSavedUrlRef.current = dataUrl;
+                onSave(dataUrl);
             }
         }
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
+        if (!file) return;
+
+        try {
+            const optimizer = new ImageOptimizer();
+            await optimizer.validateImage(file);
+            const optimizedDataUrl = await optimizer.optimizeImage(file, true);
+
+            const img = new Image();
+            img.onload = () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const scale = Math.min(
+                    canvas.width / img.width,
+                    canvas.height / img.height
+                ) * 0.8;
+
+                const w = img.width * scale;
+                const h = img.height * scale;
+                const x = (canvas.width - w) / 2;
+                const y = (canvas.height - h) / 2;
+
+                ctx.drawImage(img, x, y, w, h);
+                setHasSignature(true);
+                handleSave();
+            };
+            img.src = optimizedDataUrl;
+        } catch {
+            // fallback if optimizer fails
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
@@ -189,14 +245,11 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
                     const ctx = canvas.getContext('2d');
                     if (!ctx) return;
 
-                    // Clear canvas first
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                    // Calculate scaling to fit image within canvas while maintaining aspect ratio
                     const scale = Math.min(
                         canvas.width / img.width,
                         canvas.height / img.height
-                    ) * 0.8; // Use 80% of space
+                    ) * 0.8;
 
                     const w = img.width * scale;
                     const h = img.height * scale;
@@ -210,6 +263,8 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
                 img.src = (event.target as FileReader).result as string;
             };
             reader.readAsDataURL(file);
+        } finally {
+            e.target.value = '';
         }
     };
 
@@ -217,32 +272,32 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
         <div className="signature-canvas-container">
             <div className="mb-2 flex justify-between items-center">
                 <label className="text-sm font-medium text-[var(--color-text)]">
-                    İmza Çizin veya Yükleyin
+                    {t('drawOrUploadSignature')}
                 </label>
                 <div className="flex gap-2">
                     <button
                         type="button"
                         onClick={clearCanvas}
                         className="p-1 text-[var(--color-error)] hover:bg-[var(--color-bg-hover)] rounded transition-colors"
-                        title="Temizle"
-                        aria-label="Temizle"
+                        title={t('clear')}
+                        aria-label={t('clearSignature')}
                     >
                         <Eraser size={16} />
                     </button>
-                    <label className="p-1 text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] rounded cursor-pointer transition-colors" title="Resim Yükle">
+                    <label className="p-1 text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] rounded cursor-pointer transition-colors" title={t('uploadSignatureImage')}>
                         <Upload size={16} />
                         <input
                             type="file"
                             accept="image/*"
-                            className="hidden"
-                            aria-label="Resim Yükle"
                             onChange={handleImageUpload}
+                            className="hidden"
+                            aria-label={t('uploadSignatureImage')}
                         />
                     </label>
                 </div>
             </div>
 
-            <div className="relative border-2 border-dashed border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--color-bg-card)] overflow-hidden touch-none">
+            <div className="relative border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-card)] overflow-hidden">
                 <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing}
@@ -252,17 +307,18 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
                     onTouchStart={startDrawing}
                     onTouchMove={draw}
                     onTouchEnd={stopDrawing}
-                    className="w-full h-[200px] cursor-crosshair"
+                    style={{ touchAction: 'none' }}
+                    className="w-full h-[200px] cursor-crosshair touch-none"
                 />
                 {!hasSignature && !savedSignature && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-[var(--color-text-muted)] text-sm">
-                        Buraya imza atın
+                        {t('signHere')}
                     </div>
                 )}
             </div>
 
             <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-[var(--color-text-muted)]">Kalem Kalınlığı:</span>
+                <span className="text-xs text-[var(--color-text-muted)]">{t('penWidth')}:</span>
                 <input
                     type="range"
                     min="1"
@@ -271,7 +327,7 @@ const SignatureCanvas = ({ onSave, onClear, savedSignature }: SignatureCanvasPro
                     value={lineWidth}
                     onChange={(e) => setLineWidth(parseFloat(e.target.value))}
                     className="w-24 h-1 bg-[var(--color-bg-muted)] rounded-lg appearance-none cursor-pointer"
-                    aria-label="Kalem Kalınlığı"
+                    aria-label={t('penWidth')}
                 />
             </div>
         </div>

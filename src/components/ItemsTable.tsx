@@ -5,37 +5,24 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+} from '@dnd-kit/sortable';
 import {
-  Plus,
-  Trash,
   Package,
-  Upload,
-  Search,
-  X,
+  Trash,
   AlertCircle,
-  ArrowUp,
-  ArrowDown,
-  CheckSquare,
-  Square,
-  SlidersHorizontal,
-  ArrowUpDown,
-  Percent,
-  Receipt,
-  FileSpreadsheet,
-  Settings2
-} from "lucide-react";
-import React from "react";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import toast from "react-hot-toast";
-import ConfirmDialog from '@/components/ConfirmDialog';
+} from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import ContextMenu from '@/components/items/ContextMenu';
+import { ItemsBatchBar } from '@/components/items/ItemsBatchBar';
+import { ItemsHeaderControls } from '@/components/items/ItemsHeaderControls';
+import { ItemsSearchAutocomplete } from '@/components/items/ItemsSearchAutocomplete';
 import SortableRow from '@/components/items/SortableRow';
 import SortableRowCard from '@/components/items/SortableRowCard';
 import { useQuoteData } from '@/context/QuoteContext';
@@ -43,7 +30,6 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { formatCurrency } from '@/utils/calculations';
 import Logger from '@/utils/logger';
 import { sanitizeInput } from '@/utils/sanitize';
-import { evaluateMathExpression } from '@/utils/smartCalc';
 import type { QuoteItem } from '@/context/quote/types';
 
 interface ItemsTableProps {
@@ -60,28 +46,45 @@ interface ProductRow {
   unit?: string;
   price?: number;
   taxRate?: number;
+  category?: string;
   image?: string | null;
+  createdAt?: string;
 }
 
 const ItemsTable = ({
   items,
   onItemsChange,
-  currency = "TRY",
+  currency = 'TRY',
   onAddProduct,
 }: ItemsTableProps) => {
   const { quoteData, updateQuoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const [viewMode, setViewMode] = useState(
-    window.innerWidth < 768 ? "card" : "table",
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : 'table',
   );
-  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    // Faz4: viewMode resize throttle (100ms)
+    let throttleTimer: number | null = null;
+    const handleResize = () => {
+      if (throttleTimer !== null) return;
+      throttleTimer = window.setTimeout(() => {
+        setViewMode(window.innerWidth < 768 ? 'card' : 'table');
+        throttleTimer = null;
+      }, 100);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (throttleTimer !== null) window.clearTimeout(throttleTimer);
+    };
+  }, []);
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ProductRow[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
   const [touchedRows, setTouchedRows] = useState<Record<string, Record<string, boolean>>>({});
-  const [showToolsMenu, setShowToolsMenu] = useState(false);
 
   // Column Visibility Customization
   const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -106,7 +109,7 @@ const ItemsTable = ({
   const toggleTaxMode = () => {
     const next = taxMode === 'exclusive' ? 'inclusive' : 'exclusive';
     updateQuoteData('taxMode', next);
-    toast.success(next === 'inclusive' ? 'Fiyatlandırma: KDV Dahil Modu' : 'Fiyatlandırma: KDV Hariç Modu');
+    toast.success(next === 'inclusive' ? (t('taxModeToastInclusive') || 'Fiyatlandırma: KDV Dahil Modu') : (t('taxModeToastExclusive') || 'Fiyatlandırma: KDV Hariç Modu'));
   };
 
   // Live item count & quantity calculations
@@ -123,50 +126,60 @@ const ItemsTable = ({
       else if (mode === 'name-asc') list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
       return list;
     });
-    setShowToolsMenu(false);
-    toast.success('Kalemler sıralandı');
+    toast.success(t('itemsSorted') || 'Kalemler sıralandı');
   };
 
-  // Direct Clipboard TSV/Excel Paste (Ctrl+V)
+  const parseTr = (v: unknown) => {
+    const s = String(v ?? '').trim().replace(/[^\d.,-]/g, '');
+    if (!s) return NaN;
+    const hasDot = s.includes('.'), hasComma = s.includes(',');
+    let o = s;
+    if (hasDot && hasComma) o = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    else if (hasComma) o = (s.match(/,/g) || []).length > 1 ? s.replace(/,/g, '') : s.replace(',', '.');
+    else if (hasDot && (s.match(/\./g) || []).length > 1) o = s.replace(/\./g, '');
+    const n = Number(o); return Number.isFinite(n) ? n : NaN;
+  };
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const text = e.clipboardData.getData('text');
     if (!text || (!text.includes('\t') && !text.includes('\n'))) return;
     const target = e.target as HTMLElement;
     if (target.tagName === 'TEXTAREA' || (target.tagName === 'INPUT' && !text.includes('\t'))) return;
-
-    const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
+    const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length > 0).slice(0, 100);
     if (lines.length === 0) return;
-
+    const ALLOWED_TAX = new Set([0,1,10,20]);
     const parsedItems: QuoteItem[] = [];
     for (const line of lines) {
       const cols = line.split('\t');
       if (cols.length >= 1 && cols[0].trim()) {
+        const rawQty = parseTr(cols[2]); const qty = Number.isFinite(rawQty) && rawQty > 0 ? rawQty : 1;
+        const rawPrice = parseTr(cols[4]); const price = Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : 0;
+        const rawTax = parseTr(cols[5]); const taxRate = Number.isFinite(rawTax) && ALLOWED_TAX.has(rawTax) ? rawTax : Number.isFinite(rawTax) && rawTax >=0 && rawTax <=100 ? rawTax : 20;
         parsedItems.push({
           id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          name: String(sanitizeInput(cols[0].trim()) || ''),
-          description: String(sanitizeInput(cols[1]?.trim() || '') || ''),
-          quantity: parseFloat(cols[2]?.replace(',', '.')) || 1,
-          unit: cols[3]?.trim() || 'Adet',
-          price: parseFloat(cols[4]?.replace(/[^0-9,.-]/g, '').replace(',', '.')) || 0,
-          taxRate: parseFloat(cols[5]?.replace(/[^0-9,.-]/g, '').replace(',', '.')) || 20,
-          discountRate: 0,
-          total: 0,
+          name: String(sanitizeInput(cols[0].trim().slice(0,200)) || ''),
+          description: String(sanitizeInput((cols[1] || '').trim().slice(0,500)) || ''),
+          quantity: qty,
+          unit: (cols[3] || '').trim().slice(0,20) || 'Adet',
+          price, taxRate, discountRate: 0, total: 0,
         });
       }
     }
     if (parsedItems.length > 0) {
       e.preventDefault();
       onItemsChange(prev => [...prev, ...parsedItems]);
-      toast.success(`${parsedItems.length} kalem panodan yapıştırıldı`);
+      toast.success(t('pastedItemsCount').replace('{count}', String(parsedItems.length)) || `${parsedItems.length} kalem panodan yapıştırıldı`);
     }
-  }, [onItemsChange]);
+  }, [onItemsChange, t]);
 
   const getRowErrors = useCallback((item: QuoteItem) => {
     const errs: Record<string, string> = {};
+    const qty = Number(item.quantity);
+    const price = Number(item.price);
+    const tax = Number(item.taxRate);
     if (!item.name) errs.name = t('productNameRequired');
-    if (!item.quantity || item.quantity <= 0) errs.quantity = 'Miktar > 0 olmalı';
-    if (item.price === undefined || item.price < 0) errs.price = 'Geçersiz fiyat';
-    if (item.taxRate < 0 || item.taxRate > 100) errs.taxRate = 'KDV 0-100 arası';
+    if (!Number.isFinite(qty) || qty <= 0) errs.quantity = t('quantityMustBePositive') || 'Miktar > 0 olmalı';
+    if (!Number.isFinite(price) || price < 0) errs.price = t('invalidPrice') || 'Geçersiz fiyat';
+    if (!Number.isFinite(tax) || tax < 0 || tax > 100) errs.taxRate = t('vatRateRange') || 'KDV 0-100 arası';
     return errs;
   }, [t]);
 
@@ -193,13 +206,14 @@ const ItemsTable = ({
   const hasErrors = useMemo(() => {
     return items.some((item) => Object.keys(getRowErrors(item)).length > 0);
   }, [items, getRowErrors]);
+
   const [allCatalogProducts, setAllCatalogProducts] = useState<ProductRow[]>([]);
 
   useEffect(() => {
     if (!db) return;
     const fetchCatalog = async () => {
       try {
-        const prods = await db.getAll<ProductRow>("products");
+        const prods = await db.getAll<ProductRow>('products');
         setAllCatalogProducts(prods || []);
       } catch {
         setAllCatalogProducts([]);
@@ -225,7 +239,7 @@ const ItemsTable = ({
 
   const [recentProducts, setRecentProducts] = useState<ProductRow[]>(() => {
     try {
-      const saved = localStorage.getItem("recentProducts");
+      const saved = localStorage.getItem('recentProducts');
       return saved ? (JSON.parse(saved) as ProductRow[]) : [];
     } catch {
       return [];
@@ -236,7 +250,7 @@ const ItemsTable = ({
     setRecentProducts((prev) => {
       const filtered = prev.filter((p) => p.id !== product.id);
       const updated = [product, ...filtered].slice(0, 5);
-      localStorage.setItem("recentProducts", JSON.stringify(updated));
+      localStorage.setItem('recentProducts', JSON.stringify(updated));
       return updated;
     });
   }, []);
@@ -245,26 +259,57 @@ const ItemsTable = ({
     onItemsChange(prev => {
       const newItems = [...prev];
       if (!newItems[index]) return prev;
+      const quantity = newItems[index].quantity || 1;
+      const price = product.price !== undefined ? product.price : newItems[index].price;
+      const discountRate = newItems[index].discountRate || 0;
+      const total = quantity * price * (1 - discountRate / 100);
       newItems[index] = {
         ...newItems[index],
         name: product.name,
-        description: product.description !== undefined ? product.description : newItems[index].description,
-        unit: product.unit || newItems[index].unit || "Adet",
-        price: product.price !== undefined ? product.price : newItems[index].price,
-        taxRate: product.taxRate !== undefined ? product.taxRate : newItems[index].taxRate,
+        description: product.description !== undefined ? product.description : (newItems[index].description || ''),
+        unit: product.unit || newItems[index].unit || 'Adet',
+        price: price,
+        taxRate: product.taxRate !== undefined ? product.taxRate : (newItems[index].taxRate || 20),
+        total: total,
         image: product.image ?? newItems[index].image,
       };
       return newItems;
     });
     addToRecentProducts(product);
   }, [onItemsChange, addToRecentProducts]);
+
+  const handleCreateProduct = useCallback(async (index: number, name: string) => {
+    if (!name.trim() || !db) return;
+    const trimmed = name.trim();
+    const currentRow = items[index];
+    const newProduct: ProductRow = {
+      id: `prod-${Date.now()}`,
+      name: trimmed,
+      description: currentRow?.description || '',
+      price: currentRow?.price || 0,
+      unit: currentRow?.unit || 'Adet',
+      taxRate: currentRow?.taxRate || 20,
+      image: currentRow?.image || null,
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await db.add('products', newProduct);
+      toast.success(`"${trimmed}" ürünü kataloğa kaydedildi`);
+      setAllCatalogProducts((prev) => [...prev, newProduct]);
+      handleProductSelect(index, newProduct);
+    } catch (err) {
+      Logger.error('Ürün kaydedilemedi:', err);
+      toast.error('Ürün kataloğa kaydedilemedi');
+    }
+  }, [db, items, handleProductSelect]);
+
   const addProductFromSearch = useCallback((product: ProductRow) => {
     const newItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       name: product.name,
-      description: product.description || "",
+      description: product.description || '',
       quantity: 1,
-      unit: product.unit || "Adet",
+      unit: product.unit || 'Adet',
       price: product.price || 0,
       taxRate: product.taxRate || 20,
       discountRate: 0,
@@ -273,26 +318,28 @@ const ItemsTable = ({
     };
     onItemsChange(prev => [...prev, newItem]);
     addToRecentProducts(product);
-    setSearchQuery("");
+    setSearchQuery('');
     setSearchResults([]);
-    searchRef.current?.focus();
   }, [onItemsChange, addToRecentProducts]);
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!searchResults.length) return;
-    if (e.key === "ArrowDown") {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSearchIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSearchIndex((prev) => Math.max(prev - 1, 0));
-    } else if (e.key === "Enter" && searchIndex >= 0) {
+    } else if (e.key === 'Enter' && searchIndex >= 0) {
       e.preventDefault();
       addProductFromSearch(searchResults[searchIndex]);
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       setShowSearch(false);
     }
   };
+
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+
   const toggleSelectItem = useCallback((index: number) => {
     setSelectedItems((prev) => {
       const next = new Set(prev);
@@ -301,6 +348,7 @@ const ItemsTable = ({
       return next;
     });
   }, []);
+
   const selectAll = useCallback(() => {
     if (selectedItems.size === items.length) {
       setSelectedItems(new Set());
@@ -308,10 +356,12 @@ const ItemsTable = ({
       setSelectedItems(new Set(items.map((_, i) => i)));
     }
   }, [items, selectedItems.size]);
+
   const deleteSelected = useCallback(() => {
     onItemsChange(prev => prev.filter((_, i) => !selectedItems.has(i)));
     setSelectedItems(new Set());
   }, [selectedItems, onItemsChange]);
+
   const duplicateSelected = useCallback(() => {
     onItemsChange(prev => {
       const duplicates = Array.from(selectedItems)
@@ -324,37 +374,44 @@ const ItemsTable = ({
     });
     setSelectedItems(new Set());
   }, [selectedItems, onItemsChange]);
+
   const moveSelectedUp = useCallback(() => {
     if (selectedItems.size === 0) return;
+    const indices = Array.from(selectedItems).sort((a, b) => a - b);
+    if (indices[0] <= 0) return;
     onItemsChange(prev => {
       const newItems = [...prev];
-      const indices = Array.from(selectedItems).sort((a, b) => a - b);
-      if (indices[0] === 0) return prev;
       for (const i of indices) {
-        [newItems[i - 1], newItems[i]] = [newItems[i], newItems[i - 1]];
+        if (i > 0 && !selectedItems.has(i - 1)) {
+          [newItems[i - 1], newItems[i]] = [newItems[i], newItems[i - 1]];
+        }
       }
       return newItems;
     });
-    setSelectedItems(new Set(Array.from(selectedItems).map((i) => i - 1)));
+    setSelectedItems(new Set(indices.map((i) => selectedItems.has(i - 1) ? i : i - 1)));
   }, [selectedItems, onItemsChange]);
+
   const moveSelectedDown = useCallback(() => {
     if (selectedItems.size === 0) return;
+    const indices = Array.from(selectedItems).sort((a, b) => b - a);
+    if (indices[0] >= items.length - 1) return;
     onItemsChange(prev => {
       const newItems = [...prev];
-      const indices = Array.from(selectedItems).sort((a, b) => b - a);
-      if (indices[0] === prev.length - 1) return prev;
       for (const i of indices) {
-        [newItems[i], newItems[i + 1]] = [newItems[i + 1], newItems[i]];
+        if (i < newItems.length - 1 && !selectedItems.has(i + 1)) {
+          [newItems[i], newItems[i + 1]] = [newItems[i + 1], newItems[i]];
+        }
       }
       return newItems;
     });
-    setSelectedItems(new Set(Array.from(selectedItems).map((i) => i + 1)));
-  }, [selectedItems, onItemsChange]);
-  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+    setSelectedItems(new Set(indices.map((i) => selectedItems.has(i + 1) ? i : i + 1)));
+  }, [selectedItems, items.length, onItemsChange]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+
   const handleItemChange = useCallback((index: number, field: string, value: unknown) => {
     onItemsChange(prev => {
       const newItems = [...prev];
@@ -362,9 +419,11 @@ const ItemsTable = ({
       return newItems;
     });
   }, [onItemsChange]);
+
   const removeItem = useCallback((index: number) => {
     onItemsChange(prev => prev.filter((_, i) => i !== index));
   }, [onItemsChange]);
+
   const duplicateItem = useCallback((index: number) => {
     onItemsChange(prev => {
       const duplicate = {
@@ -376,6 +435,7 @@ const ItemsTable = ({
       return newItems;
     });
   }, [onItemsChange]);
+
   const handleDragEnd = useCallback((event: { active: { id: unknown }; over: { id: unknown } | null }) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
@@ -386,13 +446,14 @@ const ItemsTable = ({
       });
     }
   }, [onItemsChange]);
+
   const addNewItem = useCallback(() => {
     const newItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       quantity: 1,
-      unit: "Adet",
+      unit: 'Adet',
       price: 0,
       taxRate: 20,
       discountRate: 0,
@@ -401,6 +462,7 @@ const ItemsTable = ({
     };
     onItemsChange(prev => [...prev, newItem]);
   }, [onItemsChange]);
+
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -409,23 +471,25 @@ const ItemsTable = ({
     reader.onload = (event) => {
       try {
         const data = new Uint8Array((event.currentTarget as FileReader).result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
+        const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         const newItems: QuoteItem[] = [];
+        const ALLOWED_TAX_XL = new Set([0,1,10,20]);
         for (let i = 1; i < jsonData.length; i++) {
           const row = (jsonData[i] ?? []) as unknown[];
           if (row.length === 0) continue;
+          const q2 = parseTr(String(row[2])); const p4 = parseTr(String(row[4])); const t5 = parseTr(String(row[5])); const d6 = parseTr(String(row[6]));
           newItems.push({
             id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            name: String(row[0] ?? ""),
-            description: String(row[1] ?? ""),
-            quantity: parseFloat(String(row[2])) || 1,
-            unit: String(row[3] ?? "Adet"),
-            price: parseFloat(String(row[4])) || 0,
-            taxRate: parseFloat(String(row[5])) || 20,
-            discountRate: parseFloat(String(row[6])) || 0,
+            name: String(sanitizeInput(String(row[0] ?? '').slice(0,200)) || ''),
+            description: String(sanitizeInput(String(row[1] ?? '').slice(0,500)) || ''),
+            quantity: Number.isFinite(q2) && q2 > 0 ? q2 : 1,
+            unit: String(row[3] ?? 'Adet').slice(0,20),
+            price: Number.isFinite(p4) && p4 >=0 ? p4 : 0,
+            taxRate: Number.isFinite(t5) && ALLOWED_TAX_XL.has(t5) ? t5 : Number.isFinite(t5) && t5>=0 && t5<=100 ? t5 : 20,
+            discountRate: Number.isFinite(d6) && d6>=0 ? Math.min(d6, 1000000) : 0,
             total: 0,
             image: undefined,
           });
@@ -434,18 +498,19 @@ const ItemsTable = ({
           onItemsChange(prev => [...prev, ...newItems]);
           toast.success(t('excelItemsAdded').replace('{count}', String(newItems.length)));
         }
-      } catch (err) {
+      } catch {
         toast.error(t('excelReadErrorItems'));
       }
     };
     reader.readAsArrayBuffer(file);
-    e.target.value = "";
+    e.target.value = '';
   };
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number, field: string) => {
-    const fields = ["name", "description", "quantity", "unit", "price", "taxRate", "discountRate"];
+    const fields = ['name', 'description', 'quantity', 'unit', 'price', 'taxRate', 'discountRate'];
     const currentFieldIndex = fields.indexOf(field);
 
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       e.preventDefault();
       if (index === items.length - 1) {
         addNewItem();
@@ -458,7 +523,7 @@ const ItemsTable = ({
           || (document.querySelector(`[data-row="${index + 1}"][data-field="name"]`) as HTMLElement);
         if (nextEl) nextEl.focus();
       }
-    } else if (e.key === "Tab") {
+    } else if (e.key === 'Tab') {
       if (e.shiftKey) {
         if (currentFieldIndex > 0) {
           e.preventDefault();
@@ -492,32 +557,58 @@ const ItemsTable = ({
       }
     }
   }, [items.length, addNewItem]);
+
   const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, index: -1 });
+
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, index });
   }, []);
+
   const contextMenuItems = useMemo(() => {
     if (contextMenu.index < 0) return [];
     return [
-      { icon: <Package size={13} />, label: t('saveAsProduct'), onClick: async () => {
-        const item = items[contextMenu.index];
-        if (!item?.name) { toast.error(t('productNameRequired')); return; }
-        try {
-          await db.add("products", { id: `prod-${Date.now()}`, name: item.name, description: item.description || "", price: parseFloat(String(item.price)) || 0, taxRate: parseFloat(String(item.taxRate)) || 20, unit: item.unit || "Adet", image: item.image || null, createdAt: new Date().toISOString() });
-          toast.success(t('productSavedToCatalog'));
-        } catch (err) { Logger.error("Error saving product", err); }
-      }},
-      { icon: <AlertCircle size={13} />, label: t('validationStatus'), onClick: () => {
-        const item = items[contextMenu.index];
-        const errs = getRowErrors(item);
-        if (Object.keys(errs).length === 0) toast.success(t('noRowErrors'));
-        else toast.error(t('rowErrors').replace('{errors}', Object.values(errs).join(", ")));
-      }},
-      { separator: true, label: "", onClick: () => {} },
+      {
+        icon: <Package size={13} />,
+        label: t('saveAsProduct'),
+        onClick: async () => {
+          const item = items[contextMenu.index];
+          if (!item?.name) {
+            toast.error(t('productNameRequired'));
+            return;
+          }
+          try {
+            await db.add('products', {
+              id: `prod-${Date.now()}`,
+              name: item.name,
+              description: item.description || '',
+              price: parseFloat(String(item.price)) || 0,
+              taxRate: parseFloat(String(item.taxRate)) || 20,
+              unit: item.unit || 'Adet',
+              image: item.image || null,
+              createdAt: new Date().toISOString()
+            });
+            toast.success(t('productSavedToCatalog'));
+          } catch (err) {
+            Logger.error('Error saving product', err);
+          }
+        }
+      },
+      {
+        icon: <AlertCircle size={13} />,
+        label: t('validationStatus'),
+        onClick: () => {
+          const item = items[contextMenu.index];
+          const errs = getRowErrors(item);
+          if (Object.keys(errs).length === 0) toast.success(t('noRowErrors'));
+          else toast.error(t('rowErrors').replace('{errors}', Object.values(errs).join(', ')));
+        }
+      },
+      { separator: true, label: '', onClick: () => {} },
       { icon: <Trash size={13} />, label: t('deleteRow'), onClick: () => removeItem(contextMenu.index) },
     ];
   }, [contextMenu.index, items, db, getRowErrors, removeItem, t]);
+
   const applyBulkDiscount = (rate: number) => {
     onItemsChange(prev => prev.map((item, idx) => selectedItems.has(idx) ? { ...item, discountRate: rate } : item));
     toast.success(`Seçili kalemlere %${rate} iskonto uygulandı`);
@@ -533,242 +624,80 @@ const ItemsTable = ({
   return (
     <div className="space-y-3" onPaste={handlePaste}>
       {/* ─── CONTROLS HEADER ─── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-primary-muted)] flex items-center justify-center">
-            <Package size={16} className="text-[var(--color-primary)]" />
-          </div>
-          <h3 className="text-sm font-semibold text-[var(--color-text)]">
-            {t("items")}
-          </h3>
-          {/* Live item and quantity counter badge */}
-          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] border border-[var(--color-border)]">
-            {items.length} Kalem • {totalQuantity} Adet
-          </span>
-          {hasErrors && (
-            <span className="flex items-center gap-1 text-xs text-[var(--color-error)]">
-              <AlertCircle size={12} /> {t('errorsExist')}
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Tools & Options Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowToolsMenu(prev => !prev)}
-              className={`btn btn-xs flex items-center gap-1 ${showToolsMenu ? 'bg-[var(--color-bg-hover)]' : 'btn-outline'}`}
-              title="Tablo Araçları ve Seçenekler"
-            >
-              <Settings2 size={13} />
-              <span>Araçlar</span>
-            </button>
-            {showToolsMenu && (
-              <div className="absolute right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius)] shadow-xl p-2.5 min-w-[200px] z-50 space-y-2 text-xs">
-                {/* Tax Mode */}
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-1">Fiyatlandırma</div>
-                  <button
-                    type="button"
-                    onClick={toggleTaxMode}
-                    className="w-full flex items-center justify-between px-2 py-1 rounded hover:bg-[var(--color-bg-hover)] text-left transition-colors"
-                  >
-                    <span className="text-[var(--color-text)]">KDV Modu</span>
-                    <span className="font-semibold text-[var(--color-primary)]">{taxMode === 'inclusive' ? 'Dahil' : 'Hariç'}</span>
-                  </button>
-                </div>
-
-                <div className="border-t border-[var(--color-border)]" />
-
-                {/* Fast Sort */}
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-1">Sırala</div>
-                  <div className="space-y-0.5">
-                    <button type="button" onClick={() => { sortItems('price-desc'); setShowToolsMenu(false); }} className="w-full text-left px-2 py-1 rounded text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]">Pahalıdan Ucuza</button>
-                    <button type="button" onClick={() => { sortItems('price-asc'); setShowToolsMenu(false); }} className="w-full text-left px-2 py-1 rounded text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]">Ucuzdan Pahalıya</button>
-                    <button type="button" onClick={() => { sortItems('name-asc'); setShowToolsMenu(false); }} className="w-full text-left px-2 py-1 rounded text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]">İsim (A-Z)</button>
-                  </div>
-                </div>
-
-                <div className="border-t border-[var(--color-border)]" />
-
-                {/* Column Visibility */}
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] tracking-wider mb-1">Sütunlar</div>
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
-                      <input type="checkbox" checked={visibleColumns.image !== false} onChange={() => toggleColumn('image')} />
-                      <span>Görsel</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
-                      <input type="checkbox" checked={visibleColumns.description !== false} onChange={() => toggleColumn('description')} />
-                      <span>Açıklama</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
-                      <input type="checkbox" checked={visibleColumns.unit !== false} onChange={() => toggleColumn('unit')} />
-                      <span>Birim</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text)] px-1">
-                      <input type="checkbox" checked={visibleColumns.discount !== false} onChange={() => toggleColumn('discount')} />
-                      <span>İskonto</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="border-t border-[var(--color-border)]" />
-
-                {/* Excel Import */}
-                <label className="w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-[var(--color-bg-hover)] text-[var(--color-text)] transition-colors">
-                  <Upload size={13} className="text-[var(--color-primary)]" />
-                  <span>Excel'den Yükle (.xlsx)</span>
-                  <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { handleExcelUpload(e); setShowToolsMenu(false); }} />
-                </label>
-              </div>
-            )}
-          </div>
-
-          {/* Select All */}
-          <div className="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden">
-            <button type="button" onClick={selectAll} className="p-1.5 hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]" title={selectedItems.size === items.length ? t('deselectAll') : t('selectAllItems')} aria-label={selectedItems.size === items.length ? t('deselectAll') : t('selectAllItems')}>
-              {selectedItems.size === items.length && items.length > 0 ? <CheckSquare size={14} /> : <Square size={14} />}
-            </button>
-          </div>
-
-          {onAddProduct && (
-            <button type="button" onClick={onAddProduct} className="btn btn-outline btn-xs" title={t('addFromCatalogItems')}>
-              <Package size={12} /> {t('addFromCatalogItems')}
-            </button>
-          )}
-
-          <button type="button" onClick={addNewItem} className="btn btn-primary btn-xs">
-            <Plus size={12} /> {t("addItem")}
-          </button>
-        </div>
-      </div>
+      <ItemsHeaderControls
+        itemCount={items.length}
+        totalQuantity={totalQuantity}
+        hasErrors={hasErrors}
+        taxMode={taxMode}
+        onToggleTaxMode={toggleTaxMode}
+        onSortItems={sortItems}
+        visibleColumns={visibleColumns}
+        onToggleColumn={toggleColumn}
+        onExcelUpload={handleExcelUpload}
+        selectedCount={selectedItems.size}
+        onSelectAll={selectAll}
+        onAddProduct={onAddProduct}
+        onAddNewItem={addNewItem}
+        t={t}
+      />
 
       {/* ─── BATCH OPERATIONS TOOLBAR ─── */}
-      {selectedItems.size > 0 && (
-        <div className="flex items-center gap-2 bg-[var(--color-primary-muted)] px-3 py-1.5 rounded-lg text-xs flex-wrap border border-[var(--color-primary)]/20 animate-in fade-in">
-          <span className="font-semibold text-[var(--color-primary)]">{selectedItems.size} {t('selected')}</span>
-
-          <div className="flex items-center gap-1 border-l border-r border-[var(--color-primary)]/30 px-2">
-            <span className="text-[10px] text-[var(--color-text-muted)]">Toplu % İndirim:</span>
-            {[0, 5, 10, 20].map(rate => (
-              <button
-                key={rate}
-                type="button"
-                onClick={() => applyBulkDiscount(rate)}
-                className="px-1.5 py-0.5 rounded bg-[var(--color-bg-card)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--color-border)] text-[10px] font-medium transition-colors"
-              >
-                %{rate}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1 border-r border-[var(--color-primary)]/30 pr-2">
-            <span className="text-[10px] text-[var(--color-text-muted)]">Toplu KDV:</span>
-            {[20, 10, 1, 0].map(vat => (
-              <button
-                key={vat}
-                type="button"
-                onClick={() => applyBulkVAT(vat)}
-                className="px-1.5 py-0.5 rounded bg-[var(--color-bg-card)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--color-border)] text-[10px] font-medium transition-colors"
-              >
-                %{vat}
-              </button>
-            ))}
-          </div>
-
-          <button type="button" onClick={moveSelectedUp} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveUp')} aria-label={t('moveUp')}><ArrowUp size={13} /></button>
-          <button type="button" onClick={moveSelectedDown} className="p-1 hover:bg-[var(--color-bg-hover)] rounded" title={t('moveDown')} aria-label={t('moveDown')}><ArrowDown size={13} /></button>
-          <button type="button" onClick={duplicateSelected} className="p-1 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-primary)]" title="Seçilenleri Çoğalt" aria-label="Seçilenleri Çoğalt"><Package size={13} /></button>
-          <button type="button" onClick={deleteSelected} className="p-1 hover:bg-[var(--color-error-muted)] rounded text-[var(--color-error)]" title={t('delete')} aria-label={t('delete')}><Trash size={13} /></button>
-          <button type="button" onClick={() => setSelectedItems(new Set())} className="p-1 hover:bg-[var(--color-bg-hover)] rounded ml-auto text-[var(--color-text-muted)]" title={t('clearSelection')} aria-label={t('clearSelection')}><X size={13} /></button>
-        </div>
-      )}
+      <ItemsBatchBar
+        selectedCount={selectedItems.size}
+        onApplyBulkDiscount={applyBulkDiscount}
+        onApplyBulkVAT={applyBulkVAT}
+        onMoveSelectedUp={moveSelectedUp}
+        onMoveSelectedDown={moveSelectedDown}
+        onDuplicateSelected={duplicateSelected}
+        onDeleteSelected={deleteSelected}
+        onClearSelection={() => setSelectedItems(new Set())}
+        t={t}
+      />
 
       {/* ─── LIVE SEARCH & AUTOCOMPLETE ─── */}
-      <div className="relative" ref={searchRef}>
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-          <input
-            type="text"
-            className="form-control pl-9"
-            placeholder={t('searchProducts')}
-            aria-label={t('searchProducts')}
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
-            onFocus={() => searchQuery.length >= 2 && setShowSearch(true)}
-            onKeyDown={handleSearchKeyDown}
-          />
-          {searchQuery && (
-            <button type="button" onClick={() => { setSearchQuery(""); setShowSearch(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label={t('clearSearch')}>
-              <X size={14} />
-            </button>
-          )}
-        </div>
-        {showSearch && searchQuery.length >= 2 && (
-          <div className="absolute z-50 left-0 right-0 mt-1.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto">
-            {searchResults.length > 0 ? (
-              searchResults.map((product, idx) => (
-                <button key={product.id || idx} type="button"
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm transition-colors ${idx === searchIndex ? "bg-[var(--color-primary-muted)] text-[var(--color-primary)]" : "text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"}`}
-                  onMouseDown={() => addProductFromSearch(product)}>
-                  <div className="w-8 h-8 rounded-[var(--radius)] bg-[var(--color-bg-muted)] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {product.image ? <img src={product.image} alt="" className="w-full h-full object-cover" /> : <Package size={14} className="text-[var(--color-text-muted)]" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{product.name}</div>
-                    {product.description && <div className="text-xs text-[var(--color-text-muted)] truncate">{product.description}</div>}
-                  </div>
-                  <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">{formatCurrency(product.price || 0, currency)}</span>
-                </button>
-              ))
-            ) : (
-              <div className="px-3.5 py-3 text-sm text-[var(--color-text-muted)]">{t('noResultsFound')}</div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {recentProducts.length > 0 && items.length === 0 && (
-        <div className="text-xs text-[var(--color-text-muted)]">
-          <span className="font-medium">{t('recentProducts')}</span>{" "}
-          {recentProducts.map((p, i) => (
-            <button type="button" key={p.id || i} onClick={() => addProductFromSearch(p)} className="hover:text-[var(--color-primary)] transition-colors">
-              {p.name}{i < recentProducts.length - 1 ? ", " : ""}
-            </button>
-          ))}
-        </div>
-      )}
+      <ItemsSearchAutocomplete
+        searchRef={searchRef}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        showSearch={showSearch}
+        onShowSearchChange={setShowSearch}
+        searchResults={searchResults}
+        searchIndex={searchIndex}
+        onSearchKeyDown={handleSearchKeyDown}
+        onAddProductFromSearch={addProductFromSearch}
+        recentProducts={recentProducts}
+        itemsCount={items.length}
+        currency={currency}
+        t={t}
+      />
 
       {/* ─── DND CONTEXT & ROWS ─── */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          {viewMode === "table" ? (
+          {viewMode === 'table' ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-border)] text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
                     <th className="w-6 px-1"></th>
                     <th className="w-7 text-center">#</th>
-                    {visibleColumns.image !== false && <th className="w-16">{t("image")}</th>}
-                    <th className="min-w-[200px]">{t("productName")}</th>
-                    <th className="w-20">{t("quantity")}</th>
-                    {visibleColumns.unit !== false && <th className="w-24">{t("unit")}</th>}
-                    <th className="w-28">{t("unitPrice")}</th>
-                    <th className="w-16">{t("vatRate")}</th>
-                    {visibleColumns.discount !== false && <th className="w-22">{t("discountRate")}</th>}
-                    <th className="w-28">{t("total")}</th>
+                    {visibleColumns.image !== false && <th className="w-16">{t('image')}</th>}
+                    <th className="min-w-[200px]">{t('productName')}</th>
+                    {visibleColumns.description !== false && <th className="min-w-[140px]">{t('description')}</th>}
+                    <th className="w-20">{t('quantity')}</th>
+                    {visibleColumns.unit !== false && <th className="w-24">{t('unit')}</th>}
+                    <th className="w-28">{t('unitPrice')}</th>
+                    <th className="w-16">{t('vatRate')}</th>
+                    {visibleColumns.discount !== false && <th className="w-22">{t('discountRate')}</th>}
+                    <th className="w-28">{t('total')}</th>
                     <th className="w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, index) => (
                     <React.Fragment key={item.id}>
-                      {/* A4 Page Break Indicator guideline after 10th row */}
-                      {index === 10 && (
+                      {/* A4 Page Break Indicator guideline after 20th row (tek sayfa 20) */}
+                      {index === 20 && (
                         <tr className="bg-[var(--color-primary-muted)]/20 border-y-2 border-dashed border-[var(--color-primary)]/40 text-center select-none">
                           <td colSpan={11} className="py-1.5 text-[11px] font-semibold text-[var(--color-primary)] tracking-wide">
                             📄 1. Sayfa Sonu (A4 Baskı Sınırı — Aşağıdaki Kalemler 2. Sayfaya Taşar)
@@ -780,6 +709,7 @@ const ItemsTable = ({
                         index={index}
                         handleItemChange={handleItemChange}
                         onSelectProduct={handleProductSelect}
+                        onCreateProduct={handleCreateProduct}
                         removeItem={removeItem}
                         duplicateItem={duplicateItem}
                         formatCurrency={formatItemCurrency}
@@ -810,6 +740,7 @@ const ItemsTable = ({
                   index={index}
                   handleItemChange={handleItemChange}
                   onSelectProduct={handleProductSelect}
+                  onCreateProduct={handleCreateProduct}
                   removeItem={removeItem}
                   duplicateItem={duplicateItem}
                   formatCurrency={formatItemCurrency}
@@ -821,6 +752,7 @@ const ItemsTable = ({
                   toggleSelectItem={toggleSelectItem}
                   products={allCatalogProducts}
                   currency={currency}
+                  taxMode={taxMode}
                 />
               ))}
             </div>
@@ -830,8 +762,33 @@ const ItemsTable = ({
       {items.length === 0 && (
         <div className="text-center py-12 text-[var(--color-text-muted)]">
           <Package size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">{t("noItems")}</p>
+          <p className="text-sm">{t('noItems')}</p>
           <p className="text-xs mt-1">{t('noItemsHintItems')}</p>
+        </div>
+      )}
+      {/* Faz2: Klavye kısayol ipuçları */}
+      {items.length > 0 && (
+        <div className="flex items-center justify-center gap-3 py-2 text-[10px] text-[var(--color-text-muted)] select-none" aria-label="Klavye kısayolları">
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-muted)] border border-[var(--color-border)] font-mono text-[9px] font-medium shadow-xs">
+              Enter ↵
+            </kbd>
+            <span>{t('keyboardHintEnter') ? t('keyboardHintEnter').replace('Enter ↵ ', '') : 'yeni satır'}</span>
+          </span>
+          <span className="text-[var(--color-border)]">|</span>
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-muted)] border border-[var(--color-border)] font-mono text-[9px] font-medium shadow-xs">
+              Tab ⇥
+            </kbd>
+            <span>{t('keyboardHintTab') ? t('keyboardHintTab').replace('Tab ⇥ ', '') : 'sonraki alan'}</span>
+          </span>
+          <span className="text-[var(--color-border)]">|</span>
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-muted)] border border-[var(--color-border)] font-mono text-[9px] font-medium shadow-xs">
+              Ctrl+V
+            </kbd>
+            <span>{t('keyboardHintPaste') ? t('keyboardHintPaste').replace('Ctrl+V ', '') : 'tablodan yapıştır'}</span>
+          </span>
         </div>
       )}
       <ContextMenu

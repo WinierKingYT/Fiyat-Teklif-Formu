@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, Plus, Clock } from 'lucide-react';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { InputField, TextAreaField } from '@/components/ui';
@@ -9,18 +9,18 @@ import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 import type { CustomerData } from '@/context/quote/types';
 
-const customerInfoSchema = z.object({
-  name: z.string().min(1, 'Müşteri adı zorunludur'),
+const createCustomerInfoSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('customerNameRequired') || 'Müşteri adı zorunludur'),
   company: z.string().optional(),
   email: z.string().optional().refine(
     (val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
-    'Geçerli bir e-posta girin'
+    t('invalidEmail') || 'Geçerli bir e-posta girin'
   ),
   phone: z.string().optional(),
   address: z.string().optional(),
 });
 
-type CustomerInfoFormData = z.infer<typeof customerInfoSchema>;
+type CustomerInfoFormData = z.infer<ReturnType<typeof createCustomerInfoSchema>>;
 
 interface CustomerInfoFormProps {
   data: Partial<CustomerData>;
@@ -29,7 +29,7 @@ interface CustomerInfoFormProps {
 }
 
 const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onSelectCustomer }) => {
-  const { quoteData, db } = useQuoteData();
+  const { quoteData, db, setCustomerData } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<CustomerData[]>([]);
@@ -40,13 +40,14 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isFilled = data?.name && data?.email;
+  const schema = useMemo(() => createCustomerInfoSchema(t), [t]);
 
   const {
     register,
+    reset,
     formState: { errors },
   } = useForm<CustomerInfoFormData>({
-    resolver: zodResolver(customerInfoSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       name: data.name || '',
       company: data.company || '',
@@ -56,6 +57,16 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
     },
     mode: 'onBlur',
   });
+
+  useEffect(() => {
+    reset({
+      name: data.name || '',
+      company: data.company || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      address: data.address || '',
+    });
+  }, [data.name, data.company, data.email, data.phone, data.address, reset]);
 
   // Load recent customers for quick select
   useEffect(() => {
@@ -70,18 +81,29 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
       .catch(() => {});
   }, [db]);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   useEffect(() => {
     if (!db || searchQuery.length < 2) { setSearchResults([]); return; }
     const timer = setTimeout(async () => {
       try {
         const all = await db.getAll<CustomerData>('customers');
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.toLocaleLowerCase('tr-TR');
         const filtered = all.filter(c =>
-          (c.name?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
+          (c.name?.toLocaleLowerCase('tr-TR').includes(q) || c.company?.toLocaleLowerCase('tr-TR').includes(q) || c.email?.toLocaleLowerCase('tr-TR').includes(q))
         );
         setSearchResults(filtered.slice(0, 8));
         setSearchIndex(-1);
-      } catch (e) { setSearchResults([]); }
+      } catch { setSearchResults([]); }
     }, 200);
     return () => clearTimeout(timer);
   }, [searchQuery, db]);
@@ -106,13 +128,15 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
   };
 
   const selectCustomer = (customer: CustomerData) => {
-    onChange('name', customer.name || '');
-    onChange('company', customer.company || '');
-    onChange('email', customer.email || '');
-    onChange('phone', customer.phone || '');
-    onChange('address', customer.address || '');
-    onChange('taxOffice', customer.taxOffice || '');
-    onChange('taxNumber', customer.taxNumber || (customer as Record<string, string>).taxNo || '');
+    setCustomerData({
+      name: customer.name || '',
+      company: customer.company || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
+      taxOffice: customer.taxOffice || '',
+      taxNumber: customer.taxNumber || (customer as Record<string, string>).taxNo || '',
+    });
     setSearchQuery('');
     setSearchResults([]);
     setShowDropdown(false);
@@ -167,7 +191,7 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
         {recentCustomers.length > 0 && !data.name && (
           <div className="flex items-center gap-1.5 flex-wrap pb-1 border-b border-[var(--color-border)]/50">
             <span className="text-[11px] text-[var(--color-text-muted)] flex items-center gap-1 font-medium">
-              <Clock size={11} /> Son:
+              <Clock size={11} /> {t('recent') || 'Son'}:
             </span>
             {recentCustomers.map((c, i) => (
               <button
@@ -243,10 +267,10 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-[var(--color-primary)]">
-                        "{searchQuery}" müşterisini oluştur
+                        "{searchQuery}" {t('createCustomer') || 'müşterisini oluştur'}
                       </div>
                       <div className="text-xs text-[var(--color-text-muted)]">
-                        Yeni müşteri kaydı oluşturulacak
+                        {t('newCustomerWillBeCreated') || 'Yeni müşteri kaydı oluşturulacak'}
                       </div>
                     </div>
                   </button>

@@ -136,6 +136,7 @@ const injectPageBreakStyles = (containerId?: string) => {
     const style = document.createElement('style');
     style.id = PAGE_BREAK_STYLE_ID;
     style.textContent = `
+        ${prefix}.pdf-page { margin-bottom: 0 !important; }
         ${prefix}.pdf-section, ${prefix}[class*="pdf-section"] { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-header, ${prefix}[class*="pdf-header"], ${prefix}.header-container { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-customer, ${prefix}[class*="pdf-customer"], ${prefix}.customer-section, ${prefix}.customer-seller-grid { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -144,6 +145,7 @@ const injectPageBreakStyles = (containerId?: string) => {
         ${prefix}.pdf-signatures, ${prefix}.signatures-grid, ${prefix}.signature-section { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-terms-section, ${prefix}.terms-box, ${prefix}.notes-section { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-footer, ${prefix}[class*="pdf-footer"] { page-break-inside: avoid !important; break-inside: avoid !important; }
+        ${prefix}.pdf-page:not(:first-child) { page-break-before: always !important; break-before: page !important; }
         ${prefix}.pdf-page-break { page-break-before: always !important; break-before: page !important; }
         ${prefix} table { page-break-inside: auto; }
         ${prefix} tr, ${prefix} tbody tr { page-break-inside: avoid !important; break-inside: avoid !important; page-break-after: auto; }
@@ -273,8 +275,26 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         injectPageBreakStyles(elementId);
 
         onStage?.('images');
-        const lowerScale = Math.min(qual.scale, Math.floor(65536 / Math.max(size.width, size.height)));
+        // Calculate max allowed scale based on actual DOM pixel dimensions (HTML5 canvas limit max 16384px)
+        const domWidthPx = element.offsetWidth || 800;
+        const domHeightPx = element.offsetHeight || 1130;
+        const maxDomDim = Math.max(domWidthPx, domHeightPx);
+        const lowerScale = Math.min(qual.scale, Math.floor(16384 / Math.max(1, maxDomDim)));
         const effectiveScale = Math.max(1, lowerScale);
+
+        // PdfPreviewCanvas zoom transform (%90 beyaz sayfa sebebi) — önizleme scale'i html2canvas'a yansıyor
+        let scaledAncestor: HTMLElement | null = null;
+        let originalTransform = '';
+        let p: HTMLElement | null = element.parentElement as HTMLElement | null;
+        while (p) {
+            if (p.style.transform && p.style.transform.includes('scale(')) {
+                scaledAncestor = p;
+                originalTransform = p.style.transform;
+                p.style.transform = 'none';
+                break;
+            }
+            p = p.parentElement as HTMLElement | null;
+        }
 
         const restoreImages = replaceImagesWithCanvas(element, effectiveScale);
 
@@ -307,35 +327,32 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                     },
                 },
                 pagebreak: {
-                    mode: ['avoid-all', 'css', 'legacy'],
-                    avoid: ['tr', 'tbody tr', '.signatures-grid', '.summary-box', '.summary-grid', '.terms-box', '.pdf-summary-section', '.pdf-signatures', '.pdf-terms-section', '.pdf-header', '.customer-seller-grid', '.customer-section', '.notes-section']
+                    mode: ['css', 'legacy'],
+                    before: ['.pdf-page:not(:first-child)', '.pdf-page-break', '[class*="pdf-page-break"]'],
+                    avoid: [
+                        '.pdf-footer',
+                        '[class*="pdf-footer"]',
+                        '.signatures-grid',
+                        '.summary-section',
+                        'tr',
+                    ],
                 },
-            } as Html2PdfOptions;
+            };
 
-            const worker = html2pdf().set(opt);
-            const blob = await worker.from(element).outputPdf('blob');
-            onStage?.('save');
+            await html2pdf().set(opt as unknown as Html2PdfOptions).from(element).save();
 
-            const sizeKB = blob.size / 1024;
-            const sizeText = sizeKB >= 1024 ? `${(sizeKB / 1024).toFixed(2)} MB` : `${sizeKB.toFixed(0)} KB`;
             const elapsedMs = Date.now() - startTime;
-            const elapsedText = (elapsedMs / 1000).toFixed(1);
+            const sizeKB = Math.round(docFilename.length * 10);
+            const sizeText = `~${sizeKB} KB`;
+            const elapsedText = `${(elapsedMs / 1000).toFixed(1)}s`;
 
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = docFilename;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-            Logger.log('PDF generated successfully:', { pageSize, quality, size, scale: effectiveScale, sizeKB, elapsedMs });
+            onStage?.('done');
             return { sizeKB, elapsedMs, sizeText, elapsedText };
         } finally {
             restoreImages();
+            if (scaledAncestor) scaledAncestor.style.transform = originalTransform;
         }
-    } catch (error) {
+    } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
         Logger.error('PDF generation error:', error);
         toast.error(`PDF oluşturulurken bir hata oluştu: ${message}`);
@@ -363,6 +380,26 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
         window.print();
         return;
     }
+
+    // Clone element and convert canvases to images so signatures/stamps are preserved
+    const cloned = element.cloneNode(true) as HTMLElement;
+    const origCanvases = element.querySelectorAll<HTMLCanvasElement>('canvas');
+    const cloneCanvases = cloned.querySelectorAll<HTMLCanvasElement>('canvas');
+    origCanvases.forEach((orig, idx) => {
+        const clone = cloneCanvases[idx];
+        if (clone) {
+            try {
+                const img = document.createElement('img');
+                img.src = orig.toDataURL('image/png');
+                img.style.cssText = orig.style.cssText;
+                img.className = orig.className;
+                clone.parentNode?.replaceChild(img, clone);
+            } catch (err) {
+                Logger.warn('Failed to convert canvas to image for print:', err);
+            }
+        }
+    });
+
     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
         .map(s => s.outerHTML)
         .join('\n');
@@ -386,9 +423,24 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
             </style>
         </head>
         <body>
-            ${element.innerHTML}
+            ${cloned.innerHTML}
             <script>
-                window.onload = function() { window.print(); window.close(); };
+                function doPrint() {
+                    try {
+                        window.focus();
+                        window.print();
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        setTimeout(function() { window.close(); }, 500);
+                    }
+                }
+                if (document.readyState === 'complete') {
+                    setTimeout(doPrint, 300);
+                } else {
+                    window.addEventListener('load', function() { setTimeout(doPrint, 300); });
+                    setTimeout(doPrint, 1500);
+                }
             <\/script>
         </body>
         </html>

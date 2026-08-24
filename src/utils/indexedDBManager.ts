@@ -41,6 +41,8 @@ class IndexedDBManager {
             request.onerror = () => {
                 Logger.error('IndexedDB açılamadı:', request.error);
                 this.initializationPromise = null;
+                this.isInitialized = false;
+                this.isConnectionOpen = false;
                 reject(new Error(`IndexedDB açılamadı: ${request.error}`));
             };
 
@@ -57,6 +59,9 @@ class IndexedDBManager {
                 this.db.onclose = () => {
                     Logger.warn('Database connection closed');
                     this.isConnectionOpen = false;
+                    this.isInitialized = false;
+                    this.initializationPromise = null;
+                    this.db = null;
                 };
 
                 resolve(this.db);
@@ -149,7 +154,7 @@ class IndexedDBManager {
 
     addBankInfoStore(db: IDBDatabase): void {
         if (!db.objectStoreNames.contains('bankInfo')) {
-            const store = db.createObjectStore('bankInfo', { keyPath: 'id' });
+            const store = db.createObjectStore('bankInfo', { keyPath: 'id', autoIncrement: true });
             store.createIndex('bankName', 'bankName', { unique: false });
             Logger.log('BankInfo store oluşturuldu');
         }

@@ -1,53 +1,33 @@
 import React, { useMemo } from 'react';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const ClassicTheme: React.FC<PdfThemeProps> = ({
-    id,
-    containerStyles,
-    config,
-    companyData,
-    quoteData,
-    customerData,
-    items,
-    bankData,
-    signature,
-    t,
-    formatDate,
-    formatCurrency,
-    subtotal,
-    discountAmount,
-    totalTax,
-    total,
-    currentLocale,
-    hasLineItemDiscounts,
-    onEdit,
-    activeLayout
-}) => {
-    // Helper for editable fields
-    const layoutMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
-        return map;
-    }, [activeLayout]);
-    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
+const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
+    const {
+        id,
+        containerStyles,
+        config,
+        companyData,
+        quoteData,
+        customerData,
+        items,
+        bankData,
+        signature,
+        t,
+        formatDate,
+        formatCurrency,
+        subtotal,
+        discountAmount,
+        totalTax,
+        total,
+        currentLocale,
+        hasLineItemDiscounts,
+        onEdit,
+        activeLayout
+    } = props;
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
-    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
-
-        return (
-            <span
-                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(fieldKey, value, type);
-                }}
-                title={t.clickToEdit}
-            >
-                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
-            </span>
-        );
-    };
 
     const classicStyles = useMemo(() => `
         .classic-theme-container {
@@ -166,18 +146,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
         }
     `, [config]);
 
-    const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = useMemo(() => {
-        const chunks: QuoteItem[][] = [];
-        if (items.length === 0) {
-            chunks.push([]);
-        } else {
-            for (let i = 0; i < items.length; i += itemsPerPage) {
-                chunks.push(items.slice(i, i + itemsPerPage));
-            }
-        }
-        return chunks;
-    }, [items, itemsPerPage]);
+
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="classic-table">
@@ -233,27 +202,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                     pageBreakAfter: pageIndex < itemChunks.length - 1 ? 'always' : 'auto'
                 }}>
                     {/* Watermark */}
-                    {config.showWatermark && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                transform: `rotate(${config.watermarkRotation || -45}deg)`,
-                                opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 48}px`,
-                                fontWeight: 'bold',
-                                color: config.watermarkColor || '#000000',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {config.watermarkText}
-                        </div>
-                    )}
+                    <PdfWatermark config={config} />
 
                     {/* Header Section - Grid Layout */}
                     {showSection('header') && (pageIndex === 0 ? (
@@ -308,7 +257,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                     ) : (
                         <div style={{ borderBottom: '1.5px solid #334155', marginBottom: '0.75rem', paddingBottom: '0.35rem' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#475569' }}>
-                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
+                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -316,36 +265,78 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     ))}
 
-                    {/* Customer & Details Section - Only Page 1 */}
-                    {showSection('customer') && pageIndex === 0 && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                            {/* Customer Box */}
+                    {/* Customer & Quote Details Box */}
+                    {pageIndex === 0 && (
+                    <>
+                        <div style={{ display: 'grid', gridTemplateColumns: config.showCompanyDetails !== false ? '1fr 1fr' : '1fr', gap: '8px', marginBottom: '10px' }}>
+                            {/* Seller Box */}
+                            {config.showCompanyDetails !== false && (
+                                <div className="classic-section-box">
+                                    <div className="classic-section-header">
+                                        {t.seller}
+                                    </div>
+                                    <div style={{ padding: '6px 8px', fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
+                                        <div style={{ fontWeight: '700', fontSize: '9pt', color: '#0f172a', marginBottom: '2px' }}>
+                                            {renderEditable(companyData.name, 'companyName')}
+                                        </div>
+                                        {companyData.phone && (
+                                            <div>
+                                                <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
+                                                <span>{companyData.phone}</span>
+                                            </div>
+                                        )}
+                                        {companyData.email && (
+                                            <div>
+                                                <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
+                                                <span>{companyData.email}</span>
+                                            </div>
+                                        )}
+                                        {companyData.address && (
+                                            <div style={{ marginTop: '2px', color: '#64748b' }}>
+                                                {companyData.address}
+                                            </div>
+                                        )}
+                                        {(companyData.taxOffice || companyData.taxNumber) && (
+                                            <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
+                                                {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                                {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Customer Details Box */}
                             <div className="classic-section-box">
                                 <div className="classic-section-header">
-                                    {t.customer} / {t.to}
+                                    {t.customer}
                                 </div>
-                                <div style={{ padding: '6px 8px', fontSize: '8.5pt', lineHeight: '1.35' }}>
-                                    {customerData.company && <div style={{ fontWeight: config.customerTitleFontWeight || 'bold', fontSize: config.customerTitleFontSize || '9.5pt', color: '#0f172a' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
+                                <div style={{ padding: '6px 8px', fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
+                                    {customerData.company && (
+                                        <div style={{ fontWeight: '700', fontSize: '9pt', color: '#0f172a', marginBottom: '2px' }}>
+                                            {renderEditable(customerData.company, 'customerCompany')}
+                                        </div>
+                                    )}
                                     {customerData.name && (
-                                        <div style={{ fontSize: config.customerLabelFontSize || '8.5pt', color: '#334155' }}>
-                                            <span style={{ fontWeight: config.customerLabelFontWeight || '600', color: '#475569' }}>{t.authorized}: </span>
-                                            <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.name, 'customerName')}</span>
+                                        <div>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
+                                            <span style={{ fontWeight: '600' }}>{renderEditable(customerData.name, 'customerName')}</span>
                                         </div>
                                     )}
                                     {customerData.phone && (
-                                        <div style={{ fontSize: config.customerLabelFontSize || '8.5pt', color: '#334155' }}>
-                                            <span style={{ fontWeight: config.customerLabelFontWeight || '600', color: '#475569' }}>{t.phone}: </span>
-                                            <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                        <div>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
+                                            <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
                                         </div>
                                     )}
                                     {customerData.email && (
-                                        <div style={{ fontSize: config.customerLabelFontSize || '8.5pt', color: '#334155' }}>
-                                            <span style={{ fontWeight: config.customerLabelFontWeight || '600', color: '#475569' }}>{t.email}: </span>
-                                            <span style={{ fontSize: config.customerValueFontSize || 'inherit', fontWeight: config.customerValueFontWeight || 'normal' }}>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        <div>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
+                                            <span>{renderEditable(customerData.email, 'customerEmail')}</span>
                                         </div>
                                     )}
                                     {customerData.address && (
-                                        <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
+                                        <div style={{ marginTop: '2px', color: '#64748b' }}>
                                             {customerData.address}
                                         </div>
                                     )}
@@ -357,28 +348,15 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                                     )}
                                 </div>
                             </div>
-
-                            {/* Quote Details Box */}
-                            <div className="classic-section-box">
-                                <div className="classic-section-header">
-                                    {t.details}
-                                </div>
-                                <div style={{ padding: '6px 8px', fontSize: '8.5pt' }}>
-                                    <div style={{ fontWeight: (config.titleFontWeight as React.CSSProperties['fontWeight']) || 'bold', fontSize: (config.titleFontSize as React.CSSProperties['fontSize']) || '9.5pt', color: '#0f172a' }}>{renderEditable(config.title, 'quoteTitle')}</div>
-                                    {config.showNotes && quoteData.notes && (
-                                        <div style={{ marginTop: '4px', fontSize: '8pt', color: '#475569', fontStyle: 'italic', whiteSpace: 'pre-wrap', lineHeight: '1.3' }}>
-                                            {renderEditable(quoteData.notes, 'notes', 'textarea')}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
                         </div>
+                        <PdfCustomFields customFields={quoteData.customFields} themeColor="#3b82f6" />
+                    </>
                     )}
 
                     {/* Items Table */}
                     {showSection('items') && (
                     <div style={{ flex: 1 }}>
-                        {renderTable(chunk, pageIndex * itemsPerPage)}
+                        {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                     </div>
                     )}
 
@@ -441,7 +419,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                                                 </tbody>
                                             </table>
                                             <div style={{ fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic', marginTop: '4px', textAlign: 'right' }}>
-                                                {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                                {amountInWords}
                                             </div>
                                         </>
                                     )}
@@ -478,12 +456,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                                 </div>
                             )}
 
-                            {/* Custom Footer */}
-                            {config.customFooter && (
-                                <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '7.5pt', color: '#475569', borderTop: '1px solid #cbd5e1', paddingTop: '4px' }}>
-                                    {config.customFooter}
-                                </div>
-                            )}
+                            
 
                             {/* Footer - Only Last Page */}
                             {showSection('footer') && (
@@ -501,12 +474,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = ({
                             )}
 
                             {/* Page Number */}
-                            {config.showPageNumbers && (
-                                <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '7pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                                </div>
-                            )}
+                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
                 </div>

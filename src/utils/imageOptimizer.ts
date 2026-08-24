@@ -1,6 +1,8 @@
 // Image Optimizer Utility
 import Logger from '@/utils/logger';
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
 class ImageOptimizer {
     private maxWidth: number;
     private maxHeight: number;
@@ -16,8 +18,8 @@ class ImageOptimizer {
 
     async optimizeImage(file: File, isStamp = false): Promise<string> {
         return new Promise((resolve, reject) => {
-            if (!file || !file.type.startsWith('image/')) {
-                reject(new Error('Geçersiz dosya türü'));
+            if (!file || !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                reject(new Error('Geçersiz dosya türü. Sadece JPEG, PNG, GIF ve WebP formatları desteklenir.'));
                 return;
             }
 
@@ -28,7 +30,11 @@ class ImageOptimizer {
             }
 
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d')!;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error('Canvas bağlamı alınamadı'));
+                return;
+            }
             const img = new Image();
 
             const objectUrl = URL.createObjectURL(file);
@@ -81,7 +87,11 @@ class ImageOptimizer {
                 URL.revokeObjectURL(objectUrl);
                 const reader = new FileReader();
                 reader.onload = (e: ProgressEvent<FileReader>) => {
-                    const result = e.target?.result as string;
+                    const result = typeof e.target?.result === 'string' ? e.target.result : '';
+                    if (!result || !result.startsWith('data:image/')) {
+                        reject(new Error('Geçersiz resim verisi'));
+                        return;
+                    }
                     const resultSize = this.getBase64Size(result);
                     // If raw file is small enough, just use it
                     if (resultSize < this.maxFileSize * 2) {
@@ -119,10 +129,10 @@ class ImageOptimizer {
         if (isStamp || originalType === 'image/png') {
             return 'image/png';
         }
-        if (originalType === 'image/gif') {
+        if (originalType === 'image/gif' || originalType === 'image/webp') {
             return 'image/jpeg';
         }
-        return originalType;
+        return originalType === 'image/jpeg' ? 'image/jpeg' : 'image/png';
     }
 
     calculateQuality(originalSize: number, isStamp = false) {
@@ -136,15 +146,15 @@ class ImageOptimizer {
 
     getBase64Size(base64String: string) {
         if (!base64String) return 0;
-        const padding = base64String.endsWith('==') ? 2 : base64String.endsWith('=') ? 1 : 0;
-        return (base64String.length * 3) / 4 - padding;
+        const base64Data = base64String.includes(',') ? base64String.split(',')[1] : base64String;
+        const padding = base64Data.endsWith('==') ? 2 : base64Data.endsWith('=') ? 1 : 0;
+        return (base64Data.length * 3) / 4 - padding;
     }
 
     async validateImage(file: File) {
         const maxSize = 10 * 1024 * 1024; // 10MB Limit
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-        if (!allowedTypes.includes(file.type)) {
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
             throw new Error('Sadece JPEG, PNG, GIF ve WebP formatları desteklenir');
         }
 

@@ -1,0 +1,208 @@
+/*
+ * TeklifMaster Pro - Print Stylesheet (print.css)
+ * ===============================================
+ * Ensures clean, high-fidelity printing when the user presses Ctrl+P / window.print().
+ */
+
+@media print {
+  /* Page Geometry */
+  @page {
+    margin: 8mm 10mm 10mm 10mm;
+    size: auto;
+  }
+
+  /* Force exact color reproduction and disable browser decorations */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* ─── HIDE ALL APPLICATION SHELL & UI INTERFACES ────────────────────────── */
+  .sidebar,
+  .top-bar,
+  .status-bar,
+  .focus-mode-bar,
+  .tab-bar,
+  .preview-drawer,
+  .pdf-preview-header,
+  .pdf-zoom-toolbar,
+  .pdf-page-navigator,
+  .pdf-tabs-container,
+  .settings-panel,
+  .no-print,
+  .btn,
+  button,
+  nav,
+  input[type="file"],
+  .toast,
+  [role="dialog"],
+  [role="tooltip"],
+  .modal-overlay,
+  .modal-content,
+  .ConfirmDialog,
+  .context-menu,
+  .pagination,
+  .search-section,
+  .empty-state,
+  .popup-editor,
+  .editable-field:hover,
+  [data-sonner-toaster] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Reset layout shells */
+  .app-shell,
+  .main-area,
+  .content-area,
+  .page-enter,
+  .quote-builder-container,
+  .live-preview-container,
+  .pdf-preview-panel {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* ─── PREVIEW CANVAS RESET (Remove zoom scales & wrappers) ─────────────── */
+  .origin-top,
+  [style*="scale"] {
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* ─── PDF CONTAINERS & THEMES ─────────────────────────────────────────── */
+  #printable-quote-container-panel,
+  .modern-theme-container,
+  .classic-theme-container,
+  .corporate-theme-container,
+  .minimal-theme-container,
+  .pro-theme-container,
+  .bold-theme-container,
+  .invoice-theme-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  /* ─── MULTI-PAGE CHUNKS & PAGE BREAKS ─────────────────────────────────── */
+  .pdf-page,
+  .pdf-preview {
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .pdf-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* ─── BREAK-INSIDE PROTECTION ──────────────────────────────────────────── */
+  .pdf-header,
+  .customer-section,
+  .customer-box,
+  .signatures-grid,
+  .signature-col,
+  .signature-line,
+  .bottom-section,
+  .bank-section,
+  .terms-box,
+  .pdf-items-table thead,
+  .pdf-items-table tr,
+  .classic-table tr,
+  .corporate-table tr,
+  .minimal-table tr,
+  .pro-table tr,
+  .bold-table tr,
+  .invoice-table tr,
+  .card,
+  .card-header {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .pdf-items-table,
+  .classic-table,
+  .corporate-table,
+  .minimal-table,
+  .pro-table,
+  .bold-table,
+  .invoice-table {
+    page-break-inside: auto;
+    break-inside: auto;
+    width: 100% !important;
+  }
+
+  /* Remove editable visual rings/indicators */
+  .editable-field {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    cursor: default !important;
+  }
+
+  /* Dark mode protection during print – Faz4: color-adjust exact */
+  [data-theme="dark"],
+  [data-theme="dark"] body,
+  [data-theme="dark"] .modern-theme-container,
+  [data-theme="dark"] .classic-theme-container,
+  [data-theme="dark"] .corporate-theme-container,
+  [data-theme="dark"] .minimal-theme-container,
+  [data-theme="dark"] .pro-theme-container,
+  [data-theme="dark"] .bold-theme-container,
+  [data-theme="dark"] .invoice-theme-container {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  [data-theme="dark"] .customer-box,
+  [data-theme="dark"] .bottom-section,
+  [data-theme="dark"] .terms-box,
+  [data-theme="dark"] .card {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+  }
+}

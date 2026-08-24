@@ -52,27 +52,29 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankMa
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const finalValue = name === 'iban' ? value.replace(/\s+/g, '').toUpperCase() : value;
+        setFormData(prev => ({ ...prev, [name]: finalValue }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            const cleanedData = {
+                bankName: formData.bankName.trim(),
+                branch: formData.branch.trim(),
+                accountNumber: formData.accountNumber.trim(),
+                iban: formData.iban.replace(/\s+/g, '').toUpperCase(),
+                accountHolder: formData.accountHolder.trim()
+            };
+
             if (editingBank) {
-                await db.put('bankInfo', { ...formData, id: editingBank.id });
+                await db.put('bankInfo', { ...cleanedData, id: editingBank.id });
                 toast.success(t('bankUpdated'));
             } else {
-                await db.add('bankInfo', formData);
+                await db.add('bankInfo', { ...cleanedData, id: Date.now() });
                 toast.success(t('bankAdded'));
             }
-            setFormData({
-                bankName: '',
-                branch: '',
-                accountNumber: '',
-                iban: '',
-                accountHolder: ''
-            });
-            setEditingBank(null);
+            handleCancelEdit();
             loadBanks();
         } catch (error) {
             Logger.error('Error saving bank:', error);
@@ -105,6 +107,9 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankMa
                     await db.delete('bankInfo', id);
                     toast.success(t('bankDeleted'));
                     loadBanks();
+                    if (editingBank?.id === id) {
+                        handleCancelEdit();
+                    }
                 } catch (error) {
                     Logger.error('Error deleting bank:', error);
                     toast.error(t('bankDeleteError'));
@@ -145,7 +150,7 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankMa
                             onClick={handleCancelEdit}
                             title={t('addNewBank')}
                         >
-                            <Plus size={16} /> Yeni
+                            <Plus size={16} /> {t('new') || 'Yeni'}
                         </button>
                     </div>
 

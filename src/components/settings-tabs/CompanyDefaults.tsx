@@ -1,8 +1,13 @@
-﻿import { Save, Building } from "lucide-react";
-import React from "react";
+import { Save, Building, Hash, Settings2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import CompanyInfoForm from '@/components/CompanyInfoForm';
+import { QuoteNumberConfigModal } from '@/components/quote-number';
+import { getDefaultQuoteNumberConfig } from '@/context/quote/initialState';
 import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
+import Logger from '@/utils/logger';
+import { previewQuoteNumber } from '@/utils/numberGenerator';
+import type { QuoteNumberConfig } from '@/context/quote/types';
 
 interface CompanyDefaultsProps {
   settings: {
@@ -27,7 +32,7 @@ interface CompanyDefaultsProps {
     stamp: string | null;
   };
   onSettingsChange: (name: string, value: string | number) => void;
-onCompanyChange: (name: string, value: string | null) => void;
+  onCompanyChange: (name: string, value: string | null) => void;
   onSave: () => void;
 }
 
@@ -38,8 +43,35 @@ const CompanyDefaults = ({
   onCompanyChange,
   onSave,
 }: CompanyDefaultsProps) => {
-  const { quoteData } = useQuoteData();
+  const { quoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
+  const [isNumberModalOpen, setIsNumberModalOpen] = useState(false);
+  const [numberConfig, setNumberConfig] = useState<QuoteNumberConfig>(getDefaultQuoteNumberConfig);
+
+  useEffect(() => {
+    if (!db) return;
+    const loadConfig = async () => {
+      try {
+        const saved = await db.get<QuoteNumberConfig>('settings', 'quote_number_config');
+        if (saved) setNumberConfig(saved);
+      } catch (err) {
+        Logger.error('Error loading quote number config in settings:', err);
+      }
+    };
+    loadConfig();
+  }, [db]);
+
+  const handleSaveNumberConfig = async (newConfig: QuoteNumberConfig) => {
+    setNumberConfig(newConfig);
+    if (db) {
+      try {
+        await db.put('settings', { id: 'quote_number_config', key: 'quote_number_config', ...newConfig });
+      } catch (err) {
+        Logger.error('Error saving quote number config in settings:', err);
+      }
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     onSettingsChange(name, value);
@@ -58,7 +90,36 @@ const CompanyDefaults = ({
           <Save size={14} /> {t('saveSettings')}
         </button>
       </div>
-      <div className="card-body">
+      <div className="card-body space-y-5">
+        {/* Numarator Quick Setting Banner */}
+        <div className="p-3.5 rounded-lg bg-[var(--color-primary-muted)]/50 border border-[var(--color-primary)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)] text-white flex items-center justify-center shrink-0">
+              <Hash size={16} />
+            </div>
+            <div>
+              <div className="font-semibold text-xs text-[var(--color-text)]">
+                Dinamik Teklif Numaratörü (Sayaç & Şablonlar)
+              </div>
+              <div className="text-[11px] text-[var(--color-text-muted)] font-mono mt-0.5 flex items-center gap-1.5">
+                <Sparkles size={11} className="text-[var(--color-primary)]" />
+                <span>Sıradaki Numara: <strong className="text-[var(--color-text)]">{previewQuoteNumber(numberConfig)}</strong></span>
+                <span>•</span>
+                <span>Format: {numberConfig.template}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsNumberModalOpen(true)}
+            className="btn btn-sm btn-outline flex items-center gap-1.5 text-xs shrink-0 self-start sm:self-auto"
+          >
+            <Settings2 size={13} />
+            <span>Numaratörü Yapılandır</span>
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-group">
             <label className="form-label">
@@ -68,7 +129,7 @@ const CompanyDefaults = ({
               type="text"
               className="form-control"
               name="defaultTitle"
-              value={settings.defaultTitle || ""}
+              value={settings.defaultTitle || ''}
               onChange={handleChange}
               placeholder={t('defaultQuoteTitlePlaceholder')}
             />
@@ -87,70 +148,77 @@ const CompanyDefaults = ({
           </div>
         </div>
         <div className="form-group">
-            <label className="form-label">
-              {t('defaultQuoteDescription')}
-            </label>
+          <label className="form-label">
+            {t('defaultQuoteDescription')}
+          </label>
           <textarea
             className="form-control"
             rows={2}
             name="defaultDescription"
-            value={settings.defaultDescription || ""}
+            value={settings.defaultDescription || ''}
             onChange={handleChange}
             placeholder={t('defaultQuoteDescPlaceholder')}
           ></textarea>
         </div>
         <div className="form-group">
-            <label className="form-label">
-              {t('defaultDeliveryTerms')}
-            </label>
+          <label className="form-label">
+            {t('defaultDeliveryTerms')}
+          </label>
           <textarea
             className="form-control"
             rows={2}
             name="defaultDeliveryTerms"
-            value={settings.defaultDeliveryTerms || ""}
+            value={settings.defaultDeliveryTerms || ''}
             onChange={handleChange}
             placeholder={t('defaultDeliveryPlaceholder')}
           ></textarea>
         </div>
         <div className="form-group">
-            <label className="form-label">
-              {t('defaultWarranty')}
-            </label>
+          <label className="form-label">
+            {t('defaultWarranty')}
+          </label>
           <textarea
             className="form-control"
             rows={2}
             name="defaultWarrantyTerms"
-            value={settings.defaultWarrantyTerms || ""}
+            value={settings.defaultWarrantyTerms || ''}
             onChange={handleChange}
             placeholder={t('defaultWarrantyPlaceholder')}
           ></textarea>
         </div>
         <div className="form-group">
-            <label className="form-label">
-              {t('defaultNotes')}
-            </label>
+          <label className="form-label">
+            {t('defaultNotes')}
+          </label>
           <textarea
             className="form-control"
             rows={3}
             name="defaultNote"
-            value={settings.defaultNote}
+            value={settings.defaultNote || ''}
             onChange={handleChange}
             placeholder={t('defaultNotesPlaceholder')}
           ></textarea>
         </div>
         <div className="border-t border-[var(--color-border)] pt-5 mt-6">
-            <h3 className="text-base font-bold text-[var(--color-text)] mb-1.5">
-              {t('defaultCompanyInfo')}
-            </h3>
-            <p className="text-sm text-[var(--color-text-muted)] mb-4">
-              {t('defaultCompanyDesc')}
-            </p>
+          <h3 className="text-base font-bold text-[var(--color-text)] mb-1.5">
+            {t('defaultCompanyInfo')}
+          </h3>
+          <p className="text-sm text-[var(--color-text-muted)] mb-4">
+            {t('defaultCompanyDesc')}
+          </p>
           <CompanyInfoForm
             data={companySettings}
             onChange={onCompanyChange}
           />
         </div>
       </div>
+
+      <QuoteNumberConfigModal
+        isOpen={isNumberModalOpen}
+        onClose={() => setIsNumberModalOpen(false)}
+        config={numberConfig}
+        onSaveConfig={handleSaveNumberConfig}
+      />
     </div>
   );
 };

@@ -26,3 +26,14 @@ if (!Blob.prototype.text) {
         });
     };
 }
+
+// Faz6: ResizeObserver mock (PdfPreviewPanel & LiveInlinePreview test uyumu)
+if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).ResizeObserver) {
+    class MockResizeObserver {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    }
+    (window as unknown as Record<string, unknown>).ResizeObserver = MockResizeObserver;
+    (globalThis as unknown as Record<string, unknown>).ResizeObserver = MockResizeObserver;
+}

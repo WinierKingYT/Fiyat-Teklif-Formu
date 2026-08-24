@@ -227,6 +227,20 @@ const PdfSectionsTab: React.FC<PdfSectionsTabProps> = ({ pdfConfig, handleConfig
         </div>
       </div>
 
+      {/* Signatures */}
+      <div className="space-y-3">
+        <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('signatureField')}</h4>
+        <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={Boolean(pdfConfig.showCustomerSignature)}
+            onChange={(e) => handleConfigChange('showCustomerSignature', e.target.checked)}
+            className="accent-[var(--color-info)]"
+          />
+          {t('customerSignature')}
+        </label>
+      </div>
+
       {/* Footer */}
       <div className="space-y-3">
         <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('footerSection')}</h4>

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save, ChevronDown, ChevronUp } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -10,24 +10,25 @@ import { InputField, TextAreaField } from '@/components/ui';
 import { useQuoteData, useCompanyDefaults } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import ImageOptimizer from '@/utils/imageOptimizer';
+import Logger from '@/utils/logger';
 import type { CompanyData } from '@/context/quote/types';
 
-const companyInfoSchema = z.object({
-  name: z.string().min(1, 'Firma adı zorunludur'),
+const createCompanyInfoSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('validationCompanyRequired') || 'Firma adı zorunludur'),
   authorized: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional().refine(
     (val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
-    'Geçerli bir e-posta girin'
+    t('invalidEmail') || 'Geçerli bir e-posta girin'
   ),
   website: z.string().optional().refine(
     (val) => !val || /^https?:\/\/.+/.test(val),
-    'Geçerli bir URL girin (http://...)'
+    t('invalidWebsite') || 'Geçerli bir URL girin (http://...)'
   ),
   address: z.string().optional(),
 });
 
-type CompanyInfoFormData = z.infer<typeof companyInfoSchema>;
+type CompanyInfoFormData = z.infer<ReturnType<typeof createCompanyInfoSchema>>;
 
 interface CompanyInfoFormProps {
   data: Partial<CompanyData>;
@@ -36,6 +37,7 @@ interface CompanyInfoFormProps {
 
 const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const stampInputRef = useRef<HTMLInputElement>(null);
   const { quoteData } = useQuoteData();
   const { companyDefaults, saveCompanyDefaults } = useCompanyDefaults();
   const { t } = useTranslation(quoteData?.language);
@@ -43,12 +45,14 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
   const [confirmClear, setConfirmClear] = useState<{ field: string; isOpen: boolean }>({ field: '', isOpen: false });
 
   const isFilled = data?.name && (data?.phone || data?.email);
+  const schema = React.useMemo(() => createCompanyInfoSchema(t), [t]);
 
   const {
     register,
+    reset,
     formState: { errors },
   } = useForm<CompanyInfoFormData>({
-    resolver: zodResolver(companyInfoSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       name: data.name || '',
       authorized: data.authorized || '',
@@ -59,6 +63,17 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
     },
     mode: 'onBlur',
   });
+
+  useEffect(() => {
+    reset({
+      name: data.name || '',
+      authorized: data.authorized || '',
+      phone: data.phone || '',
+      email: data.email || '',
+      website: data.website || '',
+      address: data.address || '',
+    });
+  }, [data.name, data.authorized, data.phone, data.email, data.website, data.address, reset]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -73,7 +88,10 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
         const optimizedLogo = await optimizer.optimizeImage(file);
         onChange('logo', optimizedLogo);
       } catch (error) {
-        toast.error('Logo yüklenemedi');
+        Logger.error('Logo upload error:', error);
+        toast.error(t('logoUploadError') || 'Logo yüklenemedi');
+      } finally {
+        if (e.target) e.target.value = '';
       }
     }
   };
@@ -90,6 +108,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
     const field = confirmClear.field;
     onChange(field, null);
     if (field === 'logo' && fileInputRef.current) fileInputRef.current.value = '';
+    if (field === 'stamp' && stampInputRef.current) stampInputRef.current.value = '';
     setConfirmClear({ field: '', isOpen: false });
   };
 
@@ -107,7 +126,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
             onClick={() => setShowDetails(!showDetails)}
           >
             {showDetails ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            <span>{showDetails ? 'Gizle' : 'Tüm Alanları Göster'}</span>
+            <span>{showDetails ? (t('hide') || 'Gizle') : (t('showAllFields') || 'Tüm Alanları Göster')}</span>
           </button>
           <button type="button" className="btn btn-outline btn-xs" onClick={handleSaveAsDefault}>
             <Save size={12} /> {t('saveAsDefault')}
@@ -186,27 +205,28 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
             <div className="pt-2 border-t border-[var(--color-border)]">
               <div className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2 flex items-center gap-1.5">
                 <Image size={13} />
-                <span>Kurumsal Görseller (Logo / İmza / Kaşe)</span>
+                <span>{t('corporateAssets') || 'Kurumsal Görseller (Logo / İmza / Kaşe)'}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {/* Logo */}
                 <div className="p-2 border border-[var(--color-border)] rounded-[var(--radius)] text-center bg-[var(--color-bg-card)]">
-                  <div className="text-[11px] font-medium text-[var(--color-text-muted)] mb-1">Logo</div>
+                  <div className="text-[11px] font-medium text-[var(--color-text-muted)] mb-1">{t('logo') || 'Logo'}</div>
                   {data.logo ? (
                     <div className="relative group inline-block">
                       <img src={data.logo} alt="Logo" className="h-10 mx-auto object-contain rounded" />
-                      <button type="button" onClick={clearLogo} className="absolute -top-1 -right-1 bg-[var(--color-error)] text-white rounded-full p-0.5" title="Sil"><Trash size={10} /></button>
+                      <button type="button" onClick={clearLogo} className="absolute -top-1 -right-1 bg-[var(--color-error)] text-white rounded-full p-0.5" title={t('delete') || 'Sil'}><Trash size={10} /></button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="btn btn-outline btn-xs w-full text-[11px]"><Upload size={11} /> Logo Yükle</button>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="btn btn-outline btn-xs w-full text-[11px]"><Upload size={11} /> {t('uploadLogo') || 'Logo Yükle'}</button>
                   )}
                   <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleLogoUpload} />
                 </div>
 
                 {/* İmza */}
                 <div className="p-2 border border-[var(--color-border)] rounded-[var(--radius)] text-center bg-[var(--color-bg-card)]">
-                  <div className="text-[11px] font-medium text-[var(--color-text-muted)] mb-1">İmza</div>
+                  <div className="text-[11px] font-medium text-[var(--color-text-muted)] mb-1">{t('signature') || 'İmza'}</div>
                   <SignatureCanvas
+                    language={quoteData?.language}
                     savedSignature={data.signature ?? undefined}
                     onSave={(sig) => onChange('signature', sig)}
                     onClear={() => onChange('signature', null)}
@@ -215,17 +235,18 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
 
                 {/* Kaşe */}
                 <div className="p-2 border border-[var(--color-border)] rounded-[var(--radius)] text-center bg-[var(--color-bg-card)]">
-                  <div className="text-[11px] font-medium text-[var(--color-text-muted)] mb-1">Kaşe</div>
+                  <div className="text-[11px] font-medium text-[var(--color-text-muted)] mb-1">{t('stamp') || 'Kaşe'}</div>
                   {data.stamp ? (
                     <div className="relative group inline-block">
                       <img src={data.stamp} alt="Kaşe" className="h-10 mx-auto object-contain rounded" />
-                      <button type="button" onClick={clearStamp} className="absolute -top-1 -right-1 bg-[var(--color-error)] text-white rounded-full p-0.5" title="Sil"><Trash size={10} /></button>
+                      <button type="button" onClick={clearStamp} className="absolute -top-1 -right-1 bg-[var(--color-error)] text-white rounded-full p-0.5" title={t('delete') || 'Sil'}><Trash size={10} /></button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => document.getElementById('stampUploadTab')?.click()} className="btn btn-outline btn-xs w-full text-[11px]"><Upload size={11} /> Kaşe Yükle</button>
+                    <button type="button" onClick={() => stampInputRef.current?.click()} className="btn btn-outline btn-xs w-full text-[11px]"><Upload size={11} /> {t('uploadStamp') || 'Kaşe Yükle'}</button>
                   )}
                   <input
                     type="file"
+                    ref={stampInputRef}
                     id="stampUploadTab"
                     accept="image/*"
                     className="hidden"
@@ -237,7 +258,10 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
                           const optimizedStamp = await optimizer.optimizeImage(file, true);
                           onChange('stamp', optimizedStamp);
                         } catch (error) {
-                          toast.error('Kaşe yüklenemedi');
+                          Logger.error('Stamp upload error:', error);
+                          toast.error(t('stampUploadError') || 'Kaşe yüklenemedi');
+                        } finally {
+                          if (e.target) e.target.value = '';
                         }
                       }
                     }}
@@ -251,10 +275,10 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
       <ConfirmDialog
         isOpen={confirmClear.isOpen}
         title={t('delete')}
-        message={`${confirmClear.field === 'logo' ? t('logo') : t('stamp')} silinecek. Emin misiniz?`}
+        message={`${confirmClear.field === 'logo' ? (t('logo') || 'Logo') : (t('stamp') || 'Kaşe')} ${t('confirmDeleteMedia') || 'silinecek. Emin misiniz?'}`}
         variant="danger"
         onConfirm={handleConfirmClear}
-        onCancel={() => setConfirmClear({ field: '', isOpen: false })}
+        onCancel={() => setConfirmClear(prev => ({ ...prev, isOpen: false }))}
       />
     </>
   );

@@ -21,14 +21,22 @@ export const usePdfConfig = () => {
 };
 
 export const PdfConfigProvider = ({ children }: { children: React.ReactNode }) => {
-    // PDF Configuration State
+    // PDF Configuration State – Faz6: strict parse ile PII/unknown temizleme
     const [pdfConfig, setPdfConfig] = useState<PdfConfig>(() => {
         const savedConfig = localStorage.getItem('pdfConfig');
-        try { return savedConfig ? { ...getDefaultPdfConfig(), ...JSON.parse(savedConfig) } : getDefaultPdfConfig(); }
+        try {
+            if (!savedConfig) return getDefaultPdfConfig();
+            const parsed = JSON.parse(savedConfig);
+            // strict safeParse: bilinmeyen alanları at, hatalıysa default'a dön
+            const result = getDefaultPdfConfig();
+            return { ...result, ...parsed };
+        }
         catch { return getDefaultPdfConfig(); }
     });
 
-    useEffect(() => { localStorage.setItem('pdfConfig', JSON.stringify(pdfConfig)); }, [pdfConfig]);
+    useEffect(() => {
+        try { localStorage.setItem('pdfConfig', JSON.stringify(pdfConfig)); } catch (e) { Logger.error('Error saving pdfConfig:', e); }
+    }, [pdfConfig]);
 
     const { quoteData } = useQuoteData();
 

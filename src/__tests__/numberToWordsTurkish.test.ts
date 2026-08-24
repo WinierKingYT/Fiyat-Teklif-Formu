@@ -20,4 +20,8 @@ describe('numberToWordsTurkish', () => {
     expect(numberToWordsTurkish(NaN)).toBe('');
     expect(numberToWordsTurkish(null as unknown as number)).toBe('');
   });
+
+  it('converts negative amounts with Eksi prefix', () => {
+    expect(numberToWordsTurkish(-250, 'TRY')).toBe('Yalnız #Eksi İki Yüz Elli Türk Lirasıdır#');
+  });
 });

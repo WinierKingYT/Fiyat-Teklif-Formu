@@ -1,10 +1,10 @@
 import React from 'react';
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
-type ViewMode = 'desktop' | 'mobile';
-type AppTheme = 'light' | 'dark';
-type AppColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate';
-type AppLayout = 'modern' | 'classic';
+export type ViewMode = 'desktop' | 'mobile';
+export type AppTheme = 'light' | 'dark';
+export type AppColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate' | 'indigo' | 'teal' | 'cyan';
+export type AppLayout = 'modern' | 'classic';
 
 export interface UIContextValue {
   viewMode: ViewMode;

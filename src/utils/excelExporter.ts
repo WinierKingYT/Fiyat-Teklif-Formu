@@ -9,9 +9,11 @@ export interface ExportItem {
     unit?: string;
     price?: number | string;
     discountRate?: number | string;
+    discountType?: 'percentage' | 'fixed';
     lineDiscountRate?: number | string;
     taxRate?: number | string;
     netTotal?: number | string;
+    total?: number | string;
 }
 
 export interface ExportQuoteData {
@@ -23,6 +25,8 @@ export interface ExportQuoteData {
     company?: Partial<CompanyData>;
     bankData?: Partial<BankData>;
     terms?: string;
+    deliveryTerms?: string;
+    warrantyTerms?: string;
     notes?: string;
     subTotal?: number;
     taxAmount?: number;
@@ -90,16 +94,28 @@ export const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], local
 
     (items || []).forEach(item => {
         const discountRate = Number(item.discountRate ?? item.lineDiscountRate ?? 0);
+        const isFixedDiscount = item.discountType === 'fixed';
         const taxRate = Number(item.taxRate ?? 0);
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.price) || 0;
+        const gross = qty * price;
+        const lineDiscount = isFixedDiscount ? Math.min(gross, discountRate) : (discountRate > 0 ? gross * (Math.min(discountRate, 100) / 100) : 0);
+        const discounted = gross - lineDiscount;
+        const lineTotal = item.netTotal != null ? item.netTotal : (item.total != null ? item.total : discounted);
+
+        const discountText = discountRate > 0
+            ? (isFixedDiscount ? toLocale(discountRate, locale) : `%${discountRate}`)
+            : '';
+
         rows.push([
             safe(item.name),
             safe(item.description),
             safe(item.quantity),
             safe(item.unit),
             safe(item.price),
-            discountRate > 0 ? `%${discountRate}` : '',
+            discountText,
             taxRate > 0 ? `%${taxRate}` : '',
-            toLocale(item.netTotal != null ? item.netTotal : Number(item.quantity) * Number(item.price), locale)
+            toLocale(lineTotal, locale)
         ]);
     });
 
@@ -121,6 +137,16 @@ export const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], local
         rows.push([quoteData.terms]);
         rows.push([]);
     }
+    if (quoteData?.deliveryTerms) {
+        rows.push([t.delivery || (quoteData?.language === 'en' ? 'Delivery Terms' : quoteData?.language === 'de' ? 'Lieferbedingungen' : 'Teslimat Şartları')]);
+        rows.push([quoteData.deliveryTerms]);
+        rows.push([]);
+    }
+    if (quoteData?.warrantyTerms) {
+        rows.push([t.warranty || (quoteData?.language === 'en' ? 'Warranty Terms' : quoteData?.language === 'de' ? 'Garantiebedingungen' : 'Garanti Şartları')]);
+        rows.push([quoteData.warrantyTerms]);
+        rows.push([]);
+    }
     if (quoteData?.notes) {
         rows.push([t.notes]);
         rows.push([quoteData.notes]);
@@ -132,8 +158,10 @@ export const buildRows = (quoteData: ExportQuoteData, items: ExportItem[], local
 
 export const buildFileName = (quoteData: ExportQuoteData, ext: string) => {
     const t = getT(quoteData?.language);
-    const customerName = quoteData?.customer?.name || 'Musteri';
-    const slug = (t.quote || 'teklif').toLowerCase();
+    const defaultCustomer = quoteData?.language === 'en' ? 'Customer' : quoteData?.language === 'de' ? 'Kunde' : 'Musteri';
+    const rawCustomerName = quoteData?.customer?.name || quoteData?.customer?.company || defaultCustomer;
+    const customerName = rawCustomerName.replace(/[/\\?%*:|"<>]/g, '_').trim() || defaultCustomer;
+    const slug = (t.quote || 'teklif').toLowerCase().replace(/[/\\?%*:|"<>]/g, '_');
     return `${slug}_${customerName}_${new Date().toISOString().slice(0, 10)}.${ext}`;
 };
 
@@ -153,7 +181,8 @@ export const generateExcelBuffer = async (quoteData: ExportQuoteData, items: Exp
 export const generateCSVString = (quoteData: ExportQuoteData, items: ExportItem[]): string => {
     const locale = getLocale(quoteData?.language);
     const lines: string[] = [];
-    const csvSep = ';';
+    const isEn = quoteData?.language === 'en';
+    const csvSep = isEn ? ',' : ';';
 
     const esc = (val: unknown) => {
         const s = String(val != null ? val : '');

@@ -60,12 +60,25 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
     const handleRestore = async (item: DeletedItem) => {
         try {
             await db.delete('recycle_bin', item.id);
+            const parseId = (rawId: unknown) => {
+                if (typeof rawId === 'number') return rawId;
+                if (typeof rawId === 'string' && /^\d+$/.test(rawId)) {
+                    const num = Number(rawId);
+                    if (!isNaN(num)) return num;
+                }
+                return rawId;
+            };
+            const targetId = parseId(item.originalId);
+
             if (item.originalStore === 'quotes' && item.data && typeof item.data === 'object') {
                 const quoteObj = item.data as Record<string, unknown>;
-                await db.put('quotes', { ...quoteObj, id: item.originalId || quoteObj.id });
+                await db.put('quotes', { ...quoteObj, id: targetId ?? quoteObj.id });
+            } else if (item.data && typeof item.data === 'object') {
+                const dataObj = item.data as Record<string, unknown>;
+                await db.put(item.originalStore, { ...dataObj, id: targetId ?? dataObj.id });
             } else {
                 const { id: _ignoredId, originalStore, deletedAt: _ignoredDeletedAt, originalId, data: _ignoredData, ...originalData } = item;
-                await db.put(originalStore, { ...originalData, id: originalId });
+                await db.put(originalStore, { ...originalData, id: targetId });
             }
             toast.success(t('itemRestored'));
             loadDeletedItems();
@@ -76,19 +89,53 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
     };
 
     const handlePermanentDelete = async (id: number | string) => {
-        setConfirmDialog({ isOpen: true, title: t('permanentDeleteTitle'), message: t('permanentDeleteConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.delete('recycle_bin', id as IDBValidKey); toast.success(t('itemPermanentlyDeleted')); loadDeletedItems(); } catch (error) { Logger.error('Delete error:', error); toast.error(t('deleteFailedQuote')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('permanentDeleteTitle'),
+            message: t('permanentDeleteConfirm'),
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    await db.delete('recycle_bin', id as IDBValidKey);
+                    toast.success(t('itemPermanentlyDeleted'));
+                    loadDeletedItems();
+                } catch (error) {
+                    Logger.error('Delete error:', error);
+                    toast.error(t('deleteFailedQuote'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const handleEmptyBin = async () => {
-        setConfirmDialog({ isOpen: true, title: t('emptyBin'), message: t('emptyBinConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { await db.clear('recycle_bin'); toast.success(t('binEmptied')); loadDeletedItems(); } catch (error) { Logger.error('Empty bin error:', error); toast.error(t('emptyBinFailed')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('emptyBin'),
+            message: t('emptyBinConfirm'),
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    await db.clear('recycle_bin');
+                    toast.success(t('binEmptied'));
+                    loadDeletedItems();
+                } catch (error) {
+                    Logger.error('Empty bin error:', error);
+                    toast.error(t('emptyBinFailed'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const getItemTitle = (item: DeletedItem) => {
         if (item.name) return item.name;
         if (item.company) return item.company;
+        if (item.bankName) return item.branch ? `${item.bankName} (${item.branch})` : String(item.bankName);
+        if (item.accountHolder) return String(item.accountHolder);
         if (item.originalStore === 'quotes' && item.data && typeof item.data === 'object') {
             const q = item.data as { quoteData?: { title?: string }; quoteNumber?: string; customerData?: { name?: string; company?: string } };
-            return q.quoteData?.title || q.quoteNumber || q.customerData?.name || q.customerData?.company || `Teklif #${item.originalId || ''}`;
+            return q.quoteData?.title || q.quoteNumber || q.customerData?.name || q.customerData?.company || `${t('quote') || 'Teklif'} #${item.originalId || ''}`;
         }
         return t('unnamedItem') || 'İsimsiz Öğe';
     };
@@ -97,24 +144,30 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
         if (storeName === 'customers') return t('customers') || 'Müşteri';
         if (storeName === 'products') return t('products') || 'Ürün';
         if (storeName === 'quotes') return t('quotes') || 'Teklif';
+        if (storeName === 'bankInfo' || storeName === 'banks') return t('banks') || 'Banka';
         return storeName;
     };
 
     const filteredItems = deletedItems.filter(item => {
-        const title = getItemTitle(item).toLowerCase();
-        const matchesSearch = title.includes(searchTerm.toLowerCase()) ||
-            (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (item.company && item.company.toLowerCase().includes(searchTerm.toLowerCase()));
+        const title = getItemTitle(item).toLocaleLowerCase('tr-TR');
+        const searchLower = searchTerm.toLocaleLowerCase('tr-TR');
+        const matchesSearch = title.includes(searchLower) ||
+            (item.name && item.name.toLocaleLowerCase('tr-TR').includes(searchLower)) ||
+            (item.company && item.company.toLocaleLowerCase('tr-TR').includes(searchLower)) ||
+            (item.bankName && String(item.bankName).toLocaleLowerCase('tr-TR').includes(searchLower)) ||
+            (item.iban && String(item.iban).toLocaleLowerCase('tr-TR').includes(searchLower)) ||
+            (item.accountHolder && String(item.accountHolder).toLocaleLowerCase('tr-TR').includes(searchLower));
         if (activeTab === 'all') return matchesSearch;
         if (activeTab === 'quotes') return matchesSearch && item.originalStore === 'quotes';
         if (activeTab === 'customers') return matchesSearch && item.originalStore === 'customers';
         if (activeTab === 'products') return matchesSearch && item.originalStore === 'products';
+        if (activeTab === 'banks') return matchesSearch && (item.originalStore === 'bankInfo' || item.originalStore === 'banks');
         return matchesSearch;
     });
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return '-';
-        return new Date(dateString).toLocaleString('tr-TR');
+        return new Date(dateString).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'de' ? 'de-DE' : 'en-US');
     };
 
     return (
@@ -126,6 +179,7 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                         <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'quotes' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('quotes')}>{t('quotes')}</button>
                         <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'customers' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('customers')}>{t('customers')}</button>
                         <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'products' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('products')}>{t('products')}</button>
+                        <button type="button" className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${activeTab === 'banks' ? 'bg-[var(--color-bg-card)] text-[var(--color-primary)] shadow-2xs' : 'text-[var(--color-text-muted)]'}`} onClick={() => setActiveTab('banks')}>{t('banks') || 'Bankalar'}</button>
                     </div>
                     <div className="flex gap-1.5 w-full sm:w-auto">
                         <div className="relative flex-1 sm:w-48">
@@ -134,7 +188,7 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                         </div>
                         {deletedItems.length > 0 && (
                             <button type="button" className="btn btn-danger btn-xs whitespace-nowrap" onClick={handleEmptyBin}>
-                                <Trash2 size={13} /> Boşalt
+                                <Trash2 size={13} /> {t('emptyBinBtn') || t('emptyBin') || 'Boşalt'}
                             </button>
                         )}
                     </div>

@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Hash, Calendar, Clock, AlignLeft, DollarSign, Globe } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { InputField, SelectField, TextAreaField } from '@/components/ui';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { QuoteData } from '@/context/quote/types';
 
-const quoteInfoSchema = z.object({
-  title: z.string().min(1, 'Teklif başlığı zorunludur'),
+const createQuoteInfoSchema = (t: (key: string) => string) => z.object({
+  title: z.string().min(1, t('quoteTitleRequired') || 'Teklif başlığı zorunludur'),
   number: z.string().optional(),
   currency: z.string(),
   language: z.string(),
@@ -16,7 +17,7 @@ const quoteInfoSchema = z.object({
   description: z.string().optional(),
 });
 
-type QuoteInfoFormData = z.infer<typeof quoteInfoSchema>;
+type QuoteInfoFormData = z.infer<ReturnType<typeof createQuoteInfoSchema>>;
 
 interface QuoteInfoFormProps {
   data: Partial<QuoteData>;
@@ -24,11 +25,15 @@ interface QuoteInfoFormProps {
 }
 
 const QuoteInfoForm: React.FC<QuoteInfoFormProps> = ({ data, onChange }) => {
+  const { t } = useTranslation(data.language || 'tr');
+  const schema = useMemo(() => createQuoteInfoSchema(t), [t]);
+
   const {
     register,
+    reset,
     formState: { errors },
   } = useForm<QuoteInfoFormData>({
-    resolver: zodResolver(quoteInfoSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       title: data.title || '',
       number: data.number || '',
@@ -41,10 +46,30 @@ const QuoteInfoForm: React.FC<QuoteInfoFormProps> = ({ data, onChange }) => {
     mode: 'onBlur',
   });
 
+  useEffect(() => {
+    reset({
+      title: data.title || '',
+      number: data.number || '',
+      currency: data.currency || 'TRY',
+      language: data.language || 'tr',
+      date: data.date || '',
+      validUntilDays: data.validUntilDays || '10',
+      description: data.description || '',
+    });
+  }, [data, reset]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     onChange(name, value);
   };
+
+  const validDaysOptions = useMemo(() => {
+    const days = ['3', '5', '7', '10', '15', '30', '60', '90'];
+    return days.map(d => ({
+      value: d,
+      label: t('daysCount').replace('{count}', d) || `${d} Gün`
+    }));
+  }, [t]);
 
   return (
     <div className="space-y-3">
@@ -55,7 +80,7 @@ const QuoteInfoForm: React.FC<QuoteInfoFormProps> = ({ data, onChange }) => {
           register={register}
           error={errors.title}
           icon={<Hash size={15} />}
-          placeholder="Teklif Başlığı"
+          placeholder={t('quoteTitle') || 'Teklif Başlığı'}
           autoComplete="off"
           onChange={handleChange}
         />
@@ -65,7 +90,7 @@ const QuoteInfoForm: React.FC<QuoteInfoFormProps> = ({ data, onChange }) => {
           register={register}
           error={errors.number}
           icon={<Hash size={15} />}
-          placeholder="Teklif No (opsiyonel)"
+          placeholder={t('quoteNumberOptional') || 'Teklif No (opsiyonel)'}
           autoComplete="off"
           onChange={handleChange}
         />
@@ -111,16 +136,7 @@ const QuoteInfoForm: React.FC<QuoteInfoFormProps> = ({ data, onChange }) => {
           name="validUntilDays"
           register={register}
           icon={<Clock size={15} />}
-          options={[
-            { value: '3', label: '3 Gün' },
-            { value: '5', label: '5 Gün' },
-            { value: '7', label: '7 Gün' },
-            { value: '10', label: '10 Gün' },
-            { value: '15', label: '15 Gün' },
-            { value: '30', label: '30 Gün' },
-            { value: '60', label: '60 Gün' },
-            { value: '90', label: '90 Gün' },
-          ]}
+          options={validDaysOptions}
           onChange={handleChange}
         />
       </div>
@@ -129,7 +145,7 @@ const QuoteInfoForm: React.FC<QuoteInfoFormProps> = ({ data, onChange }) => {
         name="description"
         register={register}
         icon={<AlignLeft size={15} />}
-        placeholder="Teklif açıklaması"
+        placeholder={t('quoteDescriptionPlaceholder') || 'Teklif açıklaması'}
         rows={3}
         autoComplete="off"
         onChange={handleChange}

@@ -1,12 +1,13 @@
 import { Search, Package, Plus, Filter, CheckSquare, Square } from 'lucide-react';
-import React from 'react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import EmptyState from '@/components/EmptyState';
 import Modal from '@/components/Modal';
 import Pagination from '@/components/Pagination';
 import Skeleton from '@/components/Skeleton';
 import useDebounce from '@/hooks/useDebounce';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
+import { formatCurrency } from '@/utils/calculations';
 import Logger from '@/utils/logger';
 
 interface SelectableProduct {
@@ -22,9 +23,18 @@ interface ProductSelectModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (products: SelectableProduct | SelectableProduct[]) => void;
+    language?: string;
+    currency?: string;
 }
 
-const ProductSelectModal: React.FC<ProductSelectModalProps> = ({ isOpen, onClose, onSelect }) => {
+const ProductSelectModal: React.FC<ProductSelectModalProps> = ({
+    isOpen,
+    onClose,
+    onSelect,
+    language = 'tr',
+    currency = 'TRY'
+}) => {
+    const { t } = useTranslation(language);
     const { db, isReady } = useIndexedDB();
     const [products, setProducts] = useState<SelectableProduct[]>([]);
     const [categories, setCategories] = useState(['Genel']);
@@ -89,8 +99,12 @@ const ProductSelectModal: React.FC<ProductSelectModalProps> = ({ isOpen, onClose
     const debouncedSearch = useDebounce(searchTerm, 250);
     const filteredProducts = useMemo(() =>
         products.filter(p => {
-            const q = debouncedSearch.toLowerCase();
-            const matchesSearch = p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+            const q = debouncedSearch.toLowerCase().trim();
+            if (!q && selectedCategory === 'Tümü') return true;
+            const matchesSearch = !q ||
+                p.name?.toLowerCase().includes(q) ||
+                p.category?.toLowerCase().includes(q) ||
+                ((p as { description?: string }).description?.toLowerCase().includes(q) ?? false);
             const matchesCategory = selectedCategory === 'Tümü' || p.category === selectedCategory;
             return matchesSearch && matchesCategory;
         }),
@@ -115,15 +129,26 @@ const ProductSelectModal: React.FC<ProductSelectModalProps> = ({ isOpen, onClose
     const hasFilter = searchTerm || selectedCategory !== 'Tümü';
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Katalogdan Ürün Ekle" size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('addProductFromCatalog') || 'Katalogdan Ürün Ekle'} size="lg">
             <div className="space-y-3 flex flex-col h-[65vh]">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
-                        <input type="text" className="form-control pl-8 text-xs" placeholder="Ürün adı veya kategori ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input
+                            type="text"
+                            className="form-control pl-8 text-xs"
+                            placeholder={t('searchProductPlaceholder') || 'Ürün adı veya kategori ara...'}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    <select className="form-control text-xs w-36 cursor-pointer" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                        <option value="Tümü">Tüm Kategoriler</option>
+                    <select
+                        className="form-control text-xs w-36 cursor-pointer"
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        aria-label={t('categories') || 'Kategoriler'}
+                    >
+                        <option value="Tümü">{t('allCategories') || 'Tüm Kategoriler'}</option>
                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
@@ -136,24 +161,24 @@ const ProductSelectModal: React.FC<ProductSelectModalProps> = ({ isOpen, onClose
                     ) : filteredProducts.length === 0 ? (
                         <EmptyState
                             icon={<Package size={24} />}
-                            title={hasFilter ? 'Sonuç bulunamadı' : 'Henüz kayıtlı ürün yok'}
-                            text={hasFilter ? 'Farklı bir arama terimi deneyin.' : 'Ürün yöneticisinden ürün ekleyebilirsiniz.'}
+                            title={hasFilter ? (t('noResultsFound') || 'Sonuç bulunamadı') : (t('noProductsYet') || 'Henüz kayıtlı ürün yok')}
+                            text={hasFilter ? (t('tryDifferentSearch') || 'Farklı bir arama terimi deneyin.') : (t('startByAddingProduct') || 'Ürün yöneticisinden ürün ekleyebilirsiniz.')}
                         />
                     ) : (
                         <table className="w-full text-xs text-left">
                             <thead className="bg-[var(--color-bg-muted)] text-[var(--color-text-muted)] sticky top-0 z-10 font-semibold border-b border-[var(--color-border)]">
                                 <tr>
                                     <th className="p-2.5 w-8">
-                                        <button type="button" onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]">
+                                        <button type="button" onClick={toggleAllSelection} className="hover:text-[var(--color-primary)]" aria-label={t('selectAll') || 'Tümünü Seç'}>
                                             {selectedProducts.size === filteredProducts.length && filteredProducts.length > 0 ?
                                                 <CheckSquare size={14} className="text-[var(--color-primary)]" /> :
                                                 <Square size={14} className="text-[var(--color-text-muted)]" />
                                             }
                                         </button>
                                     </th>
-                                    <th className="p-2.5">Ürün Adı</th>
-                                    <th className="p-2.5">Kategori</th>
-                                    <th className="p-2.5 text-right">Birim Fiyat</th>
+                                    <th className="p-2.5">{t('productName') || 'Ürün Adı'}</th>
+                                    <th className="p-2.5">{t('category') || 'Kategori'}</th>
+                                    <th className="p-2.5 text-right">{t('unitPrice') || 'Birim Fiyat'}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]/50">
@@ -175,7 +200,7 @@ const ProductSelectModal: React.FC<ProductSelectModalProps> = ({ isOpen, onClose
                                             </td>
                                             <td className="p-2.5 text-[var(--color-text-muted)]">{product.category || '-'}</td>
                                             <td className="p-2.5 font-mono font-semibold text-right text-[var(--color-text)]">
-                                                {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(product.price)}
+                                                {formatCurrency(product.price, currency)}
                                             </td>
                                         </tr>
                                     );
@@ -196,12 +221,12 @@ const ProductSelectModal: React.FC<ProductSelectModalProps> = ({ isOpen, onClose
 
                 <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]/50">
                     <div className="text-xs text-[var(--color-text-muted)]">
-                        {selectedProducts.size > 0 ? `${selectedProducts.size} ürün seçildi` : 'Seçmek için satıra tıklayın'}
+                        {selectedProducts.size > 0 ? `${selectedProducts.size} ${t('itemsSelected') || 'ürün seçildi'}` : (t('clickRowToSelect') || 'Seçmek için satıra tıklayın')}
                     </div>
                     <div className="flex gap-2">
-                        <button type="button" className="btn btn-outline btn-xs" onClick={onClose}>Kapat</button>
+                        <button type="button" className="btn btn-outline btn-xs" onClick={onClose}>{t('close') || 'Kapat'}</button>
                         <button type="button" className="btn btn-primary btn-xs" onClick={handleAddSelected} disabled={selectedProducts.size === 0}>
-                            <Plus size={13} /> Ekle ({selectedProducts.size})
+                            <Plus size={13} /> {t('add') || 'Ekle'} ({selectedProducts.size})
                         </button>
                     </div>
                 </div>

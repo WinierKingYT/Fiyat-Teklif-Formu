@@ -1,20 +1,26 @@
 import {
   FileText, Landmark, Undo2, Redo2,
   Save, Plus, Building2, LogOut,
-  StickyNote, Columns2, Calendar, Hash, Clock, Sparkles
+  StickyNote, Columns2, Calendar, Hash, Clock, Sparkles, Settings2
 } from 'lucide-react';
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { toast } from 'react-hot-toast';
 import CompanyInfoForm from '@/components/CompanyInfoForm';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { CustomFieldsEditor } from '@/components/custom-fields';
 import CustomerInfoForm from '@/components/CustomerInfoForm';
 import ItemsTable from '@/components/ItemsTable';
+import LiveInlinePreview from '@/components/LiveInlinePreview';
+import { QuoteNumberConfigModal } from '@/components/quote-number';
 import SummarySection from '@/components/SummarySection';
+import { getDefaultQuoteNumberConfig } from '@/context/quote/initialState';
 import { useQuoteData, useTab } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { Customer, Product, Quote, QuoteItem } from '@/context/quote/types';
+import Logger from '@/utils/logger';
+import { generateNextQuoteNumber } from '@/utils/numberGenerator';
+import type { Customer, Product, Quote, QuoteItem, QuoteNumberConfig, CustomField } from '@/context/quote/types';
 
 const TermsAndNotes = lazy(() => import('@/components/TermsAndNotes'));
 const BankInfoForm = lazy(() => import('@/components/BankInfoForm'));
@@ -48,14 +54,15 @@ export const QuoteBuilder = React.memo(({
 }: QuoteBuilderProps) => {
   const {
     quoteData, updateQuoteData,
-    customerData, updateCustomerData,
+    customerData, updateCustomerData, setCustomerData,
     companyData, updateCompanyData,
     items, setItems,
     discount, setDiscount,
     bankData, updateBankData,
     saveQuote,
     loadQuote,
-    resetQuote
+    resetQuote,
+    db
   } = useQuoteData();
   const { undo, redo, canUndo, canRedo, addTab } = useTab();
 
@@ -65,8 +72,26 @@ export const QuoteBuilder = React.memo(({
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isNumberConfigModalOpen, setIsNumberConfigModalOpen] = useState(false);
+  const [numberConfig, setNumberConfig] = useState<QuoteNumberConfig>(getDefaultQuoteNumberConfig);
   const [activeSideTab, setActiveSideTab] = useState<'terms' | 'bank' | 'company'>('terms');
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // Load quote number config from IndexedDB
+  useEffect(() => {
+    if (!db) return;
+    const loadConfig = async () => {
+      try {
+        const saved = await db.get<QuoteNumberConfig>('settings', 'quote_number_config');
+        if (saved) {
+          setNumberConfig(saved);
+        }
+      } catch (err) {
+        Logger.error('Error loading quote number config:', err);
+      }
+    };
+    loadConfig();
+  }, [db]);
 
   useEffect(() => {
     const handleOpenHistory = () => setIsHistoryModalOpen(true);
@@ -78,12 +103,30 @@ export const QuoteBuilder = React.memo(({
   const handlePdfShortcut = () => { setIsLivePreviewMode(prev => !prev); };
   const handleNewQuote = async () => { addTab(); };
 
-  const handleAutoGenerateQuoteNumber = () => {
-    const year = new Date().getFullYear();
-    const rand = Math.floor(100 + Math.random() * 900);
-    const newNum = `TK-${year}-${rand}`;
-    updateQuoteData('number', newNum);
-    toast.success(`Teklif No oluşturuldu: ${newNum}`);
+  const handleAutoGenerateQuoteNumber = async () => {
+    try {
+      const { formattedNumber, updatedConfig } = generateNextQuoteNumber(numberConfig);
+      updateQuoteData('number', formattedNumber);
+      setNumberConfig(updatedConfig);
+      if (db) {
+        await db.put('settings', { id: 'quote_number_config', key: 'quote_number_config', ...updatedConfig });
+      }
+      toast.success(`Teklif No oluşturuldu: ${formattedNumber}`);
+    } catch (err) {
+      Logger.error('Error generating quote number:', err);
+      toast.error('Teklif numarası oluşturulamadı');
+    }
+  };
+
+  const handleSaveNumberConfig = async (newConfig: QuoteNumberConfig) => {
+    setNumberConfig(newConfig);
+    if (db) {
+      try {
+        await db.put('settings', { id: 'quote_number_config', key: 'quote_number_config', ...newConfig });
+      } catch (err) {
+        Logger.error('Error saving quote number config:', err);
+      }
+    }
   };
 
   useKeyboardShortcuts({
@@ -95,15 +138,15 @@ export const QuoteBuilder = React.memo(({
   });
 
   const handleCustomerSelect = (customer: Partial<Customer> & { taxOffice?: string; taxNumber?: string; taxNo?: string }) => {
-    if (customer.name !== undefined) updateCustomerData('name', customer.name);
-    if (customer.company !== undefined) updateCustomerData('company', customer.company);
-    if (customer.email !== undefined) updateCustomerData('email', customer.email);
-    if (customer.phone !== undefined) updateCustomerData('phone', customer.phone);
-    if (customer.address !== undefined) updateCustomerData('address', customer.address);
-    if (customer.taxOffice !== undefined) updateCustomerData('taxOffice', customer.taxOffice);
-    if (customer.taxNumber !== undefined || customer.taxNo !== undefined) {
-      updateCustomerData('taxNumber', customer.taxNumber || customer.taxNo || '');
-    }
+    setCustomerData({
+      name: customer.name || '',
+      company: customer.company || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
+      taxOffice: customer.taxOffice || '',
+      taxNumber: customer.taxNumber || customer.taxNo || ''
+    });
     toast.success('Müşteri bilgileri yüklendi');
   };
 
@@ -150,10 +193,19 @@ export const QuoteBuilder = React.memo(({
               type="button"
               onClick={handleAutoGenerateQuoteNumber}
               className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] p-0.5 transition-colors"
-              title="Otomatik Numara Üret (TK-2026-XXX)"
+              title="Otomatik Numara Üret"
               aria-label="Otomatik Numara Üret"
             >
               <Sparkles size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsNumberConfigModalOpen(true)}
+              className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] p-0.5 transition-colors"
+              title="Numaratör Ayarları (Şablon & Sayaç)"
+              aria-label="Numaratör Ayarları"
+            >
+              <Settings2 size={11} />
             </button>
           </div>
 
@@ -245,8 +297,8 @@ export const QuoteBuilder = React.memo(({
       </div>
 
       {/* ─── MAIN BUILDER CONTAINER ─── */}
-      <div className={splitPreviewMode ? 'grid grid-cols-1 xl:grid-cols-2 gap-4 items-start' : ''}>
-        {/* Forms Area */}
+      <div className={splitPreviewMode ? 'grid grid-cols-1 xl:grid-cols-2 gap-4 items-start' : 'grid grid-cols-1 gap-3'}>
+        {/* Forms Area – Faz4: lg grid desteği */}
         <div className={splitPreviewMode ? 'space-y-3' : 'grid grid-cols-1 lg:grid-cols-3 gap-3 items-start'}>
           {/* ── LEFT COLUMN ── */}
           <div className={splitPreviewMode ? 'space-y-3' : 'lg:col-span-2 space-y-3'}>
@@ -263,6 +315,12 @@ export const QuoteBuilder = React.memo(({
               onItemsChange={setItems}
               onAddProduct={() => setIsProductModalOpen(true)}
               currency={quoteData.currency}
+            />
+
+            {/* Özel Alanlar & Ek Bilgiler */}
+            <CustomFieldsEditor
+              customFields={quoteData.customFields || []}
+              onChange={(fields: CustomField[]) => updateQuoteData('customFields', fields)}
             />
 
             {/* ─── EK BİLGİLER & ŞARTLAR (Under items table) ─── */}
@@ -328,7 +386,7 @@ export const QuoteBuilder = React.memo(({
             </div>
           </div>
 
-          {/* ── RIGHT COLUMN (Financial Summary + CTAs) ── */}
+          {/* ── RIGHT COLUMN (Financial Summary + CTAs + Live Preview) ── */}
           <div className={splitPreviewMode ? 'space-y-3' : 'lg:sticky lg:top-3 space-y-3'}>
             <SummarySection
               items={items}
@@ -340,6 +398,9 @@ export const QuoteBuilder = React.memo(({
               onSaveQuote={saveQuote}
               onPreviewPdf={() => setIsLivePreviewMode(true)}
             />
+
+            {/* Canlı PDF Önizleme (SummarySection altında hep açık) */}
+            <LiveInlinePreview />
           </div>
         </div>
 
@@ -390,6 +451,14 @@ export const QuoteBuilder = React.memo(({
           onNewQuote={handleNewQuote}
         />
       </Suspense>
+
+      <QuoteNumberConfigModal
+        isOpen={isNumberConfigModalOpen}
+        onClose={() => setIsNumberConfigModalOpen(false)}
+        config={numberConfig}
+        onSaveConfig={handleSaveNumberConfig}
+        onApplyNumber={(newNum) => updateQuoteData('number', newNum)}
+      />
     </div>
   );
 });

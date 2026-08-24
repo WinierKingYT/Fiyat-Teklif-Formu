@@ -107,4 +107,16 @@ describe('excelExporter (CSV)', () => {
         const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement;
         expect(anchor.download).toMatch(/^tekli.?f_Musteri_\d{4}-\d{2}-\d{2}\.csv$/i);
     });
+
+    it('correctly computes discounted line total when netTotal is not explicitly provided', async () => {
+        const itemsWithDiscount = [
+            { name: 'Monitor', quantity: 2, price: 100, unit: 'Adet', discountRate: 20 }
+        ];
+
+        exportQuoteToCSV(sampleQuote, itemsWithDiscount);
+
+        const text = await createdBlob!.text();
+        expect(text).toContain('Monitor');
+        expect(text).toContain('160,00'); // 2 * 100 * (1 - 0.20) = 160
+    });
 });

@@ -1,10 +1,10 @@
-import { Sun, Moon, Download, Menu } from 'lucide-react';
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { Sun, Moon, Download, Menu, Palette, Check, Columns } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import Sidebar from '@/components/Sidebar';
 import TabBar from '@/components/TabBar';
 import { useQuoteData, useTab } from '@/context/QuoteContext';
-import { useUI } from '@/context/UIContext';
+import { useUI, type AppColor } from '@/context/UIContext';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const PdfPreviewPanel = lazy(() => import('@/components/PdfPreviewPanel'));
@@ -19,11 +19,39 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+const QUICK_COLORS: { id: AppColor; nameKey: string; name: string; color: string }[] = [
+  { id: 'blue', nameKey: 'oceanBlue', name: 'Okyanus Mavisi', color: '#2563eb' },
+  { id: 'indigo', nameKey: 'modernIndigo', name: 'Modern İndigo', color: '#4f46e5' },
+  { id: 'slate', nameKey: 'corporateGray', name: 'Kurumsal Gri', color: '#475569' },
+  { id: 'emerald', nameKey: 'emeraldGreen', name: 'Zümrüt Yeşili', color: '#10b981' },
+  { id: 'teal', nameKey: 'petrolTeal', name: 'Petrol Turkuazı', color: '#0d9488' },
+  { id: 'cyan', nameKey: 'skyCyan', name: 'Gök Mavisi', color: '#0284c7' },
+  { id: 'violet', nameKey: 'royalPurple', name: 'Asil Mor', color: '#8b5cf6' },
+  { id: 'amber', nameKey: 'sunset', name: 'Gün Batımı', color: '#f59e0b' },
+  { id: 'rose', nameKey: 'rosePink', name: 'Gül Kurusu', color: '#f43f5e' },
+];
+
 const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
-  const { isLivePreviewMode, setIsLivePreviewMode, appTheme, setAppTheme } = useUI();
+  const { isLivePreviewMode, setIsLivePreviewMode, splitPreviewMode, setSplitPreviewMode, appTheme, setAppTheme, appColor, setAppColor } = useUI();
   const { t } = useTranslation();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [colorMenuOpen, setColorMenuOpen] = useState(false);
+  const colorMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (colorMenuRef.current && !colorMenuRef.current.contains(event.target as Node)) {
+        setColorMenuOpen(false);
+      }
+    };
+    if (colorMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [colorMenuOpen]);
 
   useEffect(() => {
     const goOffline = () => setIsOffline(true);
@@ -75,12 +103,67 @@ const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
         )}
         <AutoSaveIndicator />
         <div className="top-bar-divider" />
+        
+        {/* Quick Color Switcher */}
+        <div className="relative" ref={colorMenuRef}>
+          <button
+            type="button"
+            onClick={() => setColorMenuOpen(!colorMenuOpen)}
+            className={`top-bar-btn ${colorMenuOpen ? 'top-bar-btn-active' : ''}`}
+            title={t('quickThemeChange') || 'Hızlı Renk Değiştir'}
+            aria-label={t('quickThemeChange') || 'Hızlı Renk Değiştir'}
+          >
+            <Palette size={15} />
+          </button>
+          {colorMenuOpen && (
+            <div className="absolute right-0 top-full mt-1.5 p-2 rounded-xl bg-[var(--color-bg-card)] border border-[var(--color-border)] shadow-lg z-50 w-52">
+              <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 px-1">
+                {t('appColor')}
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {QUICK_COLORS.map((c) => (
+                  <button
+                    type="button"
+                    key={c.id}
+                    onClick={() => { setAppColor(c.id); setColorMenuOpen(false); }}
+                    className={`flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all hover:scale-105 ${
+                      appColor === c.id
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary-muted)] ring-1 ring-[var(--color-primary)]'
+                        : 'border-transparent hover:bg-[var(--color-bg-hover)]'
+                    }`}
+                    title={t(c.nameKey) || c.name}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center shadow-xs"
+                      style={{ backgroundColor: c.color }}
+                    >
+                      {appColor === c.id && <Check size={11} className="text-white stroke-[3]" />}
+                    </div>
+                    <span className="text-[9px] font-medium text-[var(--color-text)] mt-1 truncate w-full text-center">
+                      {t(c.nameKey) || c.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <button type="button"
           onClick={() => setAppTheme(prev => prev === 'light' ? 'dark' : 'light')}
           className="top-bar-btn" title={appTheme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
           aria-label={appTheme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
         >
           {appTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+        <button type="button"
+          onClick={() => setSplitPreviewMode(prev => !prev)}
+          className={`top-bar-btn hidden xl:inline-flex ${splitPreviewMode ? 'top-bar-btn-active' : ''}`}
+          title={t('splitViewToggle') || 'Bölünmüş Ekran'}
+          aria-label={t('splitViewToggle') || 'Bölünmüş Ekran'}
+          aria-pressed={splitPreviewMode}
+        >
+          <Columns size={15} />
         </button>
         <button type="button"
           onClick={() => setIsLivePreviewMode(!isLivePreviewMode)}
@@ -117,7 +200,7 @@ const Layout = React.memo(({
   onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
   onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin,
 }: LayoutProps) => {
-  const { focusMode, setFocusMode, isLivePreviewMode } = useUI();
+  const { focusMode, setFocusMode, isLivePreviewMode, splitPreviewMode } = useUI();
   const { addTab } = useTab();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
@@ -144,6 +227,8 @@ const Layout = React.memo(({
     addTab();
     onNavigate('builder');
   };
+
+  const isSplitActive = splitPreviewMode && currentView === 'builder';
 
   return (
     <div className="app-shell">
@@ -183,20 +268,43 @@ const Layout = React.memo(({
         )}
 
         <div className="content-area" id="main-content">
-          <div style={{ display: isLivePreviewMode ? 'none' : 'block' }}>
-            {children}
-          </div>
+          {isSplitActive ? (
+            /* ── Split View: Form (sol) + PDF Preview (sağ) ── */
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-0 h-full">
+              <div className="overflow-y-auto border-r border-[var(--color-border)]">
+                {children}
+              </div>
+              <div className="overflow-y-auto hidden xl:block">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[var(--color-primary)]"></div>
+                  </div>
+                }>
+                  <div className="live-preview-container">
+                    <PdfPreviewPanel />
+                  </div>
+                </Suspense>
+              </div>
+            </div>
+          ) : (
+            /* ── Normal Mode ── */
+            <>
+              <div style={{ display: isLivePreviewMode ? 'none' : 'block' }}>
+                {children}
+              </div>
 
-          {isLivePreviewMode && (
-            <Suspense fallback={
-              <div className="live-preview-container flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[var(--color-primary)]"></div>
-              </div>
-            }>
-              <div className="live-preview-container">
-                <PdfPreviewPanel />
-              </div>
-            </Suspense>
+              {isLivePreviewMode && (
+                <Suspense fallback={
+                  <div className="live-preview-container flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[var(--color-primary)]"></div>
+                  </div>
+                }>
+                  <div className="live-preview-container">
+                    <PdfPreviewPanel />
+                  </div>
+                </Suspense>
+              )}
+            </>
           )}
         </div>
       </div>

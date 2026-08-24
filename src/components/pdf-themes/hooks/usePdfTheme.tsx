@@ -1,0 +1,81 @@
+import React, { useMemo, useCallback } from 'react';
+import { calculateQuoteTotals } from '@/utils/calculations';
+import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { chunkQuoteItems } from '@/utils/themeHelpers';
+import { PdfEditableField } from '../common';
+import type { PdfThemeProps } from '@/context/quote/types';
+
+export function usePdfTheme(props: PdfThemeProps) {
+    const { activeLayout, items, config, total, quoteData, onEdit, t } = props;
+
+    const layoutMap = useMemo(() => {
+        const map: Record<string, boolean> = {};
+        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
+        return map;
+    }, [activeLayout]);
+
+    const showSection = useCallback((sectionId: string) => layoutMap[sectionId] !== false, [layoutMap]);
+
+    const itemChunks = useMemo(() => {
+        return chunkQuoteItems(items, {
+            itemsPerPage: config.itemsPerPage,
+            showSummary: config.showSummary,
+            showBankInfo: config.showBankInfo,
+            showSignatures: config.showSignatures,
+            showTerms: config.showTerms,
+            isLandscape: config.pageOrientation === 'landscape',
+            margins: config.margins
+        });
+    }, [items, config]);
+
+    const vatBreakdown = useMemo(() => {
+        const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency });
+        const map: Record<string, { taxable: number; tax: number }> = {};
+        const globalDiscountRatio = calc.subtotal > 0 ? (calc.globalDiscountAmount / calc.subtotal) : 0;
+
+        calc.items.forEach((item) => {
+            const rate = String(item.taxRate || 0);
+            const discountedNet = item.netTotal * (1 - globalDiscountRatio);
+            if (!map[rate]) {
+                map[rate] = { taxable: 0, tax: 0 };
+            }
+            map[rate].taxable += discountedNet;
+        });
+
+        Object.entries(calc.taxBreakdown).forEach(([rate, taxAmount]) => {
+            if (!map[rate]) {
+                map[rate] = { taxable: 0, tax: taxAmount };
+            } else {
+                map[rate].tax = taxAmount;
+            }
+        });
+
+        return map;
+    }, [items, props.discount, quoteData.currency]);
+
+    const amountInWords = useMemo(() => {
+        return numberToWordsTurkish(total, quoteData.currency || 'TRY');
+    }, [total, quoteData.currency]);
+
+    const renderEditable = useCallback((value: unknown, fieldKey: string, type = 'text', className = '') => {
+        return (
+            <PdfEditableField
+                value={value}
+                fieldKey={fieldKey}
+                type={type}
+                className={className}
+                onEdit={onEdit}
+                t={t}
+            />
+        );
+    }, [onEdit, t]);
+
+    return {
+        layoutMap,
+        showSection,
+        itemChunks,
+        vatBreakdown,
+        amountInWords,
+        renderEditable
+    };
+}

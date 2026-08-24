@@ -83,6 +83,7 @@ const PrintableQuote = React.memo(({
         showLogo: true,
         showBankInfo: true,
         showSignatures: true,
+        showCustomerSignature: false,
         showTerms: true,
         showNotes: true,
         showSummary: true,

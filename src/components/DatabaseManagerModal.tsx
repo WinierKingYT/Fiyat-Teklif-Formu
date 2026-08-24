@@ -1,6 +1,5 @@
 import { Database, Download, Upload, Trash, RefreshCw, AlertTriangle } from 'lucide-react';
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Modal from '@/components/Modal';
@@ -42,7 +41,8 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
         variant: 'info' | 'warning' | 'danger';
     }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const [importFile, setImportFile] = useState<File | null>(null);
-    const [importMode, setImportMode] = useState('replace');
+    const [importMode, setImportMode] = useState<'replace' | 'merge' | 'missing'>('merge');
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [showExportWarning, setShowExportWarning] = useState(false);
 
     useEffect(() => {
@@ -52,6 +52,7 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
     }, [isOpen, db]);
 
     const loadStats = async () => {
+        if (!db) return;
         try {
             const [customers, products, quotes, templates, banks] = await Promise.all([
                 (db).getAll('customers'),
@@ -76,7 +77,15 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
     const [clearConfirmText, setClearConfirmText] = useState('');
 
     const handleClearData = async () => {
-        if (clearConfirmText !== 'TÜM VERİLERİ SİL') {
+        const trimmed = clearConfirmText.trim().toLocaleUpperCase('tr-TR');
+        const validConfirmPhrases = [
+            'TÜM VERİLERİ SİL',
+            'TUM VERILERI SIL',
+            'DELETE ALL DATA',
+            'ALLE DATEN LÖSCHEN',
+            'ALLE DATEN LOSCHEN'
+        ];
+        if (!validConfirmPhrases.includes(trimmed)) {
             toast.error(t('clearDataWrongText'));
             return;
         }
@@ -88,8 +97,9 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
                 if (items.length > 0) counts[store] = items.length;
             } catch {}
         }
+        const recordLabel = t('records') || 'kayıt';
         const summary = Object.entries(counts)
-            .map(([store, count]) => `${store}: ${count} kayıt`)
+            .map(([store, count]) => `${store}: ${count} ${recordLabel}`)
             .join(', ');
 
         setConfirmDialog({
@@ -97,7 +107,7 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
             title: t('deleteAllData'),
             message: t('deleteAllDataConfirm').replace('{summary}', summary),
             onConfirm: async () => {
-                setConfirmDialog({ ...confirmDialog, isOpen: false });
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 try {
                     await Promise.all(ALL_STORES.map(store => (db).clear(store).catch(() => {})));
                     toast.success(t('allDataCleared'));
@@ -144,11 +154,12 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             const timestamp = getLocalDateString().replace(/-/g, '');
+            a.href = url;
             a.download = `teklif_master_yedek_${timestamp}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
             setShowExportWarning(false);
             toast.success(t('backupDownloadedAll'));
         } catch (error) {
@@ -157,29 +168,59 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
         }
     };
 
-    const validateBackup = (data: { schemaVersion?: number; stores?: Record<string, unknown> } | null) => {
+    const normalizeAndValidateBackup = (data: unknown): { schemaVersion: number; stores: Record<string, unknown[]> } => {
         if (!data || typeof data !== 'object') {
-            throw new Error('Geçersiz dosya: JSON nesnesi değil');
+            throw new Error('Geçersiz dosya: JSON formatı geçersiz');
         }
-        if (!data.schemaVersion || typeof data.schemaVersion !== 'number') {
-            throw new Error('Geçersiz şema sürümü');
+
+        // Case 1: Plain Array (e.g. exported customers or products list)
+        if (Array.isArray(data)) {
+            const first = data[0] as Record<string, unknown> | undefined;
+            if (first && ('company' in first || 'taxNumber' in first || 'taxOffice' in first)) {
+                return { schemaVersion: BACKUP_SCHEMA_VERSION, stores: { customers: data } };
+            }
+            if (first && ('price' in first || 'unit' in first || 'taxRate' in first)) {
+                return { schemaVersion: BACKUP_SCHEMA_VERSION, stores: { products: data } };
+            }
+            return { schemaVersion: BACKUP_SCHEMA_VERSION, stores: { quotes: data } };
         }
-        if (!data.stores || typeof data.stores !== 'object') {
-            throw new Error('Geçersiz dosya: stores alanı eksik');
+
+        const obj = data as Record<string, unknown>;
+
+        // Case 2: Standard backup with schemaVersion and stores
+        if (obj.stores && typeof obj.stores === 'object' && !Array.isArray(obj.stores)) {
+            const version = typeof obj.schemaVersion === 'number' ? obj.schemaVersion : 1;
+            if (version > BACKUP_SCHEMA_VERSION) {
+                throw new Error(`Bu yedek (sürüm ${version}) mevcut uygulama (sürüm ${BACKUP_SCHEMA_VERSION}) için çok yeni.`);
+            }
+            return {
+                schemaVersion: version,
+                stores: obj.stores as Record<string, unknown[]>
+            };
         }
-        if (data.schemaVersion > BACKUP_SCHEMA_VERSION) {
-            throw new Error(`Bu yedek (sürüm ${data.schemaVersion}) mevcut uygulama (sürüm ${BACKUP_SCHEMA_VERSION}) için çok yeni. Lütfen uygulamayı güncelleyin.`);
+
+        // Case 3: Direct store mapping { customers: [...], products: [...] }
+        const stores: Record<string, unknown[]> = {};
+        for (const store of ALL_STORES) {
+            if (Array.isArray(obj[store])) {
+                stores[store] = obj[store] as unknown[];
+            }
         }
-        return true;
+        if (Object.keys(stores).length > 0) {
+            return { schemaVersion: BACKUP_SCHEMA_VERSION, stores };
+        }
+
+        throw new Error('Geçersiz yedek dosyası: Tanınan veri deposu bulunamadı');
     };
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        const inputEl = e.target;
         if (file.size > 50 * 1024 * 1024) {
             toast.error(t('fileTooLarge'));
-            e.target.value = '';
+            inputEl.value = '';
             return;
         }
 
@@ -187,25 +228,26 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const data = JSON.parse((event.currentTarget as FileReader).result as string);
-
-                validateBackup(data);
+                const parsed = JSON.parse((event.currentTarget as FileReader).result as string);
+                const data = normalizeAndValidateBackup(parsed);
 
                 const allOperations: Array<{ store: string; action: 'clear' | 'put' | 'tryAdd'; item?: unknown }> = [];
+
+                if (importMode === 'replace') {
+                    for (const store of ALL_STORES) {
+                        if (!EXCLUDED_IMPORT_STORES.includes(store)) {
+                            allOperations.push({ store, action: 'clear' });
+                        }
+                    }
+                }
 
                 for (const [store, items] of Object.entries(data.stores)) {
                     if (EXCLUDED_IMPORT_STORES.includes(store)) continue;
                     if (!Array.isArray(items)) continue;
 
-                    if (importMode === 'replace') {
-                        allOperations.push({ store, action: 'clear' });
-                    }
-
                     for (const item of items) {
                         if (item && typeof item === 'object') {
-                            if (importMode === 'merge') {
-                                allOperations.push({ store, action: 'put', item });
-                            } else if (importMode === 'missing') {
+                            if (importMode === 'missing') {
                                 allOperations.push({ store, action: 'tryAdd', item });
                             } else {
                                 allOperations.push({ store, action: 'put', item });
@@ -237,6 +279,7 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
                 toast.error((error as Error).message || t('importErrorInvalid'));
             } finally {
                 setImportFile(null);
+                inputEl.value = '';
             }
         };
         reader.readAsText(file);
@@ -299,13 +342,14 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
                             <input
                                 type="file"
                                 id="dbImport"
+                                ref={fileInputRef}
                                 className="hidden"
                                 accept=".json"
                                 onChange={handleImport}
                             />
                             <button type="button"
                                 className="btn btn-outline w-full flex items-center justify-center gap-2"
-                                onClick={() => document.getElementById('dbImport')?.click()}
+                                onClick={() => fileInputRef.current?.click()}
                             >
                                 <Upload size={18} /> {t('importData')}
                             </button>
@@ -314,11 +358,11 @@ const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({ isOpen, onC
                         {/* Import Mode Selection */}
                         <div className="md:col-span-2 flex flex-wrap gap-2 items-center text-sm">
                             <span className="text-[var(--color-text-muted)]">{t('importMode')}</span>
-                            {[
+                            {([
                                 { value: 'replace', label: t('replaceMode') },
                                 { value: 'merge', label: t('mergeMode') },
                                 { value: 'missing', label: t('missingMode') }
-                            ].map(option => (
+                            ] as const).map(option => (
                                 <button type="button"
                                     key={option.value}
                                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${

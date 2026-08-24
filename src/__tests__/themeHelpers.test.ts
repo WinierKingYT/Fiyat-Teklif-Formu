@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize } from '@/utils/themeHelpers';
+import { getAdjustedFontSize, chunkQuoteItems, formatIban } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {
@@ -33,5 +33,68 @@ describe('getAdjustedFontSize', () => {
 
     it('should return default for unknown string format', () => {
         expect(getAdjustedFontSize('abc')).toBe('0.85em');
+    });
+});
+
+describe('chunkQuoteItems', () => {
+    it('should handle empty or null items array', () => {
+        expect(chunkQuoteItems([])).toEqual([[]]);
+    });
+
+    it('should keep single page quote when items count is within singlePageLimit (<= 12)', () => {
+        const items = [1, 2, 3, 4, 5];
+        const chunks = chunkQuoteItems(items);
+        expect(chunks.length).toBe(1);
+        expect(chunks[0]).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('should split into multi-page when items exceed singlePageLimit (> 12)', () => {
+        const items = Array.from({ length: 13 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items);
+        expect(chunks.length).toBe(2);
+        expect(chunks[0].length).toBeGreaterThan(0);
+        expect(chunks[1].length).toBeGreaterThan(0);
+        expect(chunks.flat()).toEqual(items);
+    });
+
+    it('should handle 14 items across 2 pages with new limits (first 20 / last 12)', () => {
+        const items = Array.from({ length: 14 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items);
+        expect(chunks.length).toBe(2);
+        expect(chunks.flat()).toEqual(items);
+    });
+
+    it('should handle large lists across 3+ pages', () => {
+        const items = Array.from({ length: 50 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items);
+        expect(chunks.length).toBe(3);
+        expect(chunks.flat()).toEqual(items);
+    });
+
+    it('should respect custom itemsPerPage when specified and different from 20', () => {
+        const items = Array.from({ length: 6 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items, { itemsPerPage: 2 });
+        expect(chunks.length).toBe(3);
+        expect(chunks[0]).toEqual([1, 2]);
+        expect(chunks[1]).toEqual([3, 4]);
+        expect(chunks[2]).toEqual([5, 6]);
+    });
+});
+
+describe('formatIban', () => {
+    it('should return empty string for null, undefined or empty values', () => {
+        expect(formatIban(null)).toBe('');
+        expect(formatIban(undefined)).toBe('');
+        expect(formatIban('')).toBe('');
+    });
+
+    it('should format 26-character Turkish IBAN into 4-character blocks', () => {
+        const input = 'TR123456789012345678901234';
+        expect(formatIban(input)).toBe('TR12 3456 7890 1234 5678 9012 34');
+    });
+
+    it('should strip existing spaces and special characters then reformat', () => {
+        const input = 'tr12 3456-7890_1234 5678 9012 34';
+        expect(formatIban(input)).toBe('TR12 3456 7890 1234 5678 9012 34');
     });
 });

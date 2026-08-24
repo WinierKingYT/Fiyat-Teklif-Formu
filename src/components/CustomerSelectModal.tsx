@@ -1,12 +1,12 @@
 import { Search, User, Plus, Users } from 'lucide-react';
-import React from 'react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import EmptyState from '@/components/EmptyState';
 import Modal from '@/components/Modal';
 import Pagination from '@/components/Pagination';
 import Skeleton from '@/components/Skeleton';
 import useDebounce from '@/hooks/useDebounce';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
+import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 import type { CustomerData } from '@/context/quote/types';
 
@@ -15,9 +15,11 @@ interface CustomerSelectModalProps {
     onClose: () => void;
     onSelect: (customer: CustomerData) => void;
     onCreateNew?: () => void;
+    language?: string;
 }
 
-const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: CustomerSelectModalProps) => {
+const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew, language = 'tr' }: CustomerSelectModalProps) => {
+    const { t } = useTranslation(language);
     const { db, isReady } = useIndexedDB();
     const [customers, setCustomers] = useState<CustomerData[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -42,13 +44,17 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: Custome
     };
 
     const debouncedSearch = useDebounce(searchTerm, 250);
-    const filteredCustomers = useMemo(() =>
-        customers.filter(c =>
-            c.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-            c.company?.toLowerCase().includes(debouncedSearch.toLowerCase())
-        ),
-        [customers, debouncedSearch]
-    );
+    const filteredCustomers = useMemo(() => {
+        const q = debouncedSearch.toLocaleLowerCase('tr-TR').trim();
+        if (!q) return customers;
+        return customers.filter(c =>
+            (c.name || '').toLocaleLowerCase('tr-TR').includes(q) ||
+            (c.company || '').toLocaleLowerCase('tr-TR').includes(q) ||
+            (c.email || '').toLocaleLowerCase('tr-TR').includes(q) ||
+            (c.phone || '').toLocaleLowerCase('tr-TR').includes(q) ||
+            (c.taxNumber || '').toLocaleLowerCase('tr-TR').includes(q)
+        );
+    }, [customers, debouncedSearch]);
 
     const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
     const paginatedCustomers = useMemo(() =>
@@ -66,16 +72,22 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: Custome
     }, [debouncedSearch]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Müşteri Seç" size="md">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('selectCustomer') || 'Müşteri Seç'} size="md">
             <div className="space-y-2.5 flex flex-col h-[60vh]">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
-                        <input type="text" className="form-control pl-8 text-xs" placeholder="Müşteri veya firma ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input
+                            type="text"
+                            className="form-control pl-8 text-xs"
+                            placeholder={t('searchCustomers') || 'Müşteri veya firma ara...'}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                     {onCreateNew && (
                         <button type="button" className="btn btn-primary btn-xs whitespace-nowrap" onClick={() => { onClose(); onCreateNew(); }}>
-                            <Plus size={13} /> Yeni
+                            <Plus size={13} /> {t('new') || 'Yeni'}
                         </button>
                     )}
                 </div>
@@ -88,8 +100,8 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: Custome
                     ) : filteredCustomers.length === 0 ? (
                         <EmptyState
                             icon={<Users size={24} />}
-                            title={searchTerm ? 'Sonuç bulunamadı' : 'Henüz kayıtlı müşteri yok'}
-                            text={searchTerm ? 'Farklı bir arama terimi deneyin.' : 'Yeni müşteri ekleyerek başlayın.'}
+                            title={searchTerm ? (t('noResultsFound') || 'Sonuç bulunamadı') : (t('noCustomersYet') || 'Henüz kayıtlı müşteri yok')}
+                            text={searchTerm ? (t('tryDifferentSearch') || 'Farklı bir arama terimi deneyin.') : (t('startByAddingCustomer') || 'Yeni müşteri ekleyerek başlayın.')}
                         />
                     ) : (
                         <div className="divide-y divide-[var(--color-border)]/50">
@@ -104,26 +116,26 @@ const CustomerSelectModal = ({ isOpen, onClose, onSelect, onCreateNew }: Custome
                                             {customer.name}
                                         </div>
                                         <div className="text-[11px] text-[var(--color-text-muted)] truncate">
-                                            {customer.company || customer.email || customer.phone || 'Detay yok'}
+                                            {customer.company || customer.email || customer.phone || '-'}
                                         </div>
                                     </div>
                                     <span className="text-[11px] font-medium text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Seç →
+                                        {t('select') || 'Seç'} →
                                     </span>
                                 </div>
                             ))}
                         </div>
                     )}
-                    {!loading && filteredCustomers.length > PAGE_SIZE && (
-                        <Pagination
-                            currentPage={page}
-                            totalPages={totalPages}
-                            totalItems={filteredCustomers.length}
-                            pageSize={PAGE_SIZE}
-                            onPageChange={handlePageChange}
-                        />
-                    )}
                 </div>
+                {!loading && filteredCustomers.length > PAGE_SIZE && (
+                    <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        totalItems={filteredCustomers.length}
+                        pageSize={PAGE_SIZE}
+                        onPageChange={handlePageChange}
+                    />
+                )}
             </div>
         </Modal>
     );

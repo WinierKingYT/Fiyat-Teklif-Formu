@@ -22,6 +22,8 @@ export default defineConfig(({ command, mode }) => ({
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: 'index.html',
+        // Faz6: workbox hash & dontCacheBust
+        dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -55,6 +57,11 @@ export default defineConfig(({ command, mode }) => ({
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' }
+        ],
+        // Faz4: PWA manifest screenshots (opsiyonel)
+        screenshots: [
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', form_factor: 'wide' },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', form_factor: 'narrow' }
         ]
       }
     }),
@@ -73,11 +80,16 @@ export default defineConfig(({ command, mode }) => ({
     chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': ['lucide-react', 'react-hot-toast', 'react-hotkeys-hook'],
-          'dnd-vendor': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-          'xlsx': ['xlsx'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react-vendor';
+          if (id.includes('node_modules/lucide-react') || id.includes('react-hot-toast') || id.includes('react-hotkeys-hook')) return 'ui-vendor';
+          if (id.includes('@dnd-kit')) return 'dnd-vendor';
+          if (id.includes('node_modules/xlsx')) return 'xlsx';
+          // Faz6: ModernTheme ve pdf-themes lazy chunk split
+          if (id.includes('src/components/pdf-themes/ModernTheme')) return 'modern-theme';
+          if (id.includes('src/components/pdf-themes/')) return 'pdf-themes';
+          if (id.includes('node_modules/html2pdf')) return 'html2pdf';
+          return undefined;
         },
       },
     },

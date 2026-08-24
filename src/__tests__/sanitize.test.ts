@@ -4,7 +4,7 @@ import { sanitizeInput, sanitizeHtml, sanitizeUrl, sanitizeObject, escapeHtml } 
 describe('sanitize', () => {
   describe('escapeHtml', () => {
     it('escapes HTML special characters', () => {
-      expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;&#x2F;script&gt;');
+      expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
     });
     it('returns non-string values as-is', () => {
       expect(escapeHtml(123)).toBe(123);
@@ -59,18 +59,18 @@ describe('sanitize', () => {
     it('sanitizes strings in an object', () => {
       const obj = { name: '<script>alert(1)</script>', age: 25 };
       const result = sanitizeObject(obj);
-      expect(result.name).toBe('&lt;script&gt;alert(1)&lt;&#x2F;script&gt;');
+      expect(result.name).toBe('');
       expect(result.age).toBe(25);
     });
     it('sanitizes nested objects', () => {
       const obj = { data: { title: '<script>xss</script>' } };
       const result = sanitizeObject(obj);
-      expect(result.data.title).toBe('&lt;script&gt;xss&lt;&#x2F;script&gt;');
+      expect(result.data.title).toBe('');
     });
     it('sanitizes arrays', () => {
       const arr = ['<script>alert(1)</script>', 'safe'];
       const result = sanitizeObject(arr);
-      expect(result[0]).toBe('&lt;script&gt;alert(1)&lt;&#x2F;script&gt;');
+      expect(result[0]).toBe('');
       expect(result[1]).toBe('safe');
     });
   });

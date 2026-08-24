@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #F8FAFC;
+  --color-bg: #EFF2F7;
   --color-bg-card: #FFFFFF;
-  --color-bg-muted: #F1F5F9;
-  --color-bg-hover: #EEF2FF;
-  --color-bg-active: #E0E7FF;
+  --color-bg-muted: #E2E8F0;
+  --color-bg-hover: #E0E7FF;
+  --color-bg-active: #C7D2FE;
   --color-text: #0F172A;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94A3B8;
-  --color-border: #E2E8F0;
-  --color-border-light: #F1F5F9;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748B;
+  --color-border: #CBD5E1;
+  --color-border-light: #E2E8F0;
   --color-primary: #7C3AED;
   --color-primary-hover: #6D28D9;
   --color-primary-muted: #EDE9FE;
@@ -168,6 +168,48 @@
   --color-primary-ring: rgba(148, 163, 184, 0.25);
   --color-info: #94A3B8;
 }
+[data-color="indigo"] {
+  --color-primary: #4F46E5;
+  --color-primary-hover: #4338CA;
+  --color-primary-muted: #EEF2FF;
+  --color-primary-ring: rgba(79, 70, 229, 0.2);
+  --color-info: #4F46E5;
+}
+[data-color="indigo"][data-theme="dark"] {
+  --color-primary: #818CF8;
+  --color-primary-hover: #A5B4FC;
+  --color-primary-muted: #1E1B4B;
+  --color-primary-ring: rgba(129, 140, 248, 0.25);
+  --color-info: #818CF8;
+}
+[data-color="teal"] {
+  --color-primary: #0D9488;
+  --color-primary-hover: #0F766E;
+  --color-primary-muted: #CCFBF1;
+  --color-primary-ring: rgba(13, 148, 136, 0.2);
+  --color-info: #0D9488;
+}
+[data-color="teal"][data-theme="dark"] {
+  --color-primary: #2DD4BF;
+  --color-primary-hover: #5EEAD4;
+  --color-primary-muted: #134E4A;
+  --color-primary-ring: rgba(45, 212, 191, 0.25);
+  --color-info: #2DD4BF;
+}
+[data-color="cyan"] {
+  --color-primary: #0284C7;
+  --color-primary-hover: #0369A1;
+  --color-primary-muted: #E0F2FE;
+  --color-primary-ring: rgba(2, 132, 199, 0.2);
+  --color-info: #0284C7;
+}
+[data-color="cyan"][data-theme="dark"] {
+  --color-primary: #38BDF8;
+  --color-primary-hover: #7DD3FC;
+  --color-primary-muted: #0C4A6E;
+  --color-primary-ring: rgba(56, 189, 248, 0.25);
+  --color-info: #38BDF8;
+}
 
 /* ===== FOCUS VISIBLE ===== */
 :focus-visible {
@@ -282,3 +324,22 @@ textarea:focus-visible {
     --radius-xl: 14px;
   }
 }
+
+/* ===== FINANCIAL TYPOGRAPHY UTILITIES – Faz4: tabular-nums fix ===== */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum";
+  font-feature-settings: "tnum";
+  font-variant-ligatures: none;
+}
+
+.financial-cell {
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum";
+  font-feature-settings: "tnum";
+  font-variant-ligatures: none;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+  /* Faz4: SortableRow font-mono Inter uyumu – tabular-nums ile hizalı finansal hücre */
+}
+

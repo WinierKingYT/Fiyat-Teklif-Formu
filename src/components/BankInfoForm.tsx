@@ -39,15 +39,16 @@ const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpen
   }, [db]);
 
   const selectBank = (bank: Record<string, string>) => {
-    if (bank.bankName) onChange('bankName', bank.bankName);
-    if (bank.iban) onChange('iban', bank.iban);
-    if (bank.accountHolder) onChange('accountHolder', bank.accountHolder);
-    if (bank.branch) onChange('branch', bank.branch);
-    if (bank.accountNumber) onChange('accountNumber', bank.accountNumber);
+    onChange('bankName', bank.bankName || '');
+    onChange('iban', bank.iban || '');
+    onChange('accountHolder', bank.accountHolder || '');
+    onChange('branch', bank.branch || '');
+    onChange('accountNumber', bank.accountNumber || '');
   };
 
   const {
     register,
+    reset,
   } = useForm<BankInfoFormData>({
     resolver: zodResolver(bankInfoSchema),
     defaultValues: {
@@ -59,6 +60,16 @@ const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpen
     },
     mode: 'onBlur',
   });
+
+  useEffect(() => {
+    reset({
+      bankName: data.bankName || '',
+      branch: data.branch || '',
+      accountNumber: data.accountNumber || '',
+      iban: data.iban || '',
+      accountHolder: data.accountHolder || '',
+    });
+  }, [data, reset]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -74,7 +85,7 @@ const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpen
           onClick={() => setShowExtra(!showExtra)}
         >
           {showExtra ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          <span>{showExtra ? 'Ek Alanları Gizle' : 'Şube & Hesap No Ekle'}</span>
+          <span>{showExtra ? (t('hideExtraFields') || 'Ek Alanları Gizle') : (t('addBranchAndAccount') || 'Şube & Hesap No Ekle')}</span>
         </button>
         {onOpenManager && (
           <button type="button" className="btn btn-outline btn-xs" onClick={onOpenManager}>
@@ -85,7 +96,7 @@ const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpen
 
       {savedBanks.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap pb-1 border-b border-[var(--color-border)]/40">
-          <span className="text-[11px] text-[var(--color-text-muted)] font-medium">Kayıtlı:</span>
+          <span className="text-[11px] text-[var(--color-text-muted)] font-medium">{t('recent') || 'Kayıtlı'}:</span>
           {savedBanks.map((b, i) => (
             <button
               key={b.id || i}

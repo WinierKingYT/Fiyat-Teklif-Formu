@@ -1,10 +1,11 @@
 import React from 'react';
-import { useSaveStatus } from '@/context/QuoteContext';
+import { useSaveStatus, useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const AutoSaveIndicator = () => {
     const saveStatus = useSaveStatus();
-    const { t } = useTranslation();
+    const { quoteData } = useQuoteData();
+    const { t } = useTranslation(quoteData?.language);
 
     if (!saveStatus || saveStatus.status === 'idle') return null;
 
@@ -12,25 +13,25 @@ const AutoSaveIndicator = () => {
         if (!timestamp) return '';
         const seconds = Math.floor((Date.now() - timestamp) / 1000);
         if (seconds < 5) return t('nowLabel') || 'şimdi';
-        if (seconds < 60) return `${seconds}sn önce`;
-        return `${Math.floor(seconds / 60)}dk önce`;
+        if (seconds < 60) return `${seconds}s`;
+        return `${Math.floor(seconds / 60)}m`;
     };
 
     const statusConfig = {
         saving: {
             dotClass: 'bg-[var(--color-info)] animate-pulse',
             title: t('savingStatus') || 'Kaydediliyor...',
-            label: 'Kaydediliyor',
+            label: t('savingStatus') || 'Kaydediliyor',
         },
         saved: {
             dotClass: 'bg-[var(--color-success)]',
             title: `${t('savedStatus') || 'Kaydedildi'} (${getTimeAgo(saveStatus.lastSaved)})`,
-            label: 'Kaydedildi',
+            label: t('savedStatus') || 'Kaydedildi',
         },
         error: {
             dotClass: 'bg-[var(--color-error)] animate-bounce',
-            title: t('saveErrorStatus') || 'Kayıt hatası!',
-            label: 'Hata',
+            title: t('saveErrorStatus') || t('error') || 'Kayıt hatası!',
+            label: t('error') || 'Hata',
         },
     };
 

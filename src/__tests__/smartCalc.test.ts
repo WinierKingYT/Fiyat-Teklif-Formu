@@ -37,6 +37,13 @@ describe('evaluateMathExpression', () => {
     expect(evaluateMathExpression('10/3')).toBe(3.3333);
   });
 
+  it('handles thousand separators with comma decimal', () => {
+    expect(evaluateMathExpression('1.250,50+50')).toBe(1300.5);
+    expect(evaluateMathExpression('1.500*2')).toBe(3000);
+    expect(evaluateMathExpression('1.000.000+500')).toBe(1000500);
+    expect(evaluateMathExpression('1,000,000.50+0.50')).toBe(1000001);
+  });
+
   it('returns original value for non-math expressions', () => {
     expect(evaluateMathExpression('hello')).toBe('hello');
     expect(evaluateMathExpression('abc+123')).toBe('abc+123');

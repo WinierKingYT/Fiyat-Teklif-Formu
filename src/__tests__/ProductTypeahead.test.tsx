@@ -106,4 +106,43 @@ describe('ProductTypeahead', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(screen.queryByText('MacBook Pro 16')).not.toBeInTheDocument();
   });
+
+  it('shows create product option when typing a new product name and triggers onCreateProduct', () => {
+    const handleCreate = vi.fn();
+    const handleSelect = vi.fn();
+
+    render(
+      <ProductTypeahead
+        value="Özel Lazer Kesim"
+        onChange={vi.fn()}
+        onSelectProduct={handleSelect}
+        onCreateProduct={handleCreate}
+        products={sampleProducts}
+        placeholder="Ürün adı"
+        ariaLabel="Ürün adı"
+      />
+    );
+
+    const input = screen.getByRole('textbox', { name: 'Ürün adı' });
+    fireEvent.focus(input);
+
+    const createBtn = screen.getByText(/"Özel Lazer Kesim" ürününü kataloğa ekle/);
+    expect(createBtn).toBeInTheDocument();
+
+    fireEvent.mouseDown(createBtn);
+    expect(handleCreate).toHaveBeenCalledWith('Özel Lazer Kesim');
+  });
+
+  it('matches products by partial name, description or category', () => {
+    render(<TypeaheadHarness />);
+    const input = screen.getByRole('textbox', { name: 'Ürün adı' });
+
+    // Search by partial description: "Max" -> MacBook Pro 16 (description: 'M3 Max 36GB')
+    fireEvent.change(input, { target: { value: 'Max' } });
+    expect(screen.getByText('MacBook Pro 16')).toBeInTheDocument();
+
+    // Search by partial category: "Aksesuar" -> Magic Mouse
+    fireEvent.change(input, { target: { value: 'Aksesuar' } });
+    expect(screen.getByText('Magic Mouse')).toBeInTheDocument();
+  });
 });

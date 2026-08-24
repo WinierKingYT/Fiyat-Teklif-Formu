@@ -1,53 +1,34 @@
 import React, { useMemo } from 'react';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { usePdfTheme } from './hooks/usePdfTheme';
 import type { PdfThemeProps, QuoteItem } from '@/context/quote/types';
 
-export const InvoiceTheme: React.FC<PdfThemeProps> = ({
-    id,
-    containerStyles,
-    config,
-    color = '#1e293b',
-    companyData,
-    quoteData,
-    customerData,
-    items,
-    bankData,
-    signature,
-    t,
-    formatDate,
-    formatCurrency,
-    subtotal,
-    discountAmount,
-    totalTax,
-    total,
-    currentLocale,
-    hasLineItemDiscounts,
-    onEdit,
-    activeLayout
-}) => {
-    const layoutMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
-        return map;
-    }, [activeLayout]);
-    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
+export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
+    const {
+        id,
+        containerStyles,
+        config,
+        color = '#1e293b',
+        companyData,
+        quoteData,
+        customerData,
+        items,
+        bankData,
+        signature,
+        t,
+        formatDate,
+        formatCurrency,
+        subtotal,
+        discountAmount,
+        totalTax,
+        total,
+        currentLocale,
+        hasLineItemDiscounts,
+        onEdit,
+        activeLayout
+    } = props;
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
-    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
-
-        return (
-            <span
-                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(fieldKey, value, type);
-                }}
-                title={t.clickToEdit}
-            >
-                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
-            </span>
-        );
-    };
 
     const invoiceStyles = useMemo(() => `
         .invoice-theme-container {
@@ -218,37 +199,9 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
         }
     `, [color, config]);
 
-    const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = useMemo(() => {
-        const chunks: QuoteItem[][] = [];
-        if (items.length === 0) {
-            chunks.push([]);
-        } else {
-            for (let i = 0; i < items.length; i += itemsPerPage) {
-                chunks.push(items.slice(i, i + itemsPerPage));
-            }
-        }
-        return chunks;
-    }, [items, itemsPerPage]);
 
-    const vatBreakdown = useMemo(() => {
-        const map: Record<number, { taxable: number; tax: number }> = {};
-        items.forEach((item) => {
-            const qty = Number(item.quantity) || 0;
-            const price = Number(item.price) || 0;
-            const discRate = Number(item.discountRate) || 0;
-            const rate = Number(item.taxRate) || 0;
-            const lineTotal = qty * price * (1 - discRate / 100);
-            const lineTax = (lineTotal * rate) / 100;
-            if (!map[rate]) {
-                map[rate] = { taxable: 0, tax: 0 };
-            }
-            map[rate].taxable += lineTotal;
-            map[rate].tax += lineTax;
-        });
-        return map;
-    }, [items]);
 
+    
     const renderTable = (chunkItems: QuoteItem[], startIndex: number) => (
         <table className="invoice-table">
             <thead>
@@ -317,27 +270,7 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
                     }}
                 >
                     {/* Watermark */}
-                    {config.showWatermark && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                transform: `rotate(${config.watermarkRotation || -45}deg)`,
-                                opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 48}px`,
-                                fontWeight: 'bold',
-                                color: config.watermarkColor || '#000000',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {config.watermarkText}
-                        </div>
-                    )}
+                    <PdfWatermark config={config} />
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
@@ -351,7 +284,7 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
                                     />
                                 )}
                                 <div>
-                                    <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: color, textTransform: 'uppercase', margin: 0 }}>{renderEditable(config.title || t.quoteTitle, 'quoteTitle')}</h1>
+                                    <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: color, textTransform: 'uppercase', margin: 0 }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</h1>
                                     <div style={{ fontSize: '9pt', fontWeight: 600, color: '#334155' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 </div>
                             </div>
@@ -367,13 +300,14 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b', paddingBottom: '4px', marginBottom: '8px', borderBottom: '1px solid #cbd5e1' }}>
-                            <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
+                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
                             <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                         </div>
                     ))}
 
                     {/* Customer & Seller Information Grid - Page 1 */}
                     {showSection('customer') && pageIndex === 0 && (
+                        <>
                         <div className="invoice-parties-grid">
                             {/* Seller / Düzenleyen Box */}
                             <div className="invoice-party-card">
@@ -394,13 +328,11 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
                             {/* Customer / Alıcı Box */}
                             <div className="invoice-party-card">
                                 <div className="invoice-party-label">{t.customer} / {t.to}</div>
-                                {customerData.company && (
-                                    <div style={{ fontWeight: 700, fontSize: '9.5pt', color: '#0f172a', marginBottom: '2px' }}>
-                                        {renderEditable(customerData.company, 'customerCompany')}
-                                    </div>
-                                )}
+                                <div style={{ fontWeight: 700, fontSize: '9.5pt', color: '#0f172a', marginBottom: '2px' }}>
+                                    {renderEditable(customerData.company || customerData.name, 'customerCompany')}
+                                </div>
                                 <div style={{ fontSize: '8pt', color: '#475569', lineHeight: '1.35' }}>
-                                    {customerData.name && (
+                                    {customerData.name && customerData.company && (
                                         <div><span style={{ fontWeight: 600, color: '#64748b' }}>{t.authorized}: </span>{renderEditable(customerData.name, 'customerName')}</div>
                                     )}
                                     {customerData.phone && (
@@ -419,12 +351,14 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
                                 </div>
                             </div>
                         </div>
+                        <PdfCustomFields customFields={quoteData.customFields} themeColor="#0284c7" />
+                        </>
                     )}
 
                     {/* Items Table */}
                     {showSection('items') && (
                         <div style={{ flex: 1 }}>
-                            {renderTable(chunk, pageIndex * itemsPerPage)}
+                            {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                         </div>
                     )}
 
@@ -493,7 +427,7 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
                                         <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
-                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                            {amountInWords}
                                         </div>
                                     </div>
                                 )}
@@ -546,12 +480,7 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = ({
                     )}
 
                     {/* Page Number */}
-                    {config.showPageNumbers && (
-                        <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                            <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                            <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                        </div>
-                    )}
+                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                 </div>
             ))}
         </div>

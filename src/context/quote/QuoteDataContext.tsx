@@ -4,7 +4,7 @@ import { useCompanyDefaults } from '@/context/quote/CompanyDefaultsContext';
 import { useConfirm } from '@/context/quote/ConfirmContext';
 import { useDatabase } from '@/context/quote/DatabaseContext';
 import {
-    getInitialQuoteData, getInitialBankData, getInitialTabData,
+    getInitialQuoteData, getInitialCustomerData, getInitialCompanyData, getInitialBankData, getInitialTabData,
 } from '@/context/quote/initialState';
 import { useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
 import { useTab } from '@/context/quote/TabContext';
@@ -13,17 +13,22 @@ import {
     type QuoteItem, type Discount, type PdfConfig, type Quote, type SaveStatus,
     type IndexedDBManager, type TabData, type DbQuote, type QuoteVersion,
 } from '@/context/quote/types';
+import tr from '@/i18n/tr.json';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import cleanupService from '@/utils/cleanupService';
 import { getLocalDateString, getLocalDateTimeString } from '@/utils/dateUtils';
 import Logger from '@/utils/logger';
 import { sanitizeInput, sanitizeObject } from '@/utils/sanitize';
 
+const translations: Record<string, string> = tr;
+const tStatic = (key: string) => translations[key] || key;
+
 export interface QuoteDataContextValue {
     quoteData: QuoteData;
     updateQuoteData: (field: string, value: unknown) => void;
     customerData: CustomerData;
     updateCustomerData: (field: string, value: unknown) => void;
+    setCustomerData: (data: Partial<CustomerData>) => void;
     companyData: CompanyData;
     updateCompanyData: (field: string, value: unknown) => void;
     items: QuoteItem[];
@@ -34,7 +39,7 @@ export interface QuoteDataContextValue {
     updateBankData: (field: string, value: unknown) => void;
     setBankData: (data: BankData | ((prev: BankData) => BankData)) => void;
     saveQuote: (isFinal?: boolean) => Promise<void>;
-    loadQuote: (quote: Quote) => void;
+    loadQuote: (quote: Partial<Quote>) => void;
     resetQuote: () => void;
     fillTestData: () => Promise<void>;
     createBackup: () => Promise<void>;
@@ -101,6 +106,18 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
                 if (field === 'company' && value) newTitle = String(value);
                 else if (field === 'name' && value && !newData.company) newTitle = String(value);
                 return { ...tab, title: newTitle, data: { ...tab.data, customerData: newData } };
+            }
+            return tab;
+        }));
+    }, [activeTabId, setTabs]);
+
+    const setCustomerData = useCallback((newData: Partial<CustomerData>) => {
+        const sanitized = sanitizeObject(newData) as Partial<CustomerData>;
+        setTabs(prev => prev.map(tab => {
+            if (tab.id === activeTabId) {
+                const merged = { ...tab.data.customerData, ...sanitized };
+                const newTitle = merged.company || merged.name || tab.title;
+                return { ...tab, title: newTitle, data: { ...tab.data, customerData: merged } };
             }
             return tab;
         }));
@@ -229,26 +246,26 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
     const validateQuote = useCallback((isFinal = false) => {
         const errors: string[] = [];
-        if (!companyData.name) errors.push('Firma adı gerekli');
-        if (!customerData.name && !customerData.company) errors.push('Müşteri bilgisi gerekli');
-        if (items.length === 0) errors.push('En az bir kalem ekleyin');
-        if (!quoteData.number) errors.push('Teklif numarası gerekli');
-        if (!quoteData.currency) errors.push('Para birimi seçin');
+        if (!companyData.name) errors.push(tStatic('validationCompanyRequired'));
+        if (!customerData.name && !customerData.company) errors.push(tStatic('validationCustomerRequired'));
+        if (items.length === 0) errors.push(tStatic('validationItemsRequired'));
+        if (!quoteData.number) errors.push(tStatic('validationQuoteNumberRequired'));
+        if (!quoteData.currency) errors.push(tStatic('validationCurrencyRequired'));
         items.forEach((item: QuoteItem, i: number) => {
-            if (!item.name) errors.push(`Satır ${i + 1}: Ürün adı gerekli`);
-            if (item.quantity <= 0) errors.push(`Satır ${i + 1}: Miktar geçersiz`);
-            if (item.price < 0) errors.push(`Satır ${i + 1}: Fiyat geçersiz`);
+            if (!item.name) errors.push(`${tStatic('row')} ${i + 1}: ${tStatic('validationProductNameRequired')}`);
+            if (item.quantity <= 0) errors.push(`${tStatic('row')} ${i + 1}: ${tStatic('validationQuantityInvalid')}`);
+            if (item.price < 0) errors.push(`${tStatic('row')} ${i + 1}: ${tStatic('validationPriceInvalid')}`);
         });
         return errors;
     }, [companyData, customerData, items, quoteData]);
 
     const saveQuote = useCallback(async (isFinal = false) => {
-        if (!isReady) { toast.error('Veritabanı hazır değil'); return; }
+        if (!isReady) { toast.error(tStatic('dbNotReady')); return; }
         const activeTab = tabs.find(t => t.id === activeTabId);
         if (!activeTab) return;
         const tabSavedQuoteId = activeTab.savedQuoteId;
         const errors = validateQuote(isFinal);
-        if (errors.length > 0) { toast.error('Hataları düzeltin:\n' + errors.join('\n'), { duration: 6000 }); return; }
+        if (errors.length > 0) { toast.error(tStatic('fixErrors') + '\n' + errors.join('\n'), { duration: 6000 }); return; }
         setSaveStatus({ status: 'saving', lastSaved: null });
         const { subtotalMinor, taxTotalMinor, grandTotalMinor } = (() => {
             try {
@@ -267,11 +284,11 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
                 const existing = await db.get<DbQuote>('quotes', tabSavedQuoteId);
                 if (existing) { quote.createdAt = existing.createdAt; quote.status = isFinal ? 'final' : existing.status; }
                 await db.put('quotes', quote);
-                toast.success('Teklif güncellendi');
+                toast.success(tStatic('quoteUpdated'));
             } else {
                 await db.add('quotes', quote);
                 setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: quote.id } : tab));
-                toast.success('Teklif kaydedildi');
+                toast.success(tStatic('quoteSaved'));
             }
 
             // Otomatik versiyon snapshot'ı
@@ -282,7 +299,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
                     quoteId: quote.id,
                     createdAt: Date.now(),
                     snapshot: JSON.parse(JSON.stringify(quote)) as DbQuote,
-                    versionName: isFinal ? 'Final Sürüm' : 'Otomatik Kayıt'
+                    versionName: isFinal ? tStatic('finalVersion') : tStatic('autoSave')
                 };
                 await db.put('quoteVersions', version);
             } catch (e) {
@@ -294,27 +311,45 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             setTimeout(() => { setSaveStatus(prev => prev.status === 'saved' ? { status: 'idle', lastSaved: prev.lastSaved } : prev); }, 3000);
         } catch (error) {
             Logger.error('Error saving quote', error);
-            toast.error('Teklif kaydedilemedi');
+            toast.error(tStatic('quoteSaveFailed'));
             setSaveStatus({ status: 'error', lastSaved: null });
             setTimeout(() => { setSaveStatus(prev => prev.status === 'error' ? { status: 'idle', lastSaved: null } : prev); }, 5000);
         }
     }, [isReady, tabs, activeTabId, validateQuote, items, discount, quoteData, customerData, companyData, bankData, db, setTabs, setSaveStatus]);
 
-    const loadQuote = useCallback((quote: Quote) => {
-        setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: quote.id } : tab));
-        if (quote.quoteData) Object.entries(quote.quoteData).forEach(([key, value]) => updateQuoteData(key, value));
-        if (quote.customerData) Object.entries(quote.customerData).forEach(([key, value]) => updateCustomerData(key, value));
-        if (quote.companyData) Object.entries(quote.companyData).forEach(([key, value]) => updateCompanyData(key, value));
-        if (quote.bankData) Object.entries(quote.bankData).forEach(([key, value]) => updateBankData(key, value));
-        if (quote.items) setItems(quote.items);
-        if (quote.discount) setDiscount(quote.discount);
-        else if (quote.discountRate) setDiscount({ type: 'percentage', value: quote.discountRate });
-        toast.success('Teklif yüklendi');
-    }, [activeTabId, setTabs, updateQuoteData, updateCustomerData, updateCompanyData, updateBankData, setItems, setDiscount]);
+    const loadQuote = useCallback((quote: Partial<Quote>) => {
+        const title = quote.customerData?.company || quote.customerData?.name || tStatic('quote');
+        const sanitizedQuoteData = sanitizeObject({ ...getInitialQuoteData(), ...(quote.quoteData || {}) }) as QuoteData;
+        const sanitizedCustomerData = sanitizeObject({ ...getInitialCustomerData(), ...(quote.customerData || {}) }) as CustomerData;
+        const sanitizedCompanyData = sanitizeObject({ ...getInitialCompanyData(), ...(companyDefaults || {}), ...(quote.companyData || {}) }) as CompanyData;
+        const sanitizedBankData = sanitizeObject({ ...getInitialBankData(), ...(quote.bankData || {}) }) as BankData;
+        const sanitizedItems = sanitizeObject(quote.items || []) as QuoteItem[];
+        const sanitizedDiscount = (quote.discount || (quote.discountRate ? { type: 'percentage', value: quote.discountRate } : { type: 'percentage', value: 0 })) as Discount;
+
+        setTabs(prev => prev.map(tab => {
+            if (tab.id === activeTabId) {
+                return {
+                    ...tab,
+                    title,
+                    savedQuoteId: quote.id || null,
+                    data: {
+                        quoteData: sanitizedQuoteData,
+                        customerData: sanitizedCustomerData,
+                        companyData: sanitizedCompanyData,
+                        bankData: sanitizedBankData,
+                        items: sanitizedItems,
+                        discount: sanitizedDiscount,
+                    }
+                };
+            }
+            return tab;
+        }));
+        toast.success(tStatic('quoteLoaded'));
+    }, [activeTabId, companyDefaults, setTabs]);
 
     const saveVersion = useCallback(async (versionName?: string): Promise<string | null> => {
         if (!isReady || !db) {
-            toast.error('Veritabanı hazır değil');
+            toast.error(tStatic('dbNotReady'));
             return null;
         }
         const activeTab = tabs.find(t => t.id === activeTabId);
@@ -354,31 +389,31 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         };
         try {
             await db.put('quoteVersions', version);
-            toast.success(versionName ? `"${versionName}" sürümü kaydedildi` : 'Sürüm snapshot kaydedildi');
+            toast.success(versionName ? `"${versionName}" ${tStatic('versionSaved')}` : tStatic('versionSnapshotSaved'));
             return versionId;
         } catch (error) {
             Logger.error('Error saving quote version:', error);
-            toast.error('Sürüm kaydedilemedi');
+            toast.error(tStatic('versionSaveFailed'));
             return null;
         }
     }, [isReady, db, tabs, activeTabId, items, discount, quoteData, customerData, companyData, bankData]);
 
     const revertToVersion = useCallback(async (versionId: string) => {
         if (!isReady || !db) {
-            toast.error('Veritabanı hazır değil');
+            toast.error(tStatic('dbNotReady'));
             return;
         }
         try {
             const version = await db.get<QuoteVersion>('quoteVersions', versionId);
             if (!version || !version.snapshot) {
-                toast.error('Sürüm bulunamadı');
+                toast.error(tStatic('versionNotFound'));
                 return;
             }
             loadQuote(version.snapshot);
-            toast.success(version.versionName ? `"${version.versionName}" sürümüne geri dönüldü` : 'Sürüme geri dönüldü');
+            toast.success(version.versionName ? `"${version.versionName}" ${tStatic('versionReverted')}` : tStatic('versionRevertedGeneric'));
         } catch (error) {
             Logger.error('Error reverting to version:', error);
-            toast.error('Sürüme dönülemedi');
+            toast.error(tStatic('versionRevertFailed'));
         }
     }, [isReady, db, loadQuote]);
 
@@ -386,7 +421,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         const initialData = getInitialTabData(companyDefaults);
         setTabs(prev => prev.map(tab => tab.id === activeTabId ? {
             ...tab,
-            title: 'Yeni Teklif',
+            title: tStatic('newQuote'),
             savedQuoteId: null,
             data: initialData,
             history: [initialData],
@@ -404,18 +439,20 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
     const createBackup = useCallback(async () => {
         try {
-            const [customers, products, quotes, templates, banks] = await Promise.all([
+            const [customers, products, quotes, templates, banks, quoteVersions, settings] = await Promise.all([
                 db.getAll('customers'), db.getAll('products'), db.getAll('quotes'),
-                db.getAll('templates'), db.getAll('bankInfo')
+                db.getAll('templates'), db.getAll('bankInfo'),
+                db.getAll('quoteVersions').catch(() => []),
+                db.getAll('settings').catch(() => [])
             ]);
-            const data = { customers, products, quotes, templates, banks, exportDate: new Date().toISOString(), version: '2.3' };
+            const data = { customers, products, quotes, templates, banks, quoteVersions, settings, exportDate: new Date().toISOString(), version: '2.4' };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; a.download = `teklifmaster_backup_${getLocalDateString()}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            URL.revokeObjectURL(url); toast.success('Yedekleme indirildi');
-        } catch (error) { Logger.error('Backup error:', error); toast.error('Yedekleme hatası'); }
+            setTimeout(() => URL.revokeObjectURL(url), 1000); toast.success(tStatic('backupDownloaded'));
+        } catch (error) { Logger.error('Backup error:', error); toast.error(tStatic('backupError')); }
     }, [db]);
 
     const restoreBackup = useCallback(async (file: File) => {
@@ -424,14 +461,17 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         reader.onload = async (event) => {
             try {
                 const data = JSON.parse((event.target as FileReader).result as string);
-                if (data.customers) await Promise.all(data.customers.map((item: unknown) => db.put('customers', item)));
-                if (data.products) await Promise.all(data.products.map((item: unknown) => db.put('products', item)));
-                if (data.quotes) await Promise.all(data.quotes.map((item: unknown) => db.put('quotes', item)));
-                if (data.templates) await Promise.all(data.templates.map((item: unknown) => db.put('templates', item)));
-                if (data.banks) await Promise.all(data.banks.map((item: unknown) => db.put('bankInfo', item)));
-                toast.success('Yedekleme geri yüklendi');
-            } catch (error) { Logger.error('Error restoring backup', error); toast.error('Yedekleme geri yükleme hatası'); }
+                if (Array.isArray(data.customers)) await Promise.all(data.customers.map((item: unknown) => db.put('customers', item)));
+                if (Array.isArray(data.products)) await Promise.all(data.products.map((item: unknown) => db.put('products', item)));
+                if (Array.isArray(data.quotes)) await Promise.all(data.quotes.map((item: unknown) => db.put('quotes', item)));
+                if (Array.isArray(data.templates)) await Promise.all(data.templates.map((item: unknown) => db.put('templates', item)));
+                if (Array.isArray(data.banks)) await Promise.all(data.banks.map((item: unknown) => db.put('bankInfo', item)));
+                if (Array.isArray(data.quoteVersions)) await Promise.all(data.quoteVersions.map((item: unknown) => db.put('quoteVersions', item)));
+                if (Array.isArray(data.settings)) await Promise.all(data.settings.map((item: unknown) => db.put('settings', item)));
+                toast.success(tStatic('backupRestored'));
+            } catch (error) { Logger.error('Error restoring backup', error); toast.error(tStatic('backupRestoreError')); }
         };
+        reader.onerror = () => { toast.error(tStatic('backupRestoreError')); };
         reader.readAsText(file);
     }, [db]);
 
@@ -447,13 +487,13 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             bankData: { bankName: 'Garanti BBVA', branch: 'Maslak', accountNumber: '9876543', iban: 'TR12 0006 2000 0001 2345 6789 01', accountHolder: 'TeklifMaster' },
             discount: { type: 'percentage' as const, value: 10 }
         };
-        const confirmed = await showConfirm('Test Verileri', 'Test verileri mevcut verilerin üzerine yazılacak. Devam etmek istiyor musunuz?', 'warning');
+        const confirmed = await showConfirm(tStatic('testDataTitle'), tStatic('testDataConfirm'), 'warning');
         if (!confirmed) return;
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) return { ...tab, data: testData as TabData };
             return tab;
         }));
-        toast.success('Test verileri eklendi');
+        toast.success(tStatic('testDataAdded'));
     }, [showConfirm, setTabs, activeTabId]);
 
     const currentQuoteId = activeTab?.savedQuoteId || null;
@@ -462,7 +502,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     }, [activeTabId, setTabs]);
 
     const value = useMemo<QuoteDataContextValue>(() => ({
-        quoteData, updateQuoteData, customerData, updateCustomerData,
+        quoteData, updateQuoteData, customerData, updateCustomerData, setCustomerData,
         companyData, updateCompanyData, items, setItems, discount, setDiscount,
         bankData, updateBankData, setBankData,
         saveQuote, loadQuote, resetQuote, fillTestData, createBackup, restoreBackup,
@@ -470,7 +510,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         currentQuoteId, setCurrentQuoteId, validateQuote,
         db, isReady,
     }), [
-        quoteData, updateQuoteData, customerData, updateCustomerData,
+        quoteData, updateQuoteData, customerData, updateCustomerData, setCustomerData,
         companyData, updateCompanyData, items, setItems, discount, setDiscount,
         bankData, updateBankData, setBankData,
         saveQuote, loadQuote, resetQuote, fillTestData, createBackup, restoreBackup,

@@ -23,21 +23,23 @@ const useKeyboardShortcuts = ({ onSave, onPdf, onNew, onUndo, onRedo }: Keyboard
 
     // New: Ctrl+N or Cmd+N
     useHotkeys('ctrl+n, meta+n', (e) => {
-        e.preventDefault();
-        if (onNew) onNew();
+        if (onNew) {
+            e.preventDefault();
+            onNew();
+        }
     }, { enableOnFormTags: true }, [onNew]);
 
-    // Undo: Ctrl+Z or Cmd+Z
+    // Undo: Ctrl+Z or Cmd+Z (Disabled inside input/textarea so native typing undo works)
     useHotkeys('ctrl+z, meta+z', (e) => {
         e.preventDefault();
         if (onUndo) onUndo();
-    }, { enableOnFormTags: true }, [onUndo]);
+    }, { enableOnFormTags: false }, [onUndo]);
 
-    // Redo: Ctrl+Y, Cmd+Y, Ctrl+Shift+Z, Cmd+Shift+Z
+    // Redo: Ctrl+Y, Cmd+Y, Ctrl+Shift+Z, Cmd+Shift+Z (Disabled inside input/textarea so native typing redo works)
     useHotkeys('ctrl+y, meta+y, ctrl+shift+z, meta+shift+z', (e) => {
         e.preventDefault();
         if (onRedo) onRedo();
-    }, { enableOnFormTags: true }, [onRedo]);
+    }, { enableOnFormTags: false }, [onRedo]);
 };
 
 export default useKeyboardShortcuts;

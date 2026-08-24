@@ -1,54 +1,34 @@
 import React, { useMemo } from 'react';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const ProTheme: React.FC<PdfThemeProps> = ({
-    id,
-    containerStyles,
-    config,
-    color = '#4f46e5',
-    companyData,
-    quoteData,
-    customerData,
-    items,
-    bankData,
-    signature,
-    t,
-    formatDate,
-    formatCurrency,
-    subtotal,
-    discountAmount,
-    totalTax,
-    total,
-    currentLocale,
-    hasLineItemDiscounts,
-    onEdit,
-    activeLayout
-}) => {
-    // Helper for editable fields
-    const layoutMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
-        return map;
-    }, [activeLayout]);
-    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
+const ProTheme: React.FC<PdfThemeProps> = (props) => {
+    const {
+        id,
+        containerStyles,
+        config,
+        color = '#4f46e5',
+        companyData,
+        quoteData,
+        customerData,
+        items,
+        bankData,
+        signature,
+        t,
+        formatDate,
+        formatCurrency,
+        subtotal,
+        discountAmount,
+        totalTax,
+        total,
+        currentLocale,
+        hasLineItemDiscounts,
+        onEdit,
+        activeLayout
+    } = props;
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
-    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
-
-        return (
-            <span
-                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(fieldKey, value, type);
-                }}
-                title={t.clickToEdit}
-            >
-                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
-            </span>
-        );
-    };
 
     const proStyles = useMemo(() => `
         .pro-theme-container {
@@ -213,37 +193,9 @@ const ProTheme: React.FC<PdfThemeProps> = ({
         }
     `, [color, config]);
 
-    const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = useMemo(() => {
-        const chunks: QuoteItem[][] = [];
-        if (items.length === 0) {
-            chunks.push([]);
-        } else {
-            for (let i = 0; i < items.length; i += itemsPerPage) {
-                chunks.push(items.slice(i, i + itemsPerPage));
-            }
-        }
-        return chunks;
-    }, [items, itemsPerPage]);
 
-    const vatBreakdown = useMemo(() => {
-        const map: Record<number, { taxable: number; tax: number }> = {};
-        items.forEach((item) => {
-            const qty = Number(item.quantity) || 0;
-            const price = Number(item.price) || 0;
-            const discRate = Number(item.discountRate) || 0;
-            const rate = Number(item.taxRate) || 0;
-            const lineTotal = qty * price * (1 - discRate / 100);
-            const lineTax = (lineTotal * rate) / 100;
-            if (!map[rate]) {
-                map[rate] = { taxable: 0, tax: 0 };
-            }
-            map[rate].taxable += lineTotal;
-            map[rate].tax += lineTax;
-        });
-        return map;
-    }, [items]);
 
+    
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="pro-table">
             <thead>
@@ -306,27 +258,7 @@ const ProTheme: React.FC<PdfThemeProps> = ({
                     <div className="pro-top-accent" />
 
                     {/* Watermark */}
-                    {config.showWatermark && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                transform: `rotate(${config.watermarkRotation || -45}deg)`,
-                                opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 48}px`,
-                                fontWeight: 'bold',
-                                color: config.watermarkColor || '#000000',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {config.watermarkText}
-                        </div>
-                    )}
+                    <PdfWatermark config={config} />
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
@@ -350,7 +282,7 @@ const ProTheme: React.FC<PdfThemeProps> = ({
                                 </div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ fontSize: '1.25rem', fontWeight: '800', textTransform: 'uppercase', color: '#0f172a' }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: '800', textTransform: 'uppercase', color: '#0f172a' }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                     <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
                                     <span>•</span>
@@ -362,63 +294,103 @@ const ProTheme: React.FC<PdfThemeProps> = ({
                         </div>
                     ) : (
                         <div style={{ marginBottom: '8px', paddingBottom: '4px', borderBottom: `1.5px solid ${color}`, display: 'flex', justifyContent: 'space-between', fontSize: '8pt', color: '#64748b' }}>
-                            <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
+                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
                             <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                         </div>
                     ))}
 
                     {/* Customer & Details Cards */}
                     {showSection('customer') && pageIndex === 0 && (
+                        <>
                         <div className="pro-parties-grid">
-                            {/* Customer Box */}
-                            <div className="pro-party-card">
-                                <div className="pro-party-label">{t.customer} / {t.to}</div>
-                                {customerData.company && (
-                                    <div style={{ fontSize: '9.5pt', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }}>
-                                        {renderEditable(customerData.company, 'customerCompany')}
-                                    </div>
-                                )}
-                                <div style={{ fontSize: '8pt', color: '#334155', lineHeight: '1.35' }}>
-                                    {customerData.name && (
-                                        <div><span style={{ color: '#64748b', fontWeight: 600 }}>{t.authorized}: </span>{renderEditable(customerData.name, 'customerName')}</div>
+                            {/* Seller Box */}
+                            {config.showCompanyDetails !== false && (
+                                <div className="pro-party-card">
+                                    <div className="pro-party-label">{t.seller}</div>
+                                    <div style={{ fontSize: '9pt', fontWeight: 700, color: '#0f172a', marginBottom: '2px' }}>{renderEditable(companyData.name, 'companyName')}</div>
+                                    {companyData.phone && (
+                                        <div style={{ fontSize: '8pt', color: '#475569' }}>
+                                            <span style={{ fontWeight: 600 }}>{t.phone}: </span>
+                                            <span>{companyData.phone}</span>
+                                        </div>
                                     )}
-                                    {customerData.phone && (
-                                        <div><span style={{ color: '#64748b', fontWeight: 600 }}>{t.phone}: </span>{renderEditable(customerData.phone, 'customerPhone')}</div>
+                                    {companyData.email && (
+                                        <div style={{ fontSize: '8pt', color: '#475569' }}>
+                                            <span style={{ fontWeight: 600 }}>{t.email}: </span>
+                                            <span>{companyData.email}</span>
+                                        </div>
                                     )}
-                                    {customerData.email && (
-                                        <div><span style={{ color: '#64748b', fontWeight: 600 }}>{t.email}: </span>{renderEditable(customerData.email, 'customerEmail')}</div>
+                                    {companyData.address && (
+                                        <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
+                                            {companyData.address}
+                                        </div>
                                     )}
-                                    {customerData.address && <div>{customerData.address}</div>}
-                                    {(customerData.taxOffice || customerData.taxNumber) && (
+                                    {(companyData.taxOffice || companyData.taxNumber) && (
                                         <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                            {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
-                                            {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                            {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                            {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                         </div>
                                     )}
                                 </div>
+                            )}
+
+                            {/* Customer Box */}
+                            <div className="pro-party-card">
+                                <div className="pro-party-label">{t.customer}</div>
+                                {customerData.company && (
+                                    <div style={{ fontSize: '9pt', fontWeight: 700, color: '#0f172a', marginBottom: '2px' }}>{renderEditable(customerData.company, 'customerCompany')}</div>
+                                )}
+                                {customerData.name && (
+                                    <div style={{ fontSize: '8.5pt', color: '#334155', fontWeight: 600, marginBottom: '2px' }}>{renderEditable(customerData.name, 'customerName')}</div>
+                                )}
+                                {customerData.phone && (
+                                    <div style={{ fontSize: '8pt', color: '#475569' }}>
+                                        <span style={{ fontWeight: 600 }}>{t.phone}: </span>
+                                        <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                    </div>
+                                )}
+                                {customerData.email && (
+                                    <div style={{ fontSize: '8pt', color: '#475569' }}>
+                                        <span style={{ fontWeight: 600 }}>{t.email}: </span>
+                                        <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                    </div>
+                                )}
+                                {customerData.address && (
+                                    <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
+                                        {customerData.address}
+                                    </div>
+                                )}
+                                {(customerData.taxOffice || customerData.taxNumber) && (
+                                    <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
+                                        {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                        {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Quote Info Card */}
+                            {/* Quote Details Card */}
                             <div className="pro-party-card">
                                 <div className="pro-party-label">{t.details}</div>
-                                <div style={{ fontSize: '8.5pt', color: '#334155', lineHeight: '1.4' }}>
+                                <div style={{ fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
                                     <div><strong>{t.quoteNo}:</strong> #{quoteData.number}</div>
                                     <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
                                     <div><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</div>
                                     {config.showNotes && quoteData.notes && (
-                                        <div style={{ marginTop: '3px', fontSize: '8pt', color: '#64748b', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                                        <div style={{ marginTop: '2px', fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
                                             {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
+                        <PdfCustomFields customFields={quoteData.customFields} themeColor={color} />
+                        </>
                     )}
 
                     {/* Items Table */}
                     {showSection('items') && (
                         <div style={{ flex: 1 }}>
-                            {renderTable(chunk, pageIndex * itemsPerPage)}
+                            {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                         </div>
                     )}
 
@@ -443,7 +415,8 @@ const ProTheme: React.FC<PdfThemeProps> = ({
                                         {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
                                             <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '4px' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.deliveryConditions}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                                {(quoteData.warrantyTerms || quoteData.terms) && <div><strong>{t.warrantyConditions}:</strong> {renderEditable(quoteData.warrantyTerms || quoteData.terms, 'terms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms && <div><strong>{t.warrantyConditions}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
+                                                {quoteData.terms && <div><strong>{t.payment || 'Ödeme'}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
                                     </div>
@@ -482,7 +455,7 @@ const ProTheme: React.FC<PdfThemeProps> = ({
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
                                         <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
-                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                            {amountInWords}
                                         </div>
                                     </div>
                                 </div>
@@ -531,12 +504,7 @@ const ProTheme: React.FC<PdfThemeProps> = ({
                             )}
 
                             {/* Page Number */}
-                            {config.showPageNumbers && (
-                                <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                                </div>
-                            )}
+                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
                 </div>

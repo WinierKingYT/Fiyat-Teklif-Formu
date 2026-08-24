@@ -1,10 +1,24 @@
 import { getLocalDateString } from '@/utils/dateUtils';
-import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, TabData, PdfConfig, PdfLayoutItem, Tab } from '@/context/quote/types';
+import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, TabData, PdfConfig, PdfLayoutItem, Tab, QuoteNumberConfig } from '@/context/quote/types';
+
+export const getDefaultQuoteNumberConfig = (): QuoteNumberConfig => ({
+    template: '{PREFIX}-{YYYY}{MM}-{INDEX:4}',
+    prefix: 'TK',
+    counter: 1,
+    resetPeriod: 'yearly',
+    series: [
+        { id: 'default', name: 'Standart Seri', prefix: 'TK', template: '{PREFIX}-{YYYY}{MM}-{INDEX:4}', counter: 1 },
+        { id: 'export', name: 'İhracat Serisi', prefix: 'EXP', template: '{PREFIX}/{YYYY}/{INDEX:3}', counter: 1 },
+        { id: 'project', name: 'Proje Serisi', prefix: 'PRJ', template: '{PREFIX}-{YYYY}-{INDEX:4}', counter: 1 }
+    ],
+    activeSeriesId: 'default'
+});
 
 export const getInitialQuoteData = (): QuoteData => ({
     title: '', number: '', date: getLocalDateString(), validUntilDays: '10',
     validUntil: '', description: '', terms: '', deliveryTerms: '',
-    warrantyTerms: '', notes: '', currency: 'TRY', language: 'tr'
+    warrantyTerms: '', notes: '', currency: 'TRY', language: 'tr',
+    customFields: []
 });
 
 export const getInitialCustomerData = (): CustomerData => ({
@@ -45,7 +59,7 @@ export const getDefaultTabs = (companyDefaults: Partial<CompanyData> | null = nu
 }];
 
 export const getDefaultPdfConfig = (): PdfConfig => ({
-    showLogo: true, showBankInfo: true, showSignatures: true,
+    showLogo: true, showBankInfo: true, showSignatures: true, showCustomerSignature: false,
     showTerms: true, showNotes: true, showSummary: true,
     title: 'FİYAT TEKLİFİ', fontFamily: 'Inter', fontSize: 12,
     tableHeaderFontSize: 14, tableRowHeight: 35, borderRadius: 6,
@@ -66,7 +80,7 @@ export const getDefaultPdfConfig = (): PdfConfig => ({
     summaryLabelFontSize: '0.75rem', summaryLabelFontWeight: 'normal',
     summaryValueFontSize: 'inherit', summaryValueFontWeight: '500',
     summaryTotalFontSize: '0.9rem', summaryTotalFontWeight: '700',
-    footerFontSize: '0.7rem', footerFontWeight: 'normal', itemsPerPage: 14,
+    footerFontSize: '0.7rem', footerFontWeight: 'normal', itemsPerPage: 20,
     pageBackgroundColor: '#ffffff'
 });
 

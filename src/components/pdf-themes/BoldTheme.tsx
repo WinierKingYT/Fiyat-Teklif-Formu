@@ -1,54 +1,34 @@
 import React, { useMemo } from 'react';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const BoldTheme: React.FC<PdfThemeProps> = ({
-    id,
-    containerStyles,
-    config,
-    color = '#0284c7',
-    companyData,
-    quoteData,
-    customerData,
-    items,
-    bankData,
-    signature,
-    t,
-    formatDate,
-    formatCurrency,
-    subtotal,
-    discountAmount,
-    totalTax,
-    total,
-    currentLocale,
-    hasLineItemDiscounts,
-    onEdit,
-    activeLayout
-}) => {
-    // Helper for editable fields
-    const layoutMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
-        return map;
-    }, [activeLayout]);
-    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
+const BoldTheme: React.FC<PdfThemeProps> = (props) => {
+    const {
+        id,
+        containerStyles,
+        config,
+        color = '#0284c7',
+        companyData,
+        quoteData,
+        customerData,
+        items,
+        bankData,
+        signature,
+        t,
+        formatDate,
+        formatCurrency,
+        subtotal,
+        discountAmount,
+        totalTax,
+        total,
+        currentLocale,
+        hasLineItemDiscounts,
+        onEdit,
+        activeLayout
+    } = props;
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
-    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
-
-        return (
-            <span
-                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(fieldKey, value, type);
-                }}
-                title={t.clickToEdit}
-            >
-                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
-            </span>
-        );
-    };
 
     const boldStyles = useMemo(() => `
         .bold-theme-container {
@@ -212,18 +192,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
         }
     `, [color, config]);
 
-    const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = useMemo(() => {
-        const chunks: QuoteItem[][] = [];
-        if (items.length === 0) {
-            chunks.push([]);
-        } else {
-            for (let i = 0; i < items.length; i += itemsPerPage) {
-                chunks.push(items.slice(i, i + itemsPerPage));
-            }
-        }
-        return chunks;
-    }, [items, itemsPerPage]);
+
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="bold-table">
@@ -287,27 +256,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                     <div className="bold-top-gradient" />
 
                     {/* Watermark */}
-                    {config.showWatermark && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                transform: `rotate(${config.watermarkRotation || -45}deg)`,
-                                opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 48}px`,
-                                fontWeight: 'bold',
-                                color: config.watermarkColor || '#000000',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {config.watermarkText}
-                        </div>
-                    )}
+                    <PdfWatermark config={config} />
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
@@ -335,7 +284,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                                 </div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ fontSize: '1.35rem', fontWeight: '900', textTransform: 'uppercase', color: color }}>{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div style={{ fontSize: '1.35rem', fontWeight: '900', textTransform: 'uppercase', color: color }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1.5px solid #e2e8f0' }}>
                                     <span style={{ fontWeight: '800' }}>#{quoteData.number}</span>
                                     <span>•</span>
@@ -348,7 +297,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                     ) : (
                         <div style={{ marginBottom: '8px', paddingBottom: '4px', borderBottom: `2px solid ${color}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b' }}>
-                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
+                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -358,6 +307,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
 
                     {/* Customer & Quote Details */}
                     {showSection('customer') && pageIndex === 0 && (
+                        <>
                         <div className="bold-parties-grid">
                             {/* Customer Box */}
                             <div className="bold-party-box">
@@ -413,12 +363,14 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                                 </div>
                             </div>
                         </div>
+                        <PdfCustomFields customFields={quoteData.customFields} themeColor={color} />
+                        </>
                     )}
 
                     {/* Items Table */}
                     {showSection('items') && (
                         <div style={{ flex: 1 }}>
-                            {renderTable(chunk, pageIndex * itemsPerPage)}
+                            {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                         </div>
                     )}
 
@@ -468,7 +420,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
                                         <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
-                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                            {amountInWords}
                                         </div>
                                     </div>
                                 </div>
@@ -529,12 +481,7 @@ const BoldTheme: React.FC<PdfThemeProps> = ({
                             )}
 
                             {/* Page Number */}
-                            {config.showPageNumbers && (
-                                <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                                </div>
-                            )}
+                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
                 </div>

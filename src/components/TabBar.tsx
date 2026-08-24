@@ -16,7 +16,11 @@ const TabBar = React.memo(() => {
         if (next >= 0) {
             e.preventDefault();
             switchTab(tabs[next].id);
-            tabRefs.current[next]?.focus();
+            const nextEl = tabRefs.current[next];
+            if (nextEl) {
+                nextEl.focus();
+                nextEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            }
         }
     };
 

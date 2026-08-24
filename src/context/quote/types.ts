@@ -2,6 +2,7 @@ import React from 'react';
 import { z } from 'zod';
 
 // ─── Quote Item ─────────────────────────────────────────────────────────────
+const finiteNumber = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : undefined; };
 export const quoteItemSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Ürün/hizmet adı gerekli'),
@@ -9,11 +10,11 @@ export const quoteItemSchema = z.object({
   note: z.string().optional(),
   isRecurring: z.boolean().optional(),
   billingPeriod: z.enum(['one-time', 'monthly', 'yearly', 'weekly']).optional(),
-  quantity: z.union([z.number().positive(), z.string()]).transform((v) => Number(v)),
+  quantity: z.preprocess(finiteNumber, z.number().positive({ message: 'Miktar >0 olmalı' })),
   unit: z.string().optional(),
-  price: z.union([z.number().nonnegative(), z.string()]).transform((v) => Number(v)),
-  taxRate: z.union([z.number().nonnegative(), z.string()]).transform((v) => Number(v)),
-  discountRate: z.union([z.number().nonnegative(), z.string()]).transform((v) => Number(v)).optional(),
+  price: z.preprocess(finiteNumber, z.number().nonnegative()),
+  taxRate: z.preprocess(finiteNumber, z.number().min(0).max(100)),
+  discountRate: z.preprocess((v) => v === undefined || v === '' ? 0 : finiteNumber(v), z.number().min(0).max(1000000).optional()),
   discountType: z.enum(['percentage', 'fixed']).optional(),
   image: z.string().optional(),
   total: z.number().optional(),
@@ -28,6 +29,42 @@ export const discountSchema = z.object({
 });
 
 export type Discount = z.infer<typeof discountSchema>;
+
+// ─── Custom Field ─────────────────────────────────────────────────────────
+export const customFieldSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  value: z.string(),
+  type: z.enum(['text', 'date', 'select', 'number']).optional(),
+  options: z.array(z.string()).optional(),
+  showOnPdf: z.boolean(),
+  order: z.number(),
+});
+
+export type CustomField = z.infer<typeof customFieldSchema>;
+
+// ─── Quote Number Configuration ─────────────────────────────────────────────
+export const quoteNumberSeriesSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  prefix: z.string(),
+  template: z.string(),
+  counter: z.number(),
+});
+
+export type QuoteNumberSeries = z.infer<typeof quoteNumberSeriesSchema>;
+
+export const quoteNumberConfigSchema = z.object({
+  template: z.string(),
+  prefix: z.string(),
+  counter: z.number(),
+  resetPeriod: z.enum(['never', 'yearly', 'monthly', 'daily']),
+  lastResetDate: z.string().optional(),
+  series: z.array(quoteNumberSeriesSchema).optional(),
+  activeSeriesId: z.string().optional(),
+});
+
+export type QuoteNumberConfig = z.infer<typeof quoteNumberConfigSchema>;
 
 // ─── Quote Data ─────────────────────────────────────────────────────────────
 export const quoteDataSchema = z.object({
@@ -48,6 +85,7 @@ export const quoteDataSchema = z.object({
   watermark: z.string().optional(),
   taxMode: z.enum(['exclusive', 'inclusive']).optional(),
   showAmountInWords: z.boolean().optional(),
+  customFields: z.array(customFieldSchema).optional(),
 });
 
 export type QuoteData = z.infer<typeof quoteDataSchema>;
@@ -57,11 +95,11 @@ export const customerDataSchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
   name: z.string().optional(),
   company: z.string().optional(),
-  email: z.string().optional(),
+  email: z.string().optional().refine(v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: 'Geçersiz e-posta' }),
   phone: z.string().optional(),
   address: z.string().optional(),
   taxOffice: z.string().optional(),
-  taxNumber: z.string().optional(),
+  taxNumber: z.string().optional().refine(v => !v || /^\d{10,11}$/.test(v.replace(/\s/g, '')), { message: 'Vergi no 10-11 hane olmalı' }),
 });
 
 export type CustomerData = z.infer<typeof customerDataSchema>;
@@ -84,14 +122,14 @@ export const companyDataSchema = z.object({
   name: z.string().optional(),
   authorized: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().optional(),
+  email: z.string().optional().refine(v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { message: 'Geçersiz e-posta' }),
   website: z.string().optional(),
   address: z.string().optional(),
   logo: z.string().nullable().optional(),
   signature: z.string().nullable().optional(),
   stamp: z.string().nullable().optional(),
   taxOffice: z.string().optional(),
-  taxNumber: z.string().optional(),
+  taxNumber: z.string().optional().refine(v => !v || /^\d{10,11}$/.test(v.replace(/\s/g, '')), { message: 'Vergi no 10-11 hane olmalı' }),
 });
 
 export type CompanyData = z.infer<typeof companyDataSchema>;
@@ -102,7 +140,7 @@ export const bankDataSchema = z.object({
   branch: z.string().optional(),
   accountHolder: z.string().optional(),
   accountNumber: z.string().optional(),
-  iban: z.string().optional(),
+  iban: z.string().optional().refine(v => !v || /^TR\d{2}\s?(\d{4}\s?){5}\d{2}$/.test(v.replace(/\s/g, '').toUpperCase()) || /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(v.replace(/\s/g, '').toUpperCase()), { message: 'Geçersiz IBAN' }),
 });
 
 export type BankData = z.infer<typeof bankDataSchema>;
@@ -120,6 +158,7 @@ export interface Quote {
   updatedAt?: string;
   status?: string;
   discountRate?: number;
+  discountType?: 'percentage' | 'fixed';
 }
 
 // ─── Stored Quote (IndexedDB'de saklanan genişletilmiş şekil) ───────────────
@@ -162,11 +201,12 @@ export interface Tab {
   historyIndex: number;
 }
 
-// ─── PDF Config ─────────────────────────────────────────────────────────────
+// ─── PDF Config – Faz6: strict (bilinmeyen anahtarları reddet, PII sızıntısını azalt) ──────
 export const pdfConfigSchema = z.object({
   showLogo: z.boolean(),
   showBankInfo: z.boolean(),
   showSignatures: z.boolean(),
+  showCustomerSignature: z.boolean().default(false),
   showTerms: z.boolean(),
   showNotes: z.boolean(),
   showSummary: z.boolean(),
@@ -242,9 +282,10 @@ export const pdfConfigSchema = z.object({
   textVat: z.string().optional(),
   textTotal: z.string().optional(),
   enableShadows: z.boolean().optional(),
-});
+}).strict();
 
 export type PdfConfig = Partial<z.infer<typeof pdfConfigSchema>> & Record<string, unknown>;
+// Faz6 strict: parse için pdfConfigSchema.strict().safeParse kullanın; unknown anahtarlar reddedilir
 
 // ─── PDF Layout Item ────────────────────────────────────────────────────────
 export interface PdfLayoutItem {
@@ -334,6 +375,7 @@ export interface QuoteContextValue {
   // Update functions
   updateQuoteData: (field: string, value: unknown) => void;
   updateCustomerData: (field: string, value: unknown) => void;
+  setCustomerData: (data: Partial<CustomerData>) => void;
   updateCompanyData: (field: string, value: unknown) => void;
   setItems: (items: QuoteItem[] | ((prev: QuoteItem[]) => QuoteItem[])) => void;
   setDiscount: (discount: Discount) => void;
@@ -348,7 +390,7 @@ export interface QuoteContextValue {
 
   // Save/Load
   saveQuote: (isFinal?: boolean) => Promise<void>;
-  loadQuote: (quote: Quote) => void;
+  loadQuote: (quote: Partial<Quote>) => void;
   resetQuote: () => void;
   fillTestData: () => Promise<void>;
   saveVersion: (versionName?: string) => Promise<string | null>;

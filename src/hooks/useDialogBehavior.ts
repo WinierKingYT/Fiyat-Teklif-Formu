@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+let openDialogCount = 0;
+
 export const useDialogBehavior = (
   isOpen: boolean,
   onClose: () => void
@@ -49,10 +51,14 @@ export const useDialogBehavior = (
       if (e.key === 'Escape') { e.preventDefault(); handleClose(); return; }
     };
     document.addEventListener('keydown', handler);
+    openDialogCount++;
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handler);
-      document.body.style.overflow = '';
+      openDialogCount--;
+      if (openDialogCount === 0) {
+        document.body.style.overflow = '';
+      }
     };
   }, [visible, handleClose]);
 

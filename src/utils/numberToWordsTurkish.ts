@@ -5,7 +5,7 @@
 
 const ONES = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz'];
 const TENS = ['', 'On', 'Yirmi', 'Otuz', 'Kırk', 'Elli', 'Altmış', 'Yetmiş', 'Seksen', 'Doksan'];
-const SCALES = ['', 'Bin', 'Milyon', 'Milyar', 'Trilyon'];
+const SCALES = ['', 'Bin', 'Milyon', 'Milyar', 'Trilyon', 'Katrilyon', 'Kentilyon'];
 
 const CURRENCY_NAMES: Record<string, { main: string; sub: string }> = {
   TRY: { main: 'Türk Lirası', sub: 'Kuruş' },
@@ -13,6 +13,7 @@ const CURRENCY_NAMES: Record<string, { main: string; sub: string }> = {
   EUR: { main: 'Euro', sub: 'Cent' },
   GBP: { main: 'İngiliz Sterlini', sub: 'Pence' },
   CHF: { main: 'İsviçre Frangı', sub: 'Rappen' },
+  JPY: { main: 'Japon Yeni', sub: 'Sen' },
 };
 
 function convertGroupToWords(n: number): string {
@@ -57,7 +58,9 @@ function integerToWords(num: number): string {
         // Turkish grammar: 1000 is "Bin", not "Bir Bin"
         parts.unshift('Bin');
       } else {
-        const scale = SCALES[scaleIndex];
+        // Safety: clamp scaleIndex to SCALES length
+        const safeIndex = Math.min(scaleIndex, SCALES.length - 1);
+        const scale = SCALES[safeIndex];
         parts.unshift(scale ? `${groupWords} ${scale}` : groupWords);
       }
     }
@@ -89,7 +92,13 @@ function getTurkishCopulaSuffix(text: string): string {
 
 export function numberToWordsTurkish(amount: number, currency: string = 'TRY'): string {
   if (isNaN(amount) || amount === null || amount === undefined) return '';
+  // Faz5: 1e24 clamp – JS unsafe integer & SCALES overflow koruması
+  const MAX_SAFE_AMOUNT = 1e24;
+  if (Math.abs(amount) >= MAX_SAFE_AMOUNT) {
+    amount = Math.sign(amount) * (MAX_SAFE_AMOUNT - 1);
+  }
 
+  const isNegative = amount < 0;
   const rounded = Math.round((Math.abs(amount) + Number.EPSILON) * 100) / 100;
   const integerPart = Math.floor(rounded);
   const fractionalPart = Math.round((rounded - integerPart) * 100);
@@ -105,7 +114,8 @@ export function numberToWordsTurkish(amount: number, currency: string = 'TRY'): 
   }
 
   const suffix = getTurkishCopulaSuffix(result);
-  return `Yalnız #${result}${suffix}#`.replace(/\s+/g, ' ');
+  const prefix = isNegative ? 'Eksi ' : '';
+  return `Yalnız #${prefix}${result}${suffix}#`.replace(/\s+/g, ' ');
 }
 
 export default numberToWordsTurkish;

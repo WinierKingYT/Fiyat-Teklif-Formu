@@ -74,7 +74,8 @@ const ConfirmDialog = ({
                 maxWidth: mobile ? '100%' : '360px',
                 borderRadius: mobile ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
                 transition: 'transform 0.3s ease-out',
-            }} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+            }} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
+                 onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); handleClose(); } }}>
                 {mobile && <div className="modal-drag-handle" />}
                 <div className={`flex items-center justify-between p-3.5 border-b border-[var(--color-border)] ${mobile ? 'pt-1' : ''}`}>
                     <div className="flex items-center gap-2.5">

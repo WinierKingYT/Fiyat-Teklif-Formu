@@ -9,20 +9,20 @@ export default {
         extend: {
             colors: {
                 bg: {
-                    DEFAULT: '#FAFAFA',
+                    DEFAULT: '#F1F3F5',
                     card: '#FFFFFF',
-                    muted: '#F4F5F7',
-                    hover: '#EEF0F2',
-                    active: '#E2E5E9',
+                    muted: '#E5E7EB',
+                    hover: '#E0E7FF',
+                    active: '#C7D2FE',
                 },
                 fg: {
-                    DEFAULT: '#1A1D23',
-                    secondary: '#5A6069',
-                    muted: '#9298A3',
+                    DEFAULT: '#0F172A',
+                    secondary: '#4B5563',
+                    muted: '#64748B',
                 },
                 border: {
-                    DEFAULT: '#E2E5E9',
-                    light: '#F0F1F3',
+                    DEFAULT: '#D1D5DB',
+                    light: '#E5E7EB',
                 },
                 primary: {
                     DEFAULT: '#1E293B',

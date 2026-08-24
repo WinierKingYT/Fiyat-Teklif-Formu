@@ -49,7 +49,10 @@ const PopupEditor = ({ isOpen, onClose, onSave, initialValue, title, type = 'tex
     const inputClass = "w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--color-bg-card)] text-[var(--color-text)] text-sm focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-muted)] transition-all";
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
+        <div
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn"
+        >
             <div role="dialog" aria-modal="true" aria-label={title} className="bg-[var(--color-bg-card)] rounded-[var(--radius-lg)] shadow-lg w-full max-w-md border border-[var(--color-border)] animate-scaleIn">
                 <div className="flex justify-between items-center p-4 border-b border-[var(--color-border)]">
                     <h3 className="font-semibold text-[var(--color-text)] flex items-center gap-2 text-sm">

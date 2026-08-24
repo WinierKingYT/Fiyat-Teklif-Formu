@@ -4,12 +4,11 @@ const ENTITY_MAP: { [key: string]: string } = {
   '>': '&gt;',
   '"': '&quot;',
   "'": '&#x27;',
-  '/': '&#x2F;'
 };
 
 export function escapeHtml(str: unknown): unknown {
   if (typeof str !== 'string') return str;
-  return str.replace(/[&<>"'/]/g, (ch: string) => ENTITY_MAP[ch]);
+  return str.replace(/[&<>"']/g, (ch: string) => ENTITY_MAP[ch]);
 }
 
 export function sanitizeHtml(str: unknown): string {
@@ -33,8 +32,9 @@ export function sanitizeUrl(url: unknown): string {
 }
 
 export function sanitizeObject<T>(obj: T): T {
-  if (typeof obj === 'string') return sanitizeHtml(escapeHtml(obj)) as T;
+  if (typeof obj === 'string') return sanitizeHtml(obj) as T;
   if (Array.isArray(obj)) return obj.map(sanitizeObject) as T;
+  if (obj instanceof Date) return obj;
   if (obj && typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
@@ -47,10 +47,10 @@ export function sanitizeObject<T>(obj: T): T {
 
 export function sanitizeDisplay(str: unknown): unknown {
   if (typeof str !== 'string') return str;
-  return escapeHtml(sanitizeHtml(str));
+  return sanitizeHtml(str);
 }
 
 export function sanitizeInput(str: unknown): unknown {
   if (typeof str !== 'string') return str;
-  return escapeHtml(sanitizeHtml(str));
+  return sanitizeHtml(str);
 }

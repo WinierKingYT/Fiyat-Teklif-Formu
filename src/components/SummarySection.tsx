@@ -68,13 +68,13 @@ const SummarySection = React.memo(({
                 <div className="space-y-2">
                     <div className="flex items-center justify-between py-1">
                         <span className="text-sm text-[var(--color-text-secondary)]">{t('subtotal')}</span>
-                        <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.subtotal)}</span>
+                        <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.subtotal, currency)}</span>
                     </div>
 
                     {calc.lineDiscountTotal > 0 && (
                         <div className="flex items-center justify-between py-1 text-[var(--color-warning)]">
                             <span className="text-sm">{t('lineDiscounts')}</span>
-                            <span className="text-sm font-semibold">-{formatCurrency(calc.lineDiscountTotal)}</span>
+                            <span className="text-sm font-semibold">-{formatCurrency(calc.lineDiscountTotal, currency)}</span>
                         </div>
                     )}
 
@@ -90,7 +90,8 @@ const SummarySection = React.memo(({
                                     className="w-16 py-1 px-2 text-right text-xs bg-transparent border-0 outline-none"
                                     min="0"
                                     step={discount.type === 'percentage' ? "1" : "0.01"}
-                                    value={discount.value}
+                                    value={discount.value === 0 ? '' : discount.value}
+                                    placeholder="0"
                                     onChange={handleDiscountValueChange}
                                     aria-label={t('generalDiscount')}
                                 />
@@ -105,7 +106,7 @@ const SummarySection = React.memo(({
                                 </select>
                             </div>
                         </div>
-                        <span className="text-sm font-semibold text-[var(--color-error)]">-{formatCurrency(calc.globalDiscountAmount)}</span>
+                        <span className="text-sm font-semibold text-[var(--color-error)]">-{formatCurrency(calc.globalDiscountAmount, currency)}</span>
                     </div>
 
                     {/* VAT Section */}
@@ -118,22 +119,22 @@ const SummarySection = React.memo(({
                             {Object.entries(calc.taxBreakdown).map(([rate, amount]) => (
                                 <div className="flex items-center justify-between py-0.5" key={rate}>
                                     <span className="text-xs text-[var(--color-text-secondary)] ml-3">{t('vatRateDisplay').replace('{rate}', rate)}</span>
-                                    <span className="text-xs font-medium text-[var(--color-text)]">{formatCurrency(amount)}</span>
+                                    <span className="text-xs font-medium text-[var(--color-text)]">{formatCurrency(amount, currency)}</span>
                                 </div>
                             ))}
                             <div className="flex items-center justify-between py-1 border-t border-[var(--color-border)]/50 mt-1">
                                 <span className="text-sm text-[var(--color-text-secondary)]">{t('totalVat')}</span>
-                                <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal)}</span>
+                                <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal, currency)}</span>
                             </div>
                         </>
                     ) : (
                         <div className="flex items-center justify-between py-1">
                             <span className="text-sm text-[var(--color-text-secondary)]">
                                 {Object.keys(calc.taxBreakdown).length === 1
-                                    ? `KDV (%${Object.keys(calc.taxBreakdown)[0]})`
+                                    ? `${t('vat') || 'KDV'} (%${Object.keys(calc.taxBreakdown)[0]})`
                                     : t('totalVat')}
                             </span>
-                            <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal)}</span>
+                            <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.taxTotal, currency)}</span>
                         </div>
                     )}
 
@@ -141,7 +142,7 @@ const SummarySection = React.memo(({
 
                     <div className="flex items-center justify-between py-2">
                         <span className="text-base font-bold text-[var(--color-text)]">{t('grandTotal')}</span>
-                        <span className="text-lg font-extrabold text-[var(--color-primary)]">{formatCurrency(calc.grandTotal)}</span>
+                        <span className="text-lg font-extrabold text-[var(--color-primary)]">{formatCurrency(calc.grandTotal, currency)}</span>
                     </div>
 
                     {/* Amount in Words */}
@@ -152,7 +153,7 @@ const SummarySection = React.memo(({
                             className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                         >
                             <FileText size={12} />
-                            <span>{isShowingWords ? 'Yazıyla Tutarı Gizle' : 'Yazıyla Tutar Ekle'}</span>
+                            <span>{isShowingWords ? (t('hideAmountInWords') || 'Yazıyla Tutarı Gizle') : (t('addAmountInWords') || 'Yazıyla Tutar Ekle')}</span>
                         </button>
                         {isShowingWords && (
                             <div className="mt-1.5 p-2 bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded text-xs font-mono text-[var(--color-text-secondary)] italic leading-relaxed select-all">
@@ -169,10 +170,10 @@ const SummarySection = React.memo(({
                                     type="button"
                                     onClick={onPreviewPdf}
                                     className="w-full btn btn-primary flex items-center justify-center gap-2 py-2.5 font-semibold text-sm shadow-sm"
-                                    title="PDF Önizle & İndir (Ctrl+P)"
+                                    title={`${t('previewAndDownloadPdf') || 'PDF Önizle & İndir'} (Ctrl+P)`}
                                 >
                                     <FileText size={16} />
-                                    <span>PDF Önizle & İndir</span>
+                                    <span>{t('previewAndDownloadPdf') || 'PDF Önizle & İndir'}</span>
                                 </button>
                             )}
                             {onSaveQuote && (
@@ -181,10 +182,10 @@ const SummarySection = React.memo(({
                                     onClick={onSaveQuote}
                                     disabled={isSaving}
                                     className="w-full btn btn-outline flex items-center justify-center gap-2 py-2 text-xs font-medium text-[var(--color-text)]"
-                                    title="Teklifi Kaydet (Ctrl+S)"
+                                    title={`${t('saveQuoteAction') || 'Teklifi Kaydet'} (Ctrl+S)`}
                                 >
                                     <Save size={14} className="text-[var(--color-info)]" />
-                                    <span>{isSaving ? 'Kaydediliyor...' : 'Teklifi Kaydet'}</span>
+                                    <span>{isSaving ? (t('saving') || 'Kaydediliyor...') : (t('saveQuoteAction') || 'Teklifi Kaydet')}</span>
                                 </button>
                             )}
                         </div>

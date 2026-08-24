@@ -1,54 +1,34 @@
 import React, { useMemo } from 'react';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-const ModernTheme: React.FC<PdfThemeProps> = ({
-    id,
-    containerStyles,
-    config,
-    color = '#2563eb',
-    activeLayout,
-    companyData,
-    quoteData,
-    customerData,
-    items,
-    bankData,
-    signature,
-    t,
-    formatDate,
-    formatCurrency,
-    subtotal,
-    discountAmount,
-    totalTax,
-    total,
-    currentLocale,
-    hasLineItemDiscounts,
-    onEdit
-}) => {
-    // Helper for editable fields
-    const layoutMap = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        (activeLayout || []).forEach((l) => { map[l.id] = l.enabled !== false; });
-        return map;
-    }, [activeLayout]);
-    const showSection = (sectionId: string) => layoutMap[sectionId] !== false;
+const ModernTheme: React.FC<PdfThemeProps> = (props) => {
+    const {
+        id,
+        containerStyles,
+        config,
+        color = '#2563eb',
+        activeLayout,
+        companyData,
+        quoteData,
+        customerData,
+        items,
+        bankData,
+        signature,
+        t,
+        formatDate,
+        formatCurrency,
+        subtotal,
+        discountAmount,
+        totalTax,
+        total,
+        currentLocale,
+        hasLineItemDiscounts,
+        onEdit
+    } = props;
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
-    const renderEditable = (value: unknown, fieldKey: string, type = 'text', className = '') => {
-        if (!onEdit) return <span className={className}>{String(value ?? '')}</span>;
-
-        return (
-            <span
-                className={`editable-field group relative cursor-pointer hover:bg-[var(--color-primary-muted)] hover:ring-2 hover:ring-[var(--color-primary-ring)] rounded px-1 -mx-1 transition-all ${className}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(fieldKey, value, type);
-                }}
-                title={t.clickToEdit}
-            >
-                {String(value || '') || <span className="italic text-[var(--color-text-muted)]">{t.edit}</span>}
-            </span>
-        );
-    };
 
     const modernStyles = useMemo(() => `
         .modern-theme-container {
@@ -411,37 +391,9 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
         }
     `, [color, config]);
 
-    const itemsPerPage = config.itemsPerPage || 14;
-    const itemChunks = useMemo(() => {
-        const chunks: QuoteItem[][] = [];
-        if (items.length === 0) {
-            chunks.push([]);
-        } else {
-            for (let i = 0; i < items.length; i += itemsPerPage) {
-                chunks.push(items.slice(i, i + itemsPerPage));
-            }
-        }
-        return chunks;
-    }, [items, itemsPerPage]);
 
-    const vatBreakdown = useMemo(() => {
-        const map: Record<number, { taxable: number; tax: number }> = {};
-        items.forEach((item) => {
-            const qty = Number(item.quantity) || 0;
-            const price = Number(item.price) || 0;
-            const discRate = Number(item.discountRate) || 0;
-            const rate = Number(item.taxRate) || 0;
-            const lineTotal = qty * price * (1 - discRate / 100);
-            const lineTax = (lineTotal * rate) / 100;
-            if (!map[rate]) {
-                map[rate] = { taxable: 0, tax: 0 };
-            }
-            map[rate].taxable += lineTotal;
-            map[rate].tax += lineTax;
-        });
-        return map;
-    }, [items]);
 
+    
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="pdf-items-table">
             <thead>
@@ -502,27 +454,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                     pageBreakAfter: pageIndex < itemChunks.length - 1 ? 'always' : 'auto'
                 }}>
                     {/* Watermark */}
-                    {config.showWatermark && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                transform: `rotate(${config.watermarkRotation || -45}deg)`,
-                                opacity: config.watermarkOpacity,
-                                fontSize: `${config.watermarkFontSize || 96}px`,
-                                fontWeight: 'bold',
-                                color: config.watermarkColor || '#000000',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {config.watermarkText}
-                        </div>
-                    )}
+                    <PdfWatermark config={config} />
 
                     {/* Header */}
                     {showSection('header') && (pageIndex === 0 ? (
@@ -556,7 +488,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                                 </div>
                             </div>
                             <div className="header-right">
-                                <div className="quote-title">{renderEditable(config.title, 'quoteTitle')}</div>
+                                <div className="quote-title">{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div className="quote-meta">
                                     <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
                                     <span>•</span>
@@ -569,7 +501,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                     ) : (
                         <div className="pdf-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.35rem', borderBottom: `1.5px solid ${color}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '8pt', color: '#64748b' }}>
-                                <span><strong>{companyData.name}</strong> - {config.title} (#{quoteData.number})</span>
+                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -621,33 +553,32 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                                     )}
                                 </div>
                             </div>
+                            <PdfCustomFields customFields={quoteData.customFields} themeColor={color} />
                         </div>
                     )}
 
                     {/* Items Table */}
                     {showSection('items') && (
-                        <div style={{ flex: 1 }}>
-                            {renderTable(chunk, pageIndex * itemsPerPage)}
-                        </div>
+                    <div style={{ flex: 1 }}>
+                        {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
+                    </div>
                     )}
 
-                    {/* Summary, Bank, Notes, Signatures - Only Last Page */}
+                    {/* Bottom Section - Only on Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
                         <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                            {(config.showSummary || config.showBankInfo) && (
+                            {config.showSummary && (
                                 <div className="bottom-section">
-                                    <div className="bank-section">
+                                    <div className="bottom-left-col">
                                         {config.showBankInfo && (bankData.bankName || bankData.iban) && (
-                                            <div>
-                                                <div className="section-title">
-                                                    {t.bankInfo}
-                                                </div>
-                                                <div style={{ fontSize: '8pt', color: '#475569', lineHeight: '1.4' }}>
+                                            <div className="bank-info-box">
+                                                <div className="bank-title">{t.bankInfo}</div>
+                                                <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.4' }}>
                                                     {bankData.bankName && (
                                                         <div><strong style={{ color: '#0f172a' }}>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>
                                                     )}
                                                     {bankData.iban && (
-                                                        <div style={{ marginTop: '2px' }}><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>
+                                                        <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>
                                                     )}
                                                     {bankData.accountHolder && (
                                                         <div style={{ color: '#64748b', fontSize: '7.5pt' }}>{bankData.accountHolder}</div>
@@ -658,7 +589,8 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                                         {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
                                             <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '6px' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.deliveryConditions || t.delivery || 'Teslimat'}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                                {(quoteData.warrantyTerms || quoteData.terms) && <div><strong>{t.warrantyConditions || t.warranty || 'Garanti'}:</strong> {renderEditable(quoteData.warrantyTerms || quoteData.terms, 'terms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms && <div><strong>{t.warrantyConditions || t.warranty || 'Garanti'}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
+                                                {quoteData.terms && <div><strong>{t.payment || 'Ödeme'}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
                                     </div>
@@ -700,7 +632,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
                                         <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
-                                            {numberToWordsTurkish(total, quoteData.currency || 'TRY')}
+                                            {amountInWords}
                                         </div>
                                     </div>
                                 </div>
@@ -717,37 +649,15 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                             )}
 
                             {/* Signatures */}
-                            {showSection('signatures') && config.showSignatures && (
-                                <div className="signatures-grid">
-                                    <div className="signature-col">
-                                        <div className="signature-line">
-                                            {(signature || companyData.signature) && (
-                                                <img
-                                                    src={(signature || companyData.signature) as string}
-                                                    alt={t.signature}
-                                                    style={{ maxHeight: '42px', maxWidth: '110px', objectFit: 'contain' }}
-                                                />
-                                            )}
-                                            {companyData.stamp && (
-                                                <img
-                                                    src={companyData.stamp}
-                                                    alt={t.companyStamp}
-                                                    style={{ maxHeight: '42px', maxWidth: '85px', objectFit: 'contain', opacity: 0.85 }}
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="signature-label">
-                                            {t.seller} ({t.deliveredBy || 'Yetkili Kaşe / İmza'})
-                                        </div>
-                                    </div>
-                                    <div className="signature-col">
-                                        <div className="signature-line">
-                                        </div>
-                                        <div className="signature-label">
-                                            {t.customer} ({t.receivedBy || 'Müşteri Onay / İmza'})
-                                        </div>
-                                    </div>
-                                </div>
+                            {showSection('signatures') && (
+                                <PdfSignatures
+                                    companyData={companyData}
+                                    customerData={customerData}
+                                    signature={signature}
+                                    config={config}
+                                    t={t}
+                                    className="signatures-grid"
+                                />
                             )}
 
                             {/* Footer */}
@@ -771,12 +681,7 @@ const ModernTheme: React.FC<PdfThemeProps> = ({
                             )}
 
                             {/* Page Number */}
-                            {config.showPageNumbers && (
-                                <div style={{ marginTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '2px' }}>
-                                    <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-                                    <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                                </div>
-                            )}
+                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
                 </div>

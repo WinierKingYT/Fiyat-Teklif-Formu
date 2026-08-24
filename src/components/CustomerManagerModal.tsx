@@ -66,7 +66,8 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
         if (!isEditing) {
             const isDuplicate = customers.some(c =>
                 (formData.company && c.company && c.company.trim().toLowerCase() === formData.company.trim().toLowerCase()) ||
-                (formData.email && c.email && c.email.trim().toLowerCase() === formData.email.trim().toLowerCase())
+                (formData.email && c.email && c.email.trim().toLowerCase() === formData.email.trim().toLowerCase()) ||
+                (!formData.company && formData.name && c.name && c.name.trim().toLowerCase() === formData.name.trim().toLowerCase())
             );
 
             if (isDuplicate) {
@@ -109,9 +110,33 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
         setIsEditing(true);
     };
 
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
     const handleDelete = async (id: string | number) => {
-        setConfirmDialog({ isOpen: true, title: t('deleteCustomer'), message: t('deleteCustomerConfirm'), onConfirm: async () => { setConfirmDialog({ ...confirmDialog, isOpen: false }); try { const customerToDelete = customers.find(c => c.id === id); if (customerToDelete) { await db.add('recycle_bin', { ...customerToDelete, originalStore: 'customers', deletedAt: new Date().toISOString(), originalId: id }); await db.delete('customers', id); toast.success(t('customerMovedToBin')); loadCustomers(); } } catch (error) { Logger.error(error);
-                toast.error(t('customerDeleteError')); } }, variant: 'danger' });
+        setConfirmDialog({
+            isOpen: true,
+            title: t('deleteCustomer'),
+            message: t('deleteCustomerConfirm'),
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const customerToDelete = customers.find(c => c.id === id);
+                    if (customerToDelete) {
+                        await db.add('recycle_bin', { ...customerToDelete, originalStore: 'customers', deletedAt: new Date().toISOString(), originalId: id });
+                        await db.delete('customers', id);
+                        toast.success(t('customerMovedToBin'));
+                        loadCustomers();
+                        if (currentCustomer?.id === id) {
+                            resetForm();
+                        }
+                    }
+                } catch (error) {
+                    Logger.error(error);
+                    toast.error(t('customerDeleteError'));
+                }
+            },
+            variant: 'danger'
+        });
     };
 
     const resetForm = () => {
@@ -121,13 +146,18 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
     };
 
     const debouncedSearch = useDebounce(searchTerm, 250);
-    const filteredCustomers = useMemo(() =>
-        customers.filter(c =>
-            (c.name && c.name.toLowerCase().includes(debouncedSearch.toLowerCase())) ||
-            (c.company && c.company.toLowerCase().includes(debouncedSearch.toLowerCase()))
-        ),
-        [customers, debouncedSearch]
-    );
+    const filteredCustomers = useMemo(() => {
+        const q = debouncedSearch.toLowerCase().trim();
+        if (!q) return customers;
+        return customers.filter(c =>
+            (c.name && c.name.toLowerCase().includes(q)) ||
+            (c.company && c.company.toLowerCase().includes(q)) ||
+            (c.email && c.email.toLowerCase().includes(q)) ||
+            (c.phone && c.phone.toLowerCase().includes(q)) ||
+            (c.taxNumber && c.taxNumber.toLowerCase().includes(q)) ||
+            ((c as Record<string, unknown>).taxNo && String((c as Record<string, unknown>).taxNo).toLowerCase().includes(q))
+        );
+    }, [customers, debouncedSearch]);
 
     const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
     const paginatedCustomers = useMemo(() =>
@@ -158,6 +188,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
             toast.success(t('customersExported'));
         } catch (error) {
             Logger.error('Export error:', error);
@@ -169,6 +200,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
         const file = e.target.files?.[0];
         if (!file) return;
 
+        const inputEl = e.target;
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
@@ -176,9 +208,10 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
                 if (!Array.isArray(importedCustomers)) throw new Error('Invalid format');
 
                 let count = 0;
+                let baseId = Date.now();
                 for (const customer of importedCustomers) {
                     if (customer.name || customer.company) {
-                        await db.add('customers', { ...customer, id: Date.now() + Math.random() });
+                        await db.add('customers', { ...customer, id: baseId++ });
                         count++;
                     }
                 }
@@ -187,6 +220,8 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
             } catch (error) {
                 Logger.error('Import error:', error);
                 toast.error(t('importErrorInvalid'));
+            } finally {
+                inputEl.value = '';
             }
         };
         reader.readAsText(file);
@@ -209,15 +244,15 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <button type="button" className="btn btn-outline btn-xs p-1.5" onClick={handleExport} title="Dışa Aktar (JSON)">
+                        <button type="button" className="btn btn-outline btn-xs p-1.5" onClick={handleExport} title={t('exportJson') || 'Dışa Aktar (JSON)'}>
                             <Download size={13} />
                         </button>
-                        <button type="button" className="btn btn-outline btn-xs p-1.5" onClick={() => document.getElementById('importCustomerInput')?.click()} title="İçe Aktar (JSON)">
+                        <button type="button" className="btn btn-outline btn-xs p-1.5" onClick={() => fileInputRef.current?.click()} title={t('importJson') || 'İçe Aktar (JSON)'}>
                             <Upload size={13} />
                         </button>
                         <input
                             type="file"
-                            id="importCustomerInput"
+                            ref={fileInputRef}
                             accept=".json"
                             style={{ display: 'none' }}
                             onChange={handleImport}
@@ -227,7 +262,7 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
                             onClick={resetForm}
                             title={t('addNewCustomer')}
                         >
-                            <Plus size={13} /> Yeni
+                            <Plus size={13} /> {t('new') || 'Yeni'}
                         </button>
                     </div>
 

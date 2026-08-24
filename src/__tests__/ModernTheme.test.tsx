@@ -57,7 +57,7 @@ const baseConfig = {
     showTerms: false,
     showNotes: false,
     showPageNumbers: true,
-    itemsPerPage: 14,
+    itemsPerPage: 20,
     customFooter: '',
 };
 
@@ -202,5 +202,51 @@ describe('ModernTheme', () => {
 
         expect(screen.getByText(/KDV \(%10\):/)).toBeInTheDocument();
         expect(screen.getByText(/KDV \(%20\):/)).toBeInTheDocument();
+    });
+
+    it('smart chunks 21 items across 2 balanced pages to avoid single-page overflow', () => {
+        const eightItems = Array.from({ length: 21 }, (_, i) => ({
+            id: `item-${i}`,
+            name: `Ürün ${i + 1}`,
+            description: 'Açıklama',
+            quantity: 1,
+            price: 100,
+            taxRate: 20,
+            discountRate: 0,
+            unit: 'Adet',
+        }));
+
+        renderTheme({
+            items: eightItems,
+            config: baseConfig,
+        });
+
+        const pages = document.querySelectorAll('.pdf-page');
+        expect(pages.length).toBe(2);
+    });
+
+    it('renders amount in words ribbon below total', () => {
+        renderTheme({
+            total: 300,
+            config: { ...baseConfig, showSummary: true }
+        });
+        expect(screen.getByText(/Yalnız #Üç Yüz Türk Lirasıdır#/)).toBeInTheDocument();
+    });
+
+    it('handles seller signature only when showCustomerSignature is false', () => {
+        renderTheme({
+            config: { ...baseConfig, showSignatures: true, showCustomerSignature: false }
+        });
+        expect(screen.getAllByText(/Bizim A\.Ş\./).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText(/Yetkili Kaşe \/ İmza/)).toBeInTheDocument();
+        expect(screen.queryByText(/Müşteri Onayı/)).not.toBeInTheDocument();
+    });
+
+    it('renders both seller and customer signature when showCustomerSignature is true', () => {
+        renderTheme({
+            config: { ...baseConfig, showSignatures: true, showCustomerSignature: true }
+        });
+        expect(screen.getByText(/Yetkili Kaşe \/ İmza/)).toBeInTheDocument();
+        expect(screen.getByText(/Müşteri Onayı/)).toBeInTheDocument();
     });
 });
