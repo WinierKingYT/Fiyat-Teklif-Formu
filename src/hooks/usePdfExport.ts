@@ -123,8 +123,9 @@ export const usePdfExport = ({
             const shareFormat: [number, number] = isLandscape ? [baseSize.height, baseSize.width] : [baseSize.width, baseSize.height];
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
             const qual = quality === 'draft' ? 2 : quality === 'normal' ? 3 : quality === 'high' ? 4 : quality === 'print' ? 5 : 6;
-            const maxDomDim = Math.max(element.scrollWidth || 0, element.scrollHeight || 0, 1);
-            const effectiveScale = Math.max(1, Math.min(qual, Math.floor(16384 / Math.max(1, maxDomDim))));
+            const rect = element.getBoundingClientRect();
+            const maxDomDim = Math.max(element.scrollWidth || 0, element.scrollHeight || 0, rect.width || 0, rect.height || 0, 1);
+            const effectiveScale = Math.max(0.5, Math.min(qual, Math.floor(16384 / Math.max(1, maxDomDim))));
 
             // Zoom transform protection for all ancestors
             const scaledAncestors: { el: HTMLElement; originalTransform: string; originalZoom: string; originalTransition: string }[] = [];

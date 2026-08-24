@@ -36,7 +36,7 @@ const PdfPreviewCanvas: React.FC<PdfPreviewCanvasProps> = ({
     handleFieldEdit
 }) => {
     return (
-        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)] relative" style={{ transform: `scale(${zoomLevel})`, imageRendering: zoomLevel < 0.5 ? 'auto' : 'crisp-edges' } as React.CSSProperties}>
+        <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)] relative" style={{ transform: `scale(${zoomLevel})` }}>
             <div ref={contentRef} className="relative">
                 <style>{`
                     @media screen {

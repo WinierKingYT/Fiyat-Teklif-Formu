@@ -113,7 +113,7 @@ export const calculateQuoteTotals = (
     taxTotal += discountedTax;
 
     if (item.taxRate !== 0) {
-      const rateKey = String(item.taxRate);
+      const rateKey = String(Number(item.taxRate || 0));
       taxBreakdown[rateKey] = (taxBreakdown[rateKey] || 0) + discountedTax;
     }
   });
@@ -162,7 +162,7 @@ function parseTrNumber(val: unknown): number {
     if (d > 1) out = normalized.replace(/\./g, '');
     else {
       const parts = normalized.split('.');
-      if (parts[1]?.length === 3 && parts[0].length <= 3 && Number(parts[0]) > 0) out = normalized.replace('.', '');
+      if (parts[1]?.length === 3 && parts[0].length <= 3 && Number(parts[0]) >= 0) out = normalized.replace('.', '');
     }
   }
   const n = Number(out);
@@ -181,7 +181,7 @@ export function calculateLineTotal(item: {
   const taxRate = parseTrNumber(item.taxRate);
   const safeTax = Number.isFinite(taxRate) ? Math.min(Math.max(taxRate, 0), 100) : 0;
   if (item.taxMode === 'inclusive' && safeTax > 0) {
-    price = roundMoney(price / (1 + safeTax / 100));
+    price = price / (1 + safeTax / 100);
   }
   const gross = (Number.isFinite(quantity) ? quantity : 0) * (Number.isFinite(price) ? price : 0);
   const discountVal = parseTrNumber(item.discountRate);
@@ -234,7 +234,7 @@ export function formatCurrency(amount: number, currency: string = 'TRY'): string
     try {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(amount);
     } catch {
-      return `${amount.toFixed(2)} ${code}`;
+      return `${(Number(amount) || 0).toFixed(2)} ${code}`;
     }
   }
 }

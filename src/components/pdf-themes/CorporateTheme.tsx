@@ -294,7 +294,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                             <td style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
                             <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
                             {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
-                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{Number(item.taxRate) || 0}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>{(quoteData.language === 'en' || quoteData.language === 'de') ? `${Number(item.taxRate) || 0}%` : `%${Number(item.taxRate) || 0}`}</td>}
                             <td style={{ textAlign: 'right', fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
                         </tr>
                     );
@@ -332,7 +332,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                 )}
                                 <div style={{ fontSize: config.headerTitleFontSize || '1.15rem', fontWeight: config.headerTitleFontWeight || '800', color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 {companyData.address && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>{renderEditable(companyData.address, 'companyAddress')}</div>}
-                                {(companyData.phone || companyData.email) && <div style={{ fontSize: '8pt', color: '#64748b' }}>{[companyData.phone, companyData.email].filter(Boolean).join(' | ')}</div>}
+                                {(companyData.phone || companyData.email) && <div style={{ fontSize: '8pt', color: '#64748b' }}>{[companyData.phone, companyData.email].filter(v => typeof v === 'string' && v.trim().length > 0).join(' | ')}</div>}
                                 {(companyData.taxOffice || companyData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8' }}>
                                         {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
@@ -343,7 +343,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                             <div className="corporate-title-box" style={{ textAlign: 'right', flexShrink: 0 }}>
                                 <div className="corporate-title" style={{ fontSize: '1.2rem', fontWeight: '800', color: color, textTransform: 'uppercase' }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div className="corporate-meta" style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                    <div><strong>{t.quoteNo}:</strong> {quoteData.number ? `#${quoteData.number}` : '-'}</div>
+                                    <div><strong>{t.quoteNo}:</strong> {quoteData.number?.trim() ? `#${quoteData.number.trim()}` : '-'}</div>
                                     <span>•</span>
                                     <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
                                     <span>•</span>
@@ -445,9 +445,9 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                         )}
                                         {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
                                             <div style={{ marginTop: '4px', fontSize: '7.5pt', color: '#64748b', lineHeight: '1.35' }}>
-                                                {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                                {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
-                                                {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
+                                                {quoteData.deliveryTerms?.trim() && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms?.trim() && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
+                                                {quoteData.terms?.trim() && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
                                     </div>

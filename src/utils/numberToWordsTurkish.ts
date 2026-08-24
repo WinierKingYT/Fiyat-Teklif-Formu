@@ -7,6 +7,8 @@ const ONES = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Seki
 const TENS = ['', 'On', 'Yirmi', 'Otuz', 'Kırk', 'Elli', 'Altmış', 'Yetmiş', 'Seksen', 'Doksan'];
 const SCALES = ['', 'Bin', 'Milyon', 'Milyar', 'Trilyon', 'Katrilyon', 'Kentilyon'];
 
+const ZERO_DECIMAL_CURRENCIES = new Set(['JPY', 'KRW', 'HUF', 'CLP', 'VND', 'ISK']);
+
 const CURRENCY_NAMES: Record<string, { main: string; sub: string }> = {
   TRY: { main: 'Türk Lirası', sub: 'Kuruş' },
   USD: { main: 'Amerikan Doları', sub: 'Cent' },
@@ -46,7 +48,7 @@ function integerToWords(num: number): string {
   if (num === 0) return 'Sıfır';
   if (num < 0) return 'Eksi ' + integerToWords(Math.abs(num));
 
-  let remaining = Math.floor(num);
+  let remaining = Math.floor(Math.abs(num));
   let scaleIndex = 0;
   const parts: string[] = [];
 
@@ -123,7 +125,7 @@ function convertGroupEn(n: number): string {
 
 function integerToWordsEn(num: number): string {
   if (num === 0) return 'Zero';
-  let remaining = Math.floor(num);
+  let remaining = Math.floor(Math.abs(num));
   let scaleIndex = 0;
   const parts: string[] = [];
   while (remaining > 0) {
@@ -141,13 +143,20 @@ function integerToWordsEn(num: number): string {
 
 export function numberToWordsEnglish(amount: number, currency: string = 'USD'): string {
   if (isNaN(amount) || amount === null || amount === undefined) return '';
+  const MAX_SAFE_AMOUNT = Number.MAX_SAFE_INTEGER;
+  if (Math.abs(amount) >= MAX_SAFE_AMOUNT) {
+    amount = Math.sign(amount) * (MAX_SAFE_AMOUNT - 1);
+  }
   const rounded = Math.round((Math.abs(amount) + Number.EPSILON) * 100) / 100;
+  const isZeroDec = ZERO_DECIMAL_CURRENCIES.has(currency.toUpperCase());
   const intPart = Math.floor(rounded);
-  const fracPart = Math.round((rounded - intPart) * 100);
+  const fracPart = isZeroDec ? 0 : Math.round((rounded - intPart) * 100);
   const curr = EN_CURRENCIES[currency.toUpperCase()] || { main: currency, sub: 'Cents' };
-  let res = `${integerToWordsEn(intPart)} ${curr.main}`;
+  const mainUnit = (intPart === 1 && curr.main.endsWith('s') && !curr.main.endsWith('ss')) ? curr.main.slice(0, -1) : curr.main;
+  let res = `${integerToWordsEn(intPart)} ${mainUnit}`;
   if (fracPart > 0) {
-    res += ` and ${integerToWordsEn(fracPart)} ${curr.sub}`;
+    const subUnit = (fracPart === 1 && curr.sub.endsWith('s')) ? curr.sub.slice(0, -1) : curr.sub;
+    res += ` and ${integerToWordsEn(fracPart)} ${subUnit}`;
   }
   return `Only #${amount < 0 ? 'Minus ' : ''}${res}#`;
 }
@@ -193,7 +202,7 @@ function convertGroupDe(n: number): string {
 function integerToWordsDe(num: number): string {
   if (num === 0) return 'Null';
   if (num === 1) return 'Ein';
-  let remaining = Math.floor(num);
+  let remaining = Math.floor(Math.abs(num));
   const parts: string[] = [];
   const trillions = Math.floor(remaining / 1000000000000);
   remaining %= 1000000000000;
@@ -215,9 +224,14 @@ function integerToWordsDe(num: number): string {
 
 export function numberToWordsGerman(amount: number, currency: string = 'EUR'): string {
   if (isNaN(amount) || amount === null || amount === undefined) return '';
+  const MAX_SAFE_AMOUNT = Number.MAX_SAFE_INTEGER;
+  if (Math.abs(amount) >= MAX_SAFE_AMOUNT) {
+    amount = Math.sign(amount) * (MAX_SAFE_AMOUNT - 1);
+  }
   const rounded = Math.round((Math.abs(amount) + Number.EPSILON) * 100) / 100;
+  const isZeroDec = ZERO_DECIMAL_CURRENCIES.has(currency.toUpperCase());
   const intPart = Math.floor(rounded);
-  const fracPart = Math.round((rounded - intPart) * 100);
+  const fracPart = isZeroDec ? 0 : Math.round((rounded - intPart) * 100);
   const curr = DE_CURRENCIES[currency.toUpperCase()] || { main: currency, sub: 'Cent' };
   let res = `${integerToWordsDe(intPart)} ${curr.main}`;
   if (fracPart > 0) {
@@ -247,8 +261,9 @@ export function numberToWordsTurkish(amount: number, currency: string = 'TRY'): 
 
   const rounded = Math.round((Math.abs(amount) + Number.EPSILON) * 100) / 100;
   const isNegative = amount < 0 && rounded > 0;
+  const isZeroDec = ZERO_DECIMAL_CURRENCIES.has(currency.toUpperCase());
   const integerPart = Math.floor(rounded);
-  const fractionalPart = Math.round((rounded - integerPart) * 100);
+  const fractionalPart = isZeroDec ? 0 : Math.round((rounded - integerPart) * 100);
 
   const currInfo = CURRENCY_NAMES[currency.toUpperCase()] || { main: currency, sub: 'Cent' };
 

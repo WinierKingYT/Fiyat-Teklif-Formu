@@ -244,6 +244,9 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         .modern-theme-container .item-image {
             width: 32px;
             height: 32px;
+            min-width: 32px;
+            min-height: 32px;
+            flex-shrink: 0;
             border-radius: 4px;
             border: 1px solid #e2e8f0;
             display: flex;
@@ -441,7 +444,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                             <td className="item-quantity" style={{ textAlign: 'center', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
                             <td className="item-price" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
                             {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
-                            {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{Number(item.taxRate) || 0}</td>}
+                            {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>{(quoteData.language === 'en' || quoteData.language === 'de') ? `${Number(item.taxRate) || 0}%` : `%${Number(item.taxRate) || 0}`}</td>}
                             <td className="item-total" style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
                         </tr>
                     );

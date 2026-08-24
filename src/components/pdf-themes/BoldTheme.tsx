@@ -243,7 +243,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                             <td style={{ textAlign: 'center', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
                             <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
                             {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
-                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{Number(item.taxRate) || 0}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>{(quoteData.language === 'en' || quoteData.language === 'de') ? `${Number(item.taxRate) || 0}%` : `%${Number(item.taxRate) || 0}`}</td>}
                             <td style={{ textAlign: 'right', fontWeight: '800', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
                         </tr>
                     );
@@ -276,7 +276,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                             <div style={{ flex: 1, paddingRight: '12px' }}>
                                 {config.showLogo && companyData.logo && (
                                     <div style={{ display: 'flex', justifyContent: config.logoPosition === 'center' ? 'center' : config.logoPosition === 'right' ? 'flex-end' : 'flex-start', marginBottom: '4px' }}>
-                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '160px', objectFit: 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
+                                        <img src={companyData.logo} alt="Logo" style={{ maxHeight: `${config.logoMaxHeight || 48}px`, maxWidth: '160px', objectFit: config.logoStyle === 'circle' ? 'cover' : 'contain', borderRadius: config.logoStyle === 'circle' ? '50%' : config.logoStyle === 'rounded' ? '6px' : '0' }} />
                                     </div>
                                 )}
                                 <div style={{ fontSize: config.headerTitleFontSize || '1.25rem', fontWeight: '900', color: '#0f172a', textTransform: 'uppercase' }}>{renderEditable(companyData.name, 'companyName')}</div>
@@ -298,8 +298,8 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                 <div style={{ fontSize: '1.35rem', fontWeight: '900', textTransform: 'uppercase', color: color }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1.5px solid #e2e8f0' }}>
-                                    <span style={{ fontWeight: '800' }}>#{quoteData.number}</span>
-                                    <span>•</span>
+                                    {quoteData.number?.trim() && <span style={{ fontWeight: '800' }}>#{quoteData.number.trim()}</span>}
+                                    {quoteData.number?.trim() && <span>•</span>}
                                     <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
                                     <span>•</span>
                                     <span>{t.validUntil}: {formatDate(quoteData.validUntil, currentLocale)}</span>

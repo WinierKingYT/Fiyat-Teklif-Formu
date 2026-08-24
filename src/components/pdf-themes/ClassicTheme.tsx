@@ -192,7 +192,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                             <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.quantity}</td>
                             <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
                             {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{discountDisplay}</td>}
-                            {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: '#475569' }}>%{Number(item.taxRate) || 0}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: '#475569' }}>{(quoteData.language === 'en' || quoteData.language === 'de') ? `${Number(item.taxRate) || 0}%` : `%${Number(item.taxRate) || 0}`}</td>}
                             <td style={{ textAlign: 'right', fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(lineTotal)}</td>
                         </tr>
                     );

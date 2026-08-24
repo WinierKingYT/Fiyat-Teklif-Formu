@@ -35,8 +35,8 @@ export function usePdfTheme(props: PdfThemeProps) {
     const vatBreakdown = useMemo(() => {
         const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
         const map: Record<string, { taxable: number; tax: number }> = {};
-        const globalDiscountRatio = calc.subtotal > 0 ? Math.min(1.0, Math.max(0, calc.globalDiscountAmount / calc.subtotal)) : 0;
-        const targetDiscountedSubtotal = Math.max(0, calc.subtotal - calc.globalDiscountAmount);
+        const globalDiscountRatio = calc.netTotal > 0 ? Math.min(1.0, Math.max(0, calc.globalDiscountAmount / calc.netTotal)) : 0;
+        const targetDiscountedSubtotal = Math.max(0, calc.netTotal - calc.globalDiscountAmount);
 
         let sumTaxable = 0;
         let maxRateKey = '';
