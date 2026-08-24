@@ -91,7 +91,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
+            padding-bottom: 0.6rem;
             border-bottom: 2px solid ${color};
             page-break-inside: avoid;
             break-inside: avoid;
@@ -137,7 +137,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             word-wrap: break-word;
             font-size: ${config.headerTitleFontSize || '1.15rem'};
             font-weight: ${config.headerTitleFontWeight || '800'};
-            color: ${color};
+            color: #0f172a;
+            letter-spacing: -0.01em;
         }
         
         .modern-theme-container .company-details {
@@ -149,8 +150,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
         .modern-theme-container .quote-title {
             text-transform: uppercase;
-            letter-spacing: 0.04em;
-            font-size: ${config.titleFontSize || '1.2rem'};
+            letter-spacing: 0.02em;
+            font-size: ${config.titleFontSize || '1.25rem'};
             font-weight: ${config.titleFontWeight || '800'};
             color: ${color};
         }
@@ -160,7 +161,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             color: #475569;
             margin-top: 0.25rem;
             display: inline-flex;
-            gap: 0.5rem;
+            gap: 0.4rem;
             align-items: center;
             background: #f8fafc;
             padding: 0.2rem 0.5rem;
@@ -176,22 +177,22 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         }
         
         .modern-theme-container .customer-box {
-            background: #ffffff;
-            border-radius: 6px;
-            padding: 0.6rem 0.9rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 0.65rem 0.95rem;
             border: 1px solid #e2e8f0;
-            border-left: 3px solid ${color};
+            border-left: 4px solid ${color};
         }
         
         .modern-theme-container .section-title {
             text-transform: uppercase;
             font-size: ${config.customerTitleFontSize || '0.72rem'};
-            font-weight: ${config.customerTitleFontWeight || '700'};
-            color: #64748b;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.25rem;
-            border-bottom: 1px solid #f1f5f9;
-            padding-bottom: 0.15rem;
+            font-weight: ${config.customerTitleFontWeight || '800'};
+            color: ${color};
+            letter-spacing: 0.06em;
+            margin-bottom: 0.35rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.2rem;
         }
         
         /* TABLE */
@@ -206,13 +207,13 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             padding: ${config.tableHeaderPadding || '6px 8px'};
             text-align: left;
             font-weight: ${config.tableHeaderFontWeight || '700'};
-            color: ${config.tableHeaderColor || '#475569'};
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8pt')} !important;
+            color: ${config.tableHeaderColor || '#334155'};
+            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '7.5pt')} !important;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             background: ${config.tableHeaderBg || '#f8fafc'};
-            border-top: 1px solid ${config.tableBorderColor || '#e2e8f0'};
-            border-bottom: 1.5px solid ${config.tableBorderColor || '#cbd5e1'};
+            border-top: 1px solid ${config.tableBorderColor || '#cbd5e1'};
+            border-bottom: 2px solid ${color};
         }
         .modern-theme-container .pdf-items-table thead th:first-child { border-top-left-radius: 6px; }
         .modern-theme-container .pdf-items-table thead th:last-child { border-top-right-radius: 6px; }
@@ -229,7 +230,10 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         ${config.tableStriped ? `
         .modern-theme-container .pdf-items-table tbody tr:nth-child(even) td {
             background-color: ${config.tableStripedColor || '#f8fafc'};
-        }` : ''}
+        }` : `
+        .modern-theme-container .pdf-items-table tbody tr:nth-child(even) td {
+            background-color: #fafbfc;
+        }`}
 
         ${config.tableShowVerticalLines ? `
         .modern-theme-container .pdf-items-table th,
@@ -284,10 +288,10 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             grid-template-columns: 1.1fr 0.9fr;
             gap: 1rem;
             margin-bottom: 0.5rem;
-            background: #ffffff;
+            background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 0.65rem 0.9rem;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -308,11 +312,13 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         .modern-theme-container .summary-row.grand-total {
             display: flex;
             justify-content: space-between;
-            margin-top: 0.25rem;
-            padding-top: 0.25rem;
-            border-top: 2px solid ${color};
+            margin-top: 0.35rem;
+            padding: 0.35rem 0.5rem;
+            background: linear-gradient(135deg, ${color}14 0%, ${color}06 100%);
+            border: 1.5px solid ${color}35;
+            border-radius: 6px;
             align-items: center;
-            font-size: ${config.summaryTotalFontSize || '10.5pt'};
+            font-size: ${config.summaryTotalFontSize || '11pt'};
             font-weight: 800;
             color: #0f172a;
         }
@@ -503,11 +509,9 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                             <div className="header-right">
                                 <div className="quote-title">{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div className="quote-meta">
-                                    {quoteData.number && <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>}
-                                    <span>•</span>
-                                    <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
-                                    <span>•</span>
-                                    <span>{t.validUntil}: {formatDate(quoteData.validUntil, currentLocale)}</span>
+                                    {quoteData.number && <span style={{ fontWeight: '700', background: color, color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontSize: '7.5pt' }}>#{quoteData.number}</span>}
+                                    {quoteData.date && <span>{t.date}: <strong>{formatDate(quoteData.date, currentLocale)}</strong></span>}
+                                    {quoteData.validUntil && <span>• {t.validUntil}: <strong>{formatDate(quoteData.validUntil, currentLocale)}</strong></span>}
                                 </div>
                             </div>
                         </div>
@@ -631,7 +635,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                             <span>{t.generalTotal}:</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                                        <div style={{ fontSize: '7.2pt', color: '#64748b', fontStyle: 'italic', marginTop: '4px', textAlign: 'right', wordBreak: 'break-word', whiteSpace: 'normal', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px 6px' }}>
                                             {amountInWords}
                                         </div>
                                     </div>
