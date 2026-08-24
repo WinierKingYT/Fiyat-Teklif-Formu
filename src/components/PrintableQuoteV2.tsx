@@ -275,7 +275,7 @@ const PrintableQuote = React.memo(({
                 : config.pageBgPattern === 'grid'
                     ? 'linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)'
                     : config.pageBgPattern === 'gradient'
-                        ? `linear-gradient(160deg, ${config.color}14 0%, transparent 45%)`
+                        ? `linear-gradient(160deg, ${(/^#[0-9A-Fa-f]{6}$/.test(config.color || '') ? (config.color + '14') : 'rgba(37,99,235,0.08)')} 0%, transparent 45%)`
                         : 'none',
             backgroundSize: config.pageBgPattern === 'dots' ? '16px 16px' : config.pageBgPattern === 'grid' ? '24px 24px' : 'auto',
             color: '#000000',

@@ -17,6 +17,9 @@ export function usePdfTheme(props: PdfThemeProps) {
     const showSection = useCallback((sectionId: string) => layoutMap[sectionId] !== false, [layoutMap]);
 
     const itemChunks = useMemo(() => {
+        if (layoutMap['items'] === false) {
+            return [[]];
+        }
         return chunkQuoteItems(items, {
             itemsPerPage: config.itemsPerPage,
             showSummary: config.showSummary,
@@ -27,7 +30,7 @@ export function usePdfTheme(props: PdfThemeProps) {
             margins: config.margins,
             tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined
         });
-    }, [items, config]);
+    }, [items, config, layoutMap]);
 
     const vatBreakdown = useMemo(() => {
         const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
@@ -40,7 +43,7 @@ export function usePdfTheme(props: PdfThemeProps) {
         let maxTaxable = -1;
 
         calc.items.forEach((item) => {
-            const rate = String(item.taxRate || 0);
+            const rate = Number(item.taxRate || 0).toString();
             const discountedNet = item.netTotal * (1 - globalDiscountRatio);
             if (!map[rate]) {
                 map[rate] = { taxable: 0, tax: 0 };
@@ -64,7 +67,8 @@ export function usePdfTheme(props: PdfThemeProps) {
             map[maxRateKey].taxable = Math.round((map[maxRateKey].taxable + diff) * 100) / 100;
         }
 
-        Object.entries(calc.taxBreakdown).forEach(([rate, taxAmount]) => {
+        Object.entries(calc.taxBreakdown).forEach(([rawRate, taxAmount]) => {
+            const rate = Number(rawRate || 0).toString();
             if (!map[rate]) {
                 map[rate] = { taxable: 0, tax: taxAmount };
             } else {

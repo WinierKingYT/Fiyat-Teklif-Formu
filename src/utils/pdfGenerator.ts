@@ -181,6 +181,13 @@ const removePageBreakStyles = () => {
 const waitForAllImages = async (container: HTMLElement): Promise<void> => {
     const images = Array.from(container.querySelectorAll<HTMLImageElement>('img[src]'));
     if (images.length === 0) return;
+    // Ensure all lazy images are eager so they start loading immediately
+    images.forEach(img => {
+        if (img.loading === 'lazy') {
+            img.loading = 'eager';
+            img.removeAttribute('loading');
+        }
+    });
     const promises = images.map(img => {
         if (img.complete && img.naturalWidth > 0) return Promise.resolve();
         return new Promise<void>(resolve => {
@@ -223,6 +230,11 @@ const replaceImagesWithCanvas = (container: HTMLElement, scale: number): (() => 
         try {
             if (origFit === 'contain') {
                 const s = Math.min(canvas.width / w, canvas.height / h);
+                const dx = (canvas.width - w * s) / 2;
+                const dy = (canvas.height - h * s) / 2;
+                ctx.drawImage(img, dx, dy, w * s, h * s);
+            } else if (origFit === 'cover') {
+                const s = Math.max(canvas.width / w, canvas.height / h);
                 const dx = (canvas.width - w * s) / 2;
                 const dy = (canvas.height - h * s) / 2;
                 ctx.drawImage(img, dx, dy, w * s, h * s);
@@ -442,12 +454,22 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
                 clone.parentNode?.replaceChild(img, clone);
             } catch (err) {
                 Logger.warn('Failed to convert canvas to image for print:', err);
+                const fallbackDiv = document.createElement('div');
+                fallbackDiv.style.cssText = orig.style.cssText;
+                fallbackDiv.className = orig.className;
+                clone.parentNode?.replaceChild(fallbackDiv, clone);
             }
         }
     });
 
-    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-        .map(s => s.outerHTML)
+    const styles = Array.from(document.querySelectorAll<HTMLLinkElement | HTMLStyleElement>('style, link[rel="stylesheet"]'))
+        .map(s => {
+            if (s.tagName === 'LINK' && 'href' in s && s.href) {
+                const absoluteHref = new URL(s.href, document.baseURI).href;
+                return `<link rel="stylesheet" href="${absoluteHref}">`;
+            }
+            return s.outerHTML;
+        })
         .join('\n');
     const rootStyles = document.documentElement.style.cssText;
 
@@ -534,9 +556,6 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
         doc.open();
         doc.write(htmlContent);
         doc.close();
-        setTimeout(() => {
-            if (iframe && document.body.contains(iframe)) iframe.remove();
-        }, 120000);
     } else {
         // Fallback to window.open if iframe is blocked
         const printWindow = window.open('', '_blank');

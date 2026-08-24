@@ -49,7 +49,7 @@ export const usePdfExport = ({
             .join('')
             .normalize('NFKD')
             .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\w\s-]/g, '')
+            .replace(/[^\p{L}\p{N}\s-]/gu, '')
             .trim()
             .replace(/\s+/g, '_')
             .replace(/^_+|_+$/g, '')
@@ -127,7 +127,7 @@ export const usePdfExport = ({
             const effectiveScale = Math.max(1, Math.min(qual, Math.floor(16384 / Math.max(1, maxDomDim))));
 
             // Zoom transform protection for all ancestors
-            const scaledAncestors: { el: HTMLElement; originalTransform: string; originalZoom: string }[] = [];
+            const scaledAncestors: { el: HTMLElement; originalTransform: string; originalZoom: string; originalTransition: string }[] = [];
             let p: HTMLElement | null = element.parentElement as HTMLElement | null;
             while (p) {
                 const hasTransform = p.style.transform && p.style.transform.includes('scale(');
@@ -136,8 +136,10 @@ export const usePdfExport = ({
                     scaledAncestors.push({
                         el: p,
                         originalTransform: p.style.transform,
-                        originalZoom: pStyleZoom || ''
+                        originalZoom: pStyleZoom || '',
+                        originalTransition: p.style.transition
                     });
+                    p.style.transition = 'none';
                     p.style.transform = 'none';
                     (p.style as unknown as { zoom?: string }).zoom = '1';
                 }
@@ -146,16 +148,17 @@ export const usePdfExport = ({
 
             // Canvas to image conversion for signatures/stamps
             const origCanvases = element.querySelectorAll<HTMLCanvasElement>('canvas');
-            const canvasReplacements: { canvas: HTMLCanvasElement; placeholder: HTMLImageElement }[] = [];
+            const canvasReplacements: { canvas: HTMLCanvasElement; placeholder: HTMLImageElement; originalDisplay: string }[] = [];
             origCanvases.forEach(canvas => {
                 try {
+                    const originalDisplay = canvas.style.display;
                     const img = document.createElement('img');
                     img.src = canvas.toDataURL('image/png');
                     img.style.cssText = canvas.style.cssText;
                     img.className = canvas.className;
                     canvas.parentNode?.insertBefore(img, canvas);
                     canvas.style.display = 'none';
-                    canvasReplacements.push({ canvas, placeholder: img });
+                    canvasReplacements.push({ canvas, placeholder: img, originalDisplay });
                 } catch {
                     // Ignore cross-origin canvas security errors
                 }
@@ -211,11 +214,12 @@ export const usePdfExport = ({
                 });
                 toast.success(t('shareSuccess'));
             } finally {
-                canvasReplacements.forEach(({ canvas, placeholder }) => {
-                    canvas.style.display = '';
+                canvasReplacements.forEach(({ canvas, placeholder, originalDisplay }) => {
+                    canvas.style.display = originalDisplay;
                     placeholder.parentNode?.removeChild(placeholder);
                 });
-                scaledAncestors.forEach(({ el, originalTransform, originalZoom }) => {
+                scaledAncestors.forEach(({ el, originalTransform, originalZoom, originalTransition }) => {
+                    el.style.transition = originalTransition;
                     el.style.transform = originalTransform;
                     if (originalZoom) {
                         (el.style as unknown as { zoom?: string }).zoom = originalZoom;

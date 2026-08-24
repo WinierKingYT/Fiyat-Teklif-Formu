@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { formatIban } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -144,7 +145,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (item.quantity || 0) * (item.price || 0);
-                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + index}>
@@ -166,7 +167,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                             <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{item.quantity}</td>
                             <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
                             {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{discountDisplay}</td>}
-                            {config.showTableTax && <td style={{ textAlign: 'center', fontSize: '7.5pt', fontVariantNumeric: 'tabular-nums', color: '#64748b' }}>%{item.taxRate}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', fontSize: '7.5pt', fontVariantNumeric: 'tabular-nums', color: '#64748b' }}>%{Number(item.taxRate) || 0}</td>}
                             <td style={{ textAlign: 'right', fontWeight: '600', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
                         </tr>
                     );
@@ -271,7 +272,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                             <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.4' }}>
                                                 <div style={{ fontWeight: '700', color: '#64748b', textTransform: 'uppercase', fontSize: '7pt', marginBottom: '2px' }}>{t.bankInfo}</div>
                                                 {bankData.bankName && <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>}
-                                                {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>}
+                                                {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{formatIban(bankData.iban)}</span></div>}
                                                 {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                             </div>
                                         )}

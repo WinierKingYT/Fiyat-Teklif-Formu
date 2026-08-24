@@ -47,6 +47,11 @@ const PdfPreviewCanvas: React.FC<PdfPreviewCanvasProps> = ({
                             margin-bottom: 0;
                         }
                     }
+                    @media print {
+                        #printable-quote-container-panel .pdf-page {
+                            margin-bottom: 0 !important;
+                        }
+                    }
                 `}</style>
                 <PrintableQuote
                     id="printable-quote-container-panel"

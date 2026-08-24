@@ -350,7 +350,7 @@ const PdfDesignTab: React.FC<PdfDesignTabProps> = ({
                     <select
                         value={(() => {
                             const current = (pdfConfig.globalFontFamily || '').toLowerCase();
-                            const options = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Playfair Display', 'Merriweather', 'Roboto Slab', 'Oswald'];
+                            const options = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Playfair Display', 'Merriweather', 'Georgia', 'Times New Roman', 'Helvetica', 'Roboto Slab', 'Oswald'];
                             return options.find(f => current.includes(f.toLowerCase())) || 'Inter';
                         })()}
                         onChange={(e) => handleConfigChange('globalFontFamily', e.target.value)}
@@ -363,6 +363,9 @@ const PdfDesignTab: React.FC<PdfDesignTabProps> = ({
                         <option value="Montserrat">Geometrik (Montserrat)</option>
                         <option value="Playfair Display">Zarif (Playfair Display)</option>
                         <option value="Merriweather">Klasik (Merriweather)</option>
+                        <option value="Georgia">Kurumsal Serif (Georgia)</option>
+                        <option value="Times New Roman">Geleneksel (Times New Roman)</option>
+                        <option value="Helvetica">Minimal (Helvetica)</option>
                         <option value="Roboto Slab">Güçlü (Roboto Slab)</option>
                         <option value="Oswald">Kompakt (Oswald)</option>
                     </select>

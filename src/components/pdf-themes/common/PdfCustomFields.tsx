@@ -22,6 +22,13 @@ export const PdfCustomFields: React.FC<PdfCustomFieldsProps> = ({
 
     if (visibleFields.length === 0) return null;
 
+    const formatFieldValue = (val: unknown): string => {
+        if (typeof val === 'boolean') {
+            return val ? 'Evet' : 'Hayır';
+        }
+        return String(val ?? '');
+    };
+
     if (variant === 'chips') {
         return (
             <div
@@ -50,7 +57,7 @@ export const PdfCustomFields: React.FC<PdfCustomFieldsProps> = ({
                         }}
                     >
                         <span style={{ fontWeight: '700', color: themeColor }}>{field.label}:</span>
-                        <span>{field.value}</span>
+                        <span>{formatFieldValue(field.value)}</span>
                     </div>
                 ))}
             </div>
@@ -80,7 +87,7 @@ export const PdfCustomFields: React.FC<PdfCustomFieldsProps> = ({
                         {field.label}:
                     </span>
                     <span style={{ fontWeight: '600', color: '#0f172a', wordBreak: 'break-word' }}>
-                        {field.value}
+                        {formatFieldValue(field.value)}
                     </span>
                 </div>
             ))}

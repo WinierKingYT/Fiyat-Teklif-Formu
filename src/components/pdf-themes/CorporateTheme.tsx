@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { formatIban } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -269,7 +270,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (item.quantity || 0) * (item.price || 0);
-                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + index}>
@@ -293,7 +294,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                             <td style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
                             <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
                             {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
-                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{Number(item.taxRate) || 0}</td>}
                             <td style={{ textAlign: 'right', fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
                         </tr>
                     );
@@ -331,7 +332,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                 )}
                                 <div style={{ fontSize: config.headerTitleFontSize || '1.15rem', fontWeight: config.headerTitleFontWeight || '800', color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 {companyData.address && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>{renderEditable(companyData.address, 'companyAddress')}</div>}
-                                <div style={{ fontSize: '8pt', color: '#64748b' }}>{companyData.phone} | {companyData.email}</div>
+                                {(companyData.phone || companyData.email) && <div style={{ fontSize: '8pt', color: '#64748b' }}>{[companyData.phone, companyData.email].filter(Boolean).join(' | ')}</div>}
                                 {(companyData.taxOffice || companyData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8' }}>
                                         {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
@@ -342,7 +343,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                             <div className="corporate-title-box" style={{ textAlign: 'right', flexShrink: 0 }}>
                                 <div className="corporate-title" style={{ fontSize: '1.2rem', fontWeight: '800', color: color, textTransform: 'uppercase' }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div className="corporate-meta" style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                    <div><strong>{t.quoteNo}:</strong> #{quoteData.number}</div>
+                                    <div><strong>{t.quoteNo}:</strong> {quoteData.number ? `#${quoteData.number}` : '-'}</div>
                                     <span>•</span>
                                     <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
                                     <span>•</span>
@@ -404,7 +405,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                             <div className="corporate-party-card">
                                 <div className="corporate-party-label">{t.details}</div>
                                 <div style={{ fontSize: '8.5pt', color: '#334155', lineHeight: '1.4' }}>
-                                    <div><strong>{t.quoteNo}:</strong> #{quoteData.number}</div>
+                                    <div><strong>{t.quoteNo}:</strong> {quoteData.number ? `#${quoteData.number}` : '-'}</div>
                                     <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
                                     <div><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</div>
                                     {config.showNotes && quoteData.notes && (
@@ -437,7 +438,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                                 <div style={{ fontWeight: '700', color: '#64748b', marginBottom: '3px', textTransform: 'uppercase', fontSize: '7.5pt', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px' }}>{t.bankInfo}</div>
                                                 <div style={{ fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
                                                     {bankData.bankName && <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>}
-                                                    {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>}
+                                                    {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{formatIban(bankData.iban)}</span></div>}
                                                     {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                                 </div>
                                             </div>
@@ -457,7 +458,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="corporate-total-row" style={{ color: '#dc2626' }}>
-                                                <span>{t.discount}{props.discount?.type !== 'fixed' ? ` (%${subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0})` : ''}:</span>
+                                                <span>{t.discount}{props.discount?.type !== 'fixed' ? props.discount?.value ? ` (%${props.discount.value})` : ` (%${subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0})` : ''}:</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -484,7 +485,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                             <span>{t.generalTotal}</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
+                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right', wordBreak: 'break-word', whiteSpace: 'normal' }}>
                                             {amountInWords}
                                         </div>
                                     </div>

@@ -21,7 +21,10 @@ export const PdfSignatures: React.FC<PdfSignaturesProps> = ({ companyData, custo
                     {companyData.authorized && <span className="signature-authorized"> - {companyData.authorized}</span>}
                 </div>
                 <div className="signature-line" style={{ minHeight: '40px', borderBottom: '1px solid #cbd5e1', margin: '4px 0', display: 'flex', justifyContent: 'center' }}>
-                    {(signature || companyData.signature) && <img src={(signature || companyData.signature) as string} alt={t.signature} style={{ maxHeight: '38px', maxWidth: '100px', objectFit: 'contain' }} />}
+                    {(() => {
+                        const effectiveSig = (signature === null || signature === '') ? null : (signature || companyData.signature);
+                        return effectiveSig ? <img src={effectiveSig as string} alt={t.signature} style={{ maxHeight: '38px', maxWidth: '100px', objectFit: 'contain' }} /> : null;
+                    })()}
                     {companyData.stamp && <img src={companyData.stamp as string} alt={t.companyStamp} style={{ maxHeight: '38px', maxWidth: '80px', objectFit: 'contain', opacity: 0.85 }} />}
                 </div>
                 <div className="signature-label" style={{ fontSize: '6.5pt', color: '#64748b' }}>{t.seller} ({t.deliveredBy || 'Yetkili Kaşe / İmza'})</div>

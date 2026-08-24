@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { formatIban } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -206,7 +207,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                     const discountVal = Number(item.discountRate) || 0;
                     const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
                     const baseTotal = (Number(item.quantity) || 0) * (Number(item.price) || 0);
-                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+                    const lineTotal = typeof item.total === 'number' ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
                         <tr key={startIndex + idx}>
@@ -369,7 +370,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                         <div style={{ fontSize: '8pt', color: '#475569', lineHeight: '1.4', marginBottom: '4px' }}>
                                             <div style={{ fontWeight: 700, color: '#64748b', fontSize: '7.5pt', textTransform: 'uppercase', marginBottom: '2px', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px' }}>{t.bankInfo}</div>
                                             {bankData.bankName && <div><strong>{bankData.bankName}</strong> {bankData.branch && `(${bankData.branch})`}</div>}
-                                            {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>TR {bankData.iban}</span></div>}
+                                            {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>{formatIban(bankData.iban)}</span></div>}
                                             {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                         </div>
                                     )}
@@ -396,7 +397,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="invoice-summary-row" style={{ color: '#dc2626' }}>
-                                                <span>{t.discount}{props.discount?.type !== 'fixed' ? ` (%${subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0})` : ''}:</span>
+                                                <span>{t.discount}{props.discount?.type !== 'fixed' ? props.discount?.value ? ` (%${props.discount.value})` : ` (%${subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0})` : ''}:</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -423,7 +424,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                             <span>{t.generalTotal}:</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
+                                        <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right', wordBreak: 'break-word', whiteSpace: 'normal' }}>
                                             {amountInWords}
                                         </div>
                                     </div>
