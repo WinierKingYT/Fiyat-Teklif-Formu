@@ -80,7 +80,7 @@ export const getDefaultPdfConfig = (): PdfConfig => ({
     summaryLabelFontSize: '0.75rem', summaryLabelFontWeight: 'normal',
     summaryValueFontSize: 'inherit', summaryValueFontWeight: '500',
     summaryTotalFontSize: '0.9rem', summaryTotalFontWeight: '700',
-    footerFontSize: '0.7rem', footerFontWeight: 'normal', itemsPerPage: 20,
+    footerFontSize: '0.7rem', footerFontWeight: 'normal', itemsPerPage: 14,
     pageBackgroundColor: '#ffffff'
 });
 

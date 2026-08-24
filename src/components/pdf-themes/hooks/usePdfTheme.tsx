@@ -20,7 +20,7 @@ export function usePdfTheme(props: PdfThemeProps) {
         if (layoutMap['items'] === false) {
             return [[]];
         }
-        const effectiveItemsPerPage = (config.itemsPerPage && config.itemsPerPage !== 14) ? config.itemsPerPage : 20;
+        const effectiveItemsPerPage = config.itemsPerPage || 14;
         return chunkQuoteItems(items, {
             itemsPerPage: effectiveItemsPerPage,
             showSummary: config.showSummary,

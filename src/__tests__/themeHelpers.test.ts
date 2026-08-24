@@ -41,19 +41,28 @@ describe('chunkQuoteItems', () => {
         expect(chunkQuoteItems([])).toEqual([[]]);
     });
 
-    it('should keep single page quote when items count is within singlePageLimit (<= 20)', () => {
-        const items = Array.from({ length: 20 }, (_, i) => i + 1);
+    it('should keep single page quote when items count is within singlePageLimit (<= 14)', () => {
+        const items = Array.from({ length: 14 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items);
         expect(chunks.length).toBe(1);
         expect(chunks[0]).toEqual(items);
     });
 
-    it('should split into multi-page when items exceed singlePageLimit (> 20)', () => {
-        const items = Array.from({ length: 21 }, (_, i) => i + 1);
+    it('should split into multi-page when items exceed singlePageLimit (> 14)', () => {
+        const items = Array.from({ length: 15 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items);
         expect(chunks.length).toBe(2);
         expect(chunks[0].length).toBeGreaterThan(0);
         expect(chunks[1].length).toBeGreaterThan(0);
+        expect(chunks.flat()).toEqual(items);
+    });
+
+    it('should balance 17 items across 2 pages without empty gaps', () => {
+        const items = Array.from({ length: 17 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items);
+        expect(chunks.length).toBe(2);
+        expect(chunks[0].length).toBe(9);
+        expect(chunks[1].length).toBe(8);
         expect(chunks.flat()).toEqual(items);
     });
 
@@ -64,7 +73,7 @@ describe('chunkQuoteItems', () => {
         expect(chunks.flat()).toEqual(items);
     });
 
-    it('should respect custom itemsPerPage when specified and different from 20', () => {
+    it('should respect custom itemsPerPage when specified and different from 14', () => {
         const items = Array.from({ length: 6 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items, { itemsPerPage: 2 });
         expect(chunks.length).toBe(3);

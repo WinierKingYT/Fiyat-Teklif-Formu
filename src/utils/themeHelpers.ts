@@ -49,8 +49,8 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         return [[]];
     }
 
-    // If a custom itemsPerPage is explicitly specified (and not the default 20 or legacy 14), respect it
-    if (options.itemsPerPage && options.itemsPerPage !== 20 && options.itemsPerPage !== 14) {
+    // If a custom itemsPerPage is explicitly specified (and not the default 14), respect it
+    if (options.itemsPerPage && options.itemsPerPage !== 14) {
         let totalContentWeight = 0;
         for (const item of items) {
             let weight = 1;
@@ -100,31 +100,31 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
     // Check if bottom sections are active
     const hasBottomSections = options.showSummary !== false || options.showBankInfo || options.showSignatures || options.showTerms;
 
-    // Capacity for a standalone single-page quote — güvenli tek sayfa (20 ürün hedefi)
+    // Capacity for a standalone single-page quote — 14 ürün hedefi
     const singlePageLimit = hasBottomSections
-        ? Math.max(4, Math.floor((isLandscape ? (isCompact ? 14 : 12) : (isCompact ? 22 : 20)) / heightFactor))
-        : Math.max(6, Math.floor((isLandscape ? (isCompact ? 20 : 18) : (isCompact ? 28 : 26)) / heightFactor));
+        ? Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 16 : 14)) / heightFactor))
+        : Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : (isCompact ? 22 : 20)) / heightFactor));
 
     if (items.length <= singlePageLimit) {
         return [items];
     }
 
-    // Capacity limits — maksimum hedef, sayfa bütünlüğü korunarak
+    // Capacity limits — sayfa bütünlüğü ve estetiği korunarak
     // Page 1: Header + Customer + Table (No bottom sections)
-    const firstPageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 26 : 24)) / heightFactor));
+    const firstPageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : (isCompact ? 20 : 18)) / heightFactor));
     // Middle pages: Compact Header + Table
-    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 22 : 20) : (isCompact ? 30 : 28)) / heightFactor));
+    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 24 : 22)) / heightFactor));
     // Last page: Compact Header + Table + Summary + Bank + Terms + Signatures
-    const lastPageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 14 : 12) : (isCompact ? 20 : 18)) / heightFactor));
+    const lastPageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor));
 
     // If it fits across exactly 2 pages:
     if (items.length <= firstPageLimit + lastPageLimit) {
-        // Fill Page 1 up to firstPageLimit (e.g. 20-24 items), and put remainder on Page 2 (max lastPageLimit)
-        const p1Count = Math.min(firstPageLimit, Math.max(1, items.length - 1));
-        const finalP1 = items.length - p1Count > lastPageLimit ? items.length - lastPageLimit : p1Count;
+        // Balance items between page 1 and page 2 so neither page has an awkward huge empty void!
+        const p2Count = Math.min(lastPageLimit, Math.max(3, Math.ceil(items.length * 0.45)));
+        const p1Count = items.length - p2Count;
         return [
-            items.slice(0, finalP1),
-            items.slice(finalP1)
+            items.slice(0, p1Count),
+            items.slice(p1Count)
         ];
     }
 

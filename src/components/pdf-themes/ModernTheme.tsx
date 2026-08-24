@@ -576,8 +576,13 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Items Table */}
                     {showSection('items') && (
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                         {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
+                        {pageIndex < itemChunks.length - 1 && (
+                            <div style={{ marginTop: 'auto', paddingTop: '0.5rem', paddingBottom: '0.2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic' }}>
+                                <span>{t.continuedOnNextPage || 'Teklif devamı sonraki sayfadadır ➔'}</span>
+                            </div>
+                        )}
                     </div>
                     )}
 

@@ -788,5 +788,6 @@
   "fieldsFilledOf": "{filled}/{total}",
   "to": "Sayın",
   "sellerSignature": "Yetkili İmza",
-  "customerApproval": "Müşteri Onayı"
+  "customerApproval": "Müşteri Onayı",
+  "continuedOnNextPage": "Teklif devamı sonraki sayfadadır ➔"
 }
