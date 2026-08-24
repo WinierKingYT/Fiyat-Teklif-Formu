@@ -105,7 +105,7 @@ const PrintableQuote = React.memo(({
         return calculateQuoteTotals(items, discount, { currency: quoteData.currency || 'TRY', taxMode: quoteData.taxMode });
     }, [items, discount, quoteData.currency, quoteData.taxMode]);
     const subtotal = calc.subtotal;
-    const discountAmount = calc.globalDiscountAmount;
+    const discountAmount = calc.globalDiscountAmount + calc.lineDiscountTotal;
     const totalTax = calc.taxTotal;
     const total = calc.grandTotal;
 

@@ -32,8 +32,9 @@ export const PdfSignatures: React.FC<PdfSignaturesProps> = ({ companyData, custo
             {config.showCustomerSignature && (
                 <div className="signature-col customer-col" style={{ textAlign: 'center' }}>
                     <div className="signature-header" style={{ fontSize: '7.5pt', fontWeight: 600 }}>
-                        <span className="signature-company">{customerData.name || customerData.company || t.customer}</span>
-                        <span className="signature-authorized"> - {t.customerApproval || 'Müşteri Onayı'}</span>
+                        <span className="signature-company">{customerData.company || customerData.name || t.customer}</span>
+                        {customerData.company && customerData.name && <span className="signature-authorized"> - {customerData.name}</span>}
+                        <span className="signature-approval" style={{ color: '#64748b', fontWeight: 'normal' }}> ({t.customerApproval || 'Müşteri Onayı'})</span>
                     </div>
                     <div className="signature-line" style={{ minHeight: '40px', borderBottom: '1px solid #cbd5e1', margin: '4px 0' }}></div>
                     <div className="signature-label" style={{ fontSize: '6.5pt', color: '#64748b' }}>{t.customer} ({t.receivedBy || 'Teslim Alan'})</div>

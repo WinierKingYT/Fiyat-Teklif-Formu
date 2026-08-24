@@ -223,7 +223,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                     const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
-                        <tr key={startIndex + index}>
+                        <tr key={startIndex + index} style={config.tableStriped && (startIndex + index) % 2 === 1 ? { backgroundColor: typeof config.tableStripedColor === 'string' && config.tableStripedColor ? config.tableStripedColor : '#f8fafc' } : undefined}>
                             <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}>{startIndex + index + 1}</td>
                             {config.showTableImages && (
                                 <td>

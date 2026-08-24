@@ -388,8 +388,8 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                             <div style={{ whiteSpace: 'pre-wrap' }}>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
                                         </div>
                                     )}
-                                    {config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
-                                        <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.3' }}>
+                                    {showSection('terms') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                        <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.3', whiteSpace: 'pre-wrap' }}>
                                             {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
                                             {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
                                             {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}

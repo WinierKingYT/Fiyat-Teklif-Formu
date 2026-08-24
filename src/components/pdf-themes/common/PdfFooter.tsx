@@ -17,11 +17,13 @@ export const PdfFooter: React.FC<PdfFooterProps> = ({ companyData, config, t, cl
 
     return (
         <div className={className || ''} style={{ marginTop: 'auto', paddingTop: '6px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '7.5pt', color: '#64748b' }}>
-                {companyData.name && <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>}
-                {contactItems.map((item, idx) => (
-                    <span key={idx}>&bull; {item}</span>
-                ))}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '7.5pt', color: '#64748b' }}>
+                {[
+                    companyData.name ? <strong key="name" style={{ color: '#0f172a' }}>{companyData.name}</strong> : null,
+                    ...contactItems.map((item, idx) => <span key={`item-${idx}`}>{item}</span>)
+                ]
+                    .filter(Boolean)
+                    .reduce<React.ReactNode[]>((acc, elem, idx) => (idx === 0 ? [elem] : [...acc, <span key={`sep-${idx}`}>&bull;</span>, elem]), [])}
             </div>
             <div style={{ marginTop: '2px', fontSize: '7pt', color: '#94a3b8' }}>
                 {t.thankYou} &bull; {t.regards}

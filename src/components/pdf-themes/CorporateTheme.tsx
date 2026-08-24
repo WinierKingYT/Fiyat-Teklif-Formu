@@ -179,6 +179,11 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
         }
 
+        .corporate-left-col {
+            flex: 1;
+            min-width: 0;
+        }
+
         .corporate-bank-box {
             background: #f8fafc;
             padding: 8px 12px;
@@ -274,7 +279,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                     const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
-                        <tr key={startIndex + index}>
+                        <tr key={startIndex + index} style={config.tableStriped && (startIndex + index) % 2 === 1 ? { backgroundColor: typeof config.tableStripedColor === 'string' && config.tableStripedColor ? config.tableStripedColor : '#f8fafc' } : undefined}>
                             <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}>{startIndex + index + 1}</td>
                             {config.showTableImages && (
                                 <td>
@@ -449,11 +454,12 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                                 </div>
                                             </div>
                                         )}
-                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
-                                            <div style={{ marginTop: '4px', fontSize: '7.5pt', color: '#64748b', lineHeight: '1.35' }}>
-                                                {quoteData.deliveryTerms?.trim() && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                                {quoteData.warrantyTerms?.trim() && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
-                                                {quoteData.terms?.trim() && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
+                                        {(showSection('terms') || showSection('notes')) && (config.showTerms || config.showNotes) && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms || quoteData.notes) && (
+                                            <div style={{ marginTop: '4px', fontSize: '7.5pt', color: '#64748b', lineHeight: '1.35', whiteSpace: 'pre-wrap' }}>
+                                                {quoteData.notes?.trim() && config.showNotes && <div style={{ marginBottom: '2px' }}><strong>{t.notes}:</strong> {renderEditable(quoteData.notes, 'notes', 'textarea')}</div>}
+                                                {quoteData.deliveryTerms?.trim() && config.showTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
+                                                {quoteData.warrantyTerms?.trim() && config.showTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
+                                                {quoteData.terms?.trim() && config.showTerms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
                                     </div>

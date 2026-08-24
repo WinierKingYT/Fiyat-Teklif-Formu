@@ -90,12 +90,12 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         if (typeof itemObj.description === 'string' && itemObj.description.length > 0) {
             const lines = itemObj.description.split('\n').length;
             const extraByLength = Math.floor(itemObj.description.length / 80);
-            weight += Math.min(2.5, Math.max(lines - 1, extraByLength) * 0.4);
+            weight += Math.min(10, Math.max(lines - 1, extraByLength) * 0.4);
         }
         totalContentWeight += weight;
     }
     const avgItemWeight = items.length > 0 ? totalContentWeight / items.length : 1;
-    const heightFactor = baseHeightFactor * Math.min(1.8, Math.max(1.0, avgItemWeight)) * marginFactor;
+    const heightFactor = baseHeightFactor * Math.min(3.0, Math.max(1.0, avgItemWeight)) * marginFactor;
 
     // Check if bottom sections are active
     const hasBottomSections = options.showSummary !== false || options.showBankInfo || options.showSignatures || options.showTerms;

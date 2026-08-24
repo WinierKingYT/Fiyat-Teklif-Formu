@@ -149,7 +149,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                     const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
-                        <tr key={startIndex + index}>
+                        <tr key={startIndex + index} style={config.tableStriped && (startIndex + index) % 2 === 1 ? { backgroundColor: typeof config.tableStripedColor === 'string' && config.tableStripedColor ? config.tableStripedColor : '#f8fafc' } : undefined}>
                             <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: '8pt' }}>{startIndex + index + 1}</td>
                             {config.showTableImages && (
                                 <td style={{ textAlign: 'center' }}>
@@ -280,11 +280,11 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                         {showSection('notes') && config.showNotes && quoteData.notes && (
                                             <div style={{ marginTop: '4px', fontSize: '7.5pt', color: '#475569' }}>
                                                 <div style={{ fontWeight: '700', color: '#64748b', fontSize: '7pt' }}>{t.notes}</div>
-                                                <div>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
+                                                <div style={{ whiteSpace: 'pre-wrap' }}>{renderEditable(quoteData.notes, 'notes', 'textarea')}</div>
                                             </div>
                                         )}
-                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
-                                            <div style={{ marginTop: '4px', fontSize: '7pt', color: '#64748b', lineHeight: '1.3' }}>
+                                        {(showSection('terms') || showSection('notes')) && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                            <div style={{ marginTop: '4px', fontSize: '7pt', color: '#64748b', lineHeight: '1.3', whiteSpace: 'pre-wrap' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
                                                 {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
                                                 {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
@@ -309,7 +309,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                                         .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '7.5pt', color: '#475569' }}>
-                                                                <span>{t.vat || t.tax} (%{rate})</span>
+                                                                <span>{t.vat || t.tax} ({(currentLocale || 'tr').startsWith('tr') ? `%${rate}` : `${rate}%`})</span>
                                                                 <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
                                                             </div>
                                                         ))

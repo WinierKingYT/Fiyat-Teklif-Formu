@@ -60,11 +60,11 @@ export const usePdfExport = ({
     const buildPdfFilename = useCallback(() => {
         const meta = getPdfMetadata(quoteData.language || 'tr');
         const slug = meta.filename.replace(/\.pdf$/i, '');
-        const customerPart = sanitizeFileNamePart(customerData.name || 'Musteri');
-        const numberPart = quoteData.number || t('draft');
+        const customerPart = sanitizeFileNamePart(customerData.company || customerData.name || 'Musteri');
+        const numberPart = sanitizeFileNamePart(quoteData.number || t('draft'));
         const datePart = new Date().toISOString().slice(0, 10);
         return `${slug}_${customerPart}_${numberPart}_${datePart}.pdf`;
-    }, [quoteData.language, quoteData.number, customerData.name, sanitizeFileNamePart, t]);
+    }, [quoteData.language, quoteData.number, customerData.company, customerData.name, sanitizeFileNamePart, t]);
 
     const generationStageLabels: Record<string, string> = {
         fonts: t('pdfPreparing'),
@@ -123,9 +123,11 @@ export const usePdfExport = ({
             const shareFormat: [number, number] = isLandscape ? [baseSize.height, baseSize.width] : [baseSize.width, baseSize.height];
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
             const qual = quality === 'draft' ? 2 : quality === 'normal' ? 3 : quality === 'high' ? 4 : quality === 'print' ? 5 : 6;
+            const isIos = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+            const maxCanvasDim = isIos ? 4096 : 16384;
             const rect = element.getBoundingClientRect();
             const maxDomDim = Math.max(element.scrollWidth || 0, element.scrollHeight || 0, rect.width || 0, rect.height || 0, 1);
-            const effectiveScale = Math.max(0.5, Math.min(qual, Math.floor(16384 / Math.max(1, maxDomDim))));
+            const effectiveScale = Math.max(0.5, Math.min(qual, Math.floor(maxCanvasDim / Math.max(1, maxDomDim))));
 
             // Zoom transform protection for all ancestors
             const scaledAncestors: { el: HTMLElement; originalTransform: string; originalZoom: string; originalTransition: string }[] = [];
@@ -190,7 +192,7 @@ export const usePdfExport = ({
                         orientation: shareOrientation,
                         compress: true,
                         properties: {
-                            title: pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
+                            title: quoteData.title || pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
                             author: companyData.name || 'TeklifApp'
                         }
                     },

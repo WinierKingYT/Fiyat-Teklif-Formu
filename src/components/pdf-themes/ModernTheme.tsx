@@ -430,7 +430,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     const lineTotal = (typeof item.total === 'number' && item.total > 0) ? item.total : (isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100));
 
                     return (
-                        <tr key={startIndex + index}>
+                        <tr key={startIndex + index} style={config.tableStriped && (startIndex + index) % 2 === 1 ? { backgroundColor: typeof config.tableStripedColor === 'string' && config.tableStripedColor ? config.tableStripedColor : '#f8fafc' } : undefined}>
                             <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
                             {config.showTableImages && (
                                 <td>
@@ -596,8 +596,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                         {config.showBankInfo && (
                                             <PdfBankInfo bankData={bankData} t={t} className="bank-info-box" />
                                         )}
-                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
-                                            <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '6px' }}>
+                                        {(showSection('terms') || showSection('notes')) && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                            <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '6px', whiteSpace: 'pre-wrap' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.deliveryConditions || t.delivery || 'Teslimat'}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
                                                 {quoteData.warrantyTerms && <div><strong>{t.warrantyConditions || t.warranty || 'Garanti'}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
                                                 {quoteData.terms && <div><strong>{t.payment || 'Ödeme'}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}

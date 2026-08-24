@@ -43,9 +43,9 @@ export const PdfConfigProvider = ({ children }: { children: React.ReactNode }) =
     useEffect(() => {
         const language = quoteData?.language || 'tr';
         const localizedDefault = getPdfMetadata(language).title.toUpperCase();
-        const knownDefaults = ['FİYAT TEKLİFİ', 'PRICE QUOTE', 'PREISANGEBOT'];
+        const knownDefaults = ['FİYAT TEKLİFİ', 'TEKLİF', 'PRICE QUOTE', 'QUOTE', 'PREISANGEBOT', 'ANGEBOT', 'DEVIS', 'PRESUPUESTO'];
         setPdfConfig(prev =>
-            prev.title && knownDefaults.includes(prev.title) && prev.title !== localizedDefault
+            prev.title && knownDefaults.includes(prev.title.toUpperCase()) && prev.title !== localizedDefault
                 ? { ...prev, title: localizedDefault }
                 : prev
         );
