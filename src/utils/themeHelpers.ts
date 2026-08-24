@@ -49,8 +49,8 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         return [[]];
     }
 
-    // If a custom itemsPerPage is explicitly specified and not the default 20, respect it while guarding against extreme description overflow
-    if (options.itemsPerPage && options.itemsPerPage !== 20) {
+    // If a custom itemsPerPage is explicitly specified (and not the default 20 or legacy 14), respect it
+    if (options.itemsPerPage && options.itemsPerPage !== 20 && options.itemsPerPage !== 14) {
         let totalContentWeight = 0;
         for (const item of items) {
             let weight = 1;
@@ -119,12 +119,12 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
 
     // If it fits across exactly 2 pages:
     if (items.length <= firstPageLimit + lastPageLimit) {
-        // Balance items so last page has at least 1 and at most lastPageLimit items
-        const p2Count = Math.min(lastPageLimit, Math.max(1, Math.ceil(items.length / 2)));
-        const p1Count = items.length - p2Count;
+        // Fill Page 1 up to firstPageLimit (e.g. 20-24 items), and put remainder on Page 2 (max lastPageLimit)
+        const p1Count = Math.min(firstPageLimit, Math.max(1, items.length - 1));
+        const finalP1 = items.length - p1Count > lastPageLimit ? items.length - lastPageLimit : p1Count;
         return [
-            items.slice(0, p1Count),
-            items.slice(p1Count)
+            items.slice(0, finalP1),
+            items.slice(finalP1)
         ];
     }
 
@@ -143,10 +143,10 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         }
 
         if (remaining.length <= middlePageLimit + lastPageLimit) {
-            const pLastCount = Math.min(lastPageLimit, Math.max(1, Math.ceil(remaining.length / 2)));
-            const pMidCount = remaining.length - pLastCount;
-            chunks.push(remaining.slice(0, pMidCount));
-            chunks.push(remaining.slice(pMidCount));
+            const pMidCount = Math.min(middlePageLimit, Math.max(1, remaining.length - 1));
+            const finalMid = remaining.length - pMidCount > lastPageLimit ? remaining.length - lastPageLimit : pMidCount;
+            chunks.push(remaining.slice(0, finalMid));
+            chunks.push(remaining.slice(finalMid));
             break;
         }
 

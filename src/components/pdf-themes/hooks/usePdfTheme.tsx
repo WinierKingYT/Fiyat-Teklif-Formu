@@ -20,8 +20,9 @@ export function usePdfTheme(props: PdfThemeProps) {
         if (layoutMap['items'] === false) {
             return [[]];
         }
+        const effectiveItemsPerPage = (config.itemsPerPage && config.itemsPerPage !== 14) ? config.itemsPerPage : 20;
         return chunkQuoteItems(items, {
-            itemsPerPage: config.itemsPerPage,
+            itemsPerPage: effectiveItemsPerPage,
             showSummary: config.showSummary,
             showBankInfo: config.showBankInfo,
             showSignatures: config.showSignatures,
