@@ -271,6 +271,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             color: #64748b;
             line-height: 1.25;
             margin-top: 1px;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         /* SUMMARY & BANK SECTION */

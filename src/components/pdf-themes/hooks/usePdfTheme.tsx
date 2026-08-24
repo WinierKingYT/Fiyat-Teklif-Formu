@@ -33,6 +33,11 @@ export function usePdfTheme(props: PdfThemeProps) {
         const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
         const map: Record<string, { taxable: number; tax: number }> = {};
         const globalDiscountRatio = calc.subtotal > 0 ? (calc.globalDiscountAmount / calc.subtotal) : 0;
+        const targetDiscountedSubtotal = Math.max(0, calc.subtotal - calc.globalDiscountAmount);
+
+        let sumTaxable = 0;
+        let maxRateKey = '';
+        let maxTaxable = -1;
 
         calc.items.forEach((item) => {
             const rate = String(item.taxRate || 0);
@@ -42,6 +47,22 @@ export function usePdfTheme(props: PdfThemeProps) {
             }
             map[rate].taxable += discountedNet;
         });
+
+        // Round taxable amounts and find largest bucket
+        Object.entries(map).forEach(([rate, val]) => {
+            val.taxable = Math.round(val.taxable * 100) / 100;
+            sumTaxable += val.taxable;
+            if (val.taxable > maxTaxable) {
+                maxTaxable = val.taxable;
+                maxRateKey = rate;
+            }
+        });
+
+        // Distribute rounding remainder if any to the largest bucket
+        const diff = Math.round((targetDiscountedSubtotal - sumTaxable) * 100) / 100;
+        if (diff !== 0 && maxRateKey && map[maxRateKey]) {
+            map[maxRateKey].taxable = Math.round((map[maxRateKey].taxable + diff) * 100) / 100;
+        }
 
         Object.entries(calc.taxBreakdown).forEach(([rate, taxAmount]) => {
             if (!map[rate]) {

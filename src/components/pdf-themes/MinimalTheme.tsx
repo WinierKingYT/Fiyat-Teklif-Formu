@@ -160,7 +160,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                             )}
                             <td>
                                 <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.name}</div>
-                                {item.description && <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2' }}>{item.description}</div>}
+                                {item.description && <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.description}</div>}
                             </td>
                             {config.showTableUnit && <td style={{ textAlign: 'center', color: '#64748b', fontSize: '7.5pt' }}>{item.unit}</td>}
                             <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{item.quantity}</td>

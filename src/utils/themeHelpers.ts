@@ -2,8 +2,12 @@ export const getAdjustedFontSize = (size: unknown, factor: number = 0.9, default
     if (!size || size === 'inherit') return defaultSize;
     if (typeof size === 'number') return `${size * factor}px`;
     if (typeof size === 'string') {
-        if (size.endsWith('px')) return `${parseFloat(size) * factor}px`;
-        if (size.endsWith('rem') || size.endsWith('em')) return `calc(${size} * ${factor})`;
+        const trimmed = size.trim();
+        if (trimmed.endsWith('px')) return `${parseFloat(trimmed) * factor}px`;
+        if (trimmed.endsWith('pt')) return `${(parseFloat(trimmed) * 1.333 * factor).toFixed(1)}px`;
+        if (trimmed.endsWith('rem') || trimmed.endsWith('em')) return `calc(${trimmed} * ${factor})`;
+        const numeric = parseFloat(trimmed);
+        if (!isNaN(numeric) && numeric > 0) return `${numeric * factor}px`;
     }
     return defaultSize;
 };
@@ -14,7 +18,7 @@ export const getAdjustedFontSize = (size: unknown, factor: number = 0.9, default
  */
 export function formatIban(iban?: string | null): string {
     if (!iban) return '';
-    const clean = iban.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const clean = iban.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 34);
     if (!clean) return '';
     return clean.match(/.{1,4}/g)?.join(' ') || clean;
 }
@@ -53,9 +57,24 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
 
     const isLandscape = !!options.isLandscape;
     const isCompact = options.margins === 'compact';
-    const heightFactor = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
+    const baseHeightFactor = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
         ? Math.min(1.6, Math.max(0.7, options.tableRowHeight / 35))
         : 1;
+
+    // Calculate content density weight based on descriptions if available
+    let totalContentWeight = 0;
+    for (const item of items) {
+        let weight = 1;
+        const itemObj = item as Record<string, unknown>;
+        if (typeof itemObj.description === 'string' && itemObj.description.length > 0) {
+            const lines = itemObj.description.split('\n').length;
+            const extraByLength = Math.floor(itemObj.description.length / 80);
+            weight += Math.min(2.5, Math.max(lines - 1, extraByLength) * 0.4);
+        }
+        totalContentWeight += weight;
+    }
+    const avgItemWeight = items.length > 0 ? totalContentWeight / items.length : 1;
+    const heightFactor = baseHeightFactor * Math.min(1.8, Math.max(1.0, avgItemWeight));
 
     // Capacity for a standalone single-page quote — güvenli tek sayfa
     const singlePageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor));

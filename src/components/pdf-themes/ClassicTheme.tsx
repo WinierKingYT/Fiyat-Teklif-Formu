@@ -185,7 +185,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                             )}
                             <td>
                                 <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{item.name}</div>
-                                {item.description && <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
+                                {item.description && <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.2', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.description}</div>}
                             </td>
                             {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
                             <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.quantity}</td>

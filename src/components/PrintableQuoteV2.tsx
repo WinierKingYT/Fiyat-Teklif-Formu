@@ -14,16 +14,22 @@ import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discoun
 // Helper functions defined outside component to avoid recreation
 const formatDate = (dateString?: string, locale = 'tr-TR') => {
     if (!dateString) return '-';
-    // Split YYYY-MM-DD to avoid UTC timezone day-shift in negative offsets
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-        const [y, m, d] = parts.map(Number);
-        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
-            const date = new Date(y, m - 1, d);
-            return date.toLocaleDateString(locale);
-        }
+    const trimmed = dateString.trim();
+    // Check YYYY-MM-DD
+    const isoMatch = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+    if (isoMatch) {
+        const [, y, m, d] = isoMatch.map(Number);
+        const date = new Date(y, m - 1, d);
+        if (!isNaN(date.getTime())) return date.toLocaleDateString(locale);
     }
-    const d = new Date(dateString);
+    // Check DD-MM-YYYY or DD.MM.YYYY
+    const dmyMatch = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+    if (dmyMatch) {
+        const [, d, m, y] = dmyMatch.map(Number);
+        const date = new Date(y, m - 1, d);
+        if (!isNaN(date.getTime())) return date.toLocaleDateString(locale);
+    }
+    const d = new Date(trimmed);
     return isNaN(d.getTime()) ? dateString : d.toLocaleDateString(locale);
 };
 
@@ -75,8 +81,12 @@ const PrintableQuote = React.memo(({
     };
     const currentLocale = localeMap[language] || 'tr-TR';
     const formatCurrency = useCallback((amount: number) => {
-        const currency = quoteData.currency || 'TRY';
-        return new Intl.NumberFormat(currentLocale, { style: 'currency', currency: currency }).format(amount);
+        const currency = (quoteData.currency || 'TRY').trim().toUpperCase();
+        try {
+            return new Intl.NumberFormat(currentLocale, { style: 'currency', currency: currency }).format(amount);
+        } catch {
+            return `${amount.toLocaleString(currentLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+        }
     }, [quoteData.currency, currentLocale]);
 
     // Calculate totals

@@ -88,7 +88,10 @@ export const loadPdfFonts = async (fontFamilies: string[] = []) => {
         loadedFonts.add(family);
     }
     try {
-        await Promise.all(families.map(f => document.fonts.load(`400 16px "${f}"`).catch(() => null)));
+        await Promise.all([
+            ...families.map(f => document.fonts.load(`400 16px "${f}"`).catch(() => null)),
+            ...families.map(f => document.fonts.load(`700 16px "${f}"`).catch(() => null))
+        ]);
         await document.fonts.ready;
     } catch (error) {
         Logger.warn('PDF font loading failed (non-critical):', error);
@@ -167,6 +170,23 @@ const removePageBreakStyles = () => {
 };
 
 /**
+ * Ensures all images within the container are loaded before rasterization.
+ */
+const waitForAllImages = async (container: HTMLElement): Promise<void> => {
+    const images = Array.from(container.querySelectorAll<HTMLImageElement>('img[src]'));
+    if (images.length === 0) return;
+    const promises = images.map(img => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise<void>(resolve => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            setTimeout(resolve, 3000);
+        });
+    });
+    await Promise.all(promises);
+};
+
+/**
  * Replaces <img> elements with canvases so html2canvas renders them correctly,
  * while capping the final raster size to keep memory usage in check.
  */
@@ -177,8 +197,8 @@ const replaceImagesWithCanvas = (container: HTMLElement, scale: number): (() => 
     images.forEach(img => {
         if (!img.src || img.src.startsWith('data:image/svg')) return;
         const canvas = document.createElement('canvas');
-        let w = img.naturalWidth || (img.width * scale);
-        let h = img.naturalHeight || (img.height * scale);
+        let w = img.naturalWidth || (img.width * scale) || 100;
+        let h = img.naturalHeight || (img.height * scale) || 100;
         if (w < 5 || h < 5) return;
         const maxDim = Math.max(w, h);
         if (maxDim > MAX_IMAGE_DIMENSION) {
@@ -194,18 +214,20 @@ const replaceImagesWithCanvas = (container: HTMLElement, scale: number): (() => 
         canvas.style.cssText = img.style.cssText;
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        if (origFit === 'contain') {
-            const scaleX = canvas.width / w;
-            const scaleY = canvas.height / h;
-            const s = Math.min(scaleX, scaleY);
-            const dx = (canvas.width - w * s) / 2;
-            const dy = (canvas.height - h * s) / 2;
-            ctx.drawImage(img, dx, dy, w * s, h * s);
-        } else {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        try {
+            if (origFit === 'contain') {
+                const s = Math.min(canvas.width / w, canvas.height / h);
+                const dx = (canvas.width - w * s) / 2;
+                const dy = (canvas.height - h * s) / 2;
+                ctx.drawImage(img, dx, dy, w * s, h * s);
+            } else {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
+            img.parentNode?.replaceChild(canvas, img);
+            restored.push({ img, canvas });
+        } catch (err) {
+            Logger.warn('Failed to rasterize image to canvas (CORS or broken image):', err);
         }
-        img.parentNode?.replaceChild(canvas, img);
-        restored.push({ img, canvas });
     });
 
     return () => {
@@ -247,10 +269,12 @@ export const generatePDF = async (elementId: string, filename?: string, options:
     } = options;
 
     const meta = getPdfMetadata(language);
-    const docTitle = title || meta.title;
-    const docSubject = subject || meta.subject;
-    const docKeywords = keywords || meta.keywords;
-    const docFilename = filename || meta.filename;
+    const sanitizeMeta = (str?: string) => (str || '').replace(/[<>\\]/g, '').trim();
+    const docTitle = sanitizeMeta(title || meta.title);
+    const docSubject = sanitizeMeta(subject || meta.subject);
+    const docKeywords = sanitizeMeta(keywords || meta.keywords);
+    const docFilename = (filename || meta.filename).replace(/[<>:"/\\|?*]/g, '_');
+    const docAuthor = sanitizeMeta(author);
 
     const element = document.getElementById(elementId);
     if (!element) {
@@ -275,6 +299,9 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         injectPageBreakStyles(elementId);
 
         onStage?.('images');
+        // Ensure all images are fully loaded before capturing
+        await waitForAllImages(element);
+
         // Calculate max allowed scale based on actual DOM pixel dimensions (HTML5 canvas limit max 16384px)
         const domWidthPx = element.offsetWidth || 800;
         const domHeightPx = element.offsetHeight || 1130;
@@ -282,15 +309,20 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         const lowerScale = Math.min(qual.scale, Math.floor(16384 / Math.max(1, maxDomDim)));
         const effectiveScale = Math.max(1, lowerScale);
 
-        // PdfPreviewCanvas zoom transform (%90 beyaz sayfa sebebi) — önizleme scale'i html2canvas'a yansıyor
+        // PdfPreviewCanvas zoom/scale transform cleanup
         let scaledAncestor: HTMLElement | null = null;
         let originalTransform = '';
+        let originalZoom = '';
         let p: HTMLElement | null = element.parentElement as HTMLElement | null;
         while (p) {
-            if (p.style.transform && p.style.transform.includes('scale(')) {
+            const hasTransform = p.style.transform && p.style.transform.includes('scale(');
+            const pStyleZoom = (p.style as unknown as { zoom?: string }).zoom;
+            if (hasTransform || (pStyleZoom && pStyleZoom !== '1' && pStyleZoom !== 'normal')) {
                 scaledAncestor = p;
                 originalTransform = p.style.transform;
+                originalZoom = pStyleZoom || '';
                 p.style.transform = 'none';
+                (p.style as unknown as { zoom?: string }).zoom = '1';
                 break;
             }
             p = p.parentElement as HTMLElement | null;
@@ -312,15 +344,22 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                     letterRendering: qual.letterRendering,
                     backgroundColor,
                     imageTimeout: 0,
+                    ignoreElements: (el: Element) => {
+                        return (
+                            el.classList?.contains('no-print') ||
+                            el.classList?.contains('pdf-placeholder') ||
+                            el.getAttribute?.('data-no-print') === 'true'
+                        );
+                    }
                 },
                 jsPDF: {
                     unit: 'mm',
-                    format: [baseSize.width, baseSize.height],
+                    format: [size.width, size.height],
                     orientation: isLandscape ? 'landscape' : 'portrait',
                     compress: true,
                     properties: {
                         title: docTitle,
-                        author,
+                        author: docAuthor,
                         subject: docSubject,
                         keywords: docKeywords,
                         creator: 'TeklifApp v7',
@@ -346,14 +385,19 @@ export const generatePDF = async (elementId: string, filename?: string, options:
 
             const elapsedMs = Date.now() - startTime;
             const sizeKB = realSizeKB > 0 ? realSizeKB : Math.round((domWidthPx * domHeightPx * 4) / 10240);
-            const sizeText = `~${sizeKB} KB`;
+            const sizeText = realSizeKB > 0 ? `~${realSizeKB} KB` : '—';
             const elapsedText = `${(elapsedMs / 1000).toFixed(1)}s`;
 
             onStage?.('done');
             return { sizeKB, elapsedMs, sizeText, elapsedText };
         } finally {
             restoreImages();
-            if (scaledAncestor) scaledAncestor.style.transform = originalTransform;
+            if (scaledAncestor) {
+                scaledAncestor.style.transform = originalTransform;
+                if (originalZoom) {
+                    (scaledAncestor.style as unknown as { zoom?: string }).zoom = originalZoom;
+                }
+            }
         }
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
@@ -377,12 +421,6 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
     const isLandscape = orientation === 'landscape';
     const pageWidth = isLandscape ? baseSize.height : baseSize.width;
     const pageHeight = isLandscape ? baseSize.width : baseSize.height;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        Logger.error('Print failed: Could not open print window');
-        window.print();
-        return;
-    }
 
     // Clone element and convert canvases to images so signatures/stamps are preserved
     const cloned = element.cloneNode(true) as HTMLElement;
@@ -408,7 +446,7 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
         .join('\n');
     const rootStyles = document.documentElement.style.cssText;
 
-    printWindow.document.write(`
+    const htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -451,8 +489,6 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
                                 window.print();
                             } catch (e) {
                                 console.error(e);
-                            } finally {
-                                setTimeout(function() { window.close(); }, 500);
                             }
                         }, 150);
                     });
@@ -466,8 +502,41 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
             <\/script>
         </body>
         </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    // Create a hidden iframe for 100% reliable printing without popup blocking
+    const iframeId = 'pdf-print-frame';
+    let iframe = document.getElementById(iframeId) as HTMLIFrameElement | null;
+    if (iframe) iframe.remove();
+    iframe = document.createElement('iframe');
+    iframe.id = iframeId;
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+        doc.open();
+        doc.write(htmlContent);
+        doc.close();
+        setTimeout(() => {
+            if (iframe) iframe.remove();
+        }, 60000);
+    } else {
+        // Fallback to window.open if iframe is blocked
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+        } else {
+            window.print();
+        }
+    }
 };
 
 export const PAGE_SIZE_OPTIONS = (Object.keys(PAGE_SIZES) as PageSize[]).map(key => ({

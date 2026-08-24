@@ -192,6 +192,7 @@ function convertGroupDe(n: number): string {
 
 function integerToWordsDe(num: number): string {
   if (num === 0) return 'Null';
+  if (num === 1) return 'Ein';
   let remaining = Math.floor(num);
   const parts: string[] = [];
   const billions = Math.floor(remaining / 1000000000);
@@ -235,18 +236,18 @@ export function numberToWords(amount: number, currency: string = 'TRY', language
 
 export function numberToWordsTurkish(amount: number, currency: string = 'TRY'): string {
   if (isNaN(amount) || amount === null || amount === undefined) return '';
-  // Faz5: 1e24 clamp – JS unsafe integer & SCALES overflow koruması
-  const MAX_SAFE_AMOUNT = 1e24;
+  // Faz5: Number.MAX_SAFE_INTEGER clamp – JS unsafe integer koruması
+  const MAX_SAFE_AMOUNT = Number.MAX_SAFE_INTEGER;
   if (Math.abs(amount) >= MAX_SAFE_AMOUNT) {
     amount = Math.sign(amount) * (MAX_SAFE_AMOUNT - 1);
   }
 
-  const isNegative = amount < 0;
   const rounded = Math.round((Math.abs(amount) + Number.EPSILON) * 100) / 100;
+  const isNegative = amount < 0 && rounded > 0;
   const integerPart = Math.floor(rounded);
   const fractionalPart = Math.round((rounded - integerPart) * 100);
 
-  const currInfo = CURRENCY_NAMES[currency.toUpperCase()] || { main: currency, sub: 'Kuruş' };
+  const currInfo = CURRENCY_NAMES[currency.toUpperCase()] || { main: currency, sub: 'Cent' };
 
   const intWords = integerToWords(integerPart);
   let result = `${intWords} ${currInfo.main}`;

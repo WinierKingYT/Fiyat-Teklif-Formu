@@ -45,7 +45,13 @@
   .settings-panel,
   .no-print,
   .btn,
-  button,
+  .app-shell button,
+  .top-bar button,
+  .sidebar button,
+  .pdf-preview-header button,
+  .pdf-zoom-toolbar button,
+  .pdf-tabs-container button,
+  .settings-panel button,
   nav,
   input[type="file"],
   .toast,
@@ -108,8 +114,6 @@
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: #ffffff !important;
-    color: #0f172a !important;
     box-shadow: none !important;
   }
 
@@ -124,7 +128,6 @@
     margin-bottom: 0 !important;
     padding: 0 !important;
     min-height: auto !important;
-    background: #ffffff !important;
     box-shadow: none !important;
     border: none !important;
   }
@@ -182,14 +185,7 @@
 
   /* Dark mode protection during print – Faz4: color-adjust exact */
   [data-theme="dark"],
-  [data-theme="dark"] body,
-  [data-theme="dark"] .modern-theme-container,
-  [data-theme="dark"] .classic-theme-container,
-  [data-theme="dark"] .corporate-theme-container,
-  [data-theme="dark"] .minimal-theme-container,
-  [data-theme="dark"] .pro-theme-container,
-  [data-theme="dark"] .bold-theme-container,
-  [data-theme="dark"] .invoice-theme-container {
+  [data-theme="dark"] body {
     background: #ffffff !important;
     color: #0f172a !important;
     -webkit-print-color-adjust: exact !important;
@@ -201,8 +197,6 @@
   [data-theme="dark"] .bottom-section,
   [data-theme="dark"] .terms-box,
   [data-theme="dark"] .card {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
     border-color: #e2e8f0 !important;
   }
 }
