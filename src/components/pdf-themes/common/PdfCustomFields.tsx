@@ -17,7 +17,7 @@ export const PdfCustomFields: React.FC<PdfCustomFieldsProps> = ({
     style = {}
 }) => {
     const visibleFields = customFields.filter(
-        f => f.showOnPdf !== false && f.value !== undefined && f.value !== null && String(f.value).trim() !== ''
+        f => f.showOnPdf !== false && f.value !== undefined && f.value !== null && (typeof f.value === 'string' || typeof f.value === 'number' || typeof f.value === 'boolean') && String(f.value).trim() !== ''
     );
 
     if (visibleFields.length === 0) return null;

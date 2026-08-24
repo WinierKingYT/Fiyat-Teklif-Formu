@@ -36,7 +36,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             line-height: ${config.bodyLineHeight || '1.35'};
             color: ${config.globalFontColor || '#0f172a'} !important;
             background: var(--pdf-page-bg, #ffffff) !important;
-            font-size: ${config.fontSize || 11}px;
+            font-size: ${typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize || '11px')};
             position: relative;
             box-sizing: border-box;
             border-radius: ${config.borderRadius || 6}px;
@@ -402,13 +402,13 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                 <tr>
                     <th style={{ width: '32px', textAlign: 'center' }}>#</th>
                     {config.showTableImages && <th style={{ width: '46px', textAlign: 'center' }}>{t.image}</th>}
-                    <th>{config.textItem || t.item}</th>
-                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th>{config.textItem ?? t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit ?? t.unit}</th>}
+                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity ?? t.quantity}</th>
+                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice ?? t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount ?? t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat ?? t.tax}</th>}
+                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal ?? t.total}</th>
                 </tr>
             </thead>
             <tbody>
@@ -451,7 +451,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className="modern-theme-container w-full max-w-[210mm] mx-auto" style={containerStyles}>
+        <div id={id} className={`modern-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
             <style>{modernStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
@@ -500,7 +500,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                             <div className="header-right">
                                 <div className="quote-title">{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div className="quote-meta">
-                                    <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
+                                    {quoteData.number && <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>}
                                     <span>•</span>
                                     <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
                                     <span>•</span>
@@ -511,7 +511,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     ) : (
                         <div className="pdf-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.35rem', borderBottom: `1.5px solid ${color}` }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: config.headerInfoFontSize || '8pt', color: '#64748b' }}>
-                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
+                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -601,7 +601,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="summary-row discount">
-                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
+                                                <span>{t.discount}{props.discount?.type !== 'fixed' ? ` (%${subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0})` : ''}:</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}

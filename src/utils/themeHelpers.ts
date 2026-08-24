@@ -45,12 +45,27 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         return [[]];
     }
 
-    // If a custom itemsPerPage is explicitly specified and not the default 20, respect it linearly
+    // If a custom itemsPerPage is explicitly specified and not the default 20, respect it while guarding against extreme description overflow
     if (options.itemsPerPage && options.itemsPerPage !== 20) {
-        const perPage = Math.max(1, options.itemsPerPage);
+        let totalContentWeight = 0;
+        for (const item of items) {
+            let weight = 1;
+            const itemObj = item as Record<string, unknown>;
+            if (typeof itemObj.description === 'string' && itemObj.description.length > 0) {
+                const lines = itemObj.description.split('\n').length;
+                const extraByLength = Math.floor(itemObj.description.length / 80);
+                weight += Math.min(2.5, Math.max(lines - 1, extraByLength) * 0.4);
+            }
+            totalContentWeight += weight;
+        }
+        const avgItemWeight = items.length > 0 ? totalContentWeight / items.length : 1;
+        const adjustedPerPage = avgItemWeight > 1.3
+            ? Math.max(2, Math.floor(options.itemsPerPage / Math.min(1.6, avgItemWeight)))
+            : Math.max(1, options.itemsPerPage);
+
         const chunks: T[][] = [];
-        for (let i = 0; i < items.length; i += perPage) {
-            chunks.push(items.slice(i, i + perPage));
+        for (let i = 0; i < items.length; i += adjustedPerPage) {
+            chunks.push(items.slice(i, i + adjustedPerPage));
         }
         return chunks;
     }

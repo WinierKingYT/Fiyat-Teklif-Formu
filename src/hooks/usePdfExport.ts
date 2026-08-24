@@ -43,7 +43,7 @@ export const usePdfExport = ({
             'ı': 'i', 'İ': 'I', 'ş': 's', 'Ş': 'S', 'ğ': 'g', 'Ğ': 'G',
             'ü': 'u', 'Ü': 'U', 'ö': 'o', 'Ö': 'O', 'ç': 'c', 'Ç': 'C'
         };
-        return value
+        const clean = value
             .split('')
             .map(ch => trMap[ch] || ch)
             .join('')
@@ -52,7 +52,9 @@ export const usePdfExport = ({
             .replace(/[^\w\s-]/g, '')
             .trim()
             .replace(/\s+/g, '_')
+            .replace(/^_+|_+$/g, '')
             .slice(0, 40);
+        return clean || 'Teklif';
     }, []);
 
     const buildPdfFilename = useCallback(() => {
@@ -118,20 +120,26 @@ export const usePdfExport = ({
             await loadPdfFonts([pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily].filter((f): f is string => Boolean(f)));
             const isLandscape = pdfConfig.pageOrientation === 'landscape';
             const baseSize = PAGE_SIZES[pageSize] || PAGE_SIZES.a4;
-            const shareFormat: [number, number] = [baseSize.width, baseSize.height];
+            const shareFormat: [number, number] = isLandscape ? [baseSize.height, baseSize.width] : [baseSize.width, baseSize.height];
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
             const qual = quality === 'draft' ? 2 : quality === 'normal' ? 3 : quality === 'high' ? 4 : quality === 'print' ? 5 : 6;
+            const maxDomDim = Math.max(element.scrollWidth || 0, element.scrollHeight || 0, 1);
+            const effectiveScale = Math.max(1, Math.min(qual, Math.floor(16384 / Math.max(1, maxDomDim))));
 
-            // Zoom transform protection
-            let scaledAncestor: HTMLElement | null = null;
-            let originalTransform = '';
+            // Zoom transform protection for all ancestors
+            const scaledAncestors: { el: HTMLElement; originalTransform: string; originalZoom: string }[] = [];
             let p: HTMLElement | null = element.parentElement as HTMLElement | null;
             while (p) {
-                if (p.style.transform && p.style.transform.includes('scale(')) {
-                    scaledAncestor = p;
-                    originalTransform = p.style.transform;
+                const hasTransform = p.style.transform && p.style.transform.includes('scale(');
+                const pStyleZoom = (p.style as unknown as { zoom?: string }).zoom;
+                if (hasTransform || (pStyleZoom && pStyleZoom !== '1' && pStyleZoom !== 'normal')) {
+                    scaledAncestors.push({
+                        el: p,
+                        originalTransform: p.style.transform,
+                        originalZoom: pStyleZoom || ''
+                    });
                     p.style.transform = 'none';
-                    break;
+                    (p.style as unknown as { zoom?: string }).zoom = '1';
                 }
                 p = p.parentElement as HTMLElement | null;
             }
@@ -158,12 +166,19 @@ export const usePdfExport = ({
                     margin: 0,
                     image: { type: 'png', quality: 1.0 },
                     html2canvas: {
-                        scale: qual,
+                        scale: effectiveScale,
                         useCORS: true,
                         allowTaint: true,
                         backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
                         imageTimeout: 0,
-                        letterRendering: quality !== 'draft'
+                        letterRendering: quality !== 'draft',
+                        ignoreElements: (el: Element) => {
+                            return (
+                                el.classList?.contains('no-print') ||
+                                el.classList?.contains('pdf-placeholder') ||
+                                el.getAttribute?.('data-no-print') === 'true'
+                            );
+                        }
                     },
                     jsPDF: {
                         unit: 'mm',
@@ -174,6 +189,17 @@ export const usePdfExport = ({
                             title: pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
                             author: companyData.name || 'TeklifApp'
                         }
+                    },
+                    pagebreak: {
+                        mode: ['css', 'legacy'],
+                        before: ['.pdf-page:not(:first-child)', '.pdf-page-break', '[class*="pdf-page-break"]'],
+                        avoid: [
+                            '.pdf-footer',
+                            '[class*="pdf-footer"]',
+                            '.signatures-grid',
+                            '.summary-section',
+                            'tr',
+                        ],
                     }
                 } as Html2PdfOptions;
                 const pdfBlob = await html2pdf().set(shareOptions).from(element).outputPdf('blob');
@@ -189,7 +215,12 @@ export const usePdfExport = ({
                     canvas.style.display = '';
                     placeholder.parentNode?.removeChild(placeholder);
                 });
-                if (scaledAncestor) scaledAncestor.style.transform = originalTransform;
+                scaledAncestors.forEach(({ el, originalTransform, originalZoom }) => {
+                    el.style.transform = originalTransform;
+                    if (originalZoom) {
+                        (el.style as unknown as { zoom?: string }).zoom = originalZoom;
+                    }
+                });
             }
         } catch (error) {
             if (error instanceof Error && error.message !== 'Share cancelled' && error.name !== 'AbortError') {

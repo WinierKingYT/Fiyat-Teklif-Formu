@@ -195,6 +195,8 @@ function integerToWordsDe(num: number): string {
   if (num === 1) return 'Ein';
   let remaining = Math.floor(num);
   const parts: string[] = [];
+  const trillions = Math.floor(remaining / 1000000000000);
+  remaining %= 1000000000000;
   const billions = Math.floor(remaining / 1000000000);
   remaining %= 1000000000;
   const millions = Math.floor(remaining / 1000000);
@@ -202,6 +204,7 @@ function integerToWordsDe(num: number): string {
   const thousands = Math.floor(remaining / 1000);
   const hundreds = remaining % 1000;
 
+  if (trillions > 0) parts.push(trillions === 1 ? 'Eine Billion' : `${convertGroupDe(trillions)} Billionen`);
   if (billions > 0) parts.push(billions === 1 ? 'Eine Milliarde' : `${convertGroupDe(billions)} Milliarden`);
   if (millions > 0) parts.push(millions === 1 ? 'Eine Million' : `${convertGroupDe(millions)} Millionen`);
   if (thousands > 0) parts.push(thousands === 1 ? 'Eintausend' : `${convertGroupDe(thousands)}tausend`);

@@ -18,7 +18,7 @@ export const PdfEditableField = memo(({ value, fieldKey, type = 'text', classNam
             onClick={(e) => { e.stopPropagation(); onEdit(fieldKey, value, type); }}
             title={t.clickToEdit}
         >
-            {String(value || '') || <span className="italic text-[var(--color-text-muted)] no-print pdf-placeholder">{t.edit}</span>}
+            {(value !== undefined && value !== null && value !== '') ? String(value) : <span className="italic text-[var(--color-text-muted)] no-print pdf-placeholder">{t.edit}</span>}
         </span>
     );
 });

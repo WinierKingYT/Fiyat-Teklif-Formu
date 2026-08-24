@@ -32,7 +32,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
             line-height: ${config.bodyLineHeight || '1.35'};
             color: ${config.globalFontColor || '#0f172a'};
             background: var(--pdf-page-bg, #ffffff) !important;
-            font-size: ${config.fontSize || 11}px;
+            font-size: ${typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize || '11px')};
             position: relative;
             box-sizing: border-box;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
@@ -203,13 +203,13 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                 <tr>
                     <th style={{ width: '35px', textAlign: 'center' }}>#</th>
                     {config.showTableImages && <th style={{ width: '45px', textAlign: 'center' }}>{t.image}</th>}
-                    <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
-                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '90px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ textAlign: 'left' }}>{config.textItem ?? t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit ?? t.unit}</th>}
+                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity ?? t.quantity}</th>
+                    <th style={{ width: '90px', textAlign: 'right' }}>{config.textUnitPrice ?? t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount ?? t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat ?? t.tax}</th>}
+                    <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal ?? t.total}</th>
                 </tr>
             </thead>
             <tbody>
@@ -252,7 +252,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className="bold-theme-container w-full max-w-[210mm] mx-auto" style={containerStyles}>
+        <div id={id} className={`bold-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
             <style>{boldStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
@@ -307,7 +307,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: `2px solid ${color}`, paddingBottom: '4px', fontSize: '8pt', color: '#64748b' }}>
-                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
+                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                             {config.showPageNumbers !== false && (
                                 <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             )}
@@ -415,7 +415,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="bold-total-row" style={{ color: '#dc2626' }}>
-                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
+                                                <span>{t.discount}{props.discount?.type !== 'fixed' ? ` (%${subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0})` : ''}:</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '700' }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -456,7 +456,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                                         <div className="bold-sig-area">
                                             {(signature || companyData.signature) && (
                                                 <img
-                                                    src={(signature || companyData.signature) as string}
+                                                    src={(signature !== undefined ? signature : companyData.signature) as string}
                                                     alt="Signature"
                                                     style={{ maxHeight: '38px', maxWidth: '110px', objectFit: 'contain' }}
                                                 />

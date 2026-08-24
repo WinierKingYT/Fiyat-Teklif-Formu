@@ -19,15 +19,19 @@ const formatDate = (dateString?: string, locale = 'tr-TR') => {
     const isoMatch = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
     if (isoMatch) {
         const [, y, m, d] = isoMatch.map(Number);
-        const date = new Date(y, m - 1, d);
-        if (!isNaN(date.getTime())) return date.toLocaleDateString(locale);
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+            const date = new Date(y, m - 1, d);
+            if (!isNaN(date.getTime())) return date.toLocaleDateString(locale);
+        }
     }
     // Check DD-MM-YYYY or DD.MM.YYYY
     const dmyMatch = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
     if (dmyMatch) {
         const [, d, m, y] = dmyMatch.map(Number);
-        const date = new Date(y, m - 1, d);
-        if (!isNaN(date.getTime())) return date.toLocaleDateString(locale);
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+            const date = new Date(y, m - 1, d);
+            if (!isNaN(date.getTime())) return date.toLocaleDateString(locale);
+        }
     }
     const d = new Date(trimmed);
     return isNaN(d.getTime()) ? dateString : d.toLocaleDateString(locale);
@@ -82,6 +86,9 @@ const PrintableQuote = React.memo(({
     const currentLocale = localeMap[language] || 'tr-TR';
     const formatCurrency = useCallback((amount: number) => {
         const currency = (quoteData.currency || 'TRY').trim().toUpperCase();
+        if (amount === undefined || amount === null || isNaN(amount)) {
+            return `0,00 ${currency}`;
+        }
         try {
             return new Intl.NumberFormat(currentLocale, { style: 'currency', currency: currency }).format(amount);
         } catch {

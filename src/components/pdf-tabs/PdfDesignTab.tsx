@@ -65,6 +65,14 @@ const PdfDesignTab: React.FC<PdfDesignTabProps> = ({
     loadTemplate,
     deleteTemplate
 }) => {
+    const [customHex, setCustomHex] = React.useState(pdfConfig.color || '#2563eb');
+
+    React.useEffect(() => {
+        if (pdfConfig.color) {
+            setCustomHex(pdfConfig.color);
+        }
+    }, [pdfConfig.color]);
+
     const PDF_PRESETS = useMemo<PdfPreset[]>(() => [
         {
             id: 'corporate',
@@ -309,15 +317,24 @@ const PdfDesignTab: React.FC<PdfDesignTabProps> = ({
                     <div className="flex items-center gap-2">
                         <input
                             type="color"
-                            value={pdfConfig.color || '#2563eb'}
-                            onChange={(e) => handleConfigChange('color', e.target.value)}
+                            value={/^#[0-9A-Fa-f]{6}$/.test(customHex) ? customHex : (pdfConfig.color || '#2563eb')}
+                            onChange={(e) => {
+                                setCustomHex(e.target.value);
+                                handleConfigChange('color', e.target.value);
+                            }}
                             className="w-7 h-7 p-0 border-0 rounded cursor-pointer shrink-0"
                             title={t('customColor')}
                         />
                         <input
                             type="text"
-                            value={pdfConfig.color || '#2563eb'}
-                            onChange={(e) => handleConfigChange('color', e.target.value)}
+                            value={customHex}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setCustomHex(val);
+                                if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                                    handleConfigChange('color', val);
+                                }
+                            }}
                             className="w-20 px-1.5 py-1 text-xs font-mono border border-[var(--color-border)] rounded uppercase focus:outline-none focus:ring-1 focus:ring-[var(--color-info)]"
                             placeholder="#000000"
                         />
@@ -331,7 +348,11 @@ const PdfDesignTab: React.FC<PdfDesignTabProps> = ({
                 <div>
                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('generalFont')}</label>
                     <select
-                        value={pdfConfig.globalFontFamily?.replace(/['"]/g, '').split(',')[0].trim() || 'Inter'}
+                        value={(() => {
+                            const current = (pdfConfig.globalFontFamily || '').toLowerCase();
+                            const options = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Playfair Display', 'Merriweather', 'Roboto Slab', 'Oswald'];
+                            return options.find(f => current.includes(f.toLowerCase())) || 'Inter';
+                        })()}
                         onChange={(e) => handleConfigChange('globalFontFamily', e.target.value)}
                         className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                     >

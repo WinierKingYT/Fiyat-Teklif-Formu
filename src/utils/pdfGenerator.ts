@@ -133,7 +133,10 @@ const PDF_METADATA: Record<string, PdfMetadata> = {
 
 export const getPdfMetadata = (language: string = 'tr'): PdfMetadata => PDF_METADATA[language] || PDF_METADATA.tr;
 
+let pageBreakStyleCount = 0;
+
 const injectPageBreakStyles = (containerId?: string) => {
+    pageBreakStyleCount++;
     if (document.getElementById(PAGE_BREAK_STYLE_ID)) return;
     const prefix = containerId ? `#${containerId} ` : '';
     const style = document.createElement('style');
@@ -165,8 +168,11 @@ const injectPageBreakStyles = (containerId?: string) => {
 };
 
 const removePageBreakStyles = () => {
-    const style = document.getElementById(PAGE_BREAK_STYLE_ID);
-    if (style) style.remove();
+    pageBreakStyleCount = Math.max(0, pageBreakStyleCount - 1);
+    if (pageBreakStyleCount === 0) {
+        const style = document.getElementById(PAGE_BREAK_STYLE_ID);
+        if (style) style.remove();
+    }
 };
 
 /**
@@ -197,8 +203,8 @@ const replaceImagesWithCanvas = (container: HTMLElement, scale: number): (() => 
     images.forEach(img => {
         if (!img.src || img.src.startsWith('data:image/svg')) return;
         const canvas = document.createElement('canvas');
-        let w = img.naturalWidth || (img.width * scale) || 100;
-        let h = img.naturalHeight || (img.height * scale) || 100;
+        let w = (img.naturalWidth || img.width) * scale || 100;
+        let h = (img.naturalHeight || img.height) * scale || 100;
         if (w < 5 || h < 5) return;
         const maxDim = Math.max(w, h);
         if (maxDim > MAX_IMAGE_DIMENSION) {
@@ -309,21 +315,20 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         const lowerScale = Math.min(qual.scale, Math.floor(16384 / Math.max(1, maxDomDim)));
         const effectiveScale = Math.max(1, lowerScale);
 
-        // PdfPreviewCanvas zoom/scale transform cleanup
-        let scaledAncestor: HTMLElement | null = null;
-        let originalTransform = '';
-        let originalZoom = '';
+        // PdfPreviewCanvas zoom/scale transform cleanup (handle all nested ancestors)
+        const scaledAncestors: { el: HTMLElement; originalTransform: string; originalZoom: string }[] = [];
         let p: HTMLElement | null = element.parentElement as HTMLElement | null;
         while (p) {
             const hasTransform = p.style.transform && p.style.transform.includes('scale(');
             const pStyleZoom = (p.style as unknown as { zoom?: string }).zoom;
             if (hasTransform || (pStyleZoom && pStyleZoom !== '1' && pStyleZoom !== 'normal')) {
-                scaledAncestor = p;
-                originalTransform = p.style.transform;
-                originalZoom = pStyleZoom || '';
+                scaledAncestors.push({
+                    el: p,
+                    originalTransform: p.style.transform,
+                    originalZoom: pStyleZoom || ''
+                });
                 p.style.transform = 'none';
                 (p.style as unknown as { zoom?: string }).zoom = '1';
-                break;
             }
             p = p.parentElement as HTMLElement | null;
         }
@@ -384,7 +389,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
             await worker.save();
 
             const elapsedMs = Date.now() - startTime;
-            const sizeKB = realSizeKB > 0 ? realSizeKB : Math.round((domWidthPx * domHeightPx * 4) / 10240);
+            const sizeKB = realSizeKB > 0 ? realSizeKB : Math.round((domWidthPx * domHeightPx * 4) / 1024);
             const sizeText = realSizeKB > 0 ? `~${realSizeKB} KB` : '—';
             const elapsedText = `${(elapsedMs / 1000).toFixed(1)}s`;
 
@@ -392,12 +397,12 @@ export const generatePDF = async (elementId: string, filename?: string, options:
             return { sizeKB, elapsedMs, sizeText, elapsedText };
         } finally {
             restoreImages();
-            if (scaledAncestor) {
-                scaledAncestor.style.transform = originalTransform;
+            scaledAncestors.forEach(({ el, originalTransform, originalZoom }) => {
+                el.style.transform = originalTransform;
                 if (originalZoom) {
-                    (scaledAncestor.style as unknown as { zoom?: string }).zoom = originalZoom;
+                    (el.style as unknown as { zoom?: string }).zoom = originalZoom;
                 }
-            }
+            });
         }
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
@@ -511,22 +516,27 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
     iframe = document.createElement('iframe');
     iframe.id = iframeId;
     iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.opacity = '0';
     iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
     document.body.appendChild(iframe);
 
     const doc = iframe.contentWindow?.document || iframe.contentDocument;
     if (doc) {
+        if (iframe.contentWindow) {
+            iframe.contentWindow.onafterprint = () => {
+                if (iframe) iframe.remove();
+            };
+        }
         doc.open();
         doc.write(htmlContent);
         doc.close();
         setTimeout(() => {
-            if (iframe) iframe.remove();
-        }, 60000);
+            if (iframe && document.body.contains(iframe)) iframe.remove();
+        }, 120000);
     } else {
         // Fallback to window.open if iframe is blocked
         const printWindow = window.open('', '_blank');

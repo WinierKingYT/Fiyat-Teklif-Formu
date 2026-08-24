@@ -33,7 +33,11 @@ export const PdfWatermark: React.FC<PdfWatermarkProps> = ({ config, className })
                     fontSize: `${config.watermarkFontSize || 96}px`,
                     fontWeight: 'bold',
                     color: config.watermarkColor || '#000000',
-                    whiteSpace: 'nowrap',
+                    maxWidth: '90%',
+                    textAlign: 'center',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    lineHeight: '1.1',
                     userSelect: 'none',
                     letterSpacing: '0.05em'
                 }}

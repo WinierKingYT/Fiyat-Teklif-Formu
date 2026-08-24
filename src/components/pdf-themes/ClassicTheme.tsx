@@ -35,7 +35,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
             line-height: ${config.bodyLineHeight || '1.35'};
             color: ${config.globalFontColor || '#1e293b'};
             background: var(--pdf-page-bg, #ffffff) !important;
-            font-size: ${config.fontSize || 11}px;
+            font-size: ${typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize || '11px')};
             position: relative;
             box-sizing: border-box;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
@@ -104,7 +104,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
         ` : ''}
 
         .classic-table td {
-            height: ${config.tableRowHeight || 0}px;
+            height: ${typeof config.tableRowHeight === 'number' && config.tableRowHeight > 0 ? config.tableRowHeight + 'px' : 'auto'};
         }
 
         ${config.tableShowVerticalLines ? `
@@ -154,13 +154,13 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                 <tr>
                     <th style={{ width: '35px' }}>#</th>
                     {config.showTableImages && <th style={{ width: '45px' }}>{t.image}</th>}
-                    <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
-                    {config.showTableUnit && <th style={{ width: '50px' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '60px' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '50px' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ textAlign: 'left' }}>{config.textItem ?? t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '50px' }}>{config.textUnit ?? t.unit}</th>}
+                    <th style={{ width: '60px' }}>{config.textQuantity ?? t.quantity}</th>
+                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice ?? t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount ?? t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '50px' }}>{config.textVat ?? t.tax}</th>}
+                    <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal ?? t.total}</th>
                 </tr>
             </thead>
             <tbody>
@@ -201,7 +201,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className="classic-theme-container w-full max-w-[210mm] mx-auto" style={containerStyles}>
+        <div id={id} className={`classic-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
             <style>{classicStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
@@ -269,7 +269,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                     ) : (
                         <div style={{ borderBottom: '1.5px solid #334155', marginBottom: '0.75rem', paddingBottom: '0.35rem' }}>
                             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#475569' }}>
-                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
+                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                                 {config.showPageNumbers !== false && (
                                     <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                                 )}
@@ -460,7 +460,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '4px', minHeight: '40px' }}>
                                             {(signature || companyData.signature) && (
-                                                <img src={(signature || companyData.signature) as string} alt="Signature" style={{ maxHeight: '38px', maxWidth: '100px', objectFit: 'contain' }} />
+                                                <img src={(signature !== undefined ? signature : companyData.signature) as string} alt="Signature" style={{ maxHeight: '38px', maxWidth: '100px', objectFit: 'contain' }} />
                                             )}
                                             {companyData.stamp && (
                                                 <img src={companyData.stamp} alt="Stamp" style={{ maxHeight: '38px', maxWidth: '75px', objectFit: 'contain', opacity: 0.85 }} />

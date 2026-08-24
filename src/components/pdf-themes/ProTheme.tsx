@@ -35,7 +35,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
             font-family: ${config.globalFontFamily || "'Plus Jakarta Sans', 'Inter', sans-serif"};
             line-height: ${config.bodyLineHeight || '1.35'};
             color: ${config.globalFontColor || '#1e293b'};
-            font-size: ${config.fontSize || 11}px;
+            font-size: ${typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize || '11px')};
             background-color: var(--pdf-page-bg, #ffffff) !important;
             position: relative;
             box-sizing: border-box;
@@ -202,13 +202,13 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                 <tr>
                     <th style={{ width: '35px', textAlign: 'center' }}>#</th>
                     {config.showTableImages && <th style={{ width: '45px', textAlign: 'center' }}>{t.image}</th>}
-                    <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
-                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ textAlign: 'left' }}>{config.textItem ?? t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit ?? t.unit}</th>}
+                    <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity ?? t.quantity}</th>
+                    <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice ?? t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount ?? t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat ?? t.tax}</th>}
+                    <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal ?? t.total}</th>
                 </tr>
             </thead>
             <tbody>
@@ -251,7 +251,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className="pro-theme-container w-full max-w-[210mm] mx-auto" style={containerStyles}>
+        <div id={id} className={`pro-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
             <style>{proStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
@@ -292,7 +292,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                 <div style={{ fontSize: '1.25rem', fontWeight: '800', textTransform: 'uppercase', color: '#0f172a' }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div style={{ marginTop: '4px', display: 'inline-flex', gap: '8px', fontSize: '8pt', background: '#f8fafc', padding: '3px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                    <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
+                                    {quoteData.number && <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>}
                                     <span>•</span>
                                     <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
                                     <span>•</span>
@@ -302,7 +302,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ) : (
                         <div style={{ marginBottom: '8px', paddingBottom: '4px', borderBottom: `1.5px solid ${color}`, display: 'flex', justifyContent: 'space-between', fontSize: '8pt', color: '#64748b' }}>
-                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
+                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                             <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                         </div>
                     ))}
@@ -435,7 +435,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#dc2626' }}>
-                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
+                                                <span>{t.discount}{props.discount?.type !== 'fixed' ? ` (%${subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0})` : ''}:</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -475,7 +475,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                     <div className="pro-sig-box">
                                         <div className="pro-sig-area">
                                             {(signature || companyData.signature) && (
-                                                <img src={(signature || companyData.signature) as string} alt={t.signature} style={{ maxHeight: '38px', maxWidth: '110px', objectFit: 'contain' }} />
+                                                <img src={(signature !== undefined ? signature : companyData.signature) as string} alt={t.signature} style={{ maxHeight: '38px', maxWidth: '110px', objectFit: 'contain' }} />
                                             )}
                                             {companyData.stamp && (
                                                 <img src={companyData.stamp} alt={t.companyStamp} style={{ maxHeight: '38px', maxWidth: '80px', objectFit: 'contain', opacity: 0.85 }} />

@@ -35,7 +35,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
             line-height: ${config.bodyLineHeight || '1.35'};
             color: ${config.globalFontColor || '#0f172a'};
             background: var(--pdf-page-bg, #ffffff) !important;
-            font-size: ${config.fontSize || 10.5}px;
+            font-size: ${typeof config.fontSize === 'number' ? config.fontSize + 'px' : (config.fontSize || '11px')};
             position: relative;
             box-sizing: border-box;
             box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
@@ -129,13 +129,13 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                 <tr>
                     <th style={{ width: '30px', textAlign: 'center' }}>#</th>
                     {config.showTableImages && <th style={{ width: '40px', textAlign: 'center' }}>{t.image}</th>}
-                    <th style={{ textAlign: 'left' }}>{config.textItem || t.item}</th>
-                    {config.showTableUnit && <th style={{ width: '45px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
-                    <th style={{ width: '50px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
-                    <th style={{ width: '80px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '45px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
-                    {config.showTableTax && <th style={{ width: '45px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
-                    <th style={{ width: '95px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
+                    <th style={{ textAlign: 'left' }}>{config.textItem ?? t.item}</th>
+                    {config.showTableUnit && <th style={{ width: '45px', textAlign: 'center' }}>{config.textUnit ?? t.unit}</th>}
+                    <th style={{ width: '50px', textAlign: 'center' }}>{config.textQuantity ?? t.quantity}</th>
+                    <th style={{ width: '80px', textAlign: 'right' }}>{config.textUnitPrice ?? t.unitPrice}</th>
+                    {hasLineItemDiscounts && <th style={{ width: '45px', textAlign: 'center' }}>{config.textDiscount ?? t.discount}</th>}
+                    {config.showTableTax && <th style={{ width: '45px', textAlign: 'center' }}>{config.textVat ?? t.tax}</th>}
+                    <th style={{ width: '95px', textAlign: 'right' }}>{config.textTotal ?? t.total}</th>
                 </tr>
             </thead>
             <tbody>
@@ -176,7 +176,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className="minimal-theme-container w-full max-w-[210mm] mx-auto" style={containerStyles}>
+        <div id={id} className={`minimal-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
             <style>{minimalStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
@@ -218,7 +218,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                 <div style={{ fontSize: '1.2rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.02em', color: '#0f172a' }}>{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
                                 <div style={{ marginTop: '3px', display: 'inline-flex', gap: '6px', fontSize: '7.5pt', background: '#f8fafc', padding: '2px 6px', borderRadius: '3px', border: '1px solid #e2e8f0' }}>
-                                    <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>
+                                    {quoteData.number && <span style={{ fontWeight: '700', color: '#0f172a' }}>#{quoteData.number}</span>}
                                     <span>•</span>
                                     <span>{t.date}: {formatDate(quoteData.date, currentLocale)}</span>
                                     <span>•</span>
@@ -228,7 +228,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px', fontSize: '7.5pt', color: '#94a3b8' }}>
-                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
+                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} {quoteData.number ? ` (#${quoteData.number})` : ''}</span>
                             {config.showPageNumbers !== false && (
                                 <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
                             )}
@@ -334,7 +334,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                                 <div style={{ display: 'grid', gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '260px', margin: config.showCustomerSignature ? '8px 0 4px 0' : '8px auto 4px auto', gap: '16px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                                     <div style={{ textAlign: 'center' }}>
                                         <div style={{ minHeight: '40px', borderBottom: '1px solid #cbd5e1', paddingBottom: '2px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px' }}>
-                                            {(signature || companyData.signature) && <img src={(signature || companyData.signature) as string} alt="" style={{ maxHeight: '36px', maxWidth: '90px', objectFit: 'contain' }} />}
+                                            {(signature || companyData.signature) && <img src={(signature !== undefined ? signature : companyData.signature) as string} alt="" style={{ maxHeight: '36px', maxWidth: '90px', objectFit: 'contain' }} />}
                                             {companyData.stamp && <img src={companyData.stamp} alt="" style={{ maxHeight: '36px', maxWidth: '70px', objectFit: 'contain', opacity: 0.85 }} />}
                                         </div>
                                         <div style={{ fontSize: '7pt', fontWeight: '600', color: '#0f172a', paddingTop: '2px' }}>{t.seller} ({t.deliveredBy})</div>
