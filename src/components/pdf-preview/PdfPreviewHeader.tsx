@@ -38,6 +38,7 @@ const PdfPreviewHeader: React.FC<PdfPreviewHeaderProps> = ({
                         onClick={handleExcelExport}
                         className="p-1.5 text-[var(--color-success)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
                         title={t('downloadExcel')}
+                        aria-label={t('downloadExcel')}
                     >
                         <FileSpreadsheet size={15} />
                     </button>
@@ -45,6 +46,7 @@ const PdfPreviewHeader: React.FC<PdfPreviewHeaderProps> = ({
                         onClick={handleCsvExport}
                         className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
                         title={t('downloadCSV')}
+                        aria-label={t('downloadCSV')}
                     >
                         <FileText size={15} />
                     </button>
@@ -52,6 +54,7 @@ const PdfPreviewHeader: React.FC<PdfPreviewHeaderProps> = ({
                         onClick={handlePrint}
                         className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
                         title={t('print')}
+                        aria-label={t('print')}
                     >
                         <Printer size={15} />
                     </button>
@@ -59,6 +62,7 @@ const PdfPreviewHeader: React.FC<PdfPreviewHeaderProps> = ({
                         onClick={handleShare}
                         className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-info)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
                         title={t('share')}
+                        aria-label={t('share')}
                     >
                         <Share2 size={15} />
                     </button>
@@ -68,6 +72,7 @@ const PdfPreviewHeader: React.FC<PdfPreviewHeaderProps> = ({
                     onClick={() => setShowVersionModal(true)}
                     className="flex items-center gap-1 px-2 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-[var(--color-bg-hover)] rounded-lg border border-indigo-200 dark:border-indigo-800/40 transition-colors font-medium"
                     title={t('saveAsVersion') || 'Versiyon Olarak Kaydet'}
+                    aria-label={t('saveAsVersion') || 'Versiyon Olarak Kaydet'}
                 >
                     <BookmarkPlus size={14} />
                     <span className="hidden sm:inline">{t('version') || 'Sürüm'}</span>
@@ -78,6 +83,7 @@ const PdfPreviewHeader: React.FC<PdfPreviewHeaderProps> = ({
                     disabled={isGenerating}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-white rounded-[var(--radius)] shadow-sm hover:shadow transition-all text-xs font-semibold ${isGenerating ? 'bg-[var(--color-text-muted)] cursor-not-allowed' : 'bg-[var(--color-info)] hover:opacity-95'}`}
                     title={t('downloadPdf')}
+                    aria-label={t('downloadPdf')}
                 >
                     {isGenerating ? (
                         <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />

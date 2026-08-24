@@ -22,13 +22,16 @@ const PdfVersionModal: React.FC<PdfVersionModalProps> = ({
 
     return (
         <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pdf-version-modal-title"
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={(e) => { if (e.target === e.currentTarget) setShowVersionModal(false); }}
         >
             <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] shadow-xl max-w-sm w-full p-5 space-y-4">
                 <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                     <BookmarkPlus size={20} />
-                    <h3 className="font-semibold text-sm text-[var(--color-text)]">{t('saveQuoteVersion') || 'Teklif Sürümü Kaydet'}</h3>
+                    <h3 id="pdf-version-modal-title" className="font-semibold text-sm text-[var(--color-text)]">{t('saveQuoteVersion') || 'Teklif Sürümü Kaydet'}</h3>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)]">
                     {t('saveVersionDesc') || 'Mevcut teklif verilerini gelecekte geri dönebileceğiniz kalıcı bir snapshot (sürüm) olarak saklayın.'}
