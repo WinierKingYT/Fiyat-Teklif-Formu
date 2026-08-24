@@ -215,7 +215,7 @@ const replaceImagesWithCanvas = (container: HTMLElement, scale: number): (() => 
     };
 };
 
-const PAGE_SIZES: Record<PageSize, { width: number; height: number }> = {
+export const PAGE_SIZES: Record<PageSize, { width: number; height: number }> = {
     'a4': { width: 210, height: 297 },
     'a5': { width: 148, height: 210 },
     'letter': { width: 215.9, height: 279.4 },
@@ -315,7 +315,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                 },
                 jsPDF: {
                     unit: 'mm',
-                    format: [size.width, size.height],
+                    format: [baseSize.width, baseSize.height],
                     orientation: isLandscape ? 'landscape' : 'portrait',
                     compress: true,
                     properties: {
@@ -339,10 +339,13 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                 },
             };
 
-            await html2pdf().set(opt as unknown as Html2PdfOptions).from(element).save();
+            const worker = html2pdf().set(opt as unknown as Html2PdfOptions).from(element);
+            const pdfBlob = await worker.outputPdf('blob');
+            const realSizeKB = Math.round(pdfBlob.size / 1024);
+            await worker.save();
 
             const elapsedMs = Date.now() - startTime;
-            const sizeKB = Math.round(docFilename.length * 10);
+            const sizeKB = realSizeKB > 0 ? realSizeKB : Math.round((domWidthPx * domHeightPx * 4) / 10240);
             const sizeText = `~${sizeKB} KB`;
             const elapsedText = `${(elapsedMs / 1000).toFixed(1)}s`;
 
@@ -403,6 +406,8 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
         .map(s => s.outerHTML)
         .join('\n');
+    const rootStyles = document.documentElement.style.cssText;
+
     printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -410,11 +415,12 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
             <title>${meta.printTitle}</title>
             ${styles}
             <style>
-                body { margin: 0; padding: 10mm; background: ${backgroundColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                :root { ${rootStyles} }
+                body { margin: 0; padding: 0; background: ${backgroundColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 @page { margin: 0; size: ${pageWidth}mm ${pageHeight}mm; }
                 @media print {
                     body { margin: 0; padding: 0; }
-                    .no-print { display: none !important; }
+                    .no-print, .pdf-placeholder { display: none !important; }
                     .pdf-section { page-break-inside: avoid; }
                     .pdf-page-break { page-break-before: always; }
                     .pdf-table-row { page-break-inside: avoid; }
@@ -423,23 +429,39 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
             </style>
         </head>
         <body>
-            ${cloned.innerHTML}
+            ${cloned.outerHTML}
             <script>
+                function waitForImages(callback) {
+                    var imgs = Array.from(document.querySelectorAll('img'));
+                    if (imgs.length === 0) { callback(); return; }
+                    var promises = imgs.map(function(img) {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(function(resolve) {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        });
+                    });
+                    Promise.all(promises).then(callback).catch(callback);
+                }
                 function doPrint() {
-                    try {
-                        window.focus();
-                        window.print();
-                    } catch (e) {
-                        console.error(e);
-                    } finally {
-                        setTimeout(function() { window.close(); }, 500);
-                    }
+                    waitForImages(function() {
+                        setTimeout(function() {
+                            try {
+                                window.focus();
+                                window.print();
+                            } catch (e) {
+                                console.error(e);
+                            } finally {
+                                setTimeout(function() { window.close(); }, 500);
+                            }
+                        }, 150);
+                    });
                 }
                 if (document.readyState === 'complete') {
-                    setTimeout(doPrint, 300);
+                    setTimeout(doPrint, 100);
                 } else {
-                    window.addEventListener('load', function() { setTimeout(doPrint, 300); });
-                    setTimeout(doPrint, 1500);
+                    window.addEventListener('load', doPrint);
+                    setTimeout(doPrint, 2000);
                 }
             <\/script>
         </body>

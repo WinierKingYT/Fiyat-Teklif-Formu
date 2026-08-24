@@ -11,8 +11,9 @@ export const PdfWatermark: React.FC<PdfWatermarkProps> = ({ config, className })
     return (
         <div className={className || ''} style={{
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            pointerEvents: 'none', zIndex: 0, transform: `rotate(${config.watermarkRotation ?? -30}deg)`,
-            opacity: config.watermarkOpacity, fontSize: `${config.watermarkFontSize || 96}px`,
+            pointerEvents: 'none', zIndex: 0, overflow: 'hidden', transform: `rotate(${config.watermarkRotation ?? -30}deg)`,
+            opacity: typeof config.watermarkOpacity === 'number' ? config.watermarkOpacity : 0.1,
+            fontSize: `${config.watermarkFontSize || 96}px`,
             fontWeight: 'bold', color: config.watermarkColor || '#000000', whiteSpace: 'nowrap'
         }}>
             {config.watermarkText}

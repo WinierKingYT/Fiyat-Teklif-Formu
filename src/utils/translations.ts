@@ -58,7 +58,12 @@ export const translations = {
         edit: 'Düzenle',
         selectItem: 'Satırı seç',
         duplicateItem: 'Çoğalt',
-        deleteItem: 'Satırı sil'
+        deleteItem: 'Satırı sil',
+        continued: '(Devamı)',
+        customerApproval: 'Müşteri Onayı',
+        taxInclusive: 'KDV Dahil',
+        taxExclusive: 'KDV Hariç',
+        amountInWordsLabel: 'Yazı İle'
     },
     en: {
         quote: 'QUOTE',
@@ -119,7 +124,12 @@ export const translations = {
         edit: 'Edit',
         selectItem: 'Select row',
         duplicateItem: 'Duplicate',
-        deleteItem: 'Delete row'
+        deleteItem: 'Delete row',
+        continued: '(Continued)',
+        customerApproval: 'Customer Approval',
+        taxInclusive: 'VAT Incl.',
+        taxExclusive: 'VAT Excl.',
+        amountInWordsLabel: 'Amount in Words'
     },
     de: {
         quote: 'ANGEBOT',
@@ -180,6 +190,11 @@ export const translations = {
         edit: 'Bearbeiten',
         selectItem: 'Zeile auswählen',
         duplicateItem: 'Duplizieren',
-        deleteItem: 'Zeile löschen'
+        deleteItem: 'Zeile löschen',
+        continued: '(Fortsetzung)',
+        customerApproval: 'Kundenbestätigung',
+        taxInclusive: 'Inkl. MwSt.',
+        taxExclusive: 'Exkl. MwSt.',
+        amountInWordsLabel: 'Betrag in Worten'
     }
 };

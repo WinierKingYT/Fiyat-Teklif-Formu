@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
@@ -12,7 +12,6 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
         companyData,
         quoteData,
         customerData,
-        items,
         bankData,
         signature,
         t,
@@ -24,11 +23,8 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
         total,
         currentLocale,
         hasLineItemDiscounts,
-        onEdit,
-        activeLayout
     } = props;
-    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
-
+    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
     const corporateStyles = useMemo(() => `
         .corporate-theme-container {
@@ -252,9 +248,6 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
         }
     `, [color, config]);
 
-
-
-    
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="corporate-table">
             <thead>
@@ -265,38 +258,46 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                     {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
                     <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
                     <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
                     {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
                     <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
-                {tableItems.map((item, index) => (
-                    <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}>{startIndex + index + 1}</td>
-                        {config.showTableImages && (
+                {tableItems.map((item, index) => {
+                    const isFixedDiscount = item.discountType === 'fixed';
+                    const discountVal = Number(item.discountRate) || 0;
+                    const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
+                    const baseTotal = (item.quantity || 0) * (item.price || 0);
+                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+
+                    return (
+                        <tr key={startIndex + index}>
+                            <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b' }}>{startIndex + index + 1}</td>
+                            {config.showTableImages && (
+                                <td>
+                                    <div className="corporate-item-image">
+                                        {item.image ? (
+                                            <img src={item.image} alt="" />
+                                        ) : (
+                                            <span style={{ fontSize: '9px', color: '#9ca3af' }}>-</span>
+                                        )}
+                                    </div>
+                                </td>
+                            )}
                             <td>
-                                <div className="corporate-item-image">
-                                    {item.image ? (
-                                        <img src={item.image} alt="" />
-                                    ) : (
-                                        <span style={{ fontSize: '9px', color: '#9ca3af' }}>-</span>
-                                    )}
-                                </div>
+                                <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
+                                {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
                             </td>
-                        )}
-                        <td>
-                            <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
-                        </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
-                        <td style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
-                    </tr>
-                ))}
+                            {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                            <td style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                            {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                            <td style={{ textAlign: 'right', fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );
@@ -329,11 +330,11 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                     </div>
                                 )}
                                 <div style={{ fontSize: config.headerTitleFontSize || '1.15rem', fontWeight: config.headerTitleFontWeight || '800', color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
-                                {companyData.address && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>{companyData.address}</div>}
+                                {companyData.address && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>{renderEditable(companyData.address, 'companyAddress')}</div>}
                                 <div style={{ fontSize: '8pt', color: '#64748b' }}>{companyData.phone} | {companyData.email}</div>
                                 {(companyData.taxOffice || companyData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8' }}>
-                                        {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                        {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                         {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -393,7 +394,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                 )}
                                 {(customerData.taxOffice || customerData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                        {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                        {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                         {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -456,25 +457,25 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="corporate-total-row" style={{ color: '#dc2626' }}>
-                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)})</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '600' }}>-{formatCurrency(discountAmount)}</span>
+                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
+                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
                                             <>
                                                 {Object.keys(vatBreakdown).length > 1 ? (
                                                     Object.entries(vatBreakdown)
-                                                        .filter(([_, data]) => data.tax > 0)
+                                                        .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} className="corporate-total-row" style={{ fontSize: '7.5pt' }}>
-                                                                <span>{t.tax} (%{rate})</span>
-                                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
+                                                                <span>{t.vat || t.tax} (%{rate}):</span>
+                                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(data.tax)}</span>
                                                             </div>
                                                         ))
                                                 ) : (
                                                     <div className="corporate-total-row">
-                                                        <span>{t.tax}</span>
-                                                        <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
+                                                        <span>{t.vat || t.tax}:</span>
+                                                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(totalTax)}</span>
                                                     </div>
                                                 )}
                                             </>
@@ -492,7 +493,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="corporate-signatures">
+                                <div className="corporate-signatures" style={{ gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '280px', margin: config.showCustomerSignature ? '8px 0 0 0' : '8px auto 0 auto' }}>
                                     <div className="corporate-sig-box">
                                         <div className="corporate-sig-area">
                                             {(signature || companyData.signature) && (
@@ -504,35 +505,41 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         <div className="corporate-sig-label">{t.seller} ({t.deliveredBy})</div>
                                     </div>
-                                    <div className="corporate-sig-box">
-                                        <div className="corporate-sig-area">
+                                    {config.showCustomerSignature && (
+                                        <div className="corporate-sig-box">
+                                            <div className="corporate-sig-area">
+                                            </div>
+                                            <div className="corporate-sig-label">{t.customer} ({t.receivedBy})</div>
                                         </div>
-                                        <div className="corporate-sig-label">{t.customer} ({t.receivedBy})</div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* Footer */}
                             {showSection('footer') && (
                             <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '7.5pt', color: '#64748b' }}>
-                                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                    <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
-                                    {companyData.phone && <span>• {companyData.phone}</span>}
-                                    {companyData.email && <span>• {companyData.email}</span>}
-                                    {companyData.website && <span>• {companyData.website}</span>}
-                                </div>
-                                <div style={{ marginTop: '2px', fontSize: '7pt', color: '#94a3b8' }}>
-                                    {t.thankYou} • {t.regards}
-                                </div>
+                                {config.customFooter ? (
+                                    <div>{config.customFooter}</div>
+                                ) : (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                            <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
+                                            {companyData.phone && <span>• {companyData.phone}</span>}
+                                            {companyData.email && <span>• {companyData.email}</span>}
+                                            {companyData.website && <span>• {companyData.website}</span>}
+                                        </div>
+                                        <div style={{ marginTop: '2px', fontSize: '7pt', color: '#94a3b8' }}>
+                                            {t.thankYou} • {t.regards}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                             )}
-
-                            
-
-                            {/* Page Number */}
-                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
+
+                    {/* Page Number on every page */}
+                    <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                 </div>
             ))}
         </div>
@@ -540,5 +547,3 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
 };
 
 export default CorporateTheme;
-
-

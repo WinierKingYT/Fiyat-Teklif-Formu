@@ -24,9 +24,9 @@ const PdfLayoutTab: React.FC<PdfLayoutTabProps> = ({
                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('pageMargin')}</label>
                     <div className="grid grid-cols-3 gap-2">
                         {[
-                            { val: 'compact', label: 'Dar' },
-                            { val: 'normal', label: 'Normal' },
-                            { val: 'wide', label: 'Geniş' }
+                            { val: 'compact', label: t('marginCompact') || 'Dar' },
+                            { val: 'normal', label: t('marginNormal') || 'Normal' },
+                            { val: 'wide', label: t('marginWide') || 'Geniş' }
                         ].map(opt => (
                             <button type="button"
                                 key={opt.val}

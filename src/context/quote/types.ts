@@ -279,9 +279,11 @@ export const pdfConfigSchema = z.object({
   textUnit: z.string().optional(),
   textQuantity: z.string().optional(),
   textUnitPrice: z.string().optional(),
+  textDiscount: z.string().optional(),
   textVat: z.string().optional(),
   textTotal: z.string().optional(),
   enableShadows: z.boolean().optional(),
+  pageSize: z.enum(['a4', 'a5', 'letter', 'legal']).optional(),
 }).strict();
 
 export type PdfConfig = Partial<z.infer<typeof pdfConfigSchema>> & Record<string, unknown>;

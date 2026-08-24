@@ -7,13 +7,24 @@ import MinimalTheme from '@/components/pdf-themes/MinimalTheme';
 import ModernTheme from '@/components/pdf-themes/ModernTheme';
 import ProTheme from '@/components/pdf-themes/ProTheme';
 import { calculateQuoteTotals } from '@/utils/calculations';
+import { PAGE_SIZES, type PageSize } from '@/utils/pdfGenerator';
 import { translations } from '@/utils/translations';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '@/context/quote/types';
 
 // Helper functions defined outside component to avoid recreation
 const formatDate = (dateString?: string, locale = 'tr-TR') => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString(locale);
+    // Split YYYY-MM-DD to avoid UTC timezone day-shift in negative offsets
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+        const [y, m, d] = parts.map(Number);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+            const date = new Date(y, m - 1, d);
+            return date.toLocaleDateString(locale);
+        }
+    }
+    const d = new Date(dateString);
+    return isNaN(d.getTime()) ? dateString : d.toLocaleDateString(locale);
 };
 
 interface PrintableQuoteProps {
@@ -70,8 +81,8 @@ const PrintableQuote = React.memo(({
 
     // Calculate totals
     const calc = useMemo(() => {
-        return calculateQuoteTotals(items, discount, { currency: quoteData.currency || 'TRY' });
-    }, [items, discount, quoteData.currency]);
+        return calculateQuoteTotals(items, discount, { currency: quoteData.currency || 'TRY', taxMode: quoteData.taxMode });
+    }, [items, discount, quoteData.currency, quoteData.taxMode]);
     const subtotal = calc.subtotal;
     const discountAmount = calc.globalDiscountAmount;
     const totalTax = calc.taxTotal;
@@ -211,19 +222,24 @@ const PrintableQuote = React.memo(({
         // --- Logo & Pages ---
         logoStyle: undefined,
         logoMaxHeight: undefined,
-        showPageNumbers: undefined,
+        showPageNumbers: true,
         pageBgPattern: undefined,
+        pageSize: undefined,
 
         ...(_config || {})
     }), [_config]);
 
     const getContainerStyles = () => {
         const isLandscape = config.pageOrientation === 'landscape';
-        const pageWidth = isLandscape ? '297mm' : '210mm';
+        const pageSizeKey = (config.pageSize || 'a4') as PageSize;
+        const baseDimensions = PAGE_SIZES[pageSizeKey] || PAGE_SIZES.a4;
+        const widthMm = isLandscape ? baseDimensions.height : baseDimensions.width;
+        const heightMm = isLandscape ? baseDimensions.width : baseDimensions.height;
+        const pageWidth = `${widthMm}mm`;
         const paddingPx = config.margins === 'compact' ? 16 : config.margins === 'wide' ? 36 : 24;
-        const pageMinHeight = isLandscape
-            ? (config.margins === 'compact' ? '201mm' : config.margins === 'wide' ? '191mm' : '197mm')
-            : (config.margins === 'compact' ? '288mm' : config.margins === 'wide' ? '278mm' : '284mm');
+        const marginOffsetMm = config.margins === 'compact' ? 9 : config.margins === 'wide' ? 19 : 13;
+        const pageMinHeight = `${Math.max(100, heightMm - marginOffsetMm)}mm`;
+
         const baseStyles = {
             minHeight: 'auto',
             maxWidth: pageWidth,

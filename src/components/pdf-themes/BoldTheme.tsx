@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
@@ -12,7 +12,6 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
         companyData,
         quoteData,
         customerData,
-        items,
         bankData,
         signature,
         t,
@@ -24,11 +23,8 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
         total,
         currentLocale,
         hasLineItemDiscounts,
-        onEdit,
-        activeLayout
     } = props;
-    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
-
+    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
     const boldStyles = useMemo(() => `
         .bold-theme-container {
@@ -148,14 +144,23 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
         }
 
+        .bold-total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: ${config.summaryLabelFontSize || '8.5pt'};
+            color: #475569;
+        }
+
         .bold-grand-total {
             display: flex;
             justify-content: space-between;
-            border-top: 3px solid ${color};
             margin-top: 4px;
             padding-top: 4px;
-            font-size: 11pt;
+            border-top: 2.5px solid ${color};
             font-weight: 900;
+            font-size: ${config.summaryTotalFontSize || '11pt'};
             color: #0f172a;
         }
 
@@ -163,8 +168,8 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
-            margin-top: 8px;
-            margin-bottom: 6px;
+            margin-top: 10px;
+            margin-bottom: 8px;
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -174,25 +179,23 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
         }
 
         .bold-sig-area {
-            min-height: 44px;
+            height: 48px;
+            border-bottom: 2px solid #0f172a;
+            margin-bottom: 4px;
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            border-bottom: 2px solid #0f172a;
             padding-bottom: 4px;
             gap: 10px;
         }
 
         .bold-sig-label {
-            padding-top: 3px;
             font-size: 7.5pt;
             font-weight: 800;
             text-transform: uppercase;
             color: #0f172a;
         }
     `, [color, config]);
-
-
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="bold-table">
@@ -204,38 +207,46 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                     {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
                     <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
                     <th style={{ width: '90px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
                     {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
                     <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
-                {tableItems.map((item, index) => (
-                    <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: '700' }}>{startIndex + index + 1}</td>
-                        {config.showTableImages && (
+                {tableItems.map((item, index) => {
+                    const isFixedDiscount = item.discountType === 'fixed';
+                    const discountVal = Number(item.discountRate) || 0;
+                    const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
+                    const baseTotal = (item.quantity || 0) * (item.price || 0);
+                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+
+                    return (
+                        <tr key={startIndex + index}>
+                            <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}>{startIndex + index + 1}</td>
+                            {config.showTableImages && (
+                                <td>
+                                    <div style={{ width: '36px', height: '36px', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden' }}>
+                                        {item.image ? (
+                                            <img src={item.image} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '9px', color: '#9ca3af' }}>-</span>
+                                        )}
+                                    </div>
+                                </td>
+                            )}
                             <td>
-                                <div style={{ width: '36px', height: '36px', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden' }}>
-                                    {item.image ? (
-                                        <img src={item.image} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
-                                    ) : (
-                                        <span style={{ fontSize: '9px', color: '#94a3af' }}>-</span>
-                                    )}
-                                </div>
+                                <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
+                                {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2' }}>{item.description}</div>}
                             </td>
-                        )}
-                        <td>
-                            <div style={{ fontWeight: '800', color: '#0f172a' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
-                        </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
-                        <td style={{ textAlign: 'center', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: '800', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
-                    </tr>
-                ))}
+                            {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                            <td style={{ textAlign: 'center', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                            {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                            <td style={{ textAlign: 'right', fontWeight: '800', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );
@@ -255,7 +266,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                 }}>
                     <div className="bold-top-gradient" />
 
-                    {/* Watermark */}
+                    {/* Watermark - Per Page */}
                     <PdfWatermark config={config} />
 
                     {/* Header */}
@@ -277,7 +288,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                                     </div>
                                     {(companyData.taxOffice || companyData.taxNumber) && (
                                         <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '1px' }}>
-                                            {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                            {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                             {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -295,13 +306,11 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                             </div>
                         </div>
                     ) : (
-                        <div style={{ marginBottom: '8px', paddingBottom: '4px', borderBottom: `2px solid ${color}` }}>
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b' }}>
-                                <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
-                                {config.showPageNumbers !== false && (
-                                    <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
-                                )}
-                            </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: `2px solid ${color}`, paddingBottom: '4px', fontSize: '8pt', color: '#64748b' }}>
+                            <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
+                            {config.showPageNumbers !== false && (
+                                <span style={{ fontWeight: '700' }}>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                            )}
                         </div>
                     ))}
 
@@ -342,7 +351,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                                 )}
                                 {(customerData.taxOffice || customerData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                        {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                        {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                         {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -356,7 +365,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                                     <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
                                     <div><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</div>
                                     {config.showNotes && quoteData.notes && (
-                                        <div style={{ marginTop: '3px', fontSize: '8pt', color: '#475569', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                                        <div style={{ marginTop: '2px', fontSize: '8pt', color: '#64748b', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
                                             {renderEditable(quoteData.notes, 'notes', 'textarea')}
                                         </div>
                                     )}
@@ -374,49 +383,63 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     )}
 
-                    {/* Summary, Notes, Signatures - Only Last Page */}
+                    {/* Summary, Signatures, Terms - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
                         <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                            {(config.showSummary || config.showBankInfo) && (
+                            {config.showSummary && (
                                 <div className="bold-summary-section">
                                     <div>
                                         {config.showBankInfo && (bankData.bankName || bankData.iban) && (
                                             <div>
-                                                <div style={{ fontSize: '7.5pt', fontWeight: '800', color: color, textTransform: 'uppercase', marginBottom: '3px', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px' }}>{t.bankInfo}</div>
+                                                <div style={{ color: color, fontSize: '8pt', fontWeight: '800', textTransform: 'uppercase', marginBottom: '2px', borderBottom: '1px solid #f1f5f9', paddingBottom: '2px' }}>
+                                                    {t.bankInfo}
+                                                </div>
                                                 <div style={{ fontSize: '8pt', color: '#475569', lineHeight: '1.4' }}>
-                                                    {bankData.bankName && <div><strong>{t.bank}:</strong> {bankData.bankName} {bankData.branch && <span>({bankData.branch})</span>}</div>}
-                                                    {bankData.iban && <div style={{ marginTop: '1px' }}><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>}
+                                                    {bankData.bankName && <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>}
+                                                    {bankData.iban && <div><span style={{ fontFamily: 'monospace', fontWeight: '800', color: '#0f172a' }}>TR {bankData.iban}</span></div>}
                                                     {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                                 </div>
                                             </div>
                                         )}
-                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
+                                        {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.terms) && (
                                             <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '4px' }}>
                                                 {quoteData.deliveryTerms && <div><strong>{t.delivery}:</strong> {renderEditable(quoteData.deliveryTerms, 'deliveryTerms', 'textarea')}</div>}
-                                                {quoteData.warrantyTerms && <div><strong>{t.warranty}:</strong> {renderEditable(quoteData.warrantyTerms, 'warrantyTerms', 'textarea')}</div>}
                                                 {quoteData.terms && <div><strong>{t.payment}:</strong> {renderEditable(quoteData.terms, 'terms', 'textarea')}</div>}
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#475569' }}>
-                                            <span>{t.subtotal}:</span>
+                                        <div className="bold-total-row">
+                                            <span>{t.subtotal}</span>
                                             <span style={{ fontWeight: '700', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(subtotal)}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#dc2626' }}>
-                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
+                                            <div className="bold-total-row" style={{ color: '#dc2626' }}>
+                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '700' }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                         {config.showTableTax && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#475569' }}>
-                                                <span>{t.total} {t.vat}:</span>
-                                                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a', fontWeight: '600' }}>{formatCurrency(totalTax)}</span>
-                                            </div>
+                                            <>
+                                                {Object.keys(vatBreakdown).length > 1 ? (
+                                                    Object.entries(vatBreakdown)
+                                                        .filter(([_, data]) => data.taxable > 0)
+                                                        .map(([rate, data]) => (
+                                                            <div key={rate} className="bold-total-row" style={{ fontSize: '7.5pt' }}>
+                                                                <span>{t.vat || t.tax} (%{rate}):</span>
+                                                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(data.tax)}</span>
+                                                            </div>
+                                                        ))
+                                                ) : (
+                                                    <div className="bold-total-row">
+                                                        <span>{t.vat || t.tax}:</span>
+                                                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(totalTax)}</span>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                         <div className="bold-grand-total">
-                                            <span>{t.generalTotal}:</span>
+                                            <span>{t.generalTotal}</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
                                         <div style={{ fontSize: '7pt', color: '#64748b', fontStyle: 'italic', marginTop: '3px', textAlign: 'right' }}>
@@ -428,7 +451,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="bold-signatures">
+                                <div className="bold-signatures" style={{ gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '280px', margin: config.showCustomerSignature ? '10px 0 8px 0' : '10px auto 8px auto' }}>
                                     <div className="bold-sig-box">
                                         <div className="bold-sig-area">
                                             {(signature || companyData.signature) && (
@@ -447,43 +470,46 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                                             )}
                                         </div>
                                         <div className="bold-sig-label">
-                                            {t.seller} (Kaşe & İmza)
+                                            {t.seller} ({t.deliveredBy || 'Kaşe & İmza'})
                                         </div>
                                     </div>
-                                    <div className="bold-sig-box">
-                                        <div className="bold-sig-area">
+                                    {config.showCustomerSignature && (
+                                        <div className="bold-sig-box">
+                                            <div className="bold-sig-area">
+                                            </div>
+                                            <div className="bold-sig-label">
+                                                {t.customer} ({t.customerApproval || 'Onay / İmza'})
+                                            </div>
                                         </div>
-                                        <div className="bold-sig-label">
-                                            {t.customer} (Onay / İmza)
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* Footer */}
                             {showSection('footer') && (
                                 <div style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '7.5pt', color: '#64748b' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                        <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
-                                        {companyData.phone && <span>• {companyData.phone}</span>}
-                                        {companyData.email && <span>• {companyData.email}</span>}
-                                        {companyData.website && <span>• {companyData.website}</span>}
-                                    </div>
-                                    <div style={{ fontSize: '7pt', color: '#94a3b8', marginTop: '2px' }}>
-                                        <span>{t.thankYou} • {t.regards}</span>
-                                    </div>
+                                    {config.customFooter ? (
+                                        <div>{config.customFooter}</div>
+                                    ) : (
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                                <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
+                                                {companyData.phone && <span>• {companyData.phone}</span>}
+                                                {companyData.email && <span>• {companyData.email}</span>}
+                                                {companyData.website && <span>• {companyData.website}</span>}
+                                            </div>
+                                            <div style={{ fontSize: '7pt', color: '#94a3b8', marginTop: '2px' }}>
+                                                <span>{t.thankYou} • {t.regards}</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
-                            {config.customFooter && (
-                                <div style={{ marginTop: '2px', textAlign: 'center', fontSize: '6.5pt', color: '#64748b' }}>
-                                    {config.customFooter}
-                                </div>
-                            )}
-
-                            {/* Page Number */}
-                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
+
+                    {/* Page Number on every page */}
+                    <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                 </div>
             ))}
         </div>

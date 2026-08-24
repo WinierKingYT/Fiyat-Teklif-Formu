@@ -158,32 +158,44 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                     {config.showTableUnit && <th style={{ width: '50px' }}>{config.textUnit || t.unit}</th>}
                     <th style={{ width: '60px' }}>{config.textQuantity || t.quantity}</th>
                     <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
                     {config.showTableTax && <th style={{ width: '50px' }}>{config.textVat || t.tax}</th>}
                     <th style={{ width: '105px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
-                {tableItems.map((item, index) => (
-                    <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
-                        {config.showTableImages && (
-                            <td style={{ textAlign: 'center' }}>
-                                {item.image && <img src={item.image} alt="" style={{ height: '36px', width: '36px', objectFit: 'contain', margin: '0 auto' }} />}
+                {tableItems.map((item, index) => {
+                    const isFixedDiscount = item.discountType === 'fixed';
+                    const discountVal = Number(item.discountRate) || 0;
+                    const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
+                    const baseTotal = (item.quantity || 0) * (item.price || 0);
+                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+
+                    return (
+                        <tr key={startIndex + index}>
+                            <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
+                            {config.showTableImages && (
+                                <td style={{ textAlign: 'center' }}>
+                                    {item.image ? (
+                                        <img src={item.image} alt="" style={{ height: '36px', width: '36px', objectFit: 'contain', margin: '0 auto' }} />
+                                    ) : (
+                                        <span style={{ fontSize: '8px', color: '#94a3b8' }}>-</span>
+                                    )}
+                                </td>
+                            )}
+                            <td>
+                                <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{item.name}</div>
+                                {item.description && <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
                             </td>
-                        )}
-                        <td>
-                            <div style={{ fontWeight: 'bold', color: '#0f172a' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.2' }}>{item.description}</div>}
-                        </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
-                        <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: '#475569' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
-                    </tr>
-                ))}
+                            {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                            <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.quantity}</td>
+                            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                            {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{discountDisplay}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: '#475569' }}>%{item.taxRate}</td>}
+                            <td style={{ textAlign: 'right', fontWeight: 'bold', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(lineTotal)}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );
@@ -224,7 +236,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                 {companyData.website && <div style={{ fontSize: config.headerInfoFontSize || '8.5pt', color: '#475569' }}>{companyData.website}</div>}
                                 {(companyData.taxOffice || companyData.taxNumber) && (
                                     <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
-                                        {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                        {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                         {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -298,7 +310,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                         )}
                                         {(companyData.taxOffice || companyData.taxNumber) && (
                                             <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                                {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                                {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                                 {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                             </div>
                                         )}
@@ -342,7 +354,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                     )}
                                     {(customerData.taxOffice || customerData.taxNumber) && (
                                         <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
-                                            {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                            {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                             {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -407,10 +419,23 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                                         </tr>
                                                     )}
                                                     {config.showTableTax && (
-                                                        <tr>
-                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || '600', fontSize: config.summaryLabelFontSize || '8.5pt', background: '#f8fafc', color: '#334155' }}>{t.tax}:</td>
-                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || '8.5pt', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</td>
-                                                        </tr>
+                                                        <>
+                                                            {Object.keys(vatBreakdown).length > 1 ? (
+                                                                Object.entries(vatBreakdown)
+                                                                    .filter(([_, data]) => data.taxable > 0)
+                                                                    .map(([rate, data]) => (
+                                                                        <tr key={rate}>
+                                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || '600', fontSize: config.summaryLabelFontSize || '8.5pt', background: '#f8fafc', color: '#334155' }}>{t.vat || t.tax} (%{rate}):</td>
+                                                                            <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || '8.5pt', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</td>
+                                                                        </tr>
+                                                                    ))
+                                                            ) : (
+                                                                <tr>
+                                                                    <td style={{ textAlign: 'right', fontWeight: config.summaryLabelFontWeight || '600', fontSize: config.summaryLabelFontSize || '8.5pt', background: '#f8fafc', color: '#334155' }}>{t.vat || t.tax}:</td>
+                                                                    <td style={{ textAlign: 'right', fontWeight: config.summaryValueFontWeight || 'normal', fontSize: config.summaryValueFontSize || '8.5pt', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</td>
+                                                                </tr>
+                                                            )}
+                                                        </>
                                                     )}
                                                     <tr>
                                                         <td style={{ textAlign: 'right', fontWeight: 'bold', background: '#e2e8f0', fontSize: config.summaryTotalFontSize || '10pt', color: '#0f172a' }}>{t.generalTotal}:</td>
@@ -428,7 +453,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '320px', margin: config.showCustomerSignature ? '10px 0 0 0' : '10px auto 0 auto', gap: '12px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                                     <div className="classic-section-box" style={{ minHeight: '55px', margin: 0 }}>
                                         <div className="classic-section-header" style={{ textAlign: 'center', fontSize: '7.5pt' }}>
                                             {t.seller} ({t.deliveredBy})
@@ -445,38 +470,44 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="classic-section-box" style={{ minHeight: '55px', margin: 0 }}>
-                                        <div className="classic-section-header" style={{ textAlign: 'center', fontSize: '7.5pt' }}>
-                                            {t.customer} ({t.receivedBy})
+                                    {config.showCustomerSignature && (
+                                        <div className="classic-section-box" style={{ minHeight: '55px', margin: 0 }}>
+                                            <div className="classic-section-header" style={{ textAlign: 'center', fontSize: '7.5pt' }}>
+                                                {t.customer} ({t.receivedBy})
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', minHeight: '40px' }}>
+                                                <span style={{ color: '#94a3b8', fontSize: '7.5pt' }}>{t.customerApproval || t.approvedBy || 'Kaşe / İmza'}</span>
+                                            </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', minHeight: '40px' }}>
-                                            <span style={{ color: '#94a3b8', fontSize: '7.5pt' }}>{t.approvedBy || 'Kaşe / İmza'}</span>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
-
-                            
 
                             {/* Footer - Only Last Page */}
                             {showSection('footer') && (
                             <div className="footer" style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid #cbd5e1', textAlign: 'center', color: (config.footerColor as string) || '#64748b', fontSize: '7.5pt' }}>
-                                <div>
-                                    <strong style={{ color: '#0f172a' }}>{companyData.name}</strong> • {companyData.address}
-                                    {companyData.phone && <span> • {companyData.phone}</span>}
-                                    {companyData.email && <span> • {companyData.email}</span>}
-                                    {companyData.website && <span> • {companyData.website}</span>}
-                                </div>
-                                <div style={{ marginTop: '2px', color: '#94a3b8' }}>
-                                    {t.thankYou} • {t.regards}
-                                </div>
+                                {config.customFooter ? (
+                                    <div>{config.customFooter}</div>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <strong style={{ color: '#0f172a' }}>{companyData.name}</strong> • {companyData.address}
+                                            {companyData.phone && <span> • {companyData.phone}</span>}
+                                            {companyData.email && <span> • {companyData.email}</span>}
+                                            {companyData.website && <span> • {companyData.website}</span>}
+                                        </div>
+                                        <div style={{ marginTop: '2px', color: '#94a3b8' }}>
+                                            {t.thankYou} • {t.regards}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                             )}
-
-                            {/* Page Number */}
-                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
+
+                    {/* Page Number on every page */}
+                    <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                 </div>
             ))}
         </div>

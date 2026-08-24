@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { calculateQuoteTotals } from '@/utils/calculations';
-import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
+import { numberToWords } from '@/utils/numberToWordsTurkish';
 import { chunkQuoteItems } from '@/utils/themeHelpers';
 import { PdfEditableField } from '../common';
 import type { PdfThemeProps } from '@/context/quote/types';
@@ -24,12 +24,13 @@ export function usePdfTheme(props: PdfThemeProps) {
             showSignatures: config.showSignatures,
             showTerms: config.showTerms,
             isLandscape: config.pageOrientation === 'landscape',
-            margins: config.margins
+            margins: config.margins,
+            tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined
         });
     }, [items, config]);
 
     const vatBreakdown = useMemo(() => {
-        const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency });
+        const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
         const map: Record<string, { taxable: number; tax: number }> = {};
         const globalDiscountRatio = calc.subtotal > 0 ? (calc.globalDiscountAmount / calc.subtotal) : 0;
 
@@ -51,11 +52,11 @@ export function usePdfTheme(props: PdfThemeProps) {
         });
 
         return map;
-    }, [items, props.discount, quoteData.currency]);
+    }, [items, props.discount, quoteData.currency, quoteData.taxMode]);
 
     const amountInWords = useMemo(() => {
-        return numberToWordsTurkish(total, quoteData.currency || 'TRY');
-    }, [total, quoteData.currency]);
+        return numberToWords(total, quoteData.currency || 'TRY', quoteData.language || 'tr');
+    }, [total, quoteData.currency, quoteData.language]);
 
     const renderEditable = useCallback((value: unknown, fieldKey: string, type = 'text', className = '') => {
         return (

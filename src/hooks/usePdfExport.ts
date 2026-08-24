@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { shareQuote } from '@/utils/emailService';
 import { exportQuoteToExcel, exportQuoteToCSV } from '@/utils/excelExporter';
-import { generatePDF, printQuote, loadPdfFonts, getPdfMetadata, type PageSize, type PdfQuality } from '@/utils/pdfGenerator';
+import { generatePDF, printQuote, loadPdfFonts, getPdfMetadata, PAGE_SIZES, type PageSize, type PdfQuality } from '@/utils/pdfGenerator';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount } from '@/context/quote/types';
 import type { PdfConfig } from '@/context/quote/types';
 import type html2pdfType from 'html2pdf.js';
@@ -84,7 +84,7 @@ export const usePdfExport = ({
                 pageSize,
                 quality,
                 orientation: pdfConfig.pageOrientation || 'portrait',
-                margin: pdfConfig.margins === 'compact' ? 5 : pdfConfig.margins === 'wide' ? 15 : 10,
+                margin: 0,
                 title: pdfConfig.title,
                 author: companyData.name || 'TeklifApp',
                 language: quoteData.language || 'tr',
@@ -117,39 +117,80 @@ export const usePdfExport = ({
             const { default: html2pdf } = await import('html2pdf.js');
             await loadPdfFonts([pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily].filter((f): f is string => Boolean(f)));
             const isLandscape = pdfConfig.pageOrientation === 'landscape';
-            const shareFormat = pageSize === 'a4' && !isLandscape ? 'a4' : isLandscape ? 'a4' : pageSize;
+            const baseSize = PAGE_SIZES[pageSize] || PAGE_SIZES.a4;
+            const shareFormat: [number, number] = [baseSize.width, baseSize.height];
             const shareOrientation = isLandscape ? 'landscape' : 'portrait';
             const qual = quality === 'draft' ? 2 : quality === 'normal' ? 3 : quality === 'high' ? 4 : quality === 'print' ? 5 : 6;
-            const shareOptions = {
-                margin: 0,
-                image: { type: 'png', quality: 1.0 },
-                html2canvas: {
-                    scale: qual,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
-                    imageTimeout: 0,
-                    letterRendering: quality !== 'draft'
-                },
-                jsPDF: {
-                    unit: 'mm',
-                    format: shareFormat,
-                    orientation: shareOrientation,
-                    compress: true,
-                    properties: {
-                        title: pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
-                        author: companyData.name || 'TeklifApp'
-                    }
+
+            // Zoom transform protection
+            let scaledAncestor: HTMLElement | null = null;
+            let originalTransform = '';
+            let p: HTMLElement | null = element.parentElement as HTMLElement | null;
+            while (p) {
+                if (p.style.transform && p.style.transform.includes('scale(')) {
+                    scaledAncestor = p;
+                    originalTransform = p.style.transform;
+                    p.style.transform = 'none';
+                    break;
                 }
-            } as Html2PdfOptions;
-            const pdfBlob = await html2pdf().set(shareOptions).from(element).outputPdf('blob');
-            const filename = buildPdfFilename();
-            const meta = getPdfMetadata(quoteData.language || 'tr');
-            await shareQuote(pdfBlob, filename, {
-                title: meta.title,
-                text: meta.subject
+                p = p.parentElement as HTMLElement | null;
+            }
+
+            // Canvas to image conversion for signatures/stamps
+            const origCanvases = element.querySelectorAll<HTMLCanvasElement>('canvas');
+            const canvasReplacements: { canvas: HTMLCanvasElement; placeholder: HTMLImageElement }[] = [];
+            origCanvases.forEach(canvas => {
+                try {
+                    const img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/png');
+                    img.style.cssText = canvas.style.cssText;
+                    img.className = canvas.className;
+                    canvas.parentNode?.insertBefore(img, canvas);
+                    canvas.style.display = 'none';
+                    canvasReplacements.push({ canvas, placeholder: img });
+                } catch {
+                    // Ignore cross-origin canvas security errors
+                }
             });
-            toast.success(t('shareSuccess'));
+
+            try {
+                const shareOptions = {
+                    margin: 0,
+                    image: { type: 'png', quality: 1.0 },
+                    html2canvas: {
+                        scale: qual,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
+                        imageTimeout: 0,
+                        letterRendering: quality !== 'draft'
+                    },
+                    jsPDF: {
+                        unit: 'mm',
+                        format: shareFormat,
+                        orientation: shareOrientation,
+                        compress: true,
+                        properties: {
+                            title: pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
+                            author: companyData.name || 'TeklifApp'
+                        }
+                    }
+                } as Html2PdfOptions;
+                const pdfBlob = await html2pdf().set(shareOptions).from(element).outputPdf('blob');
+                const filename = buildPdfFilename();
+                const meta = getPdfMetadata(quoteData.language || 'tr');
+                await shareQuote(pdfBlob, filename, {
+                    title: meta.title,
+                    text: meta.subject
+                });
+                toast.success(t('shareSuccess'));
+            } finally {
+                canvasReplacements.forEach(({ canvas, placeholder }) => {
+                    canvas.style.display = '';
+                    placeholder.parentNode?.removeChild(placeholder);
+                });
+                if (scaledAncestor) scaledAncestor.style.transform = originalTransform;
+            }
         } catch (error) {
             if (error instanceof Error && error.message !== 'Share cancelled' && error.name !== 'AbortError') {
                 toast.error(t('shareFailed') + error.message);
@@ -158,7 +199,7 @@ export const usePdfExport = ({
     };
 
     const buildExportData = () => {
-        const calc = calculateQuoteTotals(items, discount, { currency: quoteData.currency });
+        const calc = calculateQuoteTotals(items, discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
         return {
             fullQuoteData: {
                 ...quoteData,

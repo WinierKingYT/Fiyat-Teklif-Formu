@@ -11,11 +11,11 @@ interface PdfPageNumberProps {
 }
 
 export const PdfPageNumber: React.FC<PdfPageNumberProps> = ({ config, quoteData, pageIndex, totalPages, t, className }) => {
-    if (!config.showPageNumbers) return null;
+    if (config.showPageNumbers === false) return null;
     return (
         <div className={className || ''} style={{ marginTop: 'auto', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5pt', color: '#94a3b8', borderTop: '1px solid #f1f5f9' }}>
             <span>{quoteData.number ? `#${quoteData.number}` : ''}</span>
-            <span>{t.page} {pageIndex + 1} / {totalPages}</span>
+            <span>{(t.page || 'Sayfa')} {pageIndex + 1} / {totalPages}</span>
         </div>
     );
 };

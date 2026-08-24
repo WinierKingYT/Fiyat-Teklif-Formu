@@ -404,38 +404,46 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
                     <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
                     <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
                     {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
                     <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
-                {tableItems.map((item, index) => (
-                    <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
-                        {config.showTableImages && (
+                {tableItems.map((item, index) => {
+                    const isFixedDiscount = item.discountType === 'fixed';
+                    const discountVal = Number(item.discountRate) || 0;
+                    const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
+                    const baseTotal = (item.quantity || 0) * (item.price || 0);
+                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+
+                    return (
+                        <tr key={startIndex + index}>
+                            <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
+                            {config.showTableImages && (
+                                <td>
+                                    <div className="item-image">
+                                        {item.image ? (
+                                            <img src={item.image} alt="" />
+                                        ) : (
+                                            <span style={{ fontSize: '8px', color: '#94a3b8' }}>-</span>
+                                        )}
+                                    </div>
+                                </td>
+                            )}
                             <td>
-                                <div className="item-image">
-                                    {item.image ? (
-                                        <img src={item.image} alt="" />
-                                    ) : (
-                                        <span style={{ fontSize: '8px', color: '#94a3b8' }}>-</span>
-                                    )}
-                                </div>
+                                <div className="item-name">{item.name}</div>
+                                {item.description && <div className="item-desc">{item.description}</div>}
                             </td>
-                        )}
-                        <td>
-                            <div className="item-name">{item.name}</div>
-                            {item.description && <div className="item-desc">{item.description}</div>}
-                        </td>
-                        {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
-                        <td className="item-quantity" style={{ textAlign: 'center', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
-                        <td className="item-price" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td className="item-total" style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
-                    </tr>
-                ))}
+                            {config.showTableUnit && <td className="item-unit" style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                            <td className="item-quantity" style={{ textAlign: 'center', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                            <td className="item-price" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                            {hasLineItemDiscounts && <td className="item-discount" style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
+                            {config.showTableTax && <td className="item-tax" style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                            <td className="item-total" style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );
@@ -480,7 +488,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                         )}
                                         {(companyData.taxOffice || companyData.taxNumber) && (
                                             <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '1px' }}>
-                                                {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                                {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                                 {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                             </div>
                                         )}
@@ -547,7 +555,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                     )}
                                     {(customerData.taxOffice || customerData.taxNumber) && (
                                         <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#94a3b8' }}>
-                                            {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                            {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                             {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -570,21 +578,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                             {config.showSummary && (
                                 <div className="bottom-section">
                                     <div className="bottom-left-col">
-                                        {config.showBankInfo && (bankData.bankName || bankData.iban) && (
-                                            <div className="bank-info-box">
-                                                <div className="bank-title">{t.bankInfo}</div>
-                                                <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.4' }}>
-                                                    {bankData.bankName && (
-                                                        <div><strong style={{ color: '#0f172a' }}>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>
-                                                    )}
-                                                    {bankData.iban && (
-                                                        <div><span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>TR {bankData.iban}</span></div>
-                                                    )}
-                                                    {bankData.accountHolder && (
-                                                        <div style={{ color: '#64748b', fontSize: '7.5pt' }}>{bankData.accountHolder}</div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                        {config.showBankInfo && (
+                                            <PdfBankInfo bankData={bankData} t={t} className="bank-info-box" />
                                         )}
                                         {showSection('notes') && config.showTerms && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms) && (
                                             <div style={{ fontSize: '7.5pt', color: '#475569', lineHeight: '1.35', marginTop: '6px' }}>
@@ -604,7 +599,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="summary-row discount">
-                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
+                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -612,7 +607,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                             <>
                                                 {Object.keys(vatBreakdown).length > 1 ? (
                                                     Object.entries(vatBreakdown)
-                                                        .filter(([_, data]) => data.tax > 0)
+                                                        .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} className="summary-row" style={{ fontSize: '7.5pt' }}>
                                                                 <span>{t.vat || t.tax} (%{rate}):</span>
@@ -679,11 +674,11 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                     {config.customFooter}
                                 </div>
                             )}
-
-                            {/* Page Number */}
-                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
+
+                    {/* Page Number on every page */}
+                    <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                 </div>
             ))}
         </div>

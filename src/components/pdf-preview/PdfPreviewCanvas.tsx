@@ -39,11 +39,13 @@ const PdfPreviewCanvas: React.FC<PdfPreviewCanvasProps> = ({
         <div className="origin-top shadow-[var(--shadow-lg)] transition-all duration-300 bg-[var(--color-bg-card)] relative" style={{ transform: `scale(${zoomLevel})`, imageRendering: zoomLevel < 0.5 ? 'auto' : 'crisp-edges' } as React.CSSProperties}>
             <div ref={contentRef} className="relative">
                 <style>{`
-                    #printable-quote-container-panel .pdf-page {
-                        margin-bottom: 28px;
-                    }
-                    #printable-quote-container-panel .pdf-page:last-child {
-                        margin-bottom: 0;
+                    @media screen {
+                        #printable-quote-container-panel .pdf-page {
+                            margin-bottom: 28px;
+                        }
+                        #printable-quote-container-panel .pdf-page:last-child {
+                            margin-bottom: 0;
+                        }
                     }
                 `}</style>
                 <PrintableQuote

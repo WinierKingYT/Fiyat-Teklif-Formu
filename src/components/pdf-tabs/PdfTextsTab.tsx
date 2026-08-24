@@ -103,6 +103,16 @@ const PdfTextsTab: React.FC<PdfTextsTabProps> = ({
                         />
                     </div>
                     <div>
+                        <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('discount') || 'İskonto'}</label>
+                        <input
+                            type="text"
+                            value={pdfConfig.textDiscount || ''}
+                            onChange={(e) => handleConfigChange('textDiscount', e.target.value)}
+                            placeholder={t('discount') || 'İskonto'}
+                            className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                        />
+                    </div>
+                    <div>
                         <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">{t('tax') || 'KDV'}</label>
                         <input
                             type="text"

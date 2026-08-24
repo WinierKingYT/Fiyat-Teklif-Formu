@@ -1,18 +1,17 @@
 import React, { useMemo } from 'react';
-import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
-import type { PdfThemeProps, QuoteItem } from '@/context/quote/types';
+import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
-export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
+const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
     const {
         id,
         containerStyles,
         config,
-        color = '#1e293b',
+        color = '#0284c7',
         companyData,
         quoteData,
         customerData,
-        items,
         bankData,
         signature,
         t,
@@ -24,35 +23,33 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         total,
         currentLocale,
         hasLineItemDiscounts,
-        onEdit,
-        activeLayout
     } = props;
-    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
-
+    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
 
     const invoiceStyles = useMemo(() => `
         .invoice-theme-container {
-            color: #0f172a;
-            background: var(--pdf-page-bg, #ffffff) !important;
-            font-family: ${config.globalFontFamily || "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"};
-            font-size: ${config.fontSize || 11}px;
+            font-family: ${config.globalFontFamily || "'Roboto', 'Segoe UI', Tahoma, sans-serif"};
             line-height: ${config.bodyLineHeight || '1.35'};
-            box-sizing: border-box;
+            color: ${config.globalFontColor || '#1e293b'};
+            background: var(--pdf-page-bg, #ffffff) !important;
+            font-size: ${config.fontSize || 10.5}px;
             position: relative;
+            box-sizing: border-box;
+            box-shadow: ${config.enableShadows ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'};
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         [data-theme="dark"] .invoice-theme-container {
             background-color: var(--pdf-page-bg, #ffffff) !important;
-            color: #0f172a !important;
+            color: ${config.globalFontColor || '#1e293b'} !important;
         }
 
         [data-theme="dark"] .invoice-party-card,
-        [data-theme="dark"] .invoice-summary-wrap,
+        [data-theme="dark"] .invoice-summary-box,
         [data-theme="dark"] .invoice-sig-box {
             background-color: #ffffff !important;
-            color: #0f172a !important;
+            color: #1e293b !important;
         }
 
         .invoice-theme-container * {
@@ -62,9 +59,9 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         .invoice-header-bar {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             border-bottom: 2.5px solid ${color};
-            padding-bottom: 10px;
+            padding-bottom: 8px;
             margin-bottom: 12px;
             page-break-inside: avoid;
             break-inside: avoid;
@@ -80,19 +77,18 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         }
 
         .invoice-party-card {
-            background: #ffffff;
             border: 1px solid #cbd5e1;
-            border-top: 3px solid ${color};
             border-radius: 4px;
+            background: #ffffff;
             padding: 8px 12px;
         }
 
         .invoice-party-label {
             font-size: 7.5pt;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: #64748b;
+            color: #475569;
             margin-bottom: 4px;
             border-bottom: 1px solid #f1f5f9;
             padding-bottom: 2px;
@@ -101,73 +97,63 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         .invoice-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: ${config.tableBodyFontSize || '9pt'};
             margin-bottom: 10px;
         }
 
         .invoice-table th {
-            background-color: ${config.tableHeaderBg || color};
-            color: ${config.tableHeaderColor || '#ffffff'};
-            font-weight: 700;
-            text-align: left;
+            background: ${config.tableHeaderBg || '#f1f5f9'};
+            color: ${config.tableHeaderColor || '#1e293b'};
             padding: ${config.tableHeaderPadding || '6px 8px'};
+            text-align: left;
+            font-weight: 700;
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8.5pt')};
+            border: 1px solid #cbd5e1;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
-            border: 1px solid ${color};
         }
 
         .invoice-table td {
-            padding: ${config.tableCellPadding || '6px 8px'};
-            border: 1px solid #cbd5e1;
+            padding: ${config.tableCellPadding || '5px 8px'};
+            border: 1px solid #e2e8f0;
+            font-size: ${config.tableBodyFontSize || '8.5pt'};
             color: #1e293b;
             vertical-align: middle;
         }
 
-        .invoice-table tr:nth-child(even) td {
+        .invoice-table tbody tr:nth-child(even) td {
             background-color: ${config.tableStripedColor || '#f8fafc'};
         }
 
         .invoice-summary-wrap {
-            margin-top: auto;
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
             gap: 12px;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            padding: 10px 12px;
+            margin-top: 8px;
             margin-bottom: 8px;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
         .invoice-summary-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #cbd5e1;
             border-radius: 4px;
+            background: #ffffff;
             padding: 8px 12px;
-            font-size: 8.5pt;
         }
 
         .invoice-summary-row {
             display: flex;
             justify-content: space-between;
-            padding: 3px 0;
+            padding: 2px 0;
+            font-size: ${config.summaryLabelFontSize || '8.5pt'};
             color: #475569;
-            border-bottom: 1px dashed #e2e8f0;
-        }
-
-        .invoice-summary-row:last-child {
-            border-bottom: none;
         }
 
         .invoice-summary-total {
             border-top: 2px solid ${color};
             margin-top: 4px;
             padding-top: 4px;
-            font-size: 10.5pt;
             font-weight: 800;
+            font-size: ${config.summaryTotalFontSize || '10.5pt'};
             color: #0f172a;
         }
 
@@ -199,9 +185,6 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         }
     `, [color, config]);
 
-
-
-    
     const renderTable = (chunkItems: QuoteItem[], startIndex: number) => (
         <table className="invoice-table">
             <thead>
@@ -212,42 +195,54 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                     {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
                     <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
                     <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
                     {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
                     <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
-                {chunkItems.map((item, idx) => (
-                    <tr key={startIndex + idx}>
-                        <td style={{ textAlign: 'center', fontWeight: 600, color: '#64748b' }}>{startIndex + idx + 1}</td>
-                        {config.showTableImages && (
-                            <td style={{ textAlign: 'center' }}>
-                                {item.image && <img src={item.image} alt="" style={{ height: '32px', width: '32px', objectFit: 'contain', margin: '0 auto' }} />}
+                {chunkItems.map((item, idx) => {
+                    const isFixedDiscount = item.discountType === 'fixed';
+                    const discountVal = Number(item.discountRate) || 0;
+                    const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
+                    const baseTotal = (Number(item.quantity) || 0) * (Number(item.price) || 0);
+                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+
+                    return (
+                        <tr key={startIndex + idx}>
+                            <td style={{ textAlign: 'center', fontWeight: 600, color: '#64748b' }}>{startIndex + idx + 1}</td>
+                            {config.showTableImages && (
+                                <td style={{ textAlign: 'center' }}>
+                                    {item.image ? (
+                                        <img src={item.image} alt="" style={{ height: '32px', width: '32px', objectFit: 'contain', margin: '0 auto' }} />
+                                    ) : (
+                                        <span style={{ fontSize: '8px', color: '#94a3af' }}>-</span>
+                                    )}
+                                </td>
+                            )}
+                            <td>
+                                <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
+                                {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2' }}>{item.description}</div>}
                             </td>
-                        )}
-                        <td>
-                            <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2' }}>{item.description}</div>}
-                        </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit || 'Adet'}</td>}
-                        <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(Number(item.price))}</td>
-                        {hasLineItemDiscounts && (
-                            <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                                {Number(item.discountRate || 0) > 0 ? `%${item.discountRate}` : '-'}
+                            {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit || t.unit || '-'}</td>}
+                            <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{item.quantity}</td>
+                            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(Number(item.price))}</td>
+                            {hasLineItemDiscounts && (
+                                <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                    {discountDisplay}
+                                </td>
+                            )}
+                            {config.showTableTax && (
+                                <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>
+                                    {Number(item.taxRate || 0) > 0 ? `%${item.taxRate}` : '-'}
+                                </td>
+                            )}
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                                {formatCurrency(lineTotal)}
                             </td>
-                        )}
-                        {config.showTableTax && (
-                            <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>
-                                {Number(item.taxRate || 0) > 0 ? `%${item.taxRate}` : '-'}
-                            </td>
-                        )}
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                            {formatCurrency(Number(item.total != null ? item.total : Number(item.quantity) * Number(item.price) * (1 - Number(item.discountRate || 0) / 100)))}
-                        </td>
-                    </tr>
-                ))}
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );
@@ -301,7 +296,9 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8pt', color: '#64748b', paddingBottom: '4px', marginBottom: '8px', borderBottom: '1px solid #cbd5e1' }}>
                             <span><strong>{companyData.name}</strong> - {quoteData.title || config.title || t.quoteTitle} (#{quoteData.number})</span>
-                            <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                            {config.showPageNumbers !== false && (
+                                <span>{t.page} {pageIndex + 1} / {itemChunks.length}</span>
+                            )}
                         </div>
                     ))}
 
@@ -311,14 +308,14 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                         <div className="invoice-parties-grid">
                             {/* Seller / Düzenleyen Box */}
                             <div className="invoice-party-card">
-                                <div className="invoice-party-label">{t.seller} / Düzenleyen</div>
-                                <div style={{ fontSize: '9.5pt', fontWeight: 700, color: '#0f172a' }}>{companyData.name}</div>
+                                <div className="invoice-party-label">{t.seller} / {t.from || 'Düzenleyen'}</div>
+                                <div style={{ fontSize: '9.5pt', fontWeight: 700, color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
                                 <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.35' }}>
                                     {companyData.address && <div>{companyData.address}</div>}
                                     <div>{companyData.phone} | {companyData.email}</div>
                                     {(companyData.taxOffice || companyData.taxNumber) && (
                                         <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '2px' }}>
-                                            {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                            {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                             {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -344,7 +341,7 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                     {customerData.address && <div>{customerData.address}</div>}
                                     {(customerData.taxOffice || customerData.taxNumber) && (
                                         <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '2px' }}>
-                                            {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                            {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                             {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -399,7 +396,7 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div className="invoice-summary-row" style={{ color: '#dc2626' }}>
-                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)}):</span>
+                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -407,16 +404,16 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                             <>
                                                 {Object.keys(vatBreakdown).length > 1 ? (
                                                     Object.entries(vatBreakdown)
-                                                        .filter(([_, data]) => data.tax > 0)
+                                                        .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} className="invoice-summary-row" style={{ fontSize: '7.5pt' }}>
-                                                                <span>{t.tax} (%{rate}):</span>
+                                                                <span>{t.vat || t.tax} (%{rate}):</span>
                                                                 <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
                                                             </div>
                                                         ))
                                                 ) : (
                                                     <div className="invoice-summary-row">
-                                                        <span>{t.tax}:</span>
+                                                        <span>{t.vat || t.tax}:</span>
                                                         <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
                                                     </div>
                                                 )}
@@ -435,7 +432,7 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="invoice-signatures">
+                                <div className="invoice-signatures" style={{ gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '280px', margin: config.showCustomerSignature ? '8px 0 6px 0' : '8px auto 6px auto' }}>
                                     <div className="invoice-sig-box">
                                         <div className="invoice-sig-area">
                                             {(signature || companyData.signature) && (
@@ -455,32 +452,41 @@ export const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         <div style={{ fontSize: '7pt', fontWeight: 700, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '2px' }}>{t.seller} ({t.deliveredBy})</div>
                                     </div>
-                                    <div className="invoice-sig-box">
-                                        <div className="invoice-sig-area">
+                                    {config.showCustomerSignature && (
+                                        <div className="invoice-sig-box">
+                                            <div className="invoice-sig-area">
+                                            </div>
+                                            <div style={{ fontSize: '7pt', fontWeight: 700, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '2px' }}>{t.customer} ({t.receivedBy})</div>
                                         </div>
-                                        <div style={{ fontSize: '7pt', fontWeight: 700, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '2px' }}>{t.customer} ({t.receivedBy})</div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* Footer */}
                             {showSection('footer') && (
                                 <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid #cbd5e1', textAlign: 'center', fontSize: '7pt', color: '#64748b' }}>
-                                    {config.customFooter || (
-                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                            <span><strong>{companyData.name}</strong></span>
-                                            {companyData.phone && <span>• {companyData.phone}</span>}
-                                            {companyData.email && <span>• {companyData.email}</span>}
-                                            {companyData.website && <span>• {companyData.website}</span>}
-                                        </div>
+                                    {config.customFooter ? (
+                                        <div>{config.customFooter}</div>
+                                    ) : (
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                                <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
+                                                {companyData.phone && <span>• {companyData.phone}</span>}
+                                                {companyData.email && <span>• {companyData.email}</span>}
+                                                {companyData.website && <span>• {companyData.website}</span>}
+                                            </div>
+                                            <div style={{ fontSize: '6.5pt', color: '#94a3b8', marginTop: '1px' }}>
+                                                {t.thankYou} • {t.regards}
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {/* Page Number */}
-                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
+                    {/* Page Number on every page */}
+                    <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                 </div>
             ))}
         </div>

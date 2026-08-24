@@ -206,38 +206,46 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                     {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit || t.unit}</th>}
                     <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity || t.quantity}</th>
                     <th style={{ width: '85px', textAlign: 'right' }}>{config.textUnitPrice || t.unitPrice}</th>
-                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{t.discount}</th>}
+                    {hasLineItemDiscounts && <th style={{ width: '50px', textAlign: 'center' }}>{config.textDiscount || t.discount}</th>}
                     {config.showTableTax && <th style={{ width: '50px', textAlign: 'center' }}>{config.textVat || t.tax}</th>}
                     <th style={{ width: '100px', textAlign: 'right' }}>{config.textTotal || t.total}</th>
                 </tr>
             </thead>
             <tbody>
-                {tableItems.map((item, index) => (
-                    <tr key={startIndex + index}>
-                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
-                        {config.showTableImages && (
+                {tableItems.map((item, index) => {
+                    const isFixedDiscount = item.discountType === 'fixed';
+                    const discountVal = Number(item.discountRate) || 0;
+                    const discountDisplay = discountVal > 0 ? (isFixedDiscount ? formatCurrency(discountVal) : `%${discountVal}`) : '-';
+                    const baseTotal = (item.quantity || 0) * (item.price || 0);
+                    const lineTotal = isFixedDiscount ? Math.max(0, baseTotal - discountVal) : baseTotal * (1 - discountVal / 100);
+
+                    return (
+                        <tr key={startIndex + index}>
+                            <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
+                            {config.showTableImages && (
+                                <td>
+                                    <div style={{ width: '36px', height: '36px', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden' }}>
+                                        {item.image ? (
+                                            <img src={item.image} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '9px', color: '#94a3af' }}>-</span>
+                                        )}
+                                    </div>
+                                </td>
+                            )}
                             <td>
-                                <div style={{ width: '36px', height: '36px', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden' }}>
-                                    {item.image ? (
-                                        <img src={item.image} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
-                                    ) : (
-                                        <span style={{ fontSize: '9px', color: '#94a3af' }}>-</span>
-                                    )}
-                                </div>
+                                <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
+                                {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2' }}>{item.description}</div>}
                             </td>
-                        )}
-                        <td>
-                            <div style={{ fontWeight: '700', color: '#0f172a' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '1px', lineHeight: '1.2' }}>{item.description}</div>}
-                        </td>
-                        {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
-                        <td style={{ textAlign: 'center', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
-                        {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.discountRate ? `%${item.discountRate}` : '-'}</td>}
-                        {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency((item.quantity || 0) * (item.price || 0) * (1 - (item.discountRate || 0) / 100))}</td>
-                    </tr>
-                ))}
+                            {config.showTableUnit && <td style={{ textAlign: 'center', color: '#475569' }}>{item.unit}</td>}
+                            <td style={{ textAlign: 'center', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                            <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(item.price)}</td>
+                            {hasLineItemDiscounts && <td style={{ textAlign: 'center', color: '#dc2626', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{discountDisplay}</td>}
+                            {config.showTableTax && <td style={{ textAlign: 'center', color: '#475569', fontVariantNumeric: 'tabular-nums' }}>%{item.taxRate}</td>}
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(lineTotal)}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );
@@ -327,7 +335,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                     )}
                                     {(companyData.taxOffice || companyData.taxNumber) && (
                                         <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                            {companyData.taxOffice && <span>{companyData.taxOffice} V.D. </span>}
+                                            {companyData.taxOffice && <span>{companyData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                             {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -362,7 +370,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                 )}
                                 {(customerData.taxOffice || customerData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                        {customerData.taxOffice && <span>{customerData.taxOffice} V.D. </span>}
+                                        {customerData.taxOffice && <span>{customerData.taxOffice} ({t.taxOffice || 'V.D.'}) </span>}
                                         {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -427,7 +435,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         {discountAmount > 0 && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#dc2626' }}>
-                                                <span>{t.discount} (%{Math.round((discountAmount / subtotal) * 100)})</span>
+                                                <span>{t.discount} (%{subtotal > 0 ? Math.round((discountAmount / subtotal) * 100) : 0}):</span>
                                                 <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -435,16 +443,16 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                             <>
                                                 {Object.keys(vatBreakdown).length > 1 ? (
                                                     Object.entries(vatBreakdown)
-                                                        .filter(([_, data]) => data.tax > 0)
+                                                        .filter(([_, data]) => data.taxable > 0)
                                                         .map(([rate, data]) => (
                                                             <div key={rate} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '7.5pt', color: '#475569' }}>
-                                                                <span>{t.tax} (%{rate})</span>
+                                                                <span>{t.vat || t.tax} (%{rate}):</span>
                                                                 <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(data.tax)}</span>
                                                             </div>
                                                         ))
                                                 ) : (
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '8pt', color: '#475569' }}>
-                                                        <span>{t.tax}</span>
+                                                        <span>{t.vat || t.tax}:</span>
                                                         <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{formatCurrency(totalTax)}</span>
                                                     </div>
                                                 )}
@@ -463,7 +471,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Signatures */}
                             {showSection('signatures') && config.showSignatures && (
-                                <div className="pro-signatures">
+                                <div className="pro-signatures" style={{ gridTemplateColumns: config.showCustomerSignature ? '1fr 1fr' : '1fr', maxWidth: config.showCustomerSignature ? '100%' : '280px', margin: config.showCustomerSignature ? '10px 0 8px 0' : '10px auto 8px auto' }}>
                                     <div className="pro-sig-box">
                                         <div className="pro-sig-area">
                                             {(signature || companyData.signature) && (
@@ -475,11 +483,13 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                         <div className="pro-sig-label">{t.seller} ({t.deliveredBy})</div>
                                     </div>
-                                    <div className="pro-sig-box">
-                                        <div className="pro-sig-area">
+                                    {config.showCustomerSignature && (
+                                        <div className="pro-sig-box">
+                                            <div className="pro-sig-area">
+                                            </div>
+                                            <div className="pro-sig-label">{t.customer} ({t.receivedBy})</div>
                                         </div>
-                                        <div className="pro-sig-label">{t.customer} ({t.receivedBy})</div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
@@ -502,11 +512,11 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                     {config.customFooter}
                                 </div>
                             )}
-
-                            {/* Page Number */}
-                            <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                         </div>
                     )}
+
+                    {/* Page Number on every page */}
+                    <PdfPageNumber config={config} quoteData={quoteData} pageIndex={pageIndex} totalPages={itemChunks.length} t={t} />
                 </div>
             ))}
         </div>

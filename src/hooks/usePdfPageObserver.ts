@@ -97,7 +97,7 @@ export const usePdfPageObserver = ({
         const overflow: number[] = [];
         pages.forEach((p, i) => {
             const pageEl = p as HTMLElement;
-            if (pageEl.scrollHeight > pageEl.clientHeight + 8) overflow.push(i + 1);
+            if (pageEl.scrollHeight > pageEl.clientHeight + 16) overflow.push(i + 1);
         });
         setOverflowPages(overflow);
     }, [renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, pdfConfig.tableRowHeight, zoomLevel, contentRef]);

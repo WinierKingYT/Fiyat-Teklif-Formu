@@ -180,9 +180,9 @@ describe('ModernTheme', () => {
             }
         });
 
-        expect(screen.getByText(/Beşiktaş V.D./)).toBeInTheDocument();
+        expect(screen.getByText(/Beşiktaş.*V\.D\./)).toBeInTheDocument();
         expect(screen.getByText(/1234567890/)).toBeInTheDocument();
-        expect(screen.getByText(/Kadıköy V.D./)).toBeInTheDocument();
+        expect(screen.getByText(/Kadıköy.*V\.D\./)).toBeInTheDocument();
         expect(screen.getByText(/9876543210/)).toBeInTheDocument();
     });
 

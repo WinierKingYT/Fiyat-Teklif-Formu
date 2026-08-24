@@ -27,6 +27,8 @@ export interface ChunkOptions {
     showTerms?: boolean;
     isLandscape?: boolean;
     margins?: string;
+    tableRowHeight?: number;
+    fontSize?: number;
 }
 
 /**
@@ -51,22 +53,24 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
 
     const isLandscape = !!options.isLandscape;
     const isCompact = options.margins === 'compact';
+    const heightFactor = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
+        ? Math.min(1.6, Math.max(0.7, options.tableRowHeight / 35))
+        : 1;
 
-    // Capacity for a standalone single-page quote — güvenli tek sayfa (header+özet dahil ~12)
-    // 20 tek sayfa istenirse compact mod + küçük font gerekir; aksi halde boş sayfa riski (PDF kanıtı 4 sayfa)
-    const singlePageLimit = isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12);
+    // Capacity for a standalone single-page quote — güvenli tek sayfa
+    const singlePageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor));
 
     if (items.length <= singlePageLimit) {
         return [items];
     }
 
-    // Capacity limits — maksimum 20 hedefi, sayfa bütünlüğü korunarak
-    // Page 1: Header + Customer + Table (No bottom sections) — tek sayfa ile aynı: 20
-    const firstPageLimit = isLandscape ? (isCompact ? 16 : 14) : 20;
-    // Middle pages: Compact Header + Table — hard max 20 (22 compact'ta)
-    const middlePageLimit = isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 22 : 20);
+    // Capacity limits — maksimum hedef, sayfa bütünlüğü korunarak
+    // Page 1: Header + Customer + Table (No bottom sections)
+    const firstPageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : 20) / heightFactor));
+    // Middle pages: Compact Header + Table
+    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 22 : 20)) / heightFactor));
     // Last page: Compact Header + Table + Summary + Bank + Terms + Signatures
-    const lastPageLimit = isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12);
+    const lastPageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor));
 
     // If it fits across exactly 2 pages:
     if (items.length <= firstPageLimit + lastPageLimit) {

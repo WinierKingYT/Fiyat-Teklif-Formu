@@ -331,17 +331,19 @@ const PdfDesignTab: React.FC<PdfDesignTabProps> = ({
                 <div>
                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('generalFont')}</label>
                     <select
-                        value={pdfConfig.globalFontFamily || 'Inter'}
+                        value={pdfConfig.globalFontFamily?.replace(/['"]/g, '').split(',')[0].trim() || 'Inter'}
                         onChange={(e) => handleConfigChange('globalFontFamily', e.target.value)}
                         className="w-full px-2 py-1.5 text-xs border border-[var(--color-border)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
                     >
-                        <option value="'Inter', sans-serif">Modern (Inter)</option>
-                        <option value="'Roboto', sans-serif">Standart (Roboto)</option>
-                        <option value="'Open Sans', sans-serif">Okunaklı (Open Sans)</option>
-                        <option value="'Lato', sans-serif">Dengeli (Lato)</option>
-                        <option value="'Montserrat', sans-serif">Geometrik (Montserrat)</option>
-                        <option value="'Playfair Display', serif">Zarif (Playfair)</option>
-                        <option value="'Merriweather', serif">Klasik (Merriweather)</option>
+                        <option value="Inter">Modern (Inter)</option>
+                        <option value="Roboto">Standart (Roboto)</option>
+                        <option value="Open Sans">Okunaklı (Open Sans)</option>
+                        <option value="Lato">Dengeli (Lato)</option>
+                        <option value="Montserrat">Geometrik (Montserrat)</option>
+                        <option value="Playfair Display">Zarif (Playfair Display)</option>
+                        <option value="Merriweather">Klasik (Merriweather)</option>
+                        <option value="Roboto Slab">Güçlü (Roboto Slab)</option>
+                        <option value="Oswald">Kompakt (Oswald)</option>
                     </select>
                 </div>
             </div>
