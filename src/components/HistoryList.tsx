@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
@@ -8,10 +8,11 @@ import {
     HistoryQuotesTab,
     HistoryVersionsTab
 } from '@/components/history';
+import { useHistoryData } from '@/components/history/useHistoryData';
+import { HISTORY_PAGE_SIZE, useHistoryFilters } from '@/components/history/useHistoryFilters';
 import Pagination from '@/components/Pagination';
 import Skeleton from '@/components/Skeleton';
 import { useQuoteData } from '@/context/QuoteContext';
-import useDebounce from '@/hooks/useDebounce';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
 import { useTranslation } from '@/hooks/useTranslation';
 import { calculateQuoteTotals, formatCurrency } from '@/utils/calculations';
@@ -30,10 +31,6 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
     const { t } = useTranslation(quoteData?.language);
 
     const [activeTab, setActiveTab] = useState<'quotes' | 'versions'>('quotes');
-    const [quotes, setQuotes] = useState<DbQuote[]>([]);
-    const [versions, setVersions] = useState<QuoteVersion[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [selectAll, setSelectAll] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState<{
@@ -43,34 +40,11 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
         onConfirm: () => void;
         variant: 'info' | 'warning' | 'danger';
     }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
-    const [page, setPage] = useState(1);
-    const PAGE_SIZE = 20;
-
-    const loadData = useCallback(async () => {
-        if (!db) return;
-        try {
-            setLoading(true);
-            const [fetchedQuotes, fetchedVersions] = await Promise.all([
-                db.getAll<DbQuote>('quotes'),
-                db.getAll<QuoteVersion>('quoteVersions')
-            ]);
-            fetchedQuotes.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
-            fetchedVersions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            setQuotes(fetchedQuotes);
-            setVersions(fetchedVersions);
-        } catch (error) {
-            Logger.error('Error loading history data:', error);
-            toast.error(t('errorLoadingQuotes'));
-        } finally {
-            setLoading(false);
-        }
-    }, [db, t]);
-
-    useEffect(() => {
-        if (isReady && db) {
-            loadData();
-        }
-    }, [isReady, db, loadData]);
+    const { quotes, versions, loading, loadData } = useHistoryData({ db, isReady, t });
+    const {
+        searchTerm, setSearchTerm, page, setPage, filteredQuotes, filteredVersions,
+        paginatedQuotes, paginatedVersions, totalPages, debouncedSearch,
+    } = useHistoryFilters({ quotes, versions, activeTab });
 
     const handleDelete = async (idOrIds: number | number[], e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
@@ -303,51 +277,11 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
         toast.success(t('printingQuotes').replace('{count}', String(selected.length)));
     };
 
-    const debouncedSearch = useDebounce(searchTerm, 250);
-
-    const filteredQuotes = useMemo(() =>
-        quotes.filter(q => {
-            const qs = debouncedSearch.toLowerCase();
-            return (q.quoteData?.title?.toLowerCase().includes(qs) || false) ||
-                (q.quoteData?.number?.toLowerCase().includes(qs) || false) ||
-                (q.customerData?.name?.toLowerCase().includes(qs) || false) ||
-                (q.customerData?.company?.toLowerCase().includes(qs) || false);
-        }),
-        [quotes, debouncedSearch]
-    );
-
-    const filteredVersions = useMemo(() =>
-        versions.filter(v => {
-            const qs = debouncedSearch.toLowerCase();
-            const snap = v.snapshot;
-            return (v.versionName?.toLowerCase().includes(qs) || false) ||
-                (snap?.quoteData?.number?.toLowerCase().includes(qs) || false) ||
-                (snap?.customerData?.name?.toLowerCase().includes(qs) || false) ||
-                (snap?.customerData?.company?.toLowerCase().includes(qs) || false);
-        }),
-        [versions, debouncedSearch]
-    );
-
-    const totalPages = Math.max(1, Math.ceil(
-        (activeTab === 'quotes' ? filteredQuotes.length : filteredVersions.length) / PAGE_SIZE
-    ));
-
-    const paginatedQuotes = useMemo(() =>
-        filteredQuotes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-        [filteredQuotes, page]
-    );
-
-    const paginatedVersions = useMemo(() =>
-        filteredVersions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-        [filteredVersions, page]
-    );
-
     const handlePageChange = useCallback((newPage: number) => {
         setPage(newPage);
-    }, []);
+    }, [setPage]);
 
     useEffect(() => {
-        setPage(1);
         setSelectedIds(new Set());
         setSelectAll(false);
     }, [debouncedSearch, activeTab]);
@@ -406,12 +340,12 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
                     />
                 )}
 
-                {(activeTab === 'quotes' ? filteredQuotes.length : filteredVersions.length) > PAGE_SIZE && (
+                {(activeTab === 'quotes' ? filteredQuotes.length : filteredVersions.length) > HISTORY_PAGE_SIZE && (
                     <Pagination
                         currentPage={page}
                         totalPages={totalPages}
                         totalItems={activeTab === 'quotes' ? filteredQuotes.length : filteredVersions.length}
-                        pageSize={PAGE_SIZE}
+                        pageSize={HISTORY_PAGE_SIZE}
                         onPageChange={handlePageChange}
                     />
                 )}
