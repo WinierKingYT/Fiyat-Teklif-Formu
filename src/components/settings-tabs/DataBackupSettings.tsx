@@ -94,6 +94,7 @@ const DataBackupSettings: React.FC = () => {
                 if (!db) return;
                 try {
                     await Promise.all(BACKUP_STORE_NAMES.map(s => db.clear(s).catch(() => {})));
+                    await db.clear('auditLog').catch(() => {});
                     toast.success(t('allDataCleared') || 'Tüm veriler temizlendi.');
                     loadStats();
                     window.dispatchEvent(new CustomEvent('db-cleared'));

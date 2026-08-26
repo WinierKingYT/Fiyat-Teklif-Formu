@@ -12,7 +12,7 @@ class IndexedDBManager {
 
     constructor() {
         this.dbName = 'TeklifMasterDB';
-        this.version = this.calculateVersion('2.4.0'); // Bumped version for quoteVersions store
+        this.version = this.calculateVersion('2.5.0'); // Bumped version for audit log store
         this.db = null;
         this.isInitialized = false;
         this.initializationPromise = null;
@@ -113,6 +113,7 @@ class IndexedDBManager {
             { version: 5, migrate: (d: IDBDatabase) => this.addBankInfoStore(d) },
             { version: 20300, migrate: (d: IDBDatabase) => this.addRecycleBinStore(d) },
             { version: 20400, migrate: (d: IDBDatabase) => this.addQuoteVersionsStore(d) },
+            { version: 20500, migrate: (d: IDBDatabase) => this.addAuditLogStore(d) },
         ];
 
 
@@ -197,6 +198,73 @@ class IndexedDBManager {
             store.createIndex('quoteId', 'quoteId', { unique: false });
             store.createIndex('createdAt', 'createdAt', { unique: false });
             Logger.log('QuoteVersions store oluşturuldu');
+        }
+    }
+
+    addAuditLogStore(db: IDBDatabase): void {
+        if (!db.objectStoreNames.contains('auditLog')) {
+            const store = db.createObjectStore('auditLog', { keyPath: 'id', autoIncrement: true });
+            store.createIndex('createdAt', 'createdAt', { unique: false });
+            store.createIndex('action', 'action', { unique: false });
+            store.createIndex('entityType', 'entityType', { unique: false });
+            Logger.log('AuditLog store oluşturuldu');
+        }
+    }
+
+    private hasAuditLogStore(): boolean {
+        return !!this.db?.objectStoreNames.contains('auditLog');
+    }
+
+    private deriveAuditEntityName(value: unknown): string | undefined {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+        const record = value as Record<string, unknown>;
+        const nestedData = record.data && typeof record.data === 'object' && !Array.isArray(record.data)
+            ? record.data as Record<string, unknown>
+            : undefined;
+        const nestedQuoteData = nestedData?.quoteData && typeof nestedData.quoteData === 'object' && !Array.isArray(nestedData.quoteData)
+            ? nestedData.quoteData as Record<string, unknown>
+            : undefined;
+        const nestedCustomerData = nestedData?.customerData && typeof nestedData.customerData === 'object' && !Array.isArray(nestedData.customerData)
+            ? nestedData.customerData as Record<string, unknown>
+            : undefined;
+        const candidates = [
+            record.name,
+            record.quoteNumber,
+            record.customerName,
+            record.company,
+            record.bankName,
+            record.accountHolder,
+            nestedData?.name,
+            nestedData?.quoteNumber,
+            nestedQuoteData?.number,
+            nestedQuoteData?.title,
+            nestedCustomerData?.name,
+            nestedCustomerData?.company,
+        ];
+
+        const label = candidates.find(candidate => typeof candidate === 'string' && candidate.trim().length > 0);
+        return typeof label === 'string' ? label.trim().slice(0, 120) : undefined;
+    }
+
+    private createAuditRecord(
+        action: 'delete' | 'moved_to_recycle_bin' | 'restore' | 'permanent_delete' | 'empty_recycle_bin',
+        entityType: string,
+        entityId?: IDBValidKey,
+        entityName?: string,
+    ): Record<string, unknown> {
+        return {
+            action,
+            entityType,
+            ...(entityId !== undefined ? { entityId } : {}),
+            ...(entityName ? { entityName } : {}),
+            createdAt: new Date().toISOString(),
+        };
+    }
+
+    private notifyAuditLogUpdated(): void {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('audit-log-updated'));
         }
     }
 
@@ -458,7 +526,7 @@ class IndexedDBManager {
         }
 
         const sourceStores = [...new Set(items.map(item => item.originalStore))];
-        if (sourceStores.includes('recycle_bin')) {
+        if (sourceStores.includes('recycle_bin') || sourceStores.includes('auditLog')) {
             throw new Error('Çöp kutusu öğesi doğrudan tekrar geri yüklenemez.');
         }
         if (!this.db!.objectStoreNames.contains('recycle_bin') || sourceStores.some(storeName => !this.db!.objectStoreNames.contains(storeName))) {
@@ -492,6 +560,8 @@ class IndexedDBManager {
             return {
                 storeName: item.originalStore,
                 recycleBinKey: item.id,
+                entityId: (targetId ?? item.id) as IDBValidKey,
+                entityName: this.deriveAuditEntityName(item),
                 data: this.sanitizeData(restoredData) as Record<string, unknown>,
             };
         });
@@ -519,15 +589,26 @@ class IndexedDBManager {
 
             let transaction: IDBTransaction | null = null;
             try {
-                const activeTransaction = this.db!.transaction([...sourceStores, 'recycle_bin'], 'readwrite');
+                const includeAuditLog = this.hasAuditLogStore();
+                const transactionStores = [...sourceStores, 'recycle_bin', ...(includeAuditLog ? ['auditLog'] : [])];
+                const activeTransaction = this.db!.transaction(transactionStores, 'readwrite');
                 transaction = activeTransaction;
-                activeTransaction.oncomplete = succeed;
+                activeTransaction.oncomplete = () => {
+                    if (includeAuditLog) this.notifyAuditLogUpdated();
+                    succeed();
+                };
                 activeTransaction.onerror = () => fail(activeTransaction.error || new Error('Çöp kutusu öğesi geri yüklenemedi.'));
                 activeTransaction.onabort = () => fail(activeTransaction.error || new Error('Çöp kutusu geri yükleme işlemi geri alındı.'));
 
                 restoredItems.forEach(({ storeName, data }) => activeTransaction.objectStore(storeName).put(data));
                 const recycleBinStore = activeTransaction.objectStore('recycle_bin');
                 restoredItems.forEach(({ recycleBinKey }) => recycleBinStore.delete(recycleBinKey));
+                if (includeAuditLog) {
+                    const auditStore = activeTransaction.objectStore('auditLog');
+                    restoredItems.forEach(({ storeName, entityId, entityName }) => {
+                        auditStore.add(this.createAuditRecord('restore', storeName, entityId, entityName));
+                    });
+                }
             } catch (error) {
                 try {
                     transaction?.abort();
@@ -559,7 +640,7 @@ class IndexedDBManager {
         }
 
         const sourceStores = [...new Set(items.map(item => item.storeName))];
-        if (sourceStores.includes('recycle_bin')) {
+        if (sourceStores.includes('recycle_bin') || sourceStores.includes('auditLog')) {
             throw new Error('Çöp kutusu öğesi tekrar çöp kutusuna taşınamaz.');
         }
         if (!this.db!.objectStoreNames.contains('recycle_bin') || sourceStores.some(storeName => !this.db!.objectStoreNames.contains(storeName))) {
@@ -579,6 +660,9 @@ class IndexedDBManager {
                 originalId: key,
                 deletedAt,
                 ...(options?.deletedBy ? { deletedBy: options.deletedBy } : {}),
+                storeName,
+                key,
+                entityName: this.deriveAuditEntityName(recycleData),
             };
         });
 
@@ -604,14 +688,27 @@ class IndexedDBManager {
             };
 
             try {
-                const transaction = this.db!.transaction([...sourceStores, 'recycle_bin'], 'readwrite');
-                transaction.oncomplete = succeed;
+                const includeAuditLog = this.hasAuditLogStore();
+                const transactionStores = [...sourceStores, 'recycle_bin', ...(includeAuditLog ? ['auditLog'] : [])];
+                const transaction = this.db!.transaction(transactionStores, 'readwrite');
+                transaction.oncomplete = () => {
+                    if (includeAuditLog) this.notifyAuditLogUpdated();
+                    succeed();
+                };
                 transaction.onerror = () => fail(transaction.error || new Error('Öğe çöp kutusuna taşınamadı.'));
                 transaction.onabort = () => fail(transaction.error || new Error('Öğe taşıma işlemi geri alındı.'));
 
                 const recycleBinStore = transaction.objectStore('recycle_bin');
-                recycleRecords.forEach(record => recycleBinStore.add(this.sanitizeData(record)));
+                recycleRecords.forEach(({ storeName: _storeName, key: _key, entityName: _entityName, ...record }) => {
+                    recycleBinStore.add(this.sanitizeData(record));
+                });
                 items.forEach(({ storeName, key }) => transaction.objectStore(storeName).delete(key));
+                if (includeAuditLog) {
+                    const auditStore = transaction.objectStore('auditLog');
+                    recycleRecords.forEach(({ storeName, key, entityName }) => {
+                        auditStore.add(this.createAuditRecord('moved_to_recycle_bin', storeName, key, entityName));
+                    });
+                }
             } catch (error) {
                 fail(error);
             }
@@ -623,17 +720,25 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db!.transaction([storeName], 'readwrite');
+                const includeAuditLog = storeName !== 'auditLog' && this.hasAuditLogStore();
+                const transactionStores = [storeName, ...(includeAuditLog ? ['auditLog'] : [])];
+                const transaction = this.db!.transaction(transactionStores, 'readwrite');
                 const store = transaction.objectStore(storeName);
-                const request = store.delete(key);
-
-                request.onsuccess = () => {
+                transaction.oncomplete = () => {
+                    if (includeAuditLog) this.notifyAuditLogUpdated();
                     resolve(undefined);
                 };
-                request.onerror = () => {
-                    Logger.error(`${storeName} delete işlemi hatası:`, request.error);
-                    reject(request.error);
-                };
+                transaction.onerror = () => reject(transaction.error || new Error(`${storeName} silme işlemi başarısız oldu.`));
+                transaction.onabort = () => reject(transaction.error || new Error(`${storeName} silme işlemi geri alındı.`));
+
+                store.delete(key);
+                if (includeAuditLog) {
+                    transaction.objectStore('auditLog').add(this.createAuditRecord(
+                        storeName === 'recycle_bin' ? 'permanent_delete' : 'delete',
+                        storeName,
+                        key,
+                    ));
+                }
             } catch (error) {
                 Logger.error(`${storeName} delete işlemi exception:`, error);
                 reject(error);
@@ -646,17 +751,21 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             try {
-                const transaction = this.db!.transaction([storeName], 'readwrite');
+                const includeAuditLog = storeName === 'recycle_bin' && this.hasAuditLogStore();
+                const transactionStores = [storeName, ...(includeAuditLog ? ['auditLog'] : [])];
+                const transaction = this.db!.transaction(transactionStores, 'readwrite');
                 const store = transaction.objectStore(storeName);
-                const request = store.clear();
-
-                request.onsuccess = () => {
+                transaction.oncomplete = () => {
+                    if (includeAuditLog) this.notifyAuditLogUpdated();
                     resolve(undefined);
                 };
-                request.onerror = () => {
-                    Logger.error(`${storeName} clear işlemi hatası:`, request.error);
-                    reject(request.error);
-                };
+                transaction.onerror = () => reject(transaction.error || new Error(`${storeName} temizleme işlemi başarısız oldu.`));
+                transaction.onabort = () => reject(transaction.error || new Error(`${storeName} temizleme işlemi geri alındı.`));
+
+                store.clear();
+                if (includeAuditLog) {
+                    transaction.objectStore('auditLog').add(this.createAuditRecord('empty_recycle_bin', 'recycle_bin'));
+                }
             } catch (error) {
                 Logger.error(`${storeName} clear işlemi exception:`, error);
                 reject(error);

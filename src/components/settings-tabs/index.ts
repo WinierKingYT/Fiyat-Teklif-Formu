@@ -4,3 +4,4 @@ export { default as PdfLayoutSettings } from '@/components/settings-tabs/PdfLayo
 export { default as WatermarkSettings } from '@/components/settings-tabs/WatermarkSettings';
 export { default as QuoteNumberSettingsTab } from '@/components/settings-tabs/QuoteNumberSettingsTab';
 export { default as DataBackupSettings } from '@/components/settings-tabs/DataBackupSettings';
+export { default as ActivityLogSettings } from '@/components/settings-tabs/ActivityLogSettings';

@@ -80,11 +80,12 @@ const seedRecycleBin = async (page: Page, items: Array<Record<string, unknown>>)
     });
 
     await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(['customers', 'products', 'bankInfo', 'recycle_bin'], 'readwrite');
+      const transaction = db.transaction(['customers', 'products', 'bankInfo', 'recycle_bin', 'auditLog'], 'readwrite');
       transaction.objectStore('customers').clear();
       transaction.objectStore('products').clear();
       transaction.objectStore('bankInfo').clear();
       transaction.objectStore('recycle_bin').clear();
+      transaction.objectStore('auditLog').clear();
       recycleItems.forEach(item => transaction.objectStore('recycle_bin').put(item));
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
@@ -103,9 +104,10 @@ const seedQuoteForDeletion = async (page: Page) => {
     });
 
     await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(['quotes', 'recycle_bin'], 'readwrite');
+      const transaction = db.transaction(['quotes', 'recycle_bin', 'auditLog'], 'readwrite');
       transaction.objectStore('quotes').clear();
       transaction.objectStore('recycle_bin').clear();
+      transaction.objectStore('auditLog').clear();
       transaction.objectStore('quotes').put({
         id: 950,
         quoteData: { number: 'E2E-SIL-001', currency: 'TRY' },
@@ -120,6 +122,26 @@ const seedQuoteForDeletion = async (page: Page) => {
     });
     db.close();
   }, { dbName: DB_NAME });
+};
+
+const seedAuditLog = async (page: Page, entries: Array<Record<string, unknown>>) => {
+  await page.evaluate(async ({ dbName, auditEntries }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(dbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(['auditLog'], 'readwrite');
+      transaction.objectStore('auditLog').clear();
+      auditEntries.forEach(entry => transaction.objectStore('auditLog').add(entry));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    db.close();
+  }, { dbName: DB_NAME, auditEntries: entries });
 };
 
 test.describe('Critical quote workflows', () => {
@@ -238,7 +260,7 @@ test.describe('Delete workflows', () => {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
-      const [quotes, recycleBin] = await Promise.all([
+      const [quotes, recycleBin, auditLog] = await Promise.all([
         new Promise<unknown[]>((resolve, reject) => {
           const request = db.transaction('quotes', 'readonly').objectStore('quotes').getAll();
           request.onsuccess = () => resolve(request.result);
@@ -249,13 +271,23 @@ test.describe('Delete workflows', () => {
           request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error);
         }),
+        new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
+          const request = db.transaction('auditLog', 'readonly').objectStore('auditLog').getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        }),
       ]);
       db.close();
-      return { quotesCount: quotes.length, recycleBinItem: recycleBin.find(item => item.originalId === 950) };
+      return {
+        quotesCount: quotes.length,
+        recycleBinItem: recycleBin.find(item => item.originalId === 950),
+        auditEntry: auditLog.find(item => item.action === 'moved_to_recycle_bin' && item.entityId === 950),
+      };
     }, { dbName: DB_NAME });
 
     expect(persisted.quotesCount).toBe(0);
     expect(persisted.recycleBinItem).toEqual(expect.objectContaining({ originalStore: 'quotes', originalId: 950 }));
+    expect(persisted.auditEntry).toEqual(expect.objectContaining({ action: 'moved_to_recycle_bin', entityType: 'quotes', entityId: 950, entityName: 'E2E-SIL-001' }));
   });
 });
 
@@ -515,5 +547,31 @@ test.describe('Recycle bin workflows', () => {
 
     await expect(page.getByText('Öğe kalıcı olarak silindi', { exact: true })).toBeVisible();
     await expect(page.getByText('Geri dönüşüm kutusu boş', { exact: true })).toBeVisible();
+  });
+
+  test('shows recent recycle-bin actions in the activity log', async ({ page }) => {
+    await page.goto('/');
+    await seedAuditLog(page, [
+      {
+        action: 'moved_to_recycle_bin',
+        entityType: 'customers',
+        entityId: 951,
+        entityName: 'Denetim Müşterisi',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        action: 'restore',
+        entityType: 'products',
+        entityId: 952,
+        entityName: 'Denetim Ürünü',
+        createdAt: new Date(Date.now() - 60_000).toISOString(),
+      },
+    ]);
+
+    await page.goto('/?view=settings&tab=activity');
+    await expect(page.getByRole('heading', { name: 'Uygulama Ayarları', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'İşlem Geçmişi', exact: true })).toBeVisible();
+    await expect(page.getByText('Çöp kutusuna taşındı: Denetim Müşterisi', { exact: true })).toBeVisible();
+    await expect(page.getByText('Geri yüklendi: Denetim Ürünü', { exact: true })).toBeVisible();
   });
 });

@@ -32,11 +32,13 @@ const mockStore = {
     createIndex: vi.fn(),
 };
 
+const baseStoreNames = ['customers', 'products', 'quotes', 'drafts', 'templates', 'previewData', 'formState', 'settings', 'bankInfo', 'recycle_bin', 'quoteVersions'];
+
 const mockDb = {
     transaction: vi.fn(() => mockTransaction),
     createObjectStore: vi.fn(() => mockStore),
     objectStoreNames: {
-        contains: vi.fn((name) => ['customers', 'products', 'quotes', 'drafts', 'templates', 'previewData', 'formState', 'settings', 'bankInfo', 'recycle_bin', 'quoteVersions'].includes(name)),
+        contains: vi.fn((name) => baseStoreNames.includes(name)),
     },
     close: vi.fn(),
 };
@@ -85,6 +87,8 @@ describe('IndexedDBManager', () => {
         testableManager.db = null;
 
         vi.clearAllMocks();
+
+        mockDb.objectStoreNames.contains.mockImplementation((name) => baseStoreNames.includes(name));
 
         (globalThis as unknown as { indexedDB: unknown }).indexedDB = mockIndexedDB;
 
@@ -160,6 +164,19 @@ describe('IndexedDBManager', () => {
         // Verify upgrade was triggered - migrations ran
         expect(currentRequest).not.toBeNull();
         expect(currentRequest!.onupgradeneeded).toBeDefined();
+    });
+
+    it('should create the audit log store during migration', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerUpgrade(mockDb, 20400);
+
+        expect(mockDb.createObjectStore).toHaveBeenCalledWith('auditLog', { keyPath: 'id', autoIncrement: true });
+        expect(mockStore.createIndex).toHaveBeenCalledWith('createdAt', 'createdAt', { unique: false });
+        expect(mockStore.createIndex).toHaveBeenCalledWith('action', 'action', { unique: false });
+        expect(mockStore.createIndex).toHaveBeenCalledWith('entityType', 'entityType', { unique: false });
+
+        triggerSuccess(mockDb);
+        await initPromise;
     });
 
     it('should save and query quoteVersions with versionId and quoteId index', async () => {
@@ -341,6 +358,27 @@ describe('IndexedDBManager', () => {
             expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'products', 'recycle_bin'], 'readwrite');
             expect(mockStore.add).toHaveBeenCalledTimes(2);
             expect(mockStore.delete).toHaveBeenCalledTimes(2);
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(movePromise).resolves.toBeUndefined();
+    });
+
+    it('should append audit entries in the same transaction as a recycle-bin move', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+        mockDb.objectStoreNames.contains.mockImplementation((name) => baseStoreNames.includes(name) || name === 'auditLog');
+
+        const movePromise = indexedDBManager.moveToRecycleBin('customers', 42, {
+            id: 42,
+            name: 'Denetim müşterisi',
+        }, { deletedBy: 'user' });
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'recycle_bin', 'auditLog'], 'readwrite');
+            expect(mockStore.add).toHaveBeenCalledTimes(2);
+            expect(mockStore.add.mock.calls.some(([value]) => (value as Record<string, unknown>).action === 'moved_to_recycle_bin')).toBe(true);
         });
 
         mockTransaction.oncomplete?.();

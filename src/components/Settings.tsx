@@ -2,7 +2,7 @@ import { Settings2 } from "lucide-react";
 import React from "react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { GeneralSettings, CompanyDefaults, QuoteNumberSettingsTab, PdfLayoutSettings, WatermarkSettings, DataBackupSettings } from '@/components/settings-tabs';
+import { GeneralSettings, CompanyDefaults, QuoteNumberSettingsTab, PdfLayoutSettings, WatermarkSettings, DataBackupSettings, ActivityLogSettings } from '@/components/settings-tabs';
 import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
@@ -121,6 +121,7 @@ const Settings: React.FC<SettingsProps> = ({ initialTab = "general" }) => {
     { id: "pdf", label: t('pdfLayout') },
     { id: "watermark", label: t('watermarkTab') },
     { id: "backup", label: t('dataAndStorage') || 'Veri & Yedekleme' },
+    { id: "activity", label: t('activityLog') || 'İşlem Geçmişi' },
   ];
 
   return (
@@ -185,6 +186,9 @@ const Settings: React.FC<SettingsProps> = ({ initialTab = "general" }) => {
       )}
       {activeTab === "backup" && (
         <DataBackupSettings />
+      )}
+      {activeTab === "activity" && (
+        <ActivityLogSettings />
       )}
     </div>
   );

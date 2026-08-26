@@ -349,6 +349,18 @@ export interface SaveStatus {
   lastSaved: number | null;
 }
 
+// ─── Audit Log ─────────────────────────────────────────────────────────────
+export type AuditAction = 'delete' | 'moved_to_recycle_bin' | 'restore' | 'permanent_delete' | 'empty_recycle_bin';
+
+export interface AuditLogEntry {
+  id?: IDBValidKey;
+  action: AuditAction;
+  entityType: string;
+  entityId?: IDBValidKey;
+  entityName?: string;
+  createdAt: string;
+}
+
 export interface IndexedDBManager {
   getAll: <T = unknown>(storeName: string, indexName?: string | null) => Promise<T[]>;
   getAllByIndex?: <T = unknown>(storeName: string, indexName: string, query?: IDBValidKey | IDBKeyRange) => Promise<T[]>;
