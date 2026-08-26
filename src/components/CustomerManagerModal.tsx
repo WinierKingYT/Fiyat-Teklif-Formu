@@ -15,10 +15,11 @@ import type { CustomerData } from '@/context/quote/types';
 interface CustomerManagerModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSelect?: (customer: CustomerData) => void;
     language?: string;
 }
 
-const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerManagerModalProps) => {
+const CustomerManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: CustomerManagerModalProps) => {
     const { t } = useTranslation(language);
     const { db } = useIndexedDB();
     const [customers, setCustomers] = useState<CustomerData[]>([]);
@@ -147,15 +148,16 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
 
     const debouncedSearch = useDebounce(searchTerm, 250);
     const filteredCustomers = useMemo(() => {
-        const q = debouncedSearch.toLowerCase().trim();
+        const q = debouncedSearch.toLocaleLowerCase('tr-TR').trim();
         if (!q) return customers;
         return customers.filter(c =>
-            (c.name && c.name.toLowerCase().includes(q)) ||
-            (c.company && c.company.toLowerCase().includes(q)) ||
-            (c.email && c.email.toLowerCase().includes(q)) ||
-            (c.phone && c.phone.toLowerCase().includes(q)) ||
-            (c.taxNumber && c.taxNumber.toLowerCase().includes(q)) ||
-            ((c as Record<string, unknown>).taxNo && String((c as Record<string, unknown>).taxNo).toLowerCase().includes(q))
+            (c.name && c.name.toLocaleLowerCase('tr-TR').includes(q)) ||
+            (c.company && c.company.toLocaleLowerCase('tr-TR').includes(q)) ||
+            (c.email && c.email.toLocaleLowerCase('tr-TR').includes(q)) ||
+            (c.phone && c.phone.toLocaleLowerCase('tr-TR').includes(q)) ||
+            (c.taxOffice && c.taxOffice.toLocaleLowerCase('tr-TR').includes(q)) ||
+            (c.taxNumber && c.taxNumber.toLocaleLowerCase('tr-TR').includes(q)) ||
+            ((c as Record<string, unknown>).taxNo && String((c as Record<string, unknown>).taxNo).toLocaleLowerCase('tr-TR').includes(q))
         );
     }, [customers, debouncedSearch]);
 
@@ -285,15 +287,26 @@ const CustomerManagerModal = ({ isOpen, onClose, language = 'tr' }: CustomerMana
                                         <div className="font-medium text-[var(--color-text)]">{customer.company}</div>
                                         <div className="text-sm text-[var(--color-text-muted)]">{customer.name}</div>
                                     </div>
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            type="button"
-                                            className="p-2 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); if (customer.id !== undefined) handleDelete(customer.id); }}
-                                            aria-label={`${t('deleteCustomer')}: ${customer.name || customer.company || ''}`}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                    <div className="flex items-center gap-2">
+                                        {onSelect && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-xs btn-primary font-semibold"
+                                                onClick={(e) => { e.stopPropagation(); onSelect(customer); onClose(); }}
+                                            >
+                                                {t('select') || 'Seç'}
+                                            </button>
+                                        )}
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                type="button"
+                                                className="p-1.5 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors"
+                                                onClick={(e) => { e.stopPropagation(); if (customer.id !== undefined) handleDelete(customer.id); }}
+                                                aria-label={`${t('deleteCustomer')}: ${customer.name || customer.company || ''}`}
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))

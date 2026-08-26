@@ -168,6 +168,40 @@ const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) 
                   max="300"
                 />
               </div>
+
+              {/* Canlı Belge Simülatörü Kartı */}
+              <div className="form-group md:col-span-2">
+                <label className="form-label mb-1.5 flex items-center justify-between">
+                  <span>{t('liveWatermarkPreview') || 'Canlı Filigran Simülasyonu'}</span>
+                  <span className="text-[11px] text-[var(--color-text-muted)] font-normal">
+                    {pdfConfig.watermarkRotation}° | %{Math.round((pdfConfig.watermarkOpacity ?? 0.15) * 100)} Opaklık
+                  </span>
+                </label>
+                <div className="relative w-full h-44 rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-bg-card)] flex flex-col items-center justify-center overflow-hidden shadow-xs select-none">
+                  {/* Mock document lines */}
+                  <div className="absolute inset-x-8 top-4 space-y-2 opacity-20 pointer-events-none">
+                    <div className="h-2 w-1/3 bg-current rounded-full" />
+                    <div className="h-1.5 w-full bg-current rounded-full" />
+                    <div className="h-1.5 w-5/6 bg-current rounded-full" />
+                    <div className="h-1.5 w-4/6 bg-current rounded-full" />
+                    <div className="h-1.5 w-full bg-current rounded-full mt-4" />
+                    <div className="h-1.5 w-3/4 bg-current rounded-full" />
+                  </div>
+
+                  {/* Watermark text */}
+                  <div
+                    className="font-black tracking-widest pointer-events-none transition-all duration-150 uppercase"
+                    style={{
+                      color: pdfConfig.watermarkColor || '#000000',
+                      opacity: pdfConfig.watermarkOpacity ?? 0.15,
+                      transform: `rotate(${pdfConfig.watermarkRotation ?? -45}deg)`,
+                      fontSize: `${Math.min(38, Math.max(16, (pdfConfig.watermarkFontSize || 120) / 3.5))}px`,
+                    }}
+                  >
+                    {pdfConfig.watermarkText || 'TASLAK'}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

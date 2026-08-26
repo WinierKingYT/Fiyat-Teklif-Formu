@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { getDefaultPdfConfig } from '@/context/quote/initialState';
+import { parseStoredPdfConfig } from '@/context/quote/PdfConfigContext';
 import {
   quoteItemSchema,
   discountSchema,
@@ -6,6 +8,7 @@ import {
   bankDataSchema,
   quoteDataSchema,
   customerDataSchema,
+  pdfConfigSchema,
 } from '@/context/quote/types';
 
 describe('quoteItemSchema', () => {
@@ -202,5 +205,31 @@ describe('customerDataSchema', () => {
       phone: '+90 212 555 1234',
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('pdfConfigSchema and getDefaultPdfConfig', () => {
+  it('should validate getDefaultPdfConfig successfully', () => {
+    const defaultConfig = getDefaultPdfConfig();
+    const result = pdfConfigSchema.safeParse(defaultConfig);
+    expect(result.success).toBe(true);
+  });
+
+  it('keeps valid stored settings and removes unknown fields', () => {
+    const config = parseStoredPdfConfig(JSON.stringify({
+      color: '#ff0000',
+      tableCellPadding: '4px',
+      removedFeature: true,
+    }));
+
+    expect(config.color).toBe('#ff0000');
+    expect(config.tableCellPadding).toBe('4px');
+    expect(config).not.toHaveProperty('removedFeature');
+  });
+
+  it('falls back to defaults when a stored setting has an invalid type', () => {
+    const config = parseStoredPdfConfig(JSON.stringify({ itemsPerPage: 'invalid' }));
+
+    expect(config).toEqual(getDefaultPdfConfig());
   });
 });

@@ -2,35 +2,38 @@ import { Settings2 } from "lucide-react";
 import React from "react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { GeneralSettings, CompanyDefaults, PdfLayoutSettings, WatermarkSettings } from '@/components/settings-tabs';
+import { GeneralSettings, CompanyDefaults, QuoteNumberSettingsTab, PdfLayoutSettings, WatermarkSettings, DataBackupSettings } from '@/components/settings-tabs';
 import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
 import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 
-const Settings = () => {
+interface SettingsProps {
+  initialTab?: string;
+}
+
+const Settings: React.FC<SettingsProps> = ({ initialTab = "general" }) => {
   const { db } = useIndexedDB();
   const { pdfLayout, setPdfLayout, pdfConfig, setPdfConfig } = usePdfConfig();
   const { quoteData } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
   const {
-    viewMode,
-    setViewMode,
     performanceMode,
     setPerformanceMode,
     compactMode,
     setCompactMode,
     appFontSize,
     setAppFontSize,
-    appLayout,
-    setAppLayout,
     appTheme,
     setAppTheme,
     appColor,
     setAppColor,
   } = useUI();
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || initialTab;
+  });
   const [settings, setSettings] = useState({
     defaultTitle: "",
     defaultDescription: "",
@@ -114,8 +117,10 @@ const Settings = () => {
   const tabs = [
     { id: "general", label: t('generalSettings') },
     { id: "company", label: t('companyDefaults') },
+    { id: "numbering", label: t('numberingSettings') || 'Numaratör & Seri' },
     { id: "pdf", label: t('pdfLayout') },
     { id: "watermark", label: t('watermarkTab') },
+    { id: "backup", label: t('dataAndStorage') || 'Veri & Yedekleme' },
   ];
 
   return (
@@ -141,16 +146,12 @@ const Settings = () => {
       </div>
       {activeTab === "general" && (
         <GeneralSettings
-          viewMode={viewMode}
-          setViewMode={setViewMode}
           performanceMode={performanceMode}
           setPerformanceMode={setPerformanceMode}
           compactMode={compactMode}
           setCompactMode={setCompactMode}
           appFontSize={appFontSize}
           setAppFontSize={setAppFontSize}
-          appLayout={appLayout}
-          setAppLayout={setAppLayout}
           appTheme={appTheme}
           setAppTheme={setAppTheme}
           appColor={appColor}
@@ -167,6 +168,9 @@ const Settings = () => {
           onSave={handleSave}
         />
       )}
+      {activeTab === "numbering" && (
+        <QuoteNumberSettingsTab />
+      )}
       {activeTab === "pdf" && (
         <PdfLayoutSettings
           pdfLayout={pdfLayout}
@@ -178,6 +182,9 @@ const Settings = () => {
           pdfConfig={pdfConfig}
           setPdfConfig={setPdfConfig}
         />
+      )}
+      {activeTab === "backup" && (
+        <DataBackupSettings />
       )}
     </div>
   );

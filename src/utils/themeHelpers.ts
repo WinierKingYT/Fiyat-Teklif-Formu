@@ -31,12 +31,43 @@ export interface ChunkOptions {
     itemsPerPage?: number;
     showSummary?: boolean;
     showBankInfo?: boolean;
+    hasBankData?: boolean;
     showSignatures?: boolean;
+    showCustomerSignature?: boolean;
     showTerms?: boolean;
+    hasTerms?: boolean;
+    showNotes?: boolean;
+    hasNotes?: boolean;
+    notesLength?: number;
+    customFooter?: string;
     isLandscape?: boolean;
     margins?: string;
     tableRowHeight?: number;
     fontSize?: number;
+}
+
+/**
+ * Formats tax office display without duplicate "(Vergi Dairesi)" or "(V.D.)".
+ * E.g., "Pendik Vergi Dairesi" -> "Pendik Vergi Dairesi"
+ * E.g., "Pendik" -> "Pendik (V.D.)"
+ */
+export function formatTaxOfficeDisplay(taxOffice?: string | null, label = 'V.D.'): string {
+    if (!taxOffice) return '';
+    const trimmed = taxOffice.trim();
+    if (!trimmed) return '';
+    if (/(?:vergi\s*dairesi|v\.?\s*d\.?|tax\s*office)/i.test(trimmed)) {
+        return trimmed;
+    }
+    return `${trimmed} (${label})`;
+}
+
+/**
+ * Filters and cleans contact information items to avoid trailing or orphaned bullets.
+ */
+export function formatContactItems(...items: (string | null | undefined)[]): string[] {
+    return items
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .map(item => item.trim());
 }
 
 /**
@@ -97,30 +128,45 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
     const avgItemWeight = items.length > 0 ? totalContentWeight / items.length : 1;
     const heightFactor = baseHeightFactor * Math.min(3.0, Math.max(1.0, avgItemWeight)) * marginFactor;
 
-    // Check if bottom sections are active
-    const hasBottomSections = options.showSummary !== false || options.showBankInfo || options.showSignatures || options.showTerms;
+    // Calculate dynamic bottom sections weight (in table item equivalents)
+    let bottomSectionWeight = 0;
+    if (options.showSummary !== false) bottomSectionWeight += 4.5;
+    if (options.showBankInfo !== false && options.hasBankData !== false) bottomSectionWeight += 3.0;
+    if (options.showTerms !== false && options.hasTerms !== false) bottomSectionWeight += 3.0;
+    if (options.showNotes !== false && options.hasNotes !== false) {
+        bottomSectionWeight += 2.5;
+        if (options.notesLength && options.notesLength > 100) bottomSectionWeight += 1.5;
+    }
+    if (options.showSignatures !== false) {
+        bottomSectionWeight += 3.5;
+        if (options.showCustomerSignature) bottomSectionWeight += 0.5;
+    }
+    if (options.customFooter) bottomSectionWeight += 1.0;
 
-    // Capacity for a standalone single-page quote — 14 ürün hedefi
-    const singlePageLimit = hasBottomSections
-        ? Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 16 : 14)) / heightFactor))
-        : Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : (isCompact ? 22 : 20)) / heightFactor));
+    const hasBottomSections = bottomSectionWeight > 0;
+
+    // Standard middle page limit (Header + Table only)
+    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 24 : 22)) / heightFactor));
+
+    // First page limit (Header + Customer Box + Table)
+    const firstPageLimit = Math.max(5, Math.floor((isLandscape ? (isCompact ? 14 : 12) : (isCompact ? 16 : 14)) / heightFactor));
+
+    // Last page limit (Continuation Header + Table + Bottom Sections)
+    const rawLastLimit = Math.max(3, middlePageLimit - Math.round(bottomSectionWeight / heightFactor));
+    const lastPageLimit = hasBottomSections ? Math.min(middlePageLimit, rawLastLimit) : middlePageLimit;
+
+    // Single page limit (Header + Customer Box + Table + Bottom Sections)
+    const rawSingleLimit = Math.max(2, firstPageLimit - Math.round(bottomSectionWeight / heightFactor));
+    const singlePageLimit = hasBottomSections ? Math.min(firstPageLimit, rawSingleLimit) : firstPageLimit;
 
     if (items.length <= singlePageLimit) {
         return [items];
     }
 
-    // Capacity limits — sayfa bütünlüğü ve estetiği korunarak
-    // Page 1: Header + Customer + Table (No bottom sections)
-    const firstPageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 16 : 14) : (isCompact ? 20 : 18)) / heightFactor));
-    // Middle pages: Compact Header + Table
-    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 24 : 22)) / heightFactor));
-    // Last page: Compact Header + Table + Summary + Bank + Terms + Signatures
-    const lastPageLimit = Math.max(4, Math.floor((isLandscape ? (isCompact ? 10 : 9) : (isCompact ? 14 : 12)) / heightFactor));
-
     // If it fits across exactly 2 pages:
     if (items.length <= firstPageLimit + lastPageLimit) {
-        // Balance items between page 1 and page 2 so neither page has an awkward huge empty void!
-        const p2Count = Math.min(lastPageLimit, Math.max(3, Math.ceil(items.length * 0.45)));
+        // Balance items between page 1 and page 2 so neither page has an awkward huge empty void
+        const p2Count = Math.min(lastPageLimit, Math.max(2, Math.floor(items.length * 0.4)));
         const p1Count = items.length - p2Count;
         return [
             items.slice(0, p1Count),
@@ -132,9 +178,14 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
     const chunks: T[][] = [];
     let remaining = [...items];
 
+    // Total pages estimate
+    const estRemainingPages = Math.ceil((items.length - lastPageLimit) / middlePageLimit);
+    const avgPerPage = Math.max(4, Math.ceil((items.length - lastPageLimit) / Math.max(1, estRemainingPages)));
+    const p1Limit = Math.min(firstPageLimit, avgPerPage);
+
     // Page 1
-    chunks.push(remaining.slice(0, firstPageLimit));
-    remaining = remaining.slice(firstPageLimit);
+    chunks.push(remaining.slice(0, p1Limit));
+    remaining = remaining.slice(p1Limit);
 
     while (remaining.length > 0) {
         if (remaining.length <= lastPageLimit) {
@@ -143,15 +194,24 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         }
 
         if (remaining.length <= middlePageLimit + lastPageLimit) {
-            const pMidCount = Math.min(middlePageLimit, Math.max(1, remaining.length - 1));
-            const finalMid = remaining.length - pMidCount > lastPageLimit ? remaining.length - lastPageLimit : pMidCount;
-            chunks.push(remaining.slice(0, finalMid));
-            chunks.push(remaining.slice(finalMid));
+            const pMidCount = Math.min(middlePageLimit, Math.max(2, remaining.length - lastPageLimit));
+            chunks.push(remaining.slice(0, pMidCount));
+            chunks.push(remaining.slice(pMidCount));
             break;
         }
 
         chunks.push(remaining.slice(0, middlePageLimit));
         remaining = remaining.slice(middlePageLimit);
+    }
+
+    // Post-balancing: if the last page has only 1 item and previous page has plenty, move 1-2 items over
+    if (chunks.length > 1) {
+        const lastChunk = chunks[chunks.length - 1];
+        const prevChunk = chunks[chunks.length - 2];
+        if (lastChunk.length === 1 && prevChunk.length > 3) {
+            const moved = prevChunk.pop()!;
+            lastChunk.unshift(moved);
+        }
     }
 
     return chunks;

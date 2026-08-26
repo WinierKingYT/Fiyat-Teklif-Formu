@@ -7,14 +7,10 @@ export type AppColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate
 export type AppLayout = 'modern' | 'classic';
 
 export interface UIContextValue {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode | ((prev: ViewMode) => ViewMode)) => void;
   appTheme: AppTheme;
   setAppTheme: (theme: AppTheme | ((prev: AppTheme) => AppTheme)) => void;
   appColor: AppColor;
   setAppColor: (color: AppColor | ((prev: AppColor) => AppColor)) => void;
-  appLayout: AppLayout;
-  setAppLayout: (layout: AppLayout | ((prev: AppLayout) => AppLayout)) => void;
   appFontSize: number;
   setAppFontSize: (size: number | ((prev: number) => number)) => void;
   performanceMode: boolean;
@@ -94,11 +90,6 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
     document.documentElement.setAttribute('data-color', appColor);
   }, [appColor]);
 
-  const [appLayout, setAppLayout] = useState<AppLayout>(() => getLocalStorage('appLayout', 'modern'));
-  useEffect(() => {
-    setLocalStorage('appLayout', appLayout);
-  }, [appLayout]);
-
   const [appFontSize, setAppFontSize] = useState<number>(() => {
     return getLocalStorage('appFontSize', 14);
   });
@@ -128,17 +119,15 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
   }, [splitPreviewMode]);
 
   const value = useMemo<UIContextValue>(() => ({
-    viewMode, setViewMode: handleSetViewMode,
     appTheme, setAppTheme,
     appColor, setAppColor,
-    appLayout, setAppLayout,
     appFontSize, setAppFontSize,
     performanceMode, setPerformanceMode,
     compactMode, setCompactMode,
     focusMode, setFocusMode,
     isLivePreviewMode, setIsLivePreviewMode,
     splitPreviewMode, setSplitPreviewMode,
-  }), [viewMode, appTheme, appColor, appLayout, appFontSize, performanceMode, compactMode, focusMode, isLivePreviewMode, splitPreviewMode]);
+  }), [appTheme, appColor, appFontSize, performanceMode, compactMode, focusMode, isLivePreviewMode, splitPreviewMode]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 };

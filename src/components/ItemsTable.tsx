@@ -19,10 +19,8 @@ import {
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import ContextMenu from '@/components/items/ContextMenu';
 import { ItemsBatchBar } from '@/components/items/ItemsBatchBar';
 import { ItemsHeaderControls } from '@/components/items/ItemsHeaderControls';
-import { ItemsSearchAutocomplete } from '@/components/items/ItemsSearchAutocomplete';
 import SortableRow from '@/components/items/SortableRow';
 import SortableRowCard from '@/components/items/SortableRowCard';
 import { useQuoteData } from '@/context/QuoteContext';
@@ -59,7 +57,6 @@ const ItemsTable = ({
 }: ItemsTableProps) => {
   const { quoteData, updateQuoteData, db } = useQuoteData();
   const { t } = useTranslation(quoteData?.language);
-  const searchRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() =>
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : 'table',
   );
@@ -80,10 +77,6 @@ const ItemsTable = ({
       if (throttleTimer !== null) window.clearTimeout(throttleTimer);
     };
   }, []);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ProductRow[]>([]);
-  const [showSearch, setShowSearch] = useState(false);
-  const [searchIndex, setSearchIndex] = useState(-1);
   const [touchedRows, setTouchedRows] = useState<Record<string, Record<string, boolean>>>({});
 
   // Column Visibility Customization
@@ -222,39 +215,6 @@ const ItemsTable = ({
     fetchCatalog();
   }, [db]);
 
-  useEffect(() => {
-    if (!allCatalogProducts.length || searchQuery.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    const q = searchQuery.toLowerCase();
-    const filtered = allCatalogProducts.filter(
-      (p) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q),
-    );
-    setSearchResults(filtered.slice(0, 10));
-    setSearchIndex(-1);
-  }, [searchQuery, allCatalogProducts]);
-
-  const [recentProducts, setRecentProducts] = useState<ProductRow[]>(() => {
-    try {
-      const saved = localStorage.getItem('recentProducts');
-      return saved ? (JSON.parse(saved) as ProductRow[]) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const addToRecentProducts = useCallback((product: ProductRow) => {
-    setRecentProducts((prev) => {
-      const filtered = prev.filter((p) => p.id !== product.id);
-      const updated = [product, ...filtered].slice(0, 5);
-      localStorage.setItem('recentProducts', JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
-
   const handleProductSelect = useCallback((index: number, product: ProductRow) => {
     onItemsChange(prev => {
       const newItems = [...prev];
@@ -275,8 +235,7 @@ const ItemsTable = ({
       };
       return newItems;
     });
-    addToRecentProducts(product);
-  }, [onItemsChange, addToRecentProducts]);
+  }, [onItemsChange]);
 
   const handleCreateProduct = useCallback(async (index: number, name: string) => {
     if (!name.trim() || !db) return;
@@ -302,41 +261,6 @@ const ItemsTable = ({
       toast.error('Ürün kataloğa kaydedilemedi');
     }
   }, [db, items, handleProductSelect]);
-
-  const addProductFromSearch = useCallback((product: ProductRow) => {
-    const newItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-      name: product.name,
-      description: product.description || '',
-      quantity: 1,
-      unit: product.unit || 'Adet',
-      price: product.price || 0,
-      taxRate: product.taxRate || 20,
-      discountRate: 0,
-      total: product.price || 0,
-      image: product.image ?? undefined,
-    };
-    onItemsChange(prev => [...prev, newItem]);
-    addToRecentProducts(product);
-    setSearchQuery('');
-    setSearchResults([]);
-  }, [onItemsChange, addToRecentProducts]);
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!searchResults.length) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSearchIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSearchIndex((prev) => Math.max(prev - 1, 0));
-    } else if (e.key === 'Enter' && searchIndex >= 0) {
-      e.preventDefault();
-      addProductFromSearch(searchResults[searchIndex]);
-    } else if (e.key === 'Escape') {
-      setShowSearch(false);
-    }
-  };
 
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
@@ -558,57 +482,6 @@ const ItemsTable = ({
     }
   }, [items.length, addNewItem]);
 
-  const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, index: -1 });
-
-  const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, index });
-  }, []);
-
-  const contextMenuItems = useMemo(() => {
-    if (contextMenu.index < 0) return [];
-    return [
-      {
-        icon: <Package size={13} />,
-        label: t('saveAsProduct'),
-        onClick: async () => {
-          const item = items[contextMenu.index];
-          if (!item?.name) {
-            toast.error(t('productNameRequired'));
-            return;
-          }
-          try {
-            await db.add('products', {
-              id: `prod-${Date.now()}`,
-              name: item.name,
-              description: item.description || '',
-              price: parseFloat(String(item.price)) || 0,
-              taxRate: parseFloat(String(item.taxRate)) || 20,
-              unit: item.unit || 'Adet',
-              image: item.image || null,
-              createdAt: new Date().toISOString()
-            });
-            toast.success(t('productSavedToCatalog'));
-          } catch (err) {
-            Logger.error('Error saving product', err);
-          }
-        }
-      },
-      {
-        icon: <AlertCircle size={13} />,
-        label: t('validationStatus'),
-        onClick: () => {
-          const item = items[contextMenu.index];
-          const errs = getRowErrors(item);
-          if (Object.keys(errs).length === 0) toast.success(t('noRowErrors'));
-          else toast.error(t('rowErrors').replace('{errors}', Object.values(errs).join(', ')));
-        }
-      },
-      { separator: true, label: '', onClick: () => {} },
-      { icon: <Trash size={13} />, label: t('deleteRow'), onClick: () => removeItem(contextMenu.index) },
-    ];
-  }, [contextMenu.index, items, db, getRowErrors, removeItem, t]);
-
   const applyBulkDiscount = (rate: number) => {
     onItemsChange(prev => prev.map((item, idx) => selectedItems.has(idx) ? { ...item, discountRate: rate } : item));
     toast.success(`Seçili kalemlere %${rate} iskonto uygulandı`);
@@ -651,23 +524,6 @@ const ItemsTable = ({
         onDuplicateSelected={duplicateSelected}
         onDeleteSelected={deleteSelected}
         onClearSelection={() => setSelectedItems(new Set())}
-        t={t}
-      />
-
-      {/* ─── LIVE SEARCH & AUTOCOMPLETE ─── */}
-      <ItemsSearchAutocomplete
-        searchRef={searchRef}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        showSearch={showSearch}
-        onShowSearchChange={setShowSearch}
-        searchResults={searchResults}
-        searchIndex={searchIndex}
-        onSearchKeyDown={handleSearchKeyDown}
-        onAddProductFromSearch={addProductFromSearch}
-        recentProducts={recentProducts}
-        itemsCount={items.length}
-        currency={currency}
         t={t}
       />
 
@@ -720,7 +576,6 @@ const ItemsTable = ({
                         rowErrors={allRowErrors.get(item.id)}
                         selected={selectedItems.has(index)}
                         toggleSelectItem={toggleSelectItem}
-                        onContextMenu={(e) => handleContextMenu(e, index)}
                         visibleColumns={visibleColumns}
                         taxMode={taxMode}
                         products={allCatalogProducts}
@@ -791,12 +646,6 @@ const ItemsTable = ({
           </span>
         </div>
       )}
-      <ContextMenu
-        x={contextMenu.x}
-        y={contextMenu.y}
-        items={contextMenuItems}
-        onClose={() => setContextMenu({ x: 0, y: 0, index: -1 })}
-      />
     </div>
   );
 };

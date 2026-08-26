@@ -50,7 +50,7 @@ export const getInitialTabData = (companyDefaults: Partial<CompanyData> | null =
 });
 
 export const getDefaultTabs = (companyDefaults: Partial<CompanyData> | null = null): Tab[] => [{
-    id: 'default-tab',
+    id: 'active-quote',
     title: 'Yeni Teklif',
     savedQuoteId: null,
     data: getInitialTabData(companyDefaults),

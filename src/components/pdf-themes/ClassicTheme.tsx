@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban } from '@/utils/themeHelpers';
+import { formatIban, formatTaxOfficeDisplay, formatContactItems } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -25,7 +25,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
         currentLocale,
         hasLineItemDiscounts,
     } = props;
-    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
+    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
 
     const classicStyles = useMemo(() => `
@@ -216,6 +216,8 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
         }
     `, [config, color]);
 
+    const showImageCol = config.showTableImages && hasAnyImage;
+
     const renderTable = (itemsToRender: QuoteItem[], startIndex: number) => {
         const isTr = (currentLocale || 'tr').startsWith('tr');
         return (
@@ -223,7 +225,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                 <thead>
                     <tr>
                         <th style={{ width: '28px', textAlign: 'center' }}>#</th>
-                        {config.showTableImages && <th style={{ width: '36px', textAlign: 'center' }}>{t.image}</th>}
+                        {showImageCol && <th style={{ width: '36px', textAlign: 'center' }}>{t.image}</th>}
                         <th>{config.textDescription ?? t.description}</th>
                         {config.showTableUnit && <th style={{ width: '60px', textAlign: 'center' }}>{config.textUnit ?? t.unit}</th>}
                         <th style={{ width: '50px', textAlign: 'center' }}>{config.textQuantity ?? t.quantity}</th>
@@ -244,7 +246,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                         return (
                             <tr key={startIndex + index} style={config.tableStriped && (startIndex + index) % 2 === 1 ? { backgroundColor: typeof config.tableStripedColor === 'string' && config.tableStripedColor ? config.tableStripedColor : '#f8fafc' } : undefined}>
                                 <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
-                                {config.showTableImages && (
+                                {showImageCol && (
                                     <td>
                                         <div className="classic-item-image">
                                             {item.image ? (
@@ -306,8 +308,8 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                 <div style={{ fontSize: config.headerInfoFontSize || '8.5pt', color: '#475569', marginTop: '2px' }}>{companyData.phone} | {companyData.email}</div>
                                 {companyData.website && <div style={{ fontSize: config.headerInfoFontSize || '8.5pt', color: '#475569' }}>{companyData.website}</div>}
                                 {(companyData.taxOffice || companyData.taxNumber) && (
-                                    <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
-                                        {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
+                                    <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
+                                        {companyData.taxOffice && <span>{formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} </span>}
                                         {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                     </div>
                                 )}
@@ -380,8 +382,8 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                             </div>
                                         )}
                                         {(companyData.taxOffice || companyData.taxNumber) && (
-                                            <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                                {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
+                                            <div style={{ fontSize: '7.5pt', color: '#475569', marginTop: '2px' }}>
+                                                {companyData.taxOffice && <span>{formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} </span>}
                                                 {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                             </div>
                                         )}
@@ -425,8 +427,8 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                             </div>
                                         )}
                                         {(customerData.taxOffice || customerData.taxNumber) && (
-                                            <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
-                                                {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
+                                            <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
+                                                {customerData.taxOffice && <span>{formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} </span>}
                                                 {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                             </div>
                                         )}

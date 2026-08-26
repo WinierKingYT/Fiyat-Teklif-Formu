@@ -4,13 +4,13 @@ Hızlı ve kolay fiyat teklifi oluşturmanıza yarayan, tarayıcıda çalışan 
 
 ## Özellikler
 
-- Çok sekmeli teklif düzenleyici (yeni / kaydet / yükle / kopyala / sil / geri dönüşüm)
+- Tek aktif teklif düzenleyicisi (yeni / kaydet / yükle / kopyala / sil / geri dönüşüm)
 - Müşteri, firma, banka bilgileri yönetimi ve ürün kataloğu
 - Vergi (KDV) ve indirim hesaplamaları, para birimi desteği ve döviz çevirici
 - **PDF çıktısı**: 6 tema (Modern, Klasik, Minimal, Kurumsal, Pro, Bold) ve kapsamlı görünüm/yerleşim/tipografi ayarları
 - Excel ve CSV içe / dışa aktarım
-- Veritabanı yedekleme / geri yükleme, verileri temizleme
-- Türkçe / İngilizce / Almanca arayüz (i18n)
+- Doğrulamalı ve transaction tabanlı veritabanı yedekleme / geri yükleme, verileri temizleme
+- Türkçe arayüz
 - PWA: çevrimdışı kullanım, otomatik güncelleme bildirimi
 
 ## Teknolojiler
@@ -51,7 +51,7 @@ Mevcut durum: **0 cast** (`TOTAL: 0`). Yeni `as any` ekleyen bir değişiklik he
 
 ## Code Health
 
-🛡️ `as any` casts = **0** (was 47) · explicit `any` = **0** · `tsc` 0 hata · `eslint` 0 hata · tests **105/105** · build ✓
+🛡️ `as any` casts = **0** (was 47) · explicit `any` = **0** · `tsc` 0 hata · `eslint` 0 hata · tests ✓ · build ✓
 
 Tüm metrikler CI'da `.github/workflows/typecheck.yml` üzerinden otomatik doğrulanır; sıfırdan sapma (yeni `any`, yeni `as any`, lint/type hatası, başarısız test) pull request'i bloke eder.
 
@@ -66,8 +66,8 @@ Uygulama, teklif durumunu **odaklı context'lere** bölünmüş hâlde yönetir 
 | Context | Sorumluluk |
 |---------|-----------|
 | `DatabaseContext` | IndexedDB bağlantısı ve `db` erişimi |
-| `TabContext` | Sekmeler, aktif sekme, geri alma / ileri alma (undo-redo) ve geçmiş |
-| `QuoteDataContext` | Aktif sekmenin teklif/müşteri/firma/kalem/indirim/banka verileri; kaydet, yükle, sıfırla, yedekleme |
+| `TabContext` | Tek aktif teklif oturumu, geri alma / ileri alma (undo-redo) ve otomatik oturum kaydı |
+| `QuoteDataContext` | Aktif teklifin teklif/müşteri/firma/kalem/indirim/banka verileri; kaydet, yükle, sıfırla, yedekleme |
 | `PdfConfigContext` | PDF görünüm / yerleşim ayarları (localStorage ile kalıcı) |
 | `SaveStatusContext` | Otomatik kaydetme durumu (idle / saving / saved / error) |
 | `ConfirmContext` | Global onay penceresi |

@@ -24,7 +24,6 @@ interface SortableRowProps {
   rowErrors?: Record<string, string>;
   selected?: boolean;
   toggleSelectItem: (index: number) => void;
-  onContextMenu?: (e: React.MouseEvent) => void;
   visibleColumns?: {
     image?: boolean;
     description?: boolean;
@@ -53,7 +52,6 @@ const SortableRow = memo(
     rowErrors,
     selected,
     toggleSelectItem,
-    onContextMenu,
     visibleColumns = { image: true, description: true, unit: true, discount: true },
     taxMode = 'exclusive',
     products = [],
@@ -118,7 +116,6 @@ const SortableRow = memo(
         ref={setNodeRef}
         style={style as React.CSSProperties}
         className="group hover:bg-[var(--color-bg-muted)]/40"
-        onContextMenu={onContextMenu}
       >
         <td className="w-6 px-1">
           <button

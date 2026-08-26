@@ -84,7 +84,7 @@ describe('getDefaultTabs', () => {
   it('should return one tab with default id', () => {
     const tabs = getDefaultTabs();
     expect(tabs).toHaveLength(1);
-    expect(tabs[0].id).toBe('default-tab');
+    expect(tabs[0].id).toBe('active-quote');
     expect(tabs[0].title).toBe('Yeni Teklif');
     expect(tabs[0].savedQuoteId).toBeNull();
   });
@@ -115,12 +115,12 @@ describe('getDefaultPdfConfig', () => {
 });
 
 describe('getDefaultPdfLayout', () => {
-  it('should return 6 layout items', () => {
+  it('should return layout items', () => {
     const layout = getDefaultPdfLayout();
     expect(layout).toHaveLength(6);
   });
 
-  it('should have all enabled by default', () => {
+  it('should have standard sections enabled by default', () => {
     const layout = getDefaultPdfLayout();
     layout.forEach(item => {
       expect(item.enabled).toBe(true);

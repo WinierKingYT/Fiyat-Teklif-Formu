@@ -10,9 +10,7 @@ const Settings = lazy(() => import('@/components/Settings'));
 const HistoryList = lazy(() => import('@/components/HistoryList'));
 const CustomerManagerModal = lazy(() => import('@/components/CustomerManagerModal'));
 const ProductManagerModal = lazy(() => import('@/components/ProductManagerModal'));
-const TemplateManagerModal = lazy(() => import('@/components/TemplateManagerModal'));
 const BankManagerModal = lazy(() => import('@/components/BankManagerModal'));
-const DatabaseManagerModal = lazy(() => import('@/components/DatabaseManagerModal'));
 const RecycleBinModal = lazy(() => import('@/components/RecycleBinModal'));
 
 const ModalLoadingFallback = () => (
@@ -61,22 +59,17 @@ function App() {
 
   const [isCustomerManagerOpen, setIsCustomerManagerOpen] = useState(false);
   const [isProductManagerOpen, setIsProductManagerOpen] = useState(false);
-  const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
-  const [isDatabaseManagerOpen, setIsDatabaseManagerOpen] = useState(false);
   const [isBankManagerOpen, setIsBankManagerOpen] = useState(false);
   const [isRecycleBinModalOpen, setIsRecycleBinModalOpen] = useState(false);
 
   const openCustomerManager = useCallback(() => setIsCustomerManagerOpen(true), []);
   const openProductManager = useCallback(() => setIsProductManagerOpen(true), []);
-  const openTemplateManager = useCallback(() => setIsTemplateManagerOpen(true), []);
-  const openDatabaseManager = useCallback(() => setIsDatabaseManagerOpen(true), []);
+  const openDatabaseManager = useCallback(() => setCurrentView('settings'), []);
   const openBankManager = useCallback(() => setIsBankManagerOpen(true), []);
   const openRecycleBin = useCallback(() => setIsRecycleBinModalOpen(true), []);
 
   const closeCustomerManager = useCallback(() => setIsCustomerManagerOpen(false), []);
   const closeProductManager = useCallback(() => setIsProductManagerOpen(false), []);
-  const closeTemplateManager = useCallback(() => setIsTemplateManagerOpen(false), []);
-  const closeDatabaseManager = useCallback(() => setIsDatabaseManagerOpen(false), []);
   const closeBankManager = useCallback(() => setIsBankManagerOpen(false), []);
   const closeRecycleBin = useCallback(() => setIsRecycleBinModalOpen(false), []);
 
@@ -88,7 +81,6 @@ function App() {
           onNavigate={setCurrentView}
           onOpenCustomerManager={openCustomerManager}
           onOpenProductManager={openProductManager}
-          onOpenTemplateManager={openTemplateManager}
           onOpenDatabaseManager={openDatabaseManager}
           onOpenBankManager={openBankManager}
           onOpenRecycleBin={openRecycleBin}
@@ -99,10 +91,7 @@ function App() {
                 onNavigate={setCurrentView}
                 onOpenProductManager={openProductManager}
                 onOpenCustomerManager={openCustomerManager}
-                onOpenTemplateManager={openTemplateManager}
-                onOpenDatabaseManager={openDatabaseManager}
                 onOpenBankManager={openBankManager}
-                onOpenRecycleBin={openRecycleBin}
               />
             </div>
           )}
@@ -121,20 +110,6 @@ function App() {
           <ProductManagerModal
             isOpen={isProductManagerOpen}
             onClose={closeProductManager}
-          />
-        </Suspense>
-
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <TemplateManagerModal
-            isOpen={isTemplateManagerOpen}
-            onClose={closeTemplateManager}
-          />
-        </Suspense>
-
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <DatabaseManagerModal
-            isOpen={isDatabaseManagerOpen}
-            onClose={closeDatabaseManager}
           />
         </Suspense>
 

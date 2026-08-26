@@ -1,4 +1,4 @@
-import { Clock, Eye, Trash, FileText, PlusCircle } from 'lucide-react';
+import { Clock, Eye, Trash, FileText, PlusCircle, Copy } from 'lucide-react';
 import React from 'react';
 import EmptyState from '@/components/EmptyState';
 import { calculateQuoteTotals, formatCurrency } from '@/utils/calculations';
@@ -12,6 +12,7 @@ interface HistoryQuotesTabProps {
     onToggleSelectAll: () => void;
     onToggleSelect: (id: number) => void;
     onLoadQuote: (quote: DbQuote) => void;
+    onDuplicateQuote?: (quote: DbQuote, e: React.MouseEvent) => void;
     onDeleteQuote: (id: number, e: React.MouseEvent) => void;
     onNewQuote: () => void;
     t: (key: string) => string;
@@ -25,6 +26,7 @@ export const HistoryQuotesTab: React.FC<HistoryQuotesTabProps> = ({
     onToggleSelectAll,
     onToggleSelect,
     onLoadQuote,
+    onDuplicateQuote,
     onDeleteQuote,
     onNewQuote,
     t
@@ -104,9 +106,14 @@ export const HistoryQuotesTab: React.FC<HistoryQuotesTabProps> = ({
                                 <td className="p-2.5 font-mono font-bold text-right text-[var(--color-text)]">{formatCurrency(calc.grandTotal, quoteCurrency)}</td>
                                 <td className="p-2.5 text-right">
                                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                        <button type="button" className="btn btn-xs btn-outline p-1" title={t('viewLoad')} onClick={() => onLoadQuote(quote)}>
+                                        <button type="button" className="btn btn-xs btn-outline p-1" title={t('viewLoad') || 'Yükle / Düzenle'} onClick={() => onLoadQuote(quote)}>
                                             <Eye size={13} />
                                         </button>
+                                        {onDuplicateQuote && (
+                                            <button type="button" className="btn btn-xs btn-outline p-1" title="Teklifi Klonla (Yeni Olarak Aç)" onClick={(e) => onDuplicateQuote(quote, e)}>
+                                                <Copy size={13} />
+                                            </button>
+                                        )}
                                         <button type="button" className="btn btn-xs btn-danger p-1" title={t('deleteQuoteAction')} onClick={(e) => onDeleteQuote(quote.id, e)}>
                                             <Trash size={13} />
                                         </button>

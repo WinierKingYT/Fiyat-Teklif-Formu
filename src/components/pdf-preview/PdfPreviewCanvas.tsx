@@ -41,7 +41,24 @@ const PdfPreviewCanvas: React.FC<PdfPreviewCanvasProps> = ({
                 <style>{`
                     @media screen {
                         #printable-quote-container-panel .pdf-page {
-                            margin-bottom: 28px;
+                            margin-bottom: 34px;
+                            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.08);
+                            position: relative;
+                            background: #ffffff;
+                        }
+                        #printable-quote-container-panel .pdf-page:not(:last-child)::after {
+                            content: '✂ ────────── A4 Sayfa Kırılımı ──────────';
+                            position: absolute;
+                            bottom: -24px;
+                            left: 0;
+                            right: 0;
+                            text-align: center;
+                            font-size: 9px;
+                            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                            font-weight: 600;
+                            color: #94a3b8;
+                            letter-spacing: 0.08em;
+                            pointer-events: none;
                         }
                         #printable-quote-container-panel .pdf-page:last-child {
                             margin-bottom: 0;
@@ -50,6 +67,10 @@ const PdfPreviewCanvas: React.FC<PdfPreviewCanvasProps> = ({
                     @media print {
                         #printable-quote-container-panel .pdf-page {
                             margin-bottom: 0 !important;
+                            box-shadow: none !important;
+                        }
+                        #printable-quote-container-panel .pdf-page::after {
+                            display: none !important;
                         }
                     }
                 `}</style>

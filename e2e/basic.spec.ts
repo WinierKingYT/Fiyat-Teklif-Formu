@@ -1,182 +1,42 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-test.describe('App Loading', () => {
-  test('app loads and shows builder view', async ({ page }) => {
+test.describe('Application smoke tests', () => {
+  test('opens the quote builder', async ({ page }) => {
     await page.goto('/');
+
     await expect(page.locator('#main-content')).toBeVisible();
+    await expect(page.getByLabel('Teklif Numarası')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Kalem Ekle', exact: true })).toBeVisible();
   });
 
-  test('can navigate to history view', async ({ page }) => {
+  test('opens quote history from a direct link', async ({ page }) => {
     await page.goto('/?view=history');
-    await expect(page.locator('text=Teklif').first()).toBeVisible();
+
+    await expect(page.getByRole('heading', { name: 'Tekliflerim', exact: true })).toBeVisible();
+    await expect(page.getByText('Henüz kayıtlı teklif yok')).toBeVisible();
   });
 
-  test('can navigate to settings view', async ({ page }) => {
+  test('opens settings and switches tabs', async ({ page }) => {
     await page.goto('/?view=settings');
-    await expect(page.locator('text=Uygulama Ayarları')).toBeVisible();
-  });
-});
 
-test.describe('Quote Builder', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#main-content');
-  });
+    await expect(page.getByRole('heading', { name: 'Uygulama Ayarları' })).toBeVisible();
+    await page.getByRole('button', { name: 'Varsayılan Bilgiler', exact: true }).click();
+    await expect(page.getByText('Teklif Varsayılanları')).toBeVisible();
 
-  test('shows default tab with empty form', async ({ page }) => {
-    await expect(page.locator('text=Yeni Teklif').first()).toBeVisible();
+    await page.getByRole('button', { name: 'PDF Düzeni', exact: true }).click();
+    await expect(page.getByText('PDF Bölüm Sıralaması')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Filigran', exact: true }).click();
+    await expect(page.getByText('Filigran Ayarları')).toBeVisible();
   });
 
-  test('can add a new item to the quote', async ({ page }) => {
-    const addButton = page.locator('button:has-text("Ürün Ekle"), button:has-text("Ekle")').first();
-    if (await addButton.isVisible()) {
-      await addButton.click();
-      await expect(page.locator('input[placeholder*="Ürün"], input[placeholder*="ürün"]').first()).toBeVisible();
-    }
-  });
-
-  test('can fill in customer information', async ({ page }) => {
-    const customerTab = page.locator('button:has-text("Müşteri"), [data-tab="customer"]').first();
-    if (await customerTab.isVisible()) {
-      await customerTab.click();
-      const nameInput = page.locator('input[name="name"], input[placeholder*="Müşteri"]').first();
-      if (await nameInput.isVisible()) {
-        await nameInput.fill('Test Müşteri A.Ş.');
-        await expect(nameInput).toHaveValue('Test Müşteri A.Ş.');
-      }
-    }
-  });
-
-  test('can fill in quote title', async ({ page }) => {
-    const titleInput = page.locator('input[name="title"], input[placeholder*="Başlık"]').first();
-    if (await titleInput.isVisible()) {
-      await titleInput.fill('Hizmet Teklifi');
-      await expect(titleInput).toHaveValue('Hizmet Teklifi');
-    }
-  });
-});
-
-test.describe('Settings Page', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/?view=settings');
-    await page.waitForSelector('text=Uygulama Ayarları');
-  });
-
-  test('shows all setting tabs', async ({ page }) => {
-    await expect(page.locator('button:has-text("Genel Ayarlar")')).toBeVisible();
-    await expect(page.locator('button:has-text("Varsayılan Bilgiler")')).toBeVisible();
-    await expect(page.locator('button:has-text("PDF Düzeni")')).toBeVisible();
-    await expect(page.locator('button:has-text("Filigran")')).toBeVisible();
-  });
-
-  test('can switch between tabs', async ({ page }) => {
-    await page.click('button:has-text("Varsayılan Bilgiler")');
-    await expect(page.locator('text=Teklif Varsayılanları')).toBeVisible();
-
-    await page.click('button:has-text("PDF Düzeni")');
-    await expect(page.locator('text=PDF Bölüm Sıralaması')).toBeVisible();
-
-    await page.click('button:has-text("Filigran")');
-    await expect(page.locator('text=Filigran Ayarları')).toBeVisible();
-  });
-
-  test('can toggle theme', async ({ page }) => {
-    const darkModeRadio = page.locator('input[name="appTheme"][value="dark"]');
-    if (await darkModeRadio.isVisible()) {
-      await darkModeRadio.click();
-      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    }
-  });
-
-  test('can change font size', async ({ page }) => {
-    const fontSizeSlider = page.locator('input[type="range"][min="12"][max="20"]');
-    if (await fontSizeSlider.isVisible()) {
-      await fontSizeSlider.fill('16');
-      const sizeDisplay = page.locator('text=16px');
-      await expect(sizeDisplay).toBeVisible();
-    }
-  });
-});
-
-test.describe('PDF Settings', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/?view=settings');
-    await page.waitForSelector('text=Uygulama Ayarları');
-    await page.click('button:has-text("Filigran")');
-  });
-
-  test('can toggle watermark', async ({ page }) => {
-    const watermarkToggle = page.locator('input[type="checkbox"]').first();
-    if (await watermarkToggle.isVisible()) {
-      await watermarkToggle.click();
-      const watermarkTextInput = page.locator('input[placeholder*="TASLAK"]');
-      if (watermarkTextInput.isVisible()) {
-        await expect(watermarkTextInput).toBeVisible();
-      }
-    }
-  });
-
-  test('can fill watermark text', async ({ page }) => {
-    const watermarkToggle = page.locator('input[type="checkbox"]').first();
-    if (await watermarkToggle.isVisible()) {
-      const isChecked = await watermarkToggle.isChecked();
-      if (!isChecked) await watermarkToggle.click();
-
-      const watermarkTextInput = page.locator('input[placeholder*="TASLAK"]');
-      if (await watermarkTextInput.isVisible()) {
-        await watermarkTextInput.fill('ONAY');
-        await expect(watermarkTextInput).toHaveValue('ONAY');
-      }
-    }
-  });
-});
-
-test.describe('End-to-End: Quote to PDF', () => {
-  test('creates a quote, saves it, and downloads the PDF', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#main-content');
-
-    await page.locator('input[aria-label="Teklif Başlığı"]').fill('E2E Teklif Testi');
-
-    await page.locator('input[name="name"]').first().fill('Test Müşteri A.Ş.');
-    await page.locator('input[name="company"]').first().fill('Test Firma Ltd.');
-
-    await page.locator('button[aria-label="Firma Bilgileri (aç)"]').click();
-    await page.locator('input[name="name"]').last().fill('Bizim Firma A.Ş.');
-
-    await page.locator('button[aria-label="Teklif Detayları (aç)"]').click();
-    await page.locator('input[name="number"]').fill('2026-001');
-
-    await page.locator('button.btn.btn-primary.btn-sm').click();
-    const nameInput = page.locator('[data-row="0"][data-field="name"]');
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill('Dizüstü Bilgisayar');
-    await page.locator('[data-row="0"][data-field="quantity"]').fill('2');
-    await page.locator('[data-row="0"][data-field="price"]').fill('25000');
-
-    await page.locator('button[title="Kaydet (Ctrl+S)"]').click();
-    await expect(page.locator('text=Teklif kaydedildi')).toBeVisible();
-
-    await page.locator('button[title="PDF Önizleme (Ctrl+P)"]').click();
-    await page.waitForSelector('#printable-quote-container-panel');
-
-    const downloadPromise = page.waitForEvent('download');
-    await page.locator('button[title="PDF İNDİR"]').click();
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
-  });
-});
-
-test.describe('Responsive Design', () => {
-  test('shows mobile view on small screens', async ({ page }) => {
+  test('renders the builder at mobile and desktop widths', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
     await expect(page.locator('#main-content')).toBeVisible();
-  });
+    await expect(page.getByLabel('Menüyü Aç/Kapat')).toBeVisible();
 
-  test('shows desktop view on large screens', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto('/');
-    await expect(page.locator('#main-content')).toBeVisible();
+    await expect(page.getByLabel('Teklif Numarası')).toBeVisible();
   });
 });

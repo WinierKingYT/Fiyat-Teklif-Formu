@@ -351,6 +351,53 @@ class IndexedDBManager {
         });
     }
 
+    async restoreStores(stores: Record<string, unknown[]>): Promise<number> {
+        await this.ensureConnection();
+
+        const entries = Object.entries(stores);
+        if (entries.length === 0) {
+            throw new Error('Geri yüklenecek veri bulunamadı.');
+        }
+
+        for (const [storeName, items] of entries) {
+            if (!this.db!.objectStoreNames.contains(storeName)) {
+                throw new Error(`Bilinmeyen veri alanı: ${storeName}`);
+            }
+            if (!Array.isArray(items) || items.some(item => typeof item !== 'object' || item === null || Array.isArray(item))) {
+                throw new Error(`${storeName} kayıtları geçersiz.`);
+            }
+        }
+
+        return new Promise((resolve, reject) => {
+            const storeNames = entries.map(([storeName]) => storeName);
+            const transaction = this.db!.transaction(storeNames, 'readwrite');
+            const updatedAt = new Date().toISOString();
+            let restoredCount = 0;
+
+            transaction.oncomplete = () => resolve(restoredCount);
+            transaction.onerror = () => reject(transaction.error || new Error('Yedek geri yükleme işlemi başarısız oldu.'));
+            transaction.onabort = () => reject(transaction.error || new Error('Yedek geri yükleme işlemi geri alındı.'));
+
+            try {
+                entries.forEach(([storeName, items]) => {
+                    const store = transaction.objectStore(storeName);
+                    items.forEach(item => {
+                        const sanitizedItem = this.sanitizeData(item) as Record<string, unknown>;
+                        store.put({
+                            ...sanitizedItem,
+                            updatedAt,
+                            version: this.version,
+                        });
+                        restoredCount += 1;
+                    });
+                });
+            } catch (error) {
+                transaction.abort();
+                reject(error);
+            }
+        });
+    }
+
     async delete(storeName: string, key: IDBValidKey): Promise<void> {
         await this.ensureConnection();
 

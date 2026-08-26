@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { formatTaxOfficeDisplay, formatContactItems } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -27,7 +28,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         hasLineItemDiscounts,
         onEdit
     } = props;
-    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
+    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
 
 
@@ -406,12 +407,14 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
 
     
+    const showImageCol = config.showTableImages && hasAnyImage;
+
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="pdf-items-table">
             <thead>
                 <tr>
                     <th style={{ width: '32px', textAlign: 'center' }}>#</th>
-                    {config.showTableImages && <th style={{ width: '46px', textAlign: 'center' }}>{t.image}</th>}
+                    {showImageCol && <th style={{ width: '46px', textAlign: 'center' }}>{t.image}</th>}
                     <th>{config.textItem ?? t.item}</th>
                     {config.showTableUnit && <th style={{ width: '50px', textAlign: 'center' }}>{config.textUnit ?? t.unit}</th>}
                     <th style={{ width: '55px', textAlign: 'center' }}>{config.textQuantity ?? t.quantity}</th>
@@ -432,7 +435,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     return (
                         <tr key={startIndex + index} style={config.tableStriped && (startIndex + index) % 2 === 1 ? { backgroundColor: typeof config.tableStripedColor === 'string' && config.tableStripedColor ? config.tableStripedColor : '#f8fafc' } : undefined}>
                             <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{startIndex + index + 1}</td>
-                            {config.showTableImages && (
+                            {showImageCol && (
                                 <td>
                                     <div className="item-image">
                                         {item.image ? (
@@ -490,17 +493,18 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                     <div className="company-details">
                                         {companyData.address && <div>{companyData.address}</div>}
                                         {(companyData.phone || companyData.email || companyData.website) && (
-                                            <div style={{ marginTop: '0.15rem' }}>
-                                                {companyData.phone && <span>{companyData.phone}</span>}
-                                                {companyData.phone && companyData.email && <span> • </span>}
-                                                {companyData.email && <span>{companyData.email}</span>}
-                                                {(companyData.phone || companyData.email) && companyData.website && <span> • </span>}
-                                                {companyData.website && <span>{companyData.website}</span>}
+                                            <div style={{ marginTop: '0.15rem', display: 'flex', flexWrap: 'wrap', gap: '0.2rem 0.5rem', alignItems: 'center' }}>
+                                                {formatContactItems(companyData.phone, companyData.email, companyData.website).map((contact, idx, arr) => (
+                                                    <React.Fragment key={idx}>
+                                                        <span>{contact}</span>
+                                                        {idx < arr.length - 1 && <span style={{ color: '#cbd5e1' }}>•</span>}
+                                                    </React.Fragment>
+                                                ))}
                                             </div>
                                         )}
                                         {(companyData.taxOffice || companyData.taxNumber) && (
-                                            <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '1px' }}>
-                                                {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
+                                            <div style={{ fontSize: '7.5pt', color: '#475569', marginTop: '1px' }}>
+                                                {companyData.taxOffice && <span>{formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} </span>}
                                                 {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
                                             </div>
                                         )}
@@ -509,10 +513,10 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                             </div>
                             <div className="header-right">
                                 <div className="quote-title">{renderEditable(quoteData.title || config.title || t.quoteTitle, 'quoteTitle')}</div>
-                                <div className="quote-meta">
+                                <div className="quote-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem 0.6rem', alignItems: 'center', justifyContent: 'flex-end' }}>
                                     {quoteData.number && <span style={{ fontWeight: '700', background: color, color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontSize: '7.5pt' }}>#{quoteData.number}</span>}
                                     {quoteData.date && <span>{t.date}: <strong>{formatDate(quoteData.date, currentLocale)}</strong></span>}
-                                    {quoteData.validUntil && <span>• {t.validUntil}: <strong>{formatDate(quoteData.validUntil, currentLocale)}</strong></span>}
+                                    {quoteData.validUntil && <span>{t.validUntil}: <strong>{formatDate(quoteData.validUntil, currentLocale)}</strong></span>}
                                 </div>
                             </div>
                         </div>
@@ -564,8 +568,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                         </div>
                                     )}
                                     {(customerData.taxOffice || customerData.taxNumber) && (
-                                        <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#94a3b8' }}>
-                                            {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
+                                        <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#475569' }}>
+                                            {customerData.taxOffice && <span>{formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} </span>}
                                             {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                         </div>
                                     )}
@@ -672,22 +676,12 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
                             {/* Footer */}
                             {showSection('footer') && (
-                                <div className="pdf-footer">
-                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '7.5pt', color: '#64748b' }}>
-                                        <span><strong style={{ color: '#0f172a' }}>{companyData.name}</strong></span>
-                                        {companyData.phone && <span>• {companyData.phone}</span>}
-                                        {companyData.email && <span>• {companyData.email}</span>}
-                                        {companyData.website && <span>• {companyData.website}</span>}
-                                    </div>
-                                    <div style={{ marginTop: '2px', fontSize: '7pt', color: '#94a3b8' }}>
-                                        {t.thankYou} • {t.regards}
-                                    </div>
-                                </div>
-                            )}
-                            {config.customFooter && (
-                                <div style={{ fontSize: '6.5pt', color: '#94a3b8', textAlign: 'center', marginTop: '2px' }}>
-                                    {config.customFooter}
-                                </div>
+                                <PdfFooter
+                                    companyData={companyData}
+                                    config={config}
+                                    t={t}
+                                    className="pdf-footer"
+                                />
                             )}
                         </div>
                     )}

@@ -108,6 +108,29 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
         });
     };
 
+    const handleRestoreAll = async () => {
+        if (deletedItems.length === 0) return;
+        setConfirmDialog({
+            isOpen: true,
+            title: t('restoreAll') || 'Tümünü Geri Yükle',
+            message: `${deletedItems.length} öğenin tamamını geri yüklemek istediğinize emin misiniz?`,
+            onConfirm: async () => {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    for (const item of deletedItems) {
+                        await handleRestore(item);
+                    }
+                    toast.success('Tüm öğeler geri yüklendi');
+                    loadDeletedItems();
+                } catch (error) {
+                    Logger.error('Restore all error:', error);
+                    toast.error('Geri yükleme sırasında hata oluştu');
+                }
+            },
+            variant: 'info'
+        });
+    };
+
     const handleEmptyBin = async () => {
         setConfirmDialog({
             isOpen: true,
@@ -187,9 +210,14 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                             <input type="text" className="form-control pl-8 text-xs" placeholder={t('search')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
                         {deletedItems.length > 0 && (
-                            <button type="button" className="btn btn-danger btn-xs whitespace-nowrap" onClick={handleEmptyBin}>
-                                <Trash2 size={13} /> {t('emptyBinBtn') || t('emptyBin') || 'Boşalt'}
-                            </button>
+                            <>
+                                <button type="button" className="btn btn-outline btn-xs whitespace-nowrap text-[var(--color-success)]" onClick={handleRestoreAll}>
+                                    <RefreshCw size={13} /> {t('restoreAll') || 'Tümünü Kurtar'}
+                                </button>
+                                <button type="button" className="btn btn-danger btn-xs whitespace-nowrap" onClick={handleEmptyBin}>
+                                    <Trash2 size={13} /> {t('emptyBinBtn') || t('emptyBin') || 'Boşalt'}
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>

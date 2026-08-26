@@ -2,8 +2,7 @@ import { Sun, Moon, Download, Menu, Palette, Check, Columns } from 'lucide-react
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import Sidebar from '@/components/Sidebar';
-import TabBar from '@/components/TabBar';
-import { useQuoteData, useTab } from '@/context/QuoteContext';
+import { useTab } from '@/context/QuoteContext';
 import { useUI, type AppColor } from '@/context/UIContext';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -87,7 +86,12 @@ const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
         <button type="button" onClick={onToggleMobile} className="top-bar-mobile-toggle" aria-label="Menüyü Aç/Kapat">
           <Menu size={18} />
         </button>
-        {currentView === 'builder' && <TabBar />}
+        {currentView === 'builder' && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text)]">
+            <span className="w-2 h-2 rounded-full bg-[var(--color-success)] inline-block"></span>
+            <span className="hidden sm:inline">{t('quoteBuilder') || 'Teklif Oluşturucu'}</span>
+          </div>
+        )}
       </div>
       <div className="top-bar-right">
         {installPrompt && (
@@ -189,7 +193,6 @@ interface LayoutProps {
   onNavigate: (view: string) => void;
   onOpenCustomerManager: () => void;
   onOpenProductManager: () => void;
-  onOpenTemplateManager: () => void;
   onOpenDatabaseManager: () => void;
   onOpenBankManager: () => void;
   onOpenRecycleBin: () => void;
@@ -197,7 +200,7 @@ interface LayoutProps {
 
 const Layout = React.memo(({
   children, currentView, onNavigate,
-  onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
+  onOpenCustomerManager, onOpenProductManager,
   onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin,
 }: LayoutProps) => {
   const { focusMode, setFocusMode, isLivePreviewMode, splitPreviewMode } = useUI();
@@ -240,7 +243,6 @@ const Layout = React.memo(({
         onNavigate={onNavigate}
         onOpenCustomerManager={onOpenCustomerManager}
         onOpenProductManager={onOpenProductManager}
-        onOpenTemplateManager={onOpenTemplateManager}
         onOpenDatabaseManager={onOpenDatabaseManager}
         onOpenBankManager={onOpenBankManager}
         onOpenRecycleBin={onOpenRecycleBin}

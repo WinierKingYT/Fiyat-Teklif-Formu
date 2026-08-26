@@ -44,12 +44,17 @@ const SummarySection = React.memo(({
     const amountInWords = useMemo(() => numberToWordsTurkish(calc.grandTotal, currency), [calc.grandTotal, currency]);
 
     const handleDiscountValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseFloat(e.target.value) || 0;
+        let value = parseFloat(e.target.value) || 0;
+        if (value < 0) value = 0;
+        if (discount.type === 'percentage' && value > 100) value = 100;
         onDiscountChange({ ...discount, value });
     };
 
     const handleDiscountTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        onDiscountChange({ ...discount, type: e.target.value as 'percentage' | 'fixed' });
+        const nextType = e.target.value as 'percentage' | 'fixed';
+        let nextValue = discount.value;
+        if (nextType === 'percentage' && nextValue > 100) nextValue = 100;
+        onDiscountChange({ ...discount, type: nextType, value: nextValue });
     };
 
     if (!items?.length) return null;
@@ -64,8 +69,9 @@ const SummarySection = React.memo(({
                     <span className="card-title">{t('summary')}</span>
                 </div>
             </div>
-            <div className="card-body">
-                <div className="space-y-2">
+            <div className="card-body space-y-3">
+                <div className="space-y-1.5">
+                    {/* Subtotal */}
                     <div className="flex items-center justify-between py-1">
                         <span className="text-sm text-[var(--color-text-secondary)]">{t('subtotal')}</span>
                         <span className="text-sm font-semibold text-[var(--color-text)]">{formatCurrency(calc.subtotal, currency)}</span>
@@ -89,6 +95,7 @@ const SummarySection = React.memo(({
                                     type="number"
                                     className="w-16 py-1 px-2 text-right text-xs bg-transparent border-0 outline-none"
                                     min="0"
+                                    max={discount.type === 'percentage' ? "100" : undefined}
                                     step={discount.type === 'percentage' ? "1" : "0.01"}
                                     value={discount.value === 0 ? '' : discount.value}
                                     placeholder="0"

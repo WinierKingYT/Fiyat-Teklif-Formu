@@ -6,7 +6,6 @@ import { useDatabase } from '@/context/quote/DatabaseContext';
 import { getDefaultTabs, getInitialTabData } from '@/context/quote/initialState';
 import { deepEqual } from '@/utils/deepEqual';
 import Logger from '@/utils/logger';
-import performanceMonitor from '@/utils/performanceMonitor';
 import type { Tab } from '@/context/quote/types';
 
 export interface TabContextValue {
@@ -37,185 +36,178 @@ export const TabProvider = ({ children }: { children: React.ReactNode }) => {
     const { showConfirm } = useConfirm();
     const { companyDefaults } = useCompanyDefaults();
 
-    const [tabs, setTabs] = useState<Tab[]>(getDefaultTabs());
+    const [tabs, setTabs] = useState<Tab[]>(() => getDefaultTabs(companyDefaults));
+    const activeTabId = 'active-quote';
 
-    const [activeTabId, setActiveTabId] = useState(() => {
-        return localStorage.getItem('activeTabId') || 'default-tab';
-    });
-
-    // --- Load tabs from IndexedDB ---
+    // --- Load session data from IndexedDB ---
     useEffect(() => {
         if (isReady && db) {
-            const loadTabs = async () => {
+            const loadActiveQuote = async () => {
                 try {
-                    const savedTabs = await db.getByIndex<{ id: string; value: Tab[] }>('settings', 'key', 'session_tabs');
-                    if (savedTabs && savedTabs.value) {
-                        setTabs(savedTabs.value);
-                    } else {
-                        const localTabs = localStorage.getItem('quoteTabs');
-                        if (localTabs) {
-                            try {
-                                const parsedTabs = JSON.parse(localTabs);
-                                setTabs(parsedTabs);
-                                await db.add('settings', { id: 'session_tabs', key: 'session_tabs', value: parsedTabs });
-                                localStorage.removeItem('quoteTabs');
-                                Logger.log("Migrated tabs from localStorage to IndexedDB");
-                            } catch (e) { Logger.error("Failed to migrate tabs from localStorage", e); }
-                        }
+                    const savedTab = await db.getByIndex<{ id: string; value: Tab[] }>('settings', 'key', 'active_quote_session');
+                    if (savedTab && Array.isArray(savedTab.value) && savedTab.value.length > 0) {
+                        setTabs(savedTab.value);
                     }
-                } catch (error) { Logger.error("Error loading tabs from IndexedDB:", error); }
+                } catch (error) {
+                    Logger.error('Error loading session from IndexedDB:', error);
+                }
             };
-            loadTabs();
+            loadActiveQuote();
         }
     }, [isReady, db]);
 
-    // --- Save tabs to IndexedDB ---
+    // --- Save session data to IndexedDB ---
     useEffect(() => {
         if (isReady && db) {
-            const saveTabs = async () => {
+            const saveActiveQuote = async () => {
                 try {
-                    const existingRecord = await db.getByIndex<{ id: string; value: Tab[] }>('settings', 'key', 'session_tabs');
-                    const record = { id: 'session_tabs', key: 'session_tabs', value: tabs };
-                    if (existingRecord) { record.id = existingRecord.id; await db.put('settings', record); }
-                    else { await db.add('settings', record); }
-                } catch (error) { Logger.error("Error saving tabs to IndexedDB:", error); }
+                    const existingRecord = await db.getByIndex<{ id: string; value: Tab[] }>('settings', 'key', 'active_quote_session');
+                    const record = { id: 'active_quote_session', key: 'active_quote_session', value: tabs };
+                    if (existingRecord) {
+                        record.id = existingRecord.id;
+                        await db.put('settings', record);
+                    } else {
+                        await db.add('settings', record);
+                    }
+                } catch (error) {
+                    Logger.error('Error saving session to IndexedDB:', error);
+                }
             };
-            const timeoutId = setTimeout(saveTabs, 1000);
+            const timeoutId = setTimeout(saveActiveQuote, 1000);
             return () => clearTimeout(timeoutId);
         }
     }, [tabs, isReady, db]);
 
-    // Save activeTabId to localStorage
-    useEffect(() => { localStorage.setItem('activeTabId', activeTabId); }, [activeTabId]);
-
-    // --- Tab Actions ---
+    // --- Actions ---
     const addTab = useCallback(async () => {
-        const currentTab = tabs.find(t => t.id === activeTabId);
-        if ((currentTab?.data?.items?.length ?? 0) > 0) {
-            const confirmed = await showConfirm('Yeni Sekme', 'Mevcut teklifte kaydedilmemiş değişiklikler olabilir. Yeni sekme açmak istiyor musunuz?', 'warning');
+        const currentData = tabs[0]?.data;
+        if ((currentData?.items?.length ?? 0) > 0) {
+            const confirmed = await showConfirm(
+                'Yeni Teklif',
+                'Mevcut teklif temizlenip yeni bir teklif başlatılacak. Devam etmek istiyor musunuz?',
+                'warning'
+            );
             if (!confirmed) return;
         }
-        const newTabId = `tab-${Date.now()}`;
-        const newTab: Tab = {
-            id: newTabId, title: 'Yeni Teklif', savedQuoteId: null,
-            data: getInitialTabData(companyDefaults),
-            history: [], historyIndex: -1
-        };
-        setTabs(prev => [...prev, newTab]);
-        setActiveTabId(newTabId);
-    }, [tabs, activeTabId, showConfirm, companyDefaults]);
+        const initialData = getInitialTabData(companyDefaults);
+        setTabs([{
+            id: activeTabId,
+            title: 'Yeni Teklif',
+            savedQuoteId: null,
+            data: initialData,
+            history: [initialData],
+            historyIndex: 0
+        }]);
+        toast.success('Yeni teklif formu hazırlandı');
+    }, [tabs, showConfirm, companyDefaults]);
 
-    const closeTab = useCallback(async (tabId: string) => {
-        if (tabs.length <= 1) {
-            toast.error('Son sekmeyi kapatamazsınız.');
-            return;
-        }
-        const tabToClose = tabs.find(t => t.id === tabId);
-        if ((tabToClose?.data?.items?.length ?? 0) > 0) {
-            const confirmed = await showConfirm('Sekmeyi Kapat', 'Bu sekmede kaydedilmemiş değişiklikler olabilir. Kapatmak istiyor musunuz?', 'warning');
-            if (!confirmed) return;
-        }
-        const newTabs = tabs.filter(t => t.id !== tabId);
-        setTabs(newTabs);
-        if (activeTabId === tabId && newTabs.length > 0) setActiveTabId(newTabs[newTabs.length - 1].id);
-    }, [tabs, activeTabId, showConfirm]);
+    const closeTab = useCallback(async () => {
+        await addTab();
+    }, [addTab]);
 
-    const switchTab = useCallback((tabId: string) => setActiveTabId(tabId), []);
-
-    const updateTabTitle = useCallback((tabId: string, title: string) => {
-        setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, title } : tab));
+    const switchTab = useCallback(() => {
+        /* Single quote mode - no tab switching */
     }, []);
 
-    // --- History State ---
+    const updateTabTitle = useCallback((_: string, title: string) => {
+        setTabs(prev => prev.map(t => ({ ...t, title })));
+    }, []);
+
+    // --- History State (Undo / Redo) ---
     const historyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isNavigatingHistory = useRef(false);
 
     const undo = useCallback(() => {
-        setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
-                if (tab.historyIndex > 0) {
-                    isNavigatingHistory.current = true;
-                    const newIndex = tab.historyIndex - 1;
-                    const previousData = tab.history[newIndex];
-                    return { ...tab, data: JSON.parse(JSON.stringify(previousData)), historyIndex: newIndex };
-                }
-            }
-            return tab;
-        }));
+        setTabs(prev => {
+            const current = prev[0];
+            if (!current || current.historyIndex <= 0) return prev;
+            isNavigatingHistory.current = true;
+            const newIndex = current.historyIndex - 1;
+            const previousData = current.history[newIndex];
+            return [{
+                ...current,
+                data: JSON.parse(JSON.stringify(previousData)),
+                historyIndex: newIndex
+            }];
+        });
         toast.success('Geri alındı');
-    }, [activeTabId]);
+    }, []);
 
     const redo = useCallback(() => {
-        setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
-                if (tab.historyIndex < tab.history.length - 1) {
-                    isNavigatingHistory.current = true;
-                    const newIndex = tab.historyIndex + 1;
-                    const nextData = tab.history[newIndex];
-                    return { ...tab, data: JSON.parse(JSON.stringify(nextData)), historyIndex: newIndex };
-                }
-            }
-            return tab;
-        }));
+        setTabs(prev => {
+            const current = prev[0];
+            if (!current || current.historyIndex >= (current.history?.length || 0) - 1) return prev;
+            isNavigatingHistory.current = true;
+            const newIndex = current.historyIndex + 1;
+            const nextData = current.history[newIndex];
+            return [{
+                ...current,
+                data: JSON.parse(JSON.stringify(nextData)),
+                historyIndex: newIndex
+            }];
+        });
         toast.success('İleri alındı');
-    }, [activeTabId]);
+    }, []);
 
-    // Auto-save history effect
+    // History tracker effect
     useEffect(() => {
-        if (isNavigatingHistory.current) { isNavigatingHistory.current = false; return; }
-        const activeTab = tabs.find(t => t.id === activeTabId);
-        if (!activeTab) return;
-        if (!activeTab.history || activeTab.history.length === 0) {
-            setTabs(prev => prev.map(t => {
-                if (t.id === activeTabId) return { ...t, history: [JSON.parse(JSON.stringify(t.data))], historyIndex: 0 };
-                return t;
-            }));
+        if (isNavigatingHistory.current) {
+            isNavigatingHistory.current = false;
             return;
         }
-        const currentHistoryState = activeTab.history[activeTab.historyIndex];
-        if (!deepEqual(activeTab.data, currentHistoryState)) {
+        const current = tabs[0];
+        if (!current) return;
+
+        if (!current.history || current.history.length === 0) {
+            setTabs([{
+                ...current,
+                history: [JSON.parse(JSON.stringify(current.data))],
+                historyIndex: 0
+            }]);
+            return;
+        }
+
+        const currentHistoryState = current.history[current.historyIndex];
+        if (!deepEqual(current.data, currentHistoryState)) {
             if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
             historyTimeoutRef.current = setTimeout(() => {
-                setTabs(prev => prev.map(t => {
-                    if (t.id === activeTabId) {
-                        const newHistory = t.history.slice(0, t.historyIndex + 1);
-                        newHistory.push(JSON.parse(JSON.stringify(t.data)));
-                        if (newHistory.length > 50) newHistory.shift();
-                        return { ...t, history: newHistory, historyIndex: newHistory.length - 1 };
-                    }
-                    return t;
-                }));
+                setTabs(prev => {
+                    const active = prev[0];
+                    if (!active) return prev;
+                    const newHistory = (active.history || []).slice(0, active.historyIndex + 1);
+                    newHistory.push(JSON.parse(JSON.stringify(active.data)));
+                    if (newHistory.length > 50) newHistory.shift();
+                    return [{
+                        ...active,
+                        history: newHistory,
+                        historyIndex: newHistory.length - 1
+                    }];
+                });
             }, 1000);
         }
-        return () => { if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current); };
-    }, [tabs, activeTabId]);
-
-    const activeTabObj = tabs.find(t => t.id === activeTabId);
-    const canUndo = activeTabObj ? activeTabObj.historyIndex > 0 : false;
-    const canRedo = activeTabObj ? activeTabObj.historyIndex < (activeTabObj.history?.length || 0) - 1 : false;
-
-    // Performance monitoring
-    useEffect(() => {
-        if (!isReady || !db) return;
-        const checkPerformance = async () => {
-            try {
-                const metrics = await performanceMonitor.getPerformanceMetrics(db, tabs);
-                const recommendations = performanceMonitor.getRecommendations(metrics);
-                if (recommendations.needsCleanup) {
-                    const highWarnings = recommendations.warnings.filter((w: { type: string; severity: string; message: string }) => w.severity === 'high');
-                    if (highWarnings.length > 0) toast('Performans uyarısı: ' + highWarnings[0].message, { duration: 5000, icon: '⚠️' });
-                }
-            } catch (error) { Logger.error('Performance check failed:', error); }
+        return () => {
+            if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
         };
-        const interval = setInterval(checkPerformance, 5 * 60 * 1000);
-        const timeout = setTimeout(checkPerformance, 60 * 1000);
-        return () => { clearInterval(interval); clearTimeout(timeout); };
-    }, [isReady, db, tabs]);
+    }, [tabs]);
+
+    const currentTab = tabs[0];
+    const canUndo = currentTab ? currentTab.historyIndex > 0 : false;
+    const canRedo = currentTab ? currentTab.historyIndex < (currentTab.history?.length || 0) - 1 : false;
 
     const value = useMemo<TabContextValue>(() => ({
-        tabs, activeTabId, setActiveTabId, addTab, closeTab, switchTab, updateTabTitle,
-        undo, redo, canUndo, canRedo, setTabs,
-    }), [tabs, activeTabId, addTab, closeTab, switchTab, updateTabTitle, undo, redo, canUndo, canRedo]);
+        tabs,
+        activeTabId,
+        setActiveTabId: () => {},
+        addTab,
+        closeTab,
+        switchTab,
+        updateTabTitle,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
+        setTabs,
+    }), [tabs, addTab, closeTab, switchTab, updateTabTitle, undo, redo, canUndo, canRedo]);
 
     return <TabContext.Provider value={value}>{children}</TabContext.Provider>;
 };

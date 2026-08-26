@@ -16,22 +16,36 @@ export function usePdfTheme(props: PdfThemeProps) {
 
     const showSection = useCallback((sectionId: string) => layoutMap[sectionId] !== false, [layoutMap]);
 
+    const hasAnyImage = useMemo(() => items.some((item) => !!item.image), [items]);
+
     const itemChunks = useMemo(() => {
         if (layoutMap['items'] === false) {
             return [[]];
         }
         const effectiveItemsPerPage = config.itemsPerPage || 14;
+        const hasBankData = !!(props.bankData && (props.bankData.bankName || props.bankData.iban || props.bankData.accountNumber));
+        const hasTerms = !!(quoteData && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms));
+        const hasNotes = !!(quoteData && quoteData.notes && quoteData.notes.trim().length > 0);
+        const notesLength = quoteData?.notes?.length || 0;
+
         return chunkQuoteItems(items, {
             itemsPerPage: effectiveItemsPerPage,
-            showSummary: config.showSummary,
-            showBankInfo: config.showBankInfo,
-            showSignatures: config.showSignatures,
-            showTerms: config.showTerms,
+            showSummary: config.showSummary !== false && layoutMap['summary'] !== false,
+            showBankInfo: config.showBankInfo !== false && layoutMap['bankInfo'] !== false,
+            hasBankData,
+            showSignatures: config.showSignatures !== false && layoutMap['signatures'] !== false,
+            showCustomerSignature: !!config.showCustomerSignature,
+            showTerms: config.showTerms !== false && layoutMap['notes'] !== false,
+            hasTerms,
+            showNotes: config.showNotes !== false && layoutMap['notes'] !== false,
+            hasNotes,
+            notesLength,
+            customFooter: config.customFooter,
             isLandscape: config.pageOrientation === 'landscape',
             margins: config.margins,
             tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined
         });
-    }, [items, config, layoutMap]);
+    }, [items, config, layoutMap, props.bankData, quoteData]);
 
     const vatBreakdown = useMemo(() => {
         const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
@@ -108,6 +122,7 @@ export function usePdfTheme(props: PdfThemeProps) {
         itemChunks,
         vatBreakdown,
         amountInWords,
-        renderEditable
+        renderEditable,
+        hasAnyImage
     };
 }

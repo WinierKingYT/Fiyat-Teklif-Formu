@@ -16,7 +16,6 @@ import { useIndexedDB } from '@/hooks/useIndexedDB';
 import { useTranslation } from '@/hooks/useTranslation';
 import { calculateQuoteTotals, formatCurrency } from '@/utils/calculations';
 import { exportQuoteToExcel, exportQuoteToCSV } from '@/utils/excelExporter';
-import { exportVersionPackage } from '@/utils/exportVersionPackage';
 import Logger from '@/utils/logger';
 import { escapeHtml } from '@/utils/sanitize';
 import type { DbQuote, QuoteVersion } from '@/context/quote/types';
@@ -160,12 +159,17 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
     const handleExportPackage = async (version: QuoteVersion, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         try {
-            toast.loading(t('preparingPackage') || 'Sürüm paketi hazırlanıyor...', { id: 'export-pkg' });
-            await exportVersionPackage(version);
-            toast.success(t('packageDownloaded') || 'Sürüm paketi (ZIP) indirildi', { id: 'export-pkg' });
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(version, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `surum_${version.versionName || version.versionId}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            toast.success(t('packageDownloaded') || 'Sürüm yedeği (JSON) indirildi');
         } catch (error) {
             Logger.error('Export version package error:', error);
-            toast.error(t('packageError') || 'Paket oluşturulamadı', { id: 'export-pkg' });
+            toast.error(t('packageError') || 'Paket oluşturulamadı');
         }
     };
 
@@ -176,6 +180,31 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
         } catch (error) {
             Logger.error('Error loading quote:', error);
             toast.error(t('quoteLoadError'));
+        }
+    };
+
+    const handleDuplicateQuote = (quote: DbQuote, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        try {
+            const duplicated: DbQuote = {
+                ...quote,
+                id: Date.now(),
+                quoteData: {
+                    ...quote.quoteData,
+                    title: quote.quoteData?.title ? `${quote.quoteData.title} (Kopya)` : 'Kopya Teklif',
+                    number: quote.quoteData?.number ? `${quote.quoteData.number}-REV` : `TK-${Date.now().toString().slice(-4)}`,
+                    date: new Date().toISOString().slice(0, 10),
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            loadQuote(duplicated);
+            setCurrentQuoteId(null);
+            toast.success('Teklif klonlandı ve düzenleyiciye yüklendi');
+            onNavigate('builder');
+        } catch (error) {
+            Logger.error('Error duplicating quote:', error);
+            toast.error('Teklif klonlanamadı');
         }
     };
 
@@ -361,6 +390,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
                         onToggleSelectAll={handleSelectAll}
                         onToggleSelect={toggleSelect}
                         onLoadQuote={handleLoad}
+                        onDuplicateQuote={handleDuplicateQuote}
                         onDeleteQuote={handleDelete}
                         onNewQuote={() => onNavigate('builder')}
                         t={t}

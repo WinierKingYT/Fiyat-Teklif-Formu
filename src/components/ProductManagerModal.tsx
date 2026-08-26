@@ -22,6 +22,7 @@ import Logger from '@/utils/logger';
 interface ProductManagerModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSelect?: (product: Product | Product[]) => void;
 }
 
 const INITIAL_FORM_DATA: ProductFormData = {
@@ -34,7 +35,7 @@ const INITIAL_FORM_DATA: ProductFormData = {
     image: null
 };
 
-const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClose }) => {
+const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClose, onSelect }) => {
     const { t } = useTranslation();
     const { db } = useIndexedDB();
     const [products, setProducts] = useState<Product[]>([]);
@@ -314,8 +315,10 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
     const debouncedSearch = useDebounce(searchTerm, 250);
     const filteredProducts = useMemo(() =>
         products.filter(p => {
-            const q = debouncedSearch.toLowerCase();
-            const matchesSearch = p.name && p.name.toLowerCase().includes(q);
+            const q = debouncedSearch.toLocaleLowerCase('tr-TR').trim();
+            const pName = (p.name || '').toLocaleLowerCase('tr-TR');
+            const pDesc = (p.description || '').toLocaleLowerCase('tr-TR');
+            const matchesSearch = !q || pName.includes(q) || pDesc.includes(q);
             const matchesCategory = selectedCategory === 'Tümü' || selectedCategory === t('all') || p.category === selectedCategory;
             return matchesSearch && matchesCategory;
         }),
@@ -335,6 +338,14 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         setFormData(INITIAL_FORM_DATA);
         setIsEditing(false);
         setCurrentProduct(null);
+    };
+
+    const handleAddSelectedToQuote = () => {
+        if (!onSelect || selectedProducts.size === 0) return;
+        const itemsToAdd = products.filter(p => selectedProducts.has(p.id));
+        itemsToAdd.forEach(item => onSelect(item));
+        setSelectedProducts(new Set());
+        onClose();
     };
 
     const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
@@ -358,15 +369,13 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
             const url = URL.createObjectURL(blob);
             const exportFileDefaultName = `urunler_${new Date().toISOString().slice(0, 10)}.json`;
             const linkElement = document.createElement('a');
-            linkElement.href = url;
-            linkElement.download = exportFileDefaultName;
-            document.body.appendChild(linkElement);
+            linkElement.setAttribute('href', url);
+            linkElement.setAttribute('download', exportFileDefaultName);
             linkElement.click();
-            document.body.removeChild(linkElement);
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            toast.success(t('savedSuccess'));
+            URL.revokeObjectURL(url);
+            toast.success(t('exportedSuccess'));
         } catch (error) {
-            Logger.error('Export error:', error);
+            Logger.error(error);
             toast.error(t('error'));
         }
     };
@@ -417,10 +426,15 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={t('productManagement')} size="xl">
-            <div className="flex flex-col md:flex-row gap-6 h-[75vh]">
-                {/* Left: List/Grid */}
-                <div className="w-full md:w-3/5 flex flex-col border-r border-[var(--color-border)] pr-4">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={onSelect ? `${t('products')} (Teklife Ürün Ekle)` : t('products')}
+            size="2xl"
+        >
+            <div className="flex flex-col lg:flex-row gap-6 max-h-[80vh]">
+                {/* Left: Product List */}
+                <div className="flex-1 flex flex-col min-w-0">
                     <ProductToolbar
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
@@ -435,6 +449,22 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
                         onExport={handleExport}
                         t={t}
                     />
+
+                    {/* Batch Selection Action Bar for Quote Insertion */}
+                    {onSelect && selectedProducts.size > 0 && (
+                        <div className="mb-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
+                            <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                {selectedProducts.size} ürün seçildi
+                            </span>
+                            <button
+                                type="button"
+                                onClick={handleAddSelectedToQuote}
+                                className="btn btn-xs btn-primary text-xs font-bold px-3 py-1.5 shadow-xs"
+                            >
+                                Seçilenleri Teklife Ekle ({selectedProducts.size})
+                            </button>
+                        </div>
+                    )}
 
                     {/* Content Area */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
@@ -451,6 +481,7 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
                                 onToggleSelect={toggleProductSelection}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                onSelect={onSelect ? (product) => { onSelect(product); onClose(); } : undefined}
                                 t={t}
                             />
                         ) : (

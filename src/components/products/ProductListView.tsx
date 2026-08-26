@@ -10,6 +10,7 @@ interface ProductListViewProps {
     onToggleSelect: (id: string | number) => void;
     onEdit: (product: Product) => void;
     onDelete: (id: string | number) => void;
+    onSelect?: (product: Product) => void;
     t: (key: string) => string;
 }
 
@@ -21,6 +22,7 @@ export const ProductListView: React.FC<ProductListViewProps> = ({
     onToggleSelect,
     onEdit,
     onDelete,
+    onSelect,
     t
 }) => {
     return (
@@ -69,8 +71,17 @@ export const ProductListView: React.FC<ProductListViewProps> = ({
                             <div className="text-xs text-[var(--color-text-muted)]">{product.category || 'Genel'}</div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <div className="font-semibold text-[var(--color-text)]">{product.price} ₺</div>
+                        {onSelect && (
+                            <button
+                                type="button"
+                                className="btn btn-xs btn-primary font-semibold"
+                                onClick={(e) => { e.stopPropagation(); onSelect(product); }}
+                            >
+                                {t('select') || 'Seç'}
+                            </button>
+                        )}
                         <button
                             type="button"
                             className="p-2 text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded-full transition-colors md:opacity-0 md:group-hover:opacity-100"

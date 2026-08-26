@@ -37,7 +37,6 @@ vi.mock('@/components/Layout', () => ({
     default: ({ children }: { children?: React.ReactNode }) => <div data-testid="layout">{children}</div>
 }));
 
-vi.mock('@/components/QuoteInfoForm', () => ({ default: () => <div data-testid="quote-info-form" /> }));
 vi.mock('@/components/CustomerInfoForm', () => ({ default: () => <div data-testid="customer-info-form" /> }));
 vi.mock('@/components/CompanyInfoForm', () => ({ default: () => <div data-testid="company-info-form" /> }));
 vi.mock('@/components/ItemsTable', () => ({ default: () => <div data-testid="items-table" /> }));
@@ -46,13 +45,8 @@ vi.mock('@/components/TermsAndNotes', () => ({ default: () => <div data-testid="
 vi.mock('@/components/BankInfoForm', () => ({ default: () => <div data-testid="bank-info-form" /> }));
 
 // Modals
-vi.mock('@/components/CustomerSelectModal', () => ({ default: () => <div data-testid="modal" /> }));
-vi.mock('@/components/ProductSelectModal', () => ({ default: () => <div data-testid="modal" /> }));
-vi.mock('@/components/SavedQuotesModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/CustomerManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/ProductManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
-vi.mock('@/components/TemplateManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
-vi.mock('@/components/DatabaseManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/BankManagerModal', () => ({ default: () => <div data-testid="modal" /> }));
 vi.mock('@/components/RecycleBinModal', () => ({ default: () => <div data-testid="modal" /> }));
 

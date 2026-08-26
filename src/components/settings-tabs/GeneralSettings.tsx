@@ -5,16 +5,12 @@ import { useTranslation } from '@/hooks/useTranslation';
 import type { AppColor, AppTheme, ViewMode, AppLayout } from '@/context/UIContext';
 
 interface GeneralSettingsProps {
-  viewMode: string;
-  setViewMode: (value: ViewMode) => void;
   performanceMode: boolean;
   setPerformanceMode: (value: boolean) => void;
   compactMode: boolean;
   setCompactMode: (value: boolean) => void;
   appFontSize: number;
   setAppFontSize: (value: number) => void;
-  appLayout: string;
-  setAppLayout: (value: AppLayout) => void;
   appTheme: string;
   setAppTheme: (value: AppTheme) => void;
   appColor: string;
@@ -33,11 +29,9 @@ interface ColorOption {
 }
 
 const GeneralSettings = ({
-  viewMode, setViewMode,
   performanceMode, setPerformanceMode,
   compactMode, setCompactMode,
   appFontSize, setAppFontSize,
-  appLayout, setAppLayout,
   appTheme, setAppTheme,
   appColor, setAppColor,
   onSave,
@@ -240,68 +234,6 @@ const GeneralSettings = ({
                 </div>
               );
             })}
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('interfaceDesign')}</label>
-          <div className="flex gap-3">
-            {[
-              { id: "modern", label: t('modernDashboard'), desc: t('modernDashboardDesc') },
-              { id: "classic", label: t('classicView'), desc: t('classicViewDesc') },
-            ].map((layout) => (
-              <label
-                key={layout.id}
-                className={`flex items-center gap-3 cursor-pointer p-3 border rounded-[var(--radius)] transition-colors flex-1 ${appLayout === layout.id ? "bg-[var(--color-primary-muted)] border-[var(--color-primary)]" : "bg-[var(--color-bg-card)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]"}`}
-              >
-                <input
-                  type="radio"
-                  name="appLayout"
-                  value={layout.id}
-                  checked={appLayout === layout.id}
-                  onChange={(e) => setAppLayout(e.target.value as 'modern' | 'classic')}
-                  className="form-radio"
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-[var(--color-text)]">
-                    {layout.label}
-                  </span>
-                  <span className="text-xs text-[var(--color-text-muted)]">
-                    {layout.desc}
-                  </span>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('deviceView')}</label>
-          <div className="flex gap-3">
-            {[
-              { id: "desktop", label: t('desktop'), desc: t('desktopDesc') },
-              { id: "mobile", label: t('mobile'), desc: t('mobileDesc') },
-            ].map((mode) => (
-              <label
-                key={mode.id}
-                className={`flex items-center gap-3 cursor-pointer p-3 border rounded-[var(--radius)] transition-colors flex-1 ${viewMode === mode.id ? "bg-[var(--color-primary-muted)] border-[var(--color-primary)]" : "bg-[var(--color-bg-card)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]"}`}
-              >
-                <input
-                  type="radio"
-                  name="viewMode"
-                  value={mode.id}
-                  checked={viewMode === mode.id}
-                  onChange={(e) => setViewMode(e.target.value as 'desktop' | 'mobile')}
-                  className="form-radio"
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-[var(--color-text)]">
-                    {mode.label}
-                  </span>
-                  <span className="text-xs text-[var(--color-text-muted)]">
-                    {mode.desc}
-                  </span>
-                </div>
-              </label>
-            ))}
           </div>
         </div>
         <div className="form-group">

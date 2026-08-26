@@ -14,6 +14,11 @@ const testableManager = indexedDBManager as unknown as TestableManager;
 // --- Global IndexedDB Mock ---
 const mockTransaction = {
     objectStore: vi.fn(),
+    abort: vi.fn(),
+    error: null as DOMException | null,
+    oncomplete: null as ((event?: Event) => void) | null,
+    onerror: null as ((event?: Event) => void) | null,
+    onabort: null as ((event?: Event) => void) | null,
 };
 
 const mockStore = {
@@ -31,7 +36,7 @@ const mockDb = {
     transaction: vi.fn(() => mockTransaction),
     createObjectStore: vi.fn(() => mockStore),
     objectStoreNames: {
-        contains: vi.fn((name) => ['customers', 'products', 'quotes', 'drafts', 'templates', 'previewData', 'formState', 'settings', 'bankInfo', 'recycle_bin'].includes(name)),
+        contains: vi.fn((name) => ['customers', 'products', 'quotes', 'drafts', 'templates', 'previewData', 'formState', 'settings', 'bankInfo', 'recycle_bin', 'quoteVersions'].includes(name)),
     },
     close: vi.fn(),
 };
@@ -85,6 +90,10 @@ describe('IndexedDBManager', () => {
 
         mockDb.transaction.mockReturnValue(mockTransaction);
         mockTransaction.objectStore.mockReturnValue(mockStore);
+        mockTransaction.oncomplete = null;
+        mockTransaction.onerror = null;
+        mockTransaction.onabort = null;
+        mockTransaction.error = null;
 
         // Mock store method returns for generic CRUD
         const mockRequestSuccess = (result: unknown) => ({
@@ -171,5 +180,24 @@ describe('IndexedDBManager', () => {
 
         await indexedDBManager.get('quoteVersions', 'ver_1_12345');
         expect(mockStore.get).toHaveBeenCalledWith('ver_1_12345');
+    });
+
+    it('should restore all backup records in a single transaction', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const restorePromise = indexedDBManager.restoreStores({
+            customers: [{ id: 1, name: 'Müşteri' }],
+            products: [{ id: 2, name: 'Ürün' }],
+        });
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'products'], 'readwrite');
+            expect(mockStore.put).toHaveBeenCalledTimes(2);
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(restorePromise).resolves.toBe(2);
     });
 });

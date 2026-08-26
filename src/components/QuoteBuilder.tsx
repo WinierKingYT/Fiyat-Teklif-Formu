@@ -7,10 +7,9 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { toast } from 'react-hot-toast';
 import CompanyInfoForm from '@/components/CompanyInfoForm';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { CustomFieldsEditor } from '@/components/custom-fields';
 import CustomerInfoForm from '@/components/CustomerInfoForm';
+import CustomFieldsSection from '@/components/CustomFieldsSection';
 import ItemsTable from '@/components/ItemsTable';
-import LiveInlinePreview from '@/components/LiveInlinePreview';
 import { QuoteNumberConfigModal } from '@/components/quote-number';
 import SummarySection from '@/components/SummarySection';
 import { getDefaultQuoteNumberConfig } from '@/context/quote/initialState';
@@ -20,13 +19,12 @@ import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
 import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 import { generateNextQuoteNumber } from '@/utils/numberGenerator';
-import type { Customer, Product, Quote, QuoteItem, QuoteNumberConfig, CustomField } from '@/context/quote/types';
+import type { Customer, Product, Quote, QuoteItem, QuoteNumberConfig } from '@/context/quote/types';
 
 const TermsAndNotes = lazy(() => import('@/components/TermsAndNotes'));
 const BankInfoForm = lazy(() => import('@/components/BankInfoForm'));
-const CustomerSelectModal = lazy(() => import('@/components/CustomerSelectModal'));
-const ProductSelectModal = lazy(() => import('@/components/ProductSelectModal'));
-const SavedQuotesModal = lazy(() => import('@/components/SavedQuotesModal'));
+const CustomerManagerModal = lazy(() => import('@/components/CustomerManagerModal'));
+const ProductManagerModal = lazy(() => import('@/components/ProductManagerModal'));
 const PdfPreviewPanel = lazy(() => import('@/components/PdfPreviewPanel'));
 
 const ModalLoadingFallback = () => (
@@ -39,13 +37,10 @@ const ModalLoadingFallback = () => (
 );
 
 export interface QuoteBuilderProps {
-  onNavigate: (view: string) => void;
-  onOpenProductManager: () => void;
-  onOpenCustomerManager: () => void;
-  onOpenTemplateManager: () => void;
-  onOpenDatabaseManager: () => void;
-  onOpenBankManager: () => void;
-  onOpenRecycleBin: () => void;
+  onNavigate?: (view: string) => void;
+  onOpenProductManager?: () => void;
+  onOpenCustomerManager?: () => void;
+  onOpenBankManager?: () => void;
 }
 
 export const QuoteBuilder = React.memo(({
@@ -71,7 +66,6 @@ export const QuoteBuilder = React.memo(({
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isNumberConfigModalOpen, setIsNumberConfigModalOpen] = useState(false);
   const [numberConfig, setNumberConfig] = useState<QuoteNumberConfig>(getDefaultQuoteNumberConfig);
   const [activeSideTab, setActiveSideTab] = useState<'terms' | 'bank' | 'company'>('terms');
@@ -92,12 +86,6 @@ export const QuoteBuilder = React.memo(({
     };
     loadConfig();
   }, [db]);
-
-  useEffect(() => {
-    const handleOpenHistory = () => setIsHistoryModalOpen(true);
-    document.addEventListener('open-history-modal', handleOpenHistory);
-    return () => document.removeEventListener('open-history-modal', handleOpenHistory);
-  }, []);
 
   const handleSaveShortcut = () => { saveQuote(); };
   const handlePdfShortcut = () => { setIsLivePreviewMode(prev => !prev); };
@@ -317,12 +305,6 @@ export const QuoteBuilder = React.memo(({
               currency={quoteData.currency}
             />
 
-            {/* Özel Alanlar & Ek Bilgiler */}
-            <CustomFieldsEditor
-              customFields={quoteData.customFields || []}
-              onChange={(fields: CustomField[]) => updateQuoteData('customFields', fields)}
-            />
-
             {/* ─── EK BİLGİLER & ŞARTLAR (Under items table) ─── */}
             <div className="card">
               <div className="card-header border-b border-[var(--color-border)] p-1.5">
@@ -398,9 +380,6 @@ export const QuoteBuilder = React.memo(({
               onSaveQuote={saveQuote}
               onPreviewPdf={() => setIsLivePreviewMode(true)}
             />
-
-            {/* Canlı PDF Önizleme (SummarySection altında hep açık) */}
-            <LiveInlinePreview />
           </div>
         </div>
 
@@ -427,28 +406,18 @@ export const QuoteBuilder = React.memo(({
         variant="danger"
       />
       <Suspense fallback={<ModalLoadingFallback />}>
-        <CustomerSelectModal
+        <CustomerManagerModal
           isOpen={isCustomerModalOpen}
           onClose={() => setIsCustomerModalOpen(false)}
           onSelect={handleCustomerSelect}
-          onCreateNew={onOpenCustomerManager}
         />
       </Suspense>
 
       <Suspense fallback={<ModalLoadingFallback />}>
-        <ProductSelectModal
+        <ProductManagerModal
           isOpen={isProductModalOpen}
           onClose={() => setIsProductModalOpen(false)}
           onSelect={handleProductSelect}
-        />
-      </Suspense>
-
-      <Suspense fallback={<ModalLoadingFallback />}>
-        <SavedQuotesModal
-          isOpen={isHistoryModalOpen}
-          onClose={() => setIsHistoryModalOpen(false)}
-          onLoadQuote={handleLoadQuote}
-          onNewQuote={handleNewQuote}
         />
       </Suspense>
 

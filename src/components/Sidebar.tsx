@@ -15,13 +15,12 @@ const navItems = [
 const catalogItems = [
   { icon: Users, labelKey: 'customerManager', handlerIndex: 0 },
   { icon: Package, labelKey: 'productCatalog', handlerIndex: 1 },
-  { icon: Landmark, labelKey: 'bankInfo', handlerIndex: 4 },
-  { icon: LayoutTemplate, labelKey: 'templates', handlerIndex: 2 },
+  { icon: Landmark, labelKey: 'bankInfo', handlerIndex: 2 },
 ];
 
 const systemItems = [
   { icon: Database, labelKey: 'database', handlerIndex: 3 },
-  { icon: Trash2, labelKey: 'recycleBin', handlerIndex: 5 },
+  { icon: Trash2, labelKey: 'recycleBin', handlerIndex: 4 },
 ];
 
 interface SidebarProps {
@@ -29,7 +28,6 @@ interface SidebarProps {
   onNavigate: (view: string) => void;
   onOpenCustomerManager: () => void;
   onOpenProductManager: () => void;
-  onOpenTemplateManager: () => void;
   onOpenDatabaseManager: () => void;
   onOpenBankManager: () => void;
   onOpenRecycleBin: () => void;
@@ -42,7 +40,7 @@ interface SidebarProps {
 
 const Sidebar = React.memo(({
   currentView, onNavigate,
-  onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
+  onOpenCustomerManager, onOpenProductManager,
   onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin,
   onNewQuote,
   isMobileOpen, onMobileClose,
@@ -84,13 +82,20 @@ const Sidebar = React.memo(({
   }, [quoteData, customerData, companyData, items]);
 
   const handleNav = (id: string) => {
-    if (id === 'builder') { onNewQuote(); }
-    onNavigate(id);
+    if (id === 'builder') {
+      if (currentView === 'builder') {
+        onNewQuote();
+      } else {
+        onNavigate('builder');
+      }
+    } else {
+      onNavigate(id);
+    }
   };
 
   const handlers = [
-    onOpenCustomerManager, onOpenProductManager, onOpenTemplateManager,
-    onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin
+    onOpenCustomerManager, onOpenProductManager, onOpenBankManager,
+    onOpenDatabaseManager, onOpenRecycleBin
   ];
 
   const sidebarContent = (

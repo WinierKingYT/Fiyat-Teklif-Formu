@@ -69,10 +69,10 @@ describe('QuoteContext', () => {
         );
 
         expect(screen.getByTestId('tab-count')).toHaveTextContent('1');
-        expect(screen.getByTestId('active-tab-id')).toHaveTextContent('default-tab');
+        expect(screen.getByTestId('active-tab-id')).toHaveTextContent('active-quote');
     });
 
-    it('should add a new tab', async () => {
+    it('should reset quote when addTab/newQuote is triggered', async () => {
         render(
             <QuoteProvider>
                 <TestComponent />
@@ -83,7 +83,8 @@ describe('QuoteContext', () => {
             screen.getByText('Add Tab').click();
         });
 
-        expect(screen.getByTestId('tab-count')).toHaveTextContent('2');
+        expect(screen.getByTestId('tab-count')).toHaveTextContent('1');
+        expect(screen.getByTestId('active-tab-id')).toHaveTextContent('active-quote');
     });
 
     it('should update quote data', async () => {

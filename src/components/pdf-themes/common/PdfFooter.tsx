@@ -16,7 +16,7 @@ export const PdfFooter: React.FC<PdfFooterProps> = ({ companyData, config, t, cl
     ].filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 
     return (
-        <div className={className || ''} style={{ marginTop: 'auto', paddingTop: '6px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
+        <div className={className || ''} style={{ marginTop: 'auto', paddingTop: '6px', borderTop: '1px solid #f1f5f9', textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '7.5pt', color: '#64748b' }}>
                 {[
                     companyData.name ? <strong key="name" style={{ color: '#0f172a' }}>{companyData.name}</strong> : null,

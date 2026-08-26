@@ -238,9 +238,13 @@ export const pdfConfigSchema = z.object({
   theme: z.string(),
   color: z.string(),
   globalFontFamily: z.string(),
+  globalFontColor: z.string().optional(),
   titleFontFamily: z.string(),
+  titleFontSize: z.string().optional(),
+  titleFontWeight: z.string().optional(),
   labelFontFamily: z.string(),
   bodyFontFamily: z.string(),
+  bodyLineHeight: z.union([z.string(), z.number()]).optional(),
   headerTitleFontSize: z.string(),
   headerTitleFontWeight: z.string(),
   headerInfoFontSize: z.string(),
@@ -273,6 +277,8 @@ export const pdfConfigSchema = z.object({
   tableBorderColor: z.string().optional(),
   tableStriped: z.boolean().optional(),
   tableShowVerticalLines: z.boolean().optional(),
+  tableHeaderPadding: z.string().optional(),
+  tableCellPadding: z.string().optional(),
   pageBackgroundColor: z.string().optional(),
   textItem: z.string().optional(),
   textDescription: z.string().optional(),
@@ -284,10 +290,12 @@ export const pdfConfigSchema = z.object({
   textTotal: z.string().optional(),
   enableShadows: z.boolean().optional(),
   pageSize: z.enum(['a4', 'a5', 'letter', 'legal']).optional(),
+  tableStripedColor: z.string().optional(),
+  showCompanyDetails: z.boolean().optional(),
+  footerColor: z.string().optional(),
 }).strict();
 
-export type PdfConfig = Partial<z.infer<typeof pdfConfigSchema>> & Record<string, unknown>;
-// Faz6 strict: parse için pdfConfigSchema.strict().safeParse kullanın; unknown anahtarlar reddedilir
+export type PdfConfig = Partial<z.infer<typeof pdfConfigSchema>>;
 
 // ─── PDF Layout Item ────────────────────────────────────────────────────────
 export interface PdfLayoutItem {
@@ -347,6 +355,7 @@ export interface IndexedDBManager {
   get: <T = unknown>(storeName: string, key: IDBValidKey) => Promise<T | undefined>;
   add: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
   put: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
+  restoreStores: (stores: Record<string, unknown[]>) => Promise<number>;
   delete: (storeName: string, key: IDBValidKey) => Promise<void>;
   clear: (storeName: string) => Promise<void>;
   getByIndex: <T = unknown>(storeName: string, indexName: string, value: IDBValidKey) => Promise<T | undefined>;
