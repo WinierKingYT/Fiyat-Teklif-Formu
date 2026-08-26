@@ -306,4 +306,24 @@ describe('IndexedDBManager', () => {
 
         await expect(movePromise).rejects.toThrow('transaction aborted');
     });
+
+    it('should move multiple records from different stores in one transaction', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const movePromise = indexedDBManager.moveManyToRecycleBin([
+            { storeName: 'customers', key: 42, recycleData: { id: 42, name: 'Müşteri' } },
+            { storeName: 'products', key: 8, recycleData: { id: 8, name: 'Ürün' } },
+        ], { deletedBy: 'user' });
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'products', 'recycle_bin'], 'readwrite');
+            expect(mockStore.add).toHaveBeenCalledTimes(2);
+            expect(mockStore.delete).toHaveBeenCalledTimes(2);
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(movePromise).resolves.toBeUndefined();
+    });
 });

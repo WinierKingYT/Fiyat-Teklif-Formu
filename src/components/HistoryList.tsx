@@ -60,11 +60,14 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
             onConfirm: async () => {
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 try {
-                    for (const deleteId of ids) {
+                    const moves = ids.flatMap(deleteId => {
                         const quoteToDelete = quotes.find(q => q.id === deleteId);
-                        if (quoteToDelete) {
-                            await db.moveToRecycleBin('quotes', deleteId, { data: quoteToDelete }, { deletedBy: 'user' });
-                        }
+                        return quoteToDelete
+                            ? [{ storeName: 'quotes', key: deleteId, recycleData: { data: quoteToDelete } }]
+                            : [];
+                    });
+                    await db.moveManyToRecycleBin(moves, { deletedBy: 'user' });
+                    for (const deleteId of ids) {
                         if (currentQuoteId === deleteId) setCurrentQuoteId(null);
                     }
                     toast.success(t('quotesMovedToBin').replace('{count}', String(ids.length)));

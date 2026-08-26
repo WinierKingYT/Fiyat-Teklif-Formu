@@ -269,12 +269,13 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
             onConfirm: async () => {
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 try {
-                    for (const id of selectedProducts) {
+                    const moves = Array.from(selectedProducts).flatMap(id => {
                         const productToDelete = products.find(p => p.id === id);
-                        if (productToDelete) {
-                            await db.moveToRecycleBin('products', id as IDBValidKey, productToDelete, { deletedBy: 'user' });
-                        }
-                    }
+                        return productToDelete
+                            ? [{ storeName: 'products', key: id as IDBValidKey, recycleData: productToDelete }]
+                            : [];
+                    });
+                    await db.moveManyToRecycleBin(moves, { deletedBy: 'user' });
                     if (currentProduct && selectedProducts.has(currentProduct.id)) {
                         resetForm();
                     }

@@ -513,23 +513,42 @@ class IndexedDBManager {
         recycleData: object,
         options?: { deletedBy?: string }
     ): Promise<void> {
+        return this.moveManyToRecycleBin([{ storeName, key, recycleData }], options);
+    }
+
+    async moveManyToRecycleBin(
+        items: Array<{ storeName: string; key: IDBValidKey; recycleData: object }>,
+        options?: { deletedBy?: string }
+    ): Promise<void> {
         await this.ensureConnection();
 
-        if (storeName === 'recycle_bin') {
-            throw new Error('Çöp kutusu öğesi tekrar çöp kutusuna taşınamaz.');
-        }
-        if (!this.db!.objectStoreNames.contains(storeName) || !this.db!.objectStoreNames.contains('recycle_bin')) {
-            throw new Error(`Silme işlemi için veri alanı bulunamadı: ${storeName}`);
+        if (items.length === 0) {
+            return;
         }
 
-        const { id: _sourceId, ...recordData } = recycleData as Record<string, unknown>;
-        const recycleRecord = {
-            ...recordData,
-            originalStore: storeName,
-            originalId: key,
-            deletedAt: new Date().toISOString(),
-            ...(options?.deletedBy ? { deletedBy: options.deletedBy } : {}),
-        };
+        const sourceStores = [...new Set(items.map(item => item.storeName))];
+        if (sourceStores.includes('recycle_bin')) {
+            throw new Error('Çöp kutusu öğesi tekrar çöp kutusuna taşınamaz.');
+        }
+        if (!this.db!.objectStoreNames.contains('recycle_bin') || sourceStores.some(storeName => !this.db!.objectStoreNames.contains(storeName))) {
+            const missingStore = sourceStores.find(storeName => !this.db!.objectStoreNames.contains(storeName));
+            throw new Error(`Silme işlemi için veri alanı bulunamadı: ${missingStore || 'recycle_bin'}`);
+        }
+
+        const deletedAt = new Date().toISOString();
+        const recycleRecords = items.map(({ storeName, key, recycleData }) => {
+            if (!recycleData || typeof recycleData !== 'object' || Array.isArray(recycleData)) {
+                throw new Error(`Çöp kutusu kaydı geçersiz: ${storeName}`);
+            }
+            const { id: _sourceId, ...recordData } = recycleData as Record<string, unknown>;
+            return {
+                ...recordData,
+                originalStore: storeName,
+                originalId: key,
+                deletedAt,
+                ...(options?.deletedBy ? { deletedBy: options.deletedBy } : {}),
+            };
+        });
 
         return new Promise((resolve, reject) => {
             let settled = false;
@@ -553,13 +572,14 @@ class IndexedDBManager {
             };
 
             try {
-                const transaction = this.db!.transaction([storeName, 'recycle_bin'], 'readwrite');
+                const transaction = this.db!.transaction([...sourceStores, 'recycle_bin'], 'readwrite');
                 transaction.oncomplete = succeed;
                 transaction.onerror = () => fail(transaction.error || new Error('Öğe çöp kutusuna taşınamadı.'));
                 transaction.onabort = () => fail(transaction.error || new Error('Öğe taşıma işlemi geri alındı.'));
 
-                transaction.objectStore('recycle_bin').add(this.sanitizeData(recycleRecord));
-                transaction.objectStore(storeName).delete(key);
+                const recycleBinStore = transaction.objectStore('recycle_bin');
+                recycleRecords.forEach(record => recycleBinStore.add(this.sanitizeData(record)));
+                items.forEach(({ storeName, key }) => transaction.objectStore(storeName).delete(key));
             } catch (error) {
                 fail(error);
             }

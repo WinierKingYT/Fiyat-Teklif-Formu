@@ -371,6 +371,10 @@ export interface IndexedDBManager {
     recycleData: object,
     options?: { deletedBy?: string }
   ) => Promise<void>;
+  moveManyToRecycleBin: (
+    items: Array<{ storeName: string; key: IDBValidKey; recycleData: object }>,
+    options?: { deletedBy?: string }
+  ) => Promise<void>;
   delete: (storeName: string, key: IDBValidKey) => Promise<void>;
   clear: (storeName: string) => Promise<void>;
   getByIndex: <T = unknown>(storeName: string, indexName: string, value: IDBValidKey) => Promise<T | undefined>;
