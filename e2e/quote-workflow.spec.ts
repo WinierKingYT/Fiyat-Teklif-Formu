@@ -71,6 +71,29 @@ const exportBackup = async (page: Page): Promise<{ download: Download; payload: 
   return { download, payload };
 };
 
+const seedRecycleBin = async (page: Page, items: Array<Record<string, unknown>>) => {
+  await page.evaluate(async ({ dbName, items: recycleItems }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(dbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(['customers', 'products', 'bankInfo', 'recycle_bin'], 'readwrite');
+      transaction.objectStore('customers').clear();
+      transaction.objectStore('products').clear();
+      transaction.objectStore('bankInfo').clear();
+      transaction.objectStore('recycle_bin').clear();
+      recycleItems.forEach(item => transaction.objectStore('recycle_bin').put(item));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    db.close();
+  }, { dbName: DB_NAME, items });
+};
+
 test.describe('Critical quote workflows', () => {
   test('saves the active quote and restores it after a reload', async ({ page }) => {
     await openBuilder(page);
@@ -268,5 +291,94 @@ test.describe('Backup and restore workflows', () => {
     const { payload } = await exportBackup(page);
     expect(payload.stores.customers).toContainEqual(expect.objectContaining(originalCustomer));
     expect(payload.stores.customers).not.toContainEqual(expect.objectContaining({ name: 'Geçersiz Eksik Snapshot' }));
+  });
+});
+
+test.describe('Recycle bin workflows', () => {
+  test('restores a deleted item and removes it from the recycle bin', async ({ page }) => {
+    await page.goto('/');
+    await seedRecycleBin(page, [{
+      id: 9401,
+      originalStore: 'customers',
+      originalId: 940,
+      deletedAt: new Date().toISOString(),
+      deletedBy: 'e2e',
+      name: 'Geri Yüklenecek Müşteri',
+      company: 'E2E Geri Dönüş A.Ş.',
+      data: { id: 940, name: 'Geri Yüklenecek Müşteri', company: 'E2E Geri Dönüş A.Ş.' },
+    }]);
+
+    await page.getByRole('button', { name: 'Geri Dönüşüm', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Geri Dönüşüm Kutusu', exact: true })).toBeVisible();
+    await expect(page.getByText('Geri Yüklenecek Müşteri', { exact: true })).toBeVisible();
+
+    await page.locator('button[title="Geri Yükle"]').click();
+    await expect(page.getByText('Öğe geri yüklendi', { exact: true })).toBeVisible();
+    await expect(page.getByText('Geri dönüşüm kutusu boş', { exact: true })).toBeVisible();
+
+    const restored = await page.evaluate(async ({ dbName }) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(dbName);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const customer = await new Promise<Record<string, unknown> | undefined>((resolve, reject) => {
+        const request = db.transaction('customers', 'readonly').objectStore('customers').get(940);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const recycleBin = await new Promise<unknown[]>((resolve, reject) => {
+        const request = db.transaction('recycle_bin', 'readonly').objectStore('recycle_bin').getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return { customer, recycleBinCount: recycleBin.length };
+    }, { dbName: DB_NAME });
+
+    expect(restored.customer).toEqual(expect.objectContaining({ id: 940, name: 'Geri Yüklenecek Müşteri' }));
+    expect(restored.recycleBinCount).toBe(0);
+  });
+
+  test('keeps an item when its original store is invalid', async ({ page }) => {
+    await page.goto('/');
+    await seedRecycleBin(page, [{
+      id: 9402,
+      originalStore: 'missing_store',
+      originalId: 941,
+      deletedAt: new Date().toISOString(),
+      deletedBy: 'e2e',
+      name: 'Hatalı Geri Yükleme',
+      data: { id: 941, name: 'Hatalı Geri Yükleme' },
+    }]);
+
+    await page.getByRole('button', { name: 'Geri Dönüşüm', exact: true }).click();
+    await expect(page.getByText('Hatalı Geri Yükleme', { exact: true })).toBeVisible();
+    await page.locator('button[title="Geri Yükle"]').click();
+
+    await expect(page.getByText('Geri yükleme başarısız', { exact: true })).toBeVisible();
+    await expect(page.getByText('Hatalı Geri Yükleme', { exact: true })).toBeVisible();
+  });
+
+  test('permanently deletes a recycle-bin item after confirmation', async ({ page }) => {
+    await page.goto('/');
+    await seedRecycleBin(page, [{
+      id: 9403,
+      originalStore: 'products',
+      originalId: 942,
+      deletedAt: new Date().toISOString(),
+      deletedBy: 'e2e',
+      name: 'Kalıcı Silinecek Ürün',
+      data: { id: 942, name: 'Kalıcı Silinecek Ürün' },
+    }]);
+
+    await page.getByRole('button', { name: 'Geri Dönüşüm', exact: true }).click();
+    await expect(page.getByText('Kalıcı Silinecek Ürün', { exact: true })).toBeVisible();
+    await page.locator('button[title="Kalıcı Olarak Sil"]').click();
+    await expect(page.getByRole('heading', { name: 'Kalıcı Sil', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Onayla', exact: true }).last().click();
+
+    await expect(page.getByText('Öğe kalıcı olarak silindi', { exact: true })).toBeVisible();
+    await expect(page.getByText('Geri dönüşüm kutusu boş', { exact: true })).toBeVisible();
   });
 });
