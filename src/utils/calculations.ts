@@ -1,4 +1,5 @@
 import { QuoteItem, Discount } from '@/context/quote/types';
+import { roundToCurrency } from '@/utils/money';
 
 interface CalculatedItem extends QuoteItem {
   quantity: number;
@@ -140,8 +141,8 @@ export const calculateQuoteTotals = (
   };
 };
 
-function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+function roundMoney(value: number, currency: string = 'TRY'): number {
+  return roundToCurrency(value, currency);
 }
 
 function parseTrNumber(val: unknown): number {

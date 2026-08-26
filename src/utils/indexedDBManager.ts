@@ -26,8 +26,22 @@ class IndexedDBManager {
         return parts[0] * 10000 + parts[1] * 100 + parts[2];
     }
 
+    closeConnection(): void {
+        if (this.db) {
+            try {
+                this.db.close();
+            } catch (err) {
+                Logger.error('Error closing IndexedDB connection:', err);
+            }
+            this.db = null;
+        }
+        this.isConnectionOpen = false;
+        this.isInitialized = false;
+        this.initializationPromise = null;
+    }
+
     async initialize(): Promise<IDBDatabase | null> {
-        if (this.isInitialized && this.isConnectionOpen) return this.db;
+        if (this.isInitialized && this.isConnectionOpen && this.db) return this.db;
 
         if (this.initializationPromise) {
             return this.initializationPromise;
@@ -40,9 +54,7 @@ class IndexedDBManager {
 
             request.onerror = () => {
                 Logger.error('IndexedDB açılamadı:', request.error);
-                this.initializationPromise = null;
-                this.isInitialized = false;
-                this.isConnectionOpen = false;
+                this.closeConnection();
                 reject(new Error(`IndexedDB açılamadı: ${request.error}`));
             };
 
@@ -58,10 +70,15 @@ class IndexedDBManager {
 
                 this.db.onclose = () => {
                     Logger.warn('Database connection closed');
-                    this.isConnectionOpen = false;
-                    this.isInitialized = false;
-                    this.initializationPromise = null;
-                    this.db = null;
+                    this.closeConnection();
+                };
+
+                this.db.onversionchange = () => {
+                    Logger.warn('IndexedDB version changed in another tab/connection. Closing connection to allow upgrade.');
+                    this.closeConnection();
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('db-version-change'));
+                    }
                 };
 
                 resolve(this.db);
@@ -74,6 +91,9 @@ class IndexedDBManager {
 
             request.onblocked = () => {
                 Logger.warn('Database upgrade blocked by other connections');
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('db-blocked'));
+                }
                 reject(new Error('Database upgrade blocked'));
             };
         });

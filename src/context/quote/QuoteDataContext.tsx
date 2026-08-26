@@ -1,24 +1,29 @@
 import React, { createContext, useContext, useCallback, useMemo, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { exportDatabaseBackup, importDatabaseBackup } from '@/application/quote/backupService';
+import { prepareQuoteForLoading } from '@/application/quote/loadQuoteService';
+import { saveQuoteService } from '@/application/quote/saveQuoteService';
+import { validateQuoteService } from '@/application/quote/validateQuoteService';
+import { saveVersionService, getVersionSnapshotService } from '@/application/quote/versionQuoteService';
 import { useCompanyDefaults } from '@/context/quote/CompanyDefaultsContext';
 import { useConfirm } from '@/context/quote/ConfirmContext';
 import { useDatabase } from '@/context/quote/DatabaseContext';
 import {
     getInitialQuoteData, getInitialCustomerData, getInitialCompanyData, getInitialBankData, getInitialTabData,
 } from '@/context/quote/initialState';
-import { createLegacyBackup, restoreBackupFile } from '@/context/quote/quoteBackup';
-import { buildDbQuote, buildQuoteVersion } from '@/context/quote/quotePersistence';
 import { useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
 import { useTab } from '@/context/quote/TabContext';
 import {
     type QuoteData, type CustomerData, type CompanyData, type BankData,
-    type QuoteItem, type Discount, type PdfConfig, type Quote, type SaveStatus,
-    type IndexedDBManager, type TabData, type DbQuote, type QuoteVersion,
+    type QuoteItem, type Discount, type Quote,
+    type IndexedDBManager, type TabData, type DbQuote,
 } from '@/context/quote/types';
 import tr from '@/i18n/tr.json';
+import { calculateQuoteTotals } from '@/utils/calculations';
 import cleanupService from '@/utils/cleanupService';
 import { getLocalDateString, getLocalDateTimeString } from '@/utils/dateUtils';
 import Logger from '@/utils/logger';
+import { toMinorUnit } from '@/utils/money';
 import { sanitizeInput, sanitizeObject } from '@/utils/sanitize';
 
 const translations: Record<string, string> = tr;
@@ -210,7 +215,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }
     }, [isReady, db]);
 
-    // Auto-save with debounce
+    // Auto-save with debounce and correct financial totals
     const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         if (!isReady || !db || !tabs.find(t => t.id === activeTabId)?.savedQuoteId) return;
@@ -221,18 +226,54 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             const quoteId = activeTab.savedQuoteId;
             if (!quoteId) return;
             setSaveStatus({ status: 'saving', lastSaved: null });
-            const quote = buildDbQuote({
+
+            const currency = quoteData.currency || 'TRY';
+            const { subtotalMinor, taxTotalMinor, grandTotalMinor } = (() => {
+                try {
+                    const calc = calculateQuoteTotals(items, discount, { currency });
+                    return {
+                        subtotalMinor: toMinorUnit(calc.subtotal, currency),
+                        taxTotalMinor: toMinorUnit(calc.taxTotal, currency),
+                        grandTotalMinor: toMinorUnit(calc.grandTotal, currency)
+                    };
+                } catch {
+                    return { subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0 };
+                }
+            })();
+
+            let createdAt = getLocalDateTimeString();
+            let status: 'draft' | 'saved' | 'final' = 'draft';
+            try {
+                const existing = await db.get<DbQuote>('quotes', quoteId);
+                if (existing) {
+                    if (existing.createdAt) createdAt = existing.createdAt;
+                    if (existing.status === 'draft' || existing.status === 'saved' || existing.status === 'final') {
+                        status = existing.status;
+                    }
+                }
+            } catch (err) {
+                Logger.warn('Could not read existing quote in autosave:', err);
+            }
+
+            const quote: DbQuote = {
                 id: quoteId,
-                status: 'draft',
+                quoteNumber: quoteData.number,
+                customerName: customerData.name,
+                customerCompany: customerData.company,
+                status,
+                currency,
+                subtotalMinor,
+                taxTotalMinor,
+                grandTotalMinor,
                 quoteData,
                 customerData,
                 companyData,
                 items,
                 discount,
                 bankData,
-                calculateTotals: false,
-                createdAt: getLocalDateTimeString(),
-            });
+                updatedAt: getLocalDateTimeString(),
+                createdAt,
+            };
             try {
                 await db.put('quotes', quote);
                 setSaveStatus({ status: 'saved', lastSaved: Date.now() });
@@ -251,18 +292,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     }, [isReady, db, quoteData, customerData, companyData, items, discount, bankData, tabs, activeTabId, setSaveStatus]);
 
     const validateQuote = useCallback((isFinal = false) => {
-        const errors: string[] = [];
-        if (!companyData.name) errors.push(tStatic('validationCompanyRequired'));
-        if (!customerData.name && !customerData.company) errors.push(tStatic('validationCustomerRequired'));
-        if (items.length === 0) errors.push(tStatic('validationItemsRequired'));
-        if (!quoteData.number) errors.push(tStatic('validationQuoteNumberRequired'));
-        if (!quoteData.currency) errors.push(tStatic('validationCurrencyRequired'));
-        items.forEach((item: QuoteItem, i: number) => {
-            if (!item.name) errors.push(`${tStatic('row')} ${i + 1}: ${tStatic('validationProductNameRequired')}`);
-            if (item.quantity <= 0) errors.push(`${tStatic('row')} ${i + 1}: ${tStatic('validationQuantityInvalid')}`);
-            if (item.price < 0) errors.push(`${tStatic('row')} ${i + 1}: ${tStatic('validationPriceInvalid')}`);
-        });
-        return errors;
+        return validateQuoteService({ companyData, customerData, items, quoteData, isFinal });
     }, [companyData, customerData, items, quoteData]);
 
     const saveQuote = useCallback(async (isFinal = false) => {
@@ -273,38 +303,28 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         const errors = validateQuote(isFinal);
         if (errors.length > 0) { toast.error(tStatic('fixErrors') + '\n' + errors.join('\n'), { duration: 6000 }); return; }
         setSaveStatus({ status: 'saving', lastSaved: null });
-        const quote = buildDbQuote({
-            id: tabSavedQuoteId || Date.now(),
-            status: isFinal ? 'final' : 'draft',
-            quoteData,
-            customerData,
-            companyData,
-            items,
-            discount,
-            bankData,
-            createdAt: tabSavedQuoteId ? undefined : getLocalDateTimeString(),
-        });
+
         try {
-            if (tabSavedQuoteId) {
-                const existing = await db.get<DbQuote>('quotes', tabSavedQuoteId);
-                if (existing) { quote.createdAt = existing.createdAt; quote.status = isFinal ? 'final' : existing.status; }
-                await db.put('quotes', quote);
-                toast.success(tStatic('quoteUpdated'));
-            } else {
-                await db.add('quotes', quote);
-                setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: quote.id } : tab));
+            const { savedQuote, isNew } = await saveQuoteService({
+                db,
+                tabSavedQuoteId,
+                isFinal,
+                quoteData,
+                customerData,
+                companyData,
+                items,
+                discount,
+                bankData,
+            });
+
+            if (isNew) {
+                setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: savedQuote.id } : tab));
                 toast.success(tStatic('quoteSaved'));
+            } else {
+                toast.success(tStatic('quoteUpdated'));
             }
 
-            // Otomatik versiyon snapshot'ı
-            try {
-                const version = buildQuoteVersion(quote, isFinal ? tStatic('finalVersion') : tStatic('autoSave'));
-                await db.put('quoteVersions', version);
-            } catch (e) {
-                Logger.warn('Version snapshot error:', e);
-            }
-
-            Logger.log('Quote saved successfully', quote);
+            Logger.log('Quote saved successfully', savedQuote);
             setSaveStatus({ status: 'saved', lastSaved: Date.now() });
             setTimeout(() => { setSaveStatus(prev => prev.status === 'saved' ? { status: 'idle', lastSaved: prev.lastSaved } : prev); }, 3000);
         } catch (error) {
@@ -316,28 +336,14 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     }, [isReady, tabs, activeTabId, validateQuote, items, discount, quoteData, customerData, companyData, bankData, db, setTabs, setSaveStatus]);
 
     const loadQuote = useCallback((quote: Partial<Quote>) => {
-        const title = quote.customerData?.company || quote.customerData?.name || tStatic('quote');
-        const sanitizedQuoteData = sanitizeObject({ ...getInitialQuoteData(), ...(quote.quoteData || {}) }) as QuoteData;
-        const sanitizedCustomerData = sanitizeObject({ ...getInitialCustomerData(), ...(quote.customerData || {}) }) as CustomerData;
-        const sanitizedCompanyData = sanitizeObject({ ...getInitialCompanyData(), ...(companyDefaults || {}), ...(quote.companyData || {}) }) as CompanyData;
-        const sanitizedBankData = sanitizeObject({ ...getInitialBankData(), ...(quote.bankData || {}) }) as BankData;
-        const sanitizedItems = sanitizeObject(quote.items || []) as QuoteItem[];
-        const sanitizedDiscount = (quote.discount || (quote.discountRate ? { type: 'percentage', value: quote.discountRate } : { type: 'percentage', value: 0 })) as Discount;
-
+        const loaded = prepareQuoteForLoading(quote, companyDefaults);
         setTabs(prev => prev.map(tab => {
             if (tab.id === activeTabId) {
                 return {
                     ...tab,
-                    title,
-                    savedQuoteId: quote.id || null,
-                    data: {
-                        quoteData: sanitizedQuoteData,
-                        customerData: sanitizedCustomerData,
-                        companyData: sanitizedCompanyData,
-                        bankData: sanitizedBankData,
-                        items: sanitizedItems,
-                        discount: sanitizedDiscount,
-                    }
+                    title: loaded.title,
+                    savedQuoteId: loaded.savedQuoteId,
+                    data: loaded.data,
                 };
             }
             return tab;
@@ -352,22 +358,21 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }
         const activeTab = tabs.find(t => t.id === activeTabId);
         const quoteId = activeTab?.savedQuoteId || Date.now();
-        const snapshot = buildDbQuote({
-            id: quoteId,
-            status: 'saved',
-            quoteData,
-            customerData,
-            companyData,
-            items,
-            discount,
-            bankData,
-            createdAt: getLocalDateTimeString(),
-        });
-        const version = buildQuoteVersion(snapshot, versionName);
+
         try {
-            await db.put('quoteVersions', version);
+            const versionId = await saveVersionService({
+                db,
+                quoteId,
+                versionName,
+                quoteData,
+                customerData,
+                companyData,
+                items,
+                discount,
+                bankData,
+            });
             toast.success(versionName ? `"${versionName}" ${tStatic('versionSaved')}` : tStatic('versionSnapshotSaved'));
-            return version.versionId;
+            return versionId;
         } catch (error) {
             Logger.error('Error saving quote version:', error);
             toast.error(tStatic('versionSaveFailed'));
@@ -381,13 +386,13 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             return;
         }
         try {
-            const version = await db.get<QuoteVersion>('quoteVersions', versionId);
-            if (!version || !version.snapshot) {
+            const snapshot = await getVersionSnapshotService(db, versionId);
+            if (!snapshot) {
                 toast.error(tStatic('versionNotFound'));
                 return;
             }
-            loadQuote(version.snapshot);
-            toast.success(version.versionName ? `"${version.versionName}" ${tStatic('versionReverted')}` : tStatic('versionRevertedGeneric'));
+            loadQuote(snapshot);
+            toast.success(tStatic('versionRevertedGeneric'));
         } catch (error) {
             Logger.error('Error reverting to version:', error);
             toast.error(tStatic('versionRevertFailed'));
@@ -416,15 +421,18 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
     const createBackup = useCallback(async () => {
         try {
-            await createLegacyBackup(db);
+            await exportDatabaseBackup(db);
             toast.success(tStatic('backupDownloaded'));
-        } catch (error) { Logger.error('Backup error:', error); toast.error(tStatic('backupError')); }
+        } catch (error) {
+            Logger.error('Backup error:', error);
+            toast.error(tStatic('backupError'));
+        }
     }, [db]);
 
     const restoreBackup = useCallback(async (file: File) => {
         if (!file) return;
         try {
-            await restoreBackupFile(db, file);
+            await importDatabaseBackup(db, file);
             toast.success(tStatic('backupRestored'));
         } catch (error) {
             Logger.error('Error restoring backup', error);

@@ -1,5 +1,6 @@
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { getLocalDateTimeString } from '@/utils/dateUtils';
+import { toMinorUnit } from '@/utils/money';
 import type {
     BankData,
     CompanyData,
@@ -28,14 +29,14 @@ export interface QuoteRecordInput {
 export const calculateQuoteTotalsMinor = (
     items: QuoteItem[],
     discount: Discount,
-    currency?: string,
+    currency: string = 'TRY',
 ) => {
     try {
         const totals = calculateQuoteTotals(items, discount, { currency });
         return {
-            subtotalMinor: Math.round(totals.subtotal * 100),
-            taxTotalMinor: Math.round(totals.taxTotal * 100),
-            grandTotalMinor: Math.round(totals.grandTotal * 100),
+            subtotalMinor: toMinorUnit(totals.subtotal, currency),
+            taxTotalMinor: toMinorUnit(totals.taxTotal, currency),
+            grandTotalMinor: toMinorUnit(totals.grandTotal, currency),
         };
     } catch {
         return { subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0 };
@@ -54,27 +55,30 @@ export const buildDbQuote = ({
     createdAt,
     updatedAt = getLocalDateTimeString(),
     calculateTotals = true,
-}: QuoteRecordInput): DbQuote => ({
-    id,
-    quoteNumber: quoteData.number,
-    customerName: customerData.name,
-    customerCompany: customerData.company,
-    status,
-    currency: quoteData.currency,
-    ...(calculateTotals ? calculateQuoteTotalsMinor(items, discount, quoteData.currency) : {
-        subtotalMinor: 0,
-        taxTotalMinor: 0,
-        grandTotalMinor: 0,
-    }),
-    quoteData,
-    customerData,
-    companyData,
-    items,
-    discount,
-    bankData,
-    updatedAt,
-    ...(createdAt ? { createdAt } : {}),
-});
+}: QuoteRecordInput): DbQuote => {
+    const currency = quoteData.currency || 'TRY';
+    const totals = calculateTotals
+        ? calculateQuoteTotalsMinor(items, discount, currency)
+        : calculateQuoteTotalsMinor(items, discount, currency);
+
+    return {
+        id,
+        quoteNumber: quoteData.number,
+        customerName: customerData.name,
+        customerCompany: customerData.company,
+        status,
+        currency,
+        ...totals,
+        quoteData,
+        customerData,
+        companyData,
+        items,
+        discount,
+        bankData,
+        updatedAt,
+        ...(createdAt ? { createdAt } : {}),
+    };
+};
 
 export const buildQuoteVersion = (
     snapshot: DbQuote,
