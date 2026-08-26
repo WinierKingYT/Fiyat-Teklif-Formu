@@ -7,13 +7,10 @@ import {
   Discount,
   IndexedDBManager,
   DbQuote,
-  QuoteVersion,
 } from '@/context/quote/types';
 import tr from '@/i18n/tr.json';
-import { calculateQuoteTotals } from '@/utils/calculations';
-import { getLocalDateTimeString } from '@/utils/dateUtils';
 import Logger from '@/utils/logger';
-import { toMinorUnit } from '@/utils/money';
+import { buildQuoteRecord, buildQuoteVersionRecord } from './quoteRecordBuilder';
 
 const translations: Record<string, string> = tr;
 const tStatic = (key: string) => translations[key] || key;
@@ -46,15 +43,9 @@ export async function saveQuoteService({
   discount,
   bankData,
 }: SaveQuoteParams): Promise<SaveQuoteResult> {
-  const currency = quoteData.currency || 'TRY';
-  const calc = calculateQuoteTotals(items, discount, { currency });
-  const subtotalMinor = toMinorUnit(calc.subtotal, currency);
-  const taxTotalMinor = toMinorUnit(calc.taxTotal, currency);
-  const grandTotalMinor = toMinorUnit(calc.grandTotal, currency);
-
   const quoteId = tabSavedQuoteId || Date.now();
-  let createdAt = getLocalDateTimeString();
-  let status: 'draft' | 'saved' | 'final' = isFinal ? 'final' : 'draft';
+  let createdAt: string | undefined;
+  let status = isFinal ? 'final' : 'draft';
 
   if (tabSavedQuoteId) {
     try {
@@ -72,25 +63,17 @@ export async function saveQuoteService({
     }
   }
 
-  const quote: DbQuote = {
+  const quote = buildQuoteRecord({
     id: quoteId,
-    quoteNumber: quoteData.number,
-    customerName: customerData.name,
-    customerCompany: customerData.company,
     status,
-    currency,
-    subtotalMinor,
-    taxTotalMinor,
-    grandTotalMinor,
     quoteData,
     customerData,
     companyData,
     items,
     discount,
     bankData,
-    updatedAt: getLocalDateTimeString(),
     createdAt,
-  };
+  });
 
   if (tabSavedQuoteId) {
     await db.put('quotes', quote);
@@ -100,14 +83,10 @@ export async function saveQuoteService({
 
   // Automatic version snapshot
   try {
-    const versionId = `ver_${quote.id}_${Date.now()}`;
-    const version: QuoteVersion = {
-      versionId,
-      quoteId: quote.id,
-      createdAt: Date.now(),
-      snapshot: JSON.parse(JSON.stringify(quote)) as DbQuote,
-      versionName: isFinal ? tStatic('finalVersion') : tStatic('autoSave'),
-    };
+    const version = buildQuoteVersionRecord(
+      quote,
+      isFinal ? tStatic('finalVersion') : tStatic('autoSave')
+    );
     await db.put('quoteVersions', version);
   } catch (e) {
     Logger.warn('Version snapshot error:', e);

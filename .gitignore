@@ -132,3 +132,8 @@ blob-report/
 
 # Bundle analysis
 stats.html
+
+# Stray artifacts
+'
+git
+

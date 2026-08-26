@@ -111,6 +111,49 @@ test.describe('Critical quote workflows', () => {
     const pdf = await readFile(path!);
     expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
   });
+
+  test('persists accurate non-zero financial minor units to IndexedDB on autosave after edit', async ({ page }) => {
+    await openBuilder(page);
+    await fillRequiredQuote(page);
+
+    // Initial manual save to establish a savedQuoteId on active tab
+    await page.getByRole('button', { name: 'Teklifi Kaydet', exact: true }).click();
+    await expect(page.getByText('Teklif kaydedildi', { exact: true })).toBeVisible();
+
+    // Edit item price (1250 -> 2000 => 2 * 2000 = 4000 TRY, 20% VAT = 800 TRY, Grand Total = 4800 TRY)
+    const priceInput = page.locator('[data-row="0"][data-field="price"]');
+    await priceInput.fill('2000');
+    await priceInput.blur();
+    await expect(priceInput).toHaveValue('2000');
+
+    // Wait for debounce and poll IndexedDB quotes store directly
+    await expect.poll(async () => {
+      return await page.evaluate(async ({ dbName }) => {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open(dbName);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        const allQuotes = await new Promise<Array<{ subtotalMinor?: number; taxTotalMinor?: number; grandTotalMinor?: number }>>((resolve, reject) => {
+          const tx = db.transaction('quotes', 'readonly');
+          const request = tx.objectStore('quotes').getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        db.close();
+        const latest = allQuotes[allQuotes.length - 1];
+        return latest ? {
+          subtotalMinor: latest.subtotalMinor,
+          taxTotalMinor: latest.taxTotalMinor,
+          grandTotalMinor: latest.grandTotalMinor,
+        } : null;
+      }, { dbName: DB_NAME });
+    }, { timeout: 15_000, intervals: [1000, 2000] }).toEqual({
+      subtotalMinor: 400000,
+      taxTotalMinor: 80000,
+      grandTotalMinor: 480000,
+    });
+  });
 });
 
 test.describe('Backup and restore workflows', () => {

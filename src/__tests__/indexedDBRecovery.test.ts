@@ -64,6 +64,11 @@ const triggerSuccess = (target: typeof mockDb) => {
     currentRequest!.onsuccess?.({ target } as unknown as Event);
 };
 
+const triggerBlocked = () => {
+    expect(currentRequest).not.toBeNull();
+    currentRequest!.onblocked?.(new Event('blocked'));
+};
+
 const mockIndexedDB = {
     open: vi.fn(() => captureRequest()),
 };
@@ -133,6 +138,36 @@ describe('IndexedDB Multi-Tab Recovery & Resilience', () => {
         expect(testableManager.db).toBeNull();
         expect(mockDb.close).toHaveBeenCalled();
         expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'db-version-change' }));
+
+        dispatchSpy.mockRestore();
+    });
+
+    it('should reset state on onblocked and allow subsequent retry to succeed', async () => {
+        const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+        // 1. First initialization triggers upgrade blocked
+        const firstInitPromise = indexedDBManager.initialize();
+        triggerBlocked();
+
+        await expect(firstInitPromise).rejects.toThrow('Database upgrade blocked');
+        expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'db-blocked' }));
+
+        // Verify state is clean and initializationPromise is reset
+        expect(testableManager.isConnectionOpen).toBe(false);
+        expect(testableManager.isInitialized).toBe(false);
+        expect(testableManager.initializationPromise).toBeNull();
+        expect(testableManager.db).toBeNull();
+
+        // 2. Subsequent retry starts fresh open request and succeeds
+        const secondInitPromise = indexedDBManager.initialize();
+        expect(mockIndexedDB.open).toHaveBeenCalledTimes(2);
+
+        triggerSuccess(mockDb);
+        const db = await secondInitPromise;
+
+        expect(db).toBe(mockDb);
+        expect(testableManager.isConnectionOpen).toBe(true);
+        expect(testableManager.isInitialized).toBe(true);
 
         dispatchSpy.mockRestore();
     });

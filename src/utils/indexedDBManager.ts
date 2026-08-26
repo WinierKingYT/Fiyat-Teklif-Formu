@@ -91,6 +91,7 @@ class IndexedDBManager {
 
             request.onblocked = () => {
                 Logger.warn('Database upgrade blocked by other connections');
+                this.closeConnection();
                 if (typeof window !== 'undefined') {
                     window.dispatchEvent(new CustomEvent('db-blocked'));
                 }

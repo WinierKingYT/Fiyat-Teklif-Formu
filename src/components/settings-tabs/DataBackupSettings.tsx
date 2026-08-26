@@ -1,11 +1,11 @@
 import { Database, Download, Upload, Trash2, Sparkles, RefreshCw, HardDrive } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { exportDatabaseBackup, importDatabaseBackup } from '@/application/quote/backupService';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
-import { BACKUP_SCHEMA_VERSION, BACKUP_STORE_NAMES, parseBackupStores } from '@/utils/backupValidation';
-import { getLocalDateString } from '@/utils/dateUtils';
+import { BACKUP_STORE_NAMES } from '@/utils/backupValidation';
 import Logger from '@/utils/logger';
 
 const DataBackupSettings: React.FC = () => {
@@ -59,36 +59,7 @@ const DataBackupSettings: React.FC = () => {
     const handleExport = async () => {
         if (!db) return;
         try {
-            const results = await Promise.all(
-                BACKUP_STORE_NAMES.map(async (store) => {
-                    try {
-                        return { store, data: await db.getAll(store) };
-                    } catch {
-                        return { store, data: [] };
-                    }
-                })
-            );
-
-            const data: { schemaVersion: number; createdAt: string; stores: Record<string, unknown[]> } = {
-                schemaVersion: BACKUP_SCHEMA_VERSION,
-                createdAt: new Date().toISOString(),
-                stores: {},
-            };
-
-            results.forEach(({ store, data: storeData }) => {
-                data.stores[store] = storeData;
-            });
-
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const timestamp = getLocalDateString().replace(/-/g, '');
-            a.href = url;
-            a.download = `teklif_master_yedek_${timestamp}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            await exportDatabaseBackup(db);
             toast.success(t('backupDownloadedAll') || 'Tüm sistem yedeği başarıyla indirildi.');
         } catch (error) {
             Logger.error('Error exporting data:', error);
@@ -100,31 +71,17 @@ const DataBackupSettings: React.FC = () => {
         const file = e.target.files?.[0];
         if (!file || !db) return;
 
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            try {
-                const content = (event.target as FileReader).result;
-                if (typeof content !== 'string') {
-                    throw new Error('Yedek dosyası metin olarak okunamadı.');
-                }
-                const parsed = JSON.parse(content);
-                const stores = parseBackupStores(parsed);
-                const restoredCount = await db.restoreStores(stores);
-
-                toast.success(`${t('backupRestored') || 'Yedek başarıyla geri yüklendi.'} (${restoredCount} kayıt)`);
-                await loadStats();
-                window.dispatchEvent(new CustomEvent('db-restored'));
-            } catch (err) {
-                Logger.error('Error restoring backup:', err);
-                const detail = err instanceof Error ? ` ${err.message}` : '';
-                toast.error(`${t('backupRestoreError') || 'Yedek dosyası okunamadı veya geçersiz.'}${detail}`);
-            }
-        };
-        reader.onerror = () => {
-            toast.error(t('backupRestoreError') || 'Yedek dosyası okunamadı veya geçersiz.');
-        };
-        reader.readAsText(file);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        try {
+            const restoredCount = await importDatabaseBackup(db, file);
+            toast.success(`${t('backupRestored') || 'Yedek başarıyla geri yüklendi.'} (${restoredCount} kayıt)`);
+            await loadStats();
+        } catch (err) {
+            Logger.error('Error restoring backup:', err);
+            const detail = err instanceof Error ? ` ${err.message}` : '';
+            toast.error(`${t('backupRestoreError') || 'Yedek dosyası okunamadı veya geçersiz.'}${detail}`);
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     };
 
     const handleClearAll = () => {

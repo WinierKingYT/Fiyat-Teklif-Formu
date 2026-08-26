@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useCallback, useMemo, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { autosaveQuoteService } from '@/application/quote/autosaveQuoteService';
 import { exportDatabaseBackup, importDatabaseBackup } from '@/application/quote/backupService';
 import { prepareQuoteForLoading } from '@/application/quote/loadQuoteService';
 import { saveQuoteService } from '@/application/quote/saveQuoteService';
@@ -16,14 +17,12 @@ import { useTab } from '@/context/quote/TabContext';
 import {
     type QuoteData, type CustomerData, type CompanyData, type BankData,
     type QuoteItem, type Discount, type Quote,
-    type IndexedDBManager, type TabData, type DbQuote,
+    type IndexedDBManager, type TabData,
 } from '@/context/quote/types';
 import tr from '@/i18n/tr.json';
-import { calculateQuoteTotals } from '@/utils/calculations';
 import cleanupService from '@/utils/cleanupService';
-import { getLocalDateString, getLocalDateTimeString } from '@/utils/dateUtils';
+import { getLocalDateString } from '@/utils/dateUtils';
 import Logger from '@/utils/logger';
-import { toMinorUnit } from '@/utils/money';
 import { sanitizeInput, sanitizeObject } from '@/utils/sanitize';
 
 const translations: Record<string, string> = tr;
@@ -81,6 +80,8 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
     // Helper to get active tab
     const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
+    const currentTabId = activeTab?.id || activeTabId;
+    const isCurrentTab = useCallback((id: string) => id === activeTabId || id === currentTabId, [activeTabId, currentTabId]);
     const activeTabData = activeTab.data;
 
     // Derived State
@@ -95,18 +96,18 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     const updateQuoteData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (isCurrentTab(tab.id)) {
                 const newData = { ...tab.data.quoteData, [field]: value };
                 return { ...tab, data: { ...tab.data, quoteData: newData } };
             }
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     const updateCustomerData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (isCurrentTab(tab.id)) {
                 const newData = { ...tab.data.customerData, [field]: value };
                 let newTitle = tab.title;
                 if (field === 'company' && value) newTitle = String(value);
@@ -115,34 +116,34 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             }
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     const setCustomerData = useCallback((newData: Partial<CustomerData>) => {
         const sanitized = sanitizeObject(newData) as Partial<CustomerData>;
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (isCurrentTab(tab.id)) {
                 const merged = { ...tab.data.customerData, ...sanitized };
                 const newTitle = merged.company || merged.name || tab.title;
                 return { ...tab, title: newTitle, data: { ...tab.data, customerData: merged } };
             }
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     const updateCompanyData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (isCurrentTab(tab.id)) {
                 return { ...tab, data: { ...tab.data, companyData: { ...tab.data.companyData, [field]: value } } };
             }
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     const setItems = useCallback((newItems: QuoteItem[] | ((prev: QuoteItem[]) => QuoteItem[])) => {
         if (typeof newItems === 'function') {
             setTabs(prev => prev.map(tab => {
-                if (tab.id === activeTabId) {
+                if (isCurrentTab(tab.id)) {
                     const resolvedItems = sanitizeObject(newItems(tab.data.items));
                     return { ...tab, data: { ...tab.data, items: resolvedItems } };
                 }
@@ -152,37 +153,37 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }
         const sanitized = sanitizeObject(newItems);
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) return { ...tab, data: { ...tab.data, items: sanitized } };
+            if (isCurrentTab(tab.id)) return { ...tab, data: { ...tab.data, items: sanitized } };
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     const setDiscount = useCallback((newDiscount: Discount) => {
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) return { ...tab, data: { ...tab.data, discount: newDiscount } };
+            if (isCurrentTab(tab.id)) return { ...tab, data: { ...tab.data, discount: newDiscount } };
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     const updateBankData = useCallback((field: string, value: unknown) => {
         value = sanitizeValue(value);
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (isCurrentTab(tab.id)) {
                 return { ...tab, data: { ...tab.data, bankData: { ...tab.data.bankData, [field]: value } } };
             }
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     const setBankData = useCallback((newData: BankData | ((prev: BankData) => BankData)) => {
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (isCurrentTab(tab.id)) {
                 const resolvedData = typeof newData === 'function' ? newData(tab.data.bankData) : newData;
                 return { ...tab, data: { ...tab.data, bankData: resolvedData } };
             }
             return tab;
         }));
-    }, [activeTabId, setTabs]);
+    }, [isCurrentTab, setTabs]);
 
     // Calculate Valid Until Date
     useEffect(() => {
@@ -215,81 +216,79 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }
     }, [isReady, db]);
 
-    // Auto-save with debounce and correct financial totals
+    // Auto-save with debounce when quote data changes
+    const lastSavedDataRef = useRef<string>('');
+    const pendingDataRef = useRef<string>('');
     const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     useEffect(() => {
-        if (!isReady || !db || !tabs.find(t => t.id === activeTabId)?.savedQuoteId) return;
+        const savedQuoteId = tabs.find(t => isCurrentTab(t.id))?.savedQuoteId;
+        if (!isReady || !db || !savedQuoteId) return;
+
+        const currentDataString = JSON.stringify({
+            quoteData,
+            customerData,
+            companyData,
+            items,
+            discount,
+            bankData,
+        });
+
+        // Initialize snapshot on first load if not set
+        if (!lastSavedDataRef.current) {
+            lastSavedDataRef.current = currentDataString;
+            return;
+        }
+
+        // If data hasn't changed since last save/autosave, skip
+        if (lastSavedDataRef.current === currentDataString) {
+            return;
+        }
+
+        // If the data has already been queued with an active timer, keep the timer running
+        if (pendingDataRef.current === currentDataString && autoSaveTimerRef.current) {
+            return;
+        }
+
+        pendingDataRef.current = currentDataString;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(async () => {
-            const activeTab = tabs.find(t => t.id === activeTabId);
-            if (!activeTab) return;
-            const quoteId = activeTab.savedQuoteId;
+            const currentTab = tabs.find(t => isCurrentTab(t.id));
+            if (!currentTab) return;
+            const quoteId = currentTab.savedQuoteId;
             if (!quoteId) return;
+
             setSaveStatus({ status: 'saving', lastSaved: null });
 
-            const currency = quoteData.currency || 'TRY';
-            const { subtotalMinor, taxTotalMinor, grandTotalMinor } = (() => {
-                try {
-                    const calc = calculateQuoteTotals(items, discount, { currency });
-                    return {
-                        subtotalMinor: toMinorUnit(calc.subtotal, currency),
-                        taxTotalMinor: toMinorUnit(calc.taxTotal, currency),
-                        grandTotalMinor: toMinorUnit(calc.grandTotal, currency)
-                    };
-                } catch {
-                    return { subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0 };
-                }
-            })();
-
-            let createdAt = getLocalDateTimeString();
-            let status: 'draft' | 'saved' | 'final' = 'draft';
             try {
-                const existing = await db.get<DbQuote>('quotes', quoteId);
-                if (existing) {
-                    if (existing.createdAt) createdAt = existing.createdAt;
-                    if (existing.status === 'draft' || existing.status === 'saved' || existing.status === 'final') {
-                        status = existing.status;
-                    }
-                }
-            } catch (err) {
-                Logger.warn('Could not read existing quote in autosave:', err);
-            }
-
-            const quote: DbQuote = {
-                id: quoteId,
-                quoteNumber: quoteData.number,
-                customerName: customerData.name,
-                customerCompany: customerData.company,
-                status,
-                currency,
-                subtotalMinor,
-                taxTotalMinor,
-                grandTotalMinor,
-                quoteData,
-                customerData,
-                companyData,
-                items,
-                discount,
-                bankData,
-                updatedAt: getLocalDateTimeString(),
-                createdAt,
-            };
-            try {
-                await db.put('quotes', quote);
+                await autosaveQuoteService({
+                    db,
+                    quoteId,
+                    quoteData,
+                    customerData,
+                    companyData,
+                    items,
+                    discount,
+                    bankData,
+                });
+                lastSavedDataRef.current = currentDataString;
+                pendingDataRef.current = '';
+                autoSaveTimerRef.current = null;
                 setSaveStatus({ status: 'saved', lastSaved: Date.now() });
                 setTimeout(() => {
                     setSaveStatus(prev => prev.status === 'saved' ? { status: 'idle', lastSaved: prev.lastSaved } : prev);
-                }, 3000);
+                }, 2000);
             } catch (e) {
                 Logger.error('Auto-save error:', e);
+                pendingDataRef.current = '';
+                autoSaveTimerRef.current = null;
                 setSaveStatus({ status: 'error', lastSaved: null });
                 setTimeout(() => {
                     setSaveStatus(prev => prev.status === 'error' ? { status: 'idle', lastSaved: null } : prev);
-                }, 5000);
+                }, 4000);
             }
-        }, 3000);
-        return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-    }, [isReady, db, quoteData, customerData, companyData, items, discount, bankData, tabs, activeTabId, setSaveStatus]);
+        }, 1500);
+    }, [isReady, db, quoteData, customerData, companyData, items, discount, bankData, tabs, isCurrentTab, setSaveStatus]);
 
     const validateQuote = useCallback((isFinal = false) => {
         return validateQuoteService({ companyData, customerData, items, quoteData, isFinal });
@@ -297,7 +296,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
     const saveQuote = useCallback(async (isFinal = false) => {
         if (!isReady) { toast.error(tStatic('dbNotReady')); return; }
-        const activeTab = tabs.find(t => t.id === activeTabId);
+        const activeTab = tabs.find(t => isCurrentTab(t.id)) || tabs[0];
         if (!activeTab) return;
         const tabSavedQuoteId = activeTab.savedQuoteId;
         const errors = validateQuote(isFinal);
@@ -317,8 +316,17 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
                 bankData,
             });
 
+            lastSavedDataRef.current = JSON.stringify({
+                quoteData,
+                customerData,
+                companyData,
+                items,
+                discount,
+                bankData,
+            });
+
             if (isNew) {
-                setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: savedQuote.id } : tab));
+                setTabs(prev => prev.map(tab => isCurrentTab(tab.id) ? { ...tab, savedQuoteId: savedQuote.id } : tab));
                 toast.success(tStatic('quoteSaved'));
             } else {
                 toast.success(tStatic('quoteUpdated'));
@@ -333,12 +341,12 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             setSaveStatus({ status: 'error', lastSaved: null });
             setTimeout(() => { setSaveStatus(prev => prev.status === 'error' ? { status: 'idle', lastSaved: null } : prev); }, 5000);
         }
-    }, [isReady, tabs, activeTabId, validateQuote, items, discount, quoteData, customerData, companyData, bankData, db, setTabs, setSaveStatus]);
+    }, [isReady, tabs, isCurrentTab, validateQuote, items, discount, quoteData, customerData, companyData, bankData, db, setTabs, setSaveStatus]);
 
     const loadQuote = useCallback((quote: Partial<Quote>) => {
         const loaded = prepareQuoteForLoading(quote, companyDefaults);
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) {
+            if (isCurrentTab(tab.id)) {
                 return {
                     ...tab,
                     title: loaded.title,
@@ -349,14 +357,14 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             return tab;
         }));
         toast.success(tStatic('quoteLoaded'));
-    }, [activeTabId, companyDefaults, setTabs]);
+    }, [isCurrentTab, companyDefaults, setTabs]);
 
     const saveVersion = useCallback(async (versionName?: string): Promise<string | null> => {
         if (!isReady || !db) {
             toast.error(tStatic('dbNotReady'));
             return null;
         }
-        const activeTab = tabs.find(t => t.id === activeTabId);
+        const activeTab = tabs.find(t => isCurrentTab(t.id)) || tabs[0];
         const quoteId = activeTab?.savedQuoteId || Date.now();
 
         try {
@@ -378,7 +386,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             toast.error(tStatic('versionSaveFailed'));
             return null;
         }
-    }, [isReady, db, tabs, activeTabId, items, discount, quoteData, customerData, companyData, bankData]);
+    }, [isReady, db, tabs, isCurrentTab, items, discount, quoteData, customerData, companyData, bankData]);
 
     const revertToVersion = useCallback(async (versionId: string) => {
         if (!isReady || !db) {
@@ -401,7 +409,8 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
     const resetQuote = useCallback(() => {
         const initialData = getInitialTabData(companyDefaults);
-        setTabs(prev => prev.map(tab => tab.id === activeTabId ? {
+        lastSavedDataRef.current = '';
+        setTabs(prev => prev.map(tab => isCurrentTab(tab.id) ? {
             ...tab,
             title: tStatic('newQuote'),
             savedQuoteId: null,
@@ -409,7 +418,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             history: [initialData],
             historyIndex: 0
         } : tab));
-    }, [activeTabId, companyDefaults, setTabs]);
+    }, [isCurrentTab, companyDefaults, setTabs]);
 
     useEffect(() => {
         const handleDbReset = () => {
@@ -455,16 +464,16 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         const confirmed = await showConfirm(tStatic('testDataTitle'), tStatic('testDataConfirm'), 'warning');
         if (!confirmed) return;
         setTabs(prev => prev.map(tab => {
-            if (tab.id === activeTabId) return { ...tab, data: testData as TabData };
+            if (isCurrentTab(tab.id)) return { ...tab, data: testData as TabData };
             return tab;
         }));
         toast.success(tStatic('testDataAdded'));
-    }, [showConfirm, setTabs, activeTabId]);
+    }, [showConfirm, setTabs, isCurrentTab]);
 
     const currentQuoteId = activeTab?.savedQuoteId || null;
     const setCurrentQuoteId = useCallback((id: number | null) => {
-        setTabs(prev => prev.map(tab => tab.id === activeTabId ? { ...tab, savedQuoteId: id } : tab));
-    }, [activeTabId, setTabs]);
+        setTabs(prev => prev.map(tab => isCurrentTab(tab.id) ? { ...tab, savedQuoteId: id } : tab));
+    }, [isCurrentTab, setTabs]);
 
     const value = useMemo<QuoteDataContextValue>(() => ({
         quoteData, updateQuoteData, customerData, updateCustomerData, setCustomerData,

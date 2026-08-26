@@ -46,7 +46,7 @@ export const TabProvider = ({ children }: { children: React.ReactNode }) => {
                 try {
                     const savedTab = await db.getByIndex<{ id: string; value: Tab[] }>('settings', 'key', 'active_quote_session');
                     if (savedTab && Array.isArray(savedTab.value) && savedTab.value.length > 0) {
-                        setTabs(savedTab.value);
+                        setTabs(savedTab.value.map(tab => ({ ...tab, id: tab.id || activeTabId })));
                     }
                 } catch (error) {
                     Logger.error('Error loading session from IndexedDB:', error);

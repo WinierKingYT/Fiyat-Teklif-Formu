@@ -1,100 +1,71 @@
-import { IndexedDBManager } from '@/context/quote/types';
+import { type IndexedDBManager } from '@/context/quote/types';
+import {
+  BACKUP_SCHEMA_VERSION,
+  BACKUP_STORE_NAMES,
+  parseBackupStores,
+} from '@/utils/backupValidation';
 import { getLocalDateString } from '@/utils/dateUtils';
 import Logger from '@/utils/logger';
 
 export interface BackupData {
-  customers: unknown[];
-  products: unknown[];
-  quotes: unknown[];
-  templates: unknown[];
-  banks: unknown[];
-  quoteVersions: unknown[];
-  settings: unknown[];
-  exportDate: string;
-  version: string;
+  schemaVersion: number;
+  createdAt: string;
+  stores: Record<string, unknown[]>;
 }
 
 export async function exportDatabaseBackup(db: IndexedDBManager): Promise<void> {
-  const [customers, products, quotes, templates, banks, quoteVersions, settings] =
-    await Promise.all([
-      db.getAll('customers'),
-      db.getAll('products'),
-      db.getAll('quotes'),
-      db.getAll('templates'),
-      db.getAll('bankInfo'),
-      db.getAll('quoteVersions').catch(() => []),
-      db.getAll('settings').catch(() => []),
-    ]);
+  const storeEntries = await Promise.all(
+    BACKUP_STORE_NAMES.map(async storeName => {
+      try {
+        const items = await db.getAll(storeName);
+        return [storeName, items] as const;
+      } catch {
+        return [storeName, []] as const;
+      }
+    })
+  );
 
-  const data: BackupData = {
-    customers,
-    products,
-    quotes,
-    templates,
-    banks,
-    quoteVersions,
-    settings,
-    exportDate: new Date().toISOString(),
-    version: '2.4',
+  const stores = Object.fromEntries(storeEntries);
+
+  const payload: BackupData = {
+    schemaVersion: BACKUP_SCHEMA_VERSION,
+    createdAt: new Date().toISOString(),
+    stores,
   };
 
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `teklifmaster_backup_${getLocalDateString()}.json`;
+  const dateFormatted = getLocalDateString().replace(/-/g, '');
+  a.download = `teklif_master_yedek_${dateFormatted}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function importDatabaseBackup(db: IndexedDBManager, file: File): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!file) {
-      reject(new Error('No file provided'));
-      return;
+export async function importDatabaseBackup(
+  db: IndexedDBManager,
+  file: File
+): Promise<number> {
+  if (!file) {
+    throw new Error('Yedek dosyası seçilmedi.');
+  }
+
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text) as unknown;
+    const stores = parseBackupStores(parsed);
+    const restoredCount = await db.restoreStores(stores);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('db-restored'));
     }
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = (event.target as FileReader).result as string;
-        const data = JSON.parse(text);
-
-        if (Array.isArray(data.customers)) {
-          await Promise.all(data.customers.map((item: unknown) => db.put('customers', item)));
-        }
-        if (Array.isArray(data.products)) {
-          await Promise.all(data.products.map((item: unknown) => db.put('products', item)));
-        }
-        if (Array.isArray(data.quotes)) {
-          await Promise.all(data.quotes.map((item: unknown) => db.put('quotes', item)));
-        }
-        if (Array.isArray(data.templates)) {
-          await Promise.all(data.templates.map((item: unknown) => db.put('templates', item)));
-        }
-        if (Array.isArray(data.banks)) {
-          await Promise.all(data.banks.map((item: unknown) => db.put('bankInfo', item)));
-        }
-        if (Array.isArray(data.quoteVersions)) {
-          await Promise.all(data.quoteVersions.map((item: unknown) => db.put('quoteVersions', item)));
-        }
-        if (Array.isArray(data.settings)) {
-          await Promise.all(data.settings.map((item: unknown) => db.put('settings', item)));
-        }
-
-        resolve();
-      } catch (error) {
-        Logger.error('Error importing backup data:', error);
-        reject(error);
-      }
-    };
-
-    reader.onerror = () => {
-      reject(new Error('FileReader error during backup import'));
-    };
-
-    reader.readAsText(file);
-  });
+    return restoredCount;
+  } catch (error) {
+    Logger.error('Error importing backup data:', error);
+    throw error;
+  }
 }
