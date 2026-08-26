@@ -582,6 +582,22 @@ test.describe('Recycle bin workflows', () => {
     await expect(page.getByText('Geri yüklendi: Denetim Ürünü', { exact: true })).toBeVisible();
     await expect(page.getByText('90 Günden Eski Kayıt', { exact: true })).toHaveCount(0);
 
+    const activitySearch = page.getByRole('searchbox', { name: 'İşlem geçmişinde ara' });
+    await activitySearch.fill('Denetim Müşterisi');
+    await expect(page.getByText('Çöp kutusuna taşındı: Denetim Müşterisi', { exact: true })).toBeVisible();
+    await expect(page.getByText('Geri yüklendi: Denetim Ürünü', { exact: true })).toHaveCount(0);
+
+    await activitySearch.fill('');
+    await page.getByRole('combobox', { name: 'İşlem türü filtresi' }).selectOption('restore');
+    await expect(page.getByText('Geri yüklendi: Denetim Ürünü', { exact: true })).toBeVisible();
+    await expect(page.getByText('Çöp kutusuna taşındı: Denetim Müşterisi', { exact: true })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Filtreleri temizle', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Veri türü filtresi' }).selectOption('customers');
+    await expect(page.getByText('Çöp kutusuna taşındı: Denetim Müşterisi', { exact: true })).toBeVisible();
+    await expect(page.getByText('Geri yüklendi: Denetim Ürünü', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Filtreleri temizle', exact: true }).click();
+
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'CSV Dışa Aktar', exact: true }).click();
     const download = await downloadPromise;
