@@ -429,6 +429,72 @@ test.describe('Recycle bin workflows', () => {
     await expect(page.getByText('Hatalı Geri Yükleme', { exact: true })).toBeVisible();
   });
 
+  test('restores all valid recycle-bin items in one operation', async ({ page }) => {
+    await page.goto('/');
+    await seedRecycleBin(page, [
+      {
+        id: 9404,
+        originalStore: 'customers',
+        originalId: 943,
+        deletedAt: new Date().toISOString(),
+        deletedBy: 'e2e',
+        name: 'Toplu Geri Yüklenen Müşteri',
+        data: { id: 943, name: 'Toplu Geri Yüklenen Müşteri' },
+      },
+      {
+        id: 9405,
+        originalStore: 'products',
+        originalId: 944,
+        deletedAt: new Date().toISOString(),
+        deletedBy: 'e2e',
+        name: 'Toplu Geri Yüklenen Ürün',
+        data: { id: 944, name: 'Toplu Geri Yüklenen Ürün' },
+      },
+    ]);
+
+    await page.getByRole('button', { name: 'Geri Dönüşüm', exact: true }).click();
+    await expect(page.getByText('Toplu Geri Yüklenen Müşteri', { exact: true })).toBeVisible();
+    await expect(page.getByText('Toplu Geri Yüklenen Ürün', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Tümünü Kurtar', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tümünü Kurtar', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Onayla', exact: true }).last().click();
+
+    await expect(page.getByText('Tüm öğeler geri yüklendi', { exact: true })).toBeVisible();
+    await expect(page.getByText('Geri dönüşüm kutusu boş', { exact: true })).toBeVisible();
+  });
+
+  test('keeps every item when a bulk restore contains an invalid store', async ({ page }) => {
+    await page.goto('/');
+    await seedRecycleBin(page, [
+      {
+        id: 9406,
+        originalStore: 'customers',
+        originalId: 945,
+        deletedAt: new Date().toISOString(),
+        deletedBy: 'e2e',
+        name: 'Kısmi Geri Yükleme Müşterisi',
+        data: { id: 945, name: 'Kısmi Geri Yükleme Müşterisi' },
+      },
+      {
+        id: 9407,
+        originalStore: 'missing_store',
+        originalId: 946,
+        deletedAt: new Date().toISOString(),
+        deletedBy: 'e2e',
+        name: 'Geçersiz Toplu Kayıt',
+        data: { id: 946, name: 'Geçersiz Toplu Kayıt' },
+      },
+    ]);
+
+    await page.getByRole('button', { name: 'Geri Dönüşüm', exact: true }).click();
+    await page.getByRole('button', { name: 'Tümünü Kurtar', exact: true }).click();
+    await page.getByRole('button', { name: 'Onayla', exact: true }).last().click();
+
+    await expect(page.getByText('Geri yükleme sırasında hata oluştu', { exact: true })).toBeVisible();
+    await expect(page.getByText('Kısmi Geri Yükleme Müşterisi', { exact: true })).toBeVisible();
+    await expect(page.getByText('Geçersiz Toplu Kayıt', { exact: true })).toBeVisible();
+  });
+
   test('permanently deletes a recycle-bin item after confirmation', async ({ page }) => {
     await page.goto('/');
     await seedRecycleBin(page, [{

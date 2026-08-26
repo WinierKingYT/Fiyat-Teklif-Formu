@@ -439,38 +439,62 @@ class IndexedDBManager {
         data?: unknown;
         [key: string]: unknown;
     }): Promise<void> {
+        return this.restoreManyRecycleBinItems([item]);
+    }
+
+    async restoreManyRecycleBinItems(items: Array<{
+        id: IDBValidKey;
+        originalStore: string;
+        originalId?: IDBValidKey;
+        deletedAt?: string;
+        deletedBy?: string;
+        data?: unknown;
+        [key: string]: unknown;
+    }>): Promise<void> {
         await this.ensureConnection();
 
-        if (!this.db!.objectStoreNames.contains('recycle_bin')) {
-            throw new Error('Çöp kutusu veri alanı bulunamadı.');
-        }
-        if (!this.db!.objectStoreNames.contains(item.originalStore)) {
-            throw new Error(`Bilinmeyen veri alanı: ${item.originalStore}`);
+        if (items.length === 0) {
+            return;
         }
 
-        const restoredData = item.data && typeof item.data === 'object' && !Array.isArray(item.data)
-            ? { ...(item.data as Record<string, unknown>) }
-            : (() => {
-                const {
-                    id: _id,
-                    originalStore: _originalStore,
-                    deletedAt: _deletedAt,
-                    deletedBy: _deletedBy,
-                    originalId: _originalId,
-                    data: _data,
-                    ...originalData
-                } = item;
-                return { ...originalData };
-            })();
-
-        const targetId = item.originalId ?? restoredData.id;
-        if (targetId === undefined || targetId === null) {
-            delete restoredData.id;
-        } else {
-            restoredData.id = targetId;
+        const sourceStores = [...new Set(items.map(item => item.originalStore))];
+        if (sourceStores.includes('recycle_bin')) {
+            throw new Error('Çöp kutusu öğesi doğrudan tekrar geri yüklenemez.');
+        }
+        if (!this.db!.objectStoreNames.contains('recycle_bin') || sourceStores.some(storeName => !this.db!.objectStoreNames.contains(storeName))) {
+            const missingStore = sourceStores.find(storeName => !this.db!.objectStoreNames.contains(storeName));
+            throw new Error(missingStore ? `Bilinmeyen veri alanı: ${missingStore}` : 'Çöp kutusu veri alanı bulunamadı.');
         }
 
-        const sanitized = this.sanitizeData(restoredData) as Record<string, unknown>;
+        const restoredItems = items.map(item => {
+            const restoredData = item.data && typeof item.data === 'object' && !Array.isArray(item.data)
+                ? { ...(item.data as Record<string, unknown>) }
+                : (() => {
+                    const {
+                        id: _id,
+                        originalStore: _originalStore,
+                        deletedAt: _deletedAt,
+                        deletedBy: _deletedBy,
+                        originalId: _originalId,
+                        data: _data,
+                        ...originalData
+                    } = item;
+                    return { ...originalData };
+                })();
+
+            const targetId = item.originalId ?? restoredData.id;
+            if (targetId === undefined || targetId === null) {
+                delete restoredData.id;
+            } else {
+                restoredData.id = targetId;
+            }
+
+            return {
+                storeName: item.originalStore,
+                recycleBinKey: item.id,
+                data: this.sanitizeData(restoredData) as Record<string, unknown>,
+            };
+        });
 
         return new Promise((resolve, reject) => {
             let settled = false;
@@ -493,15 +517,23 @@ class IndexedDBManager {
                 }
             };
 
+            let transaction: IDBTransaction | null = null;
             try {
-                const transaction = this.db!.transaction([item.originalStore, 'recycle_bin'], 'readwrite');
-                transaction.oncomplete = succeed;
-                transaction.onerror = () => fail(transaction.error || new Error('Çöp kutusu öğesi geri yüklenemedi.'));
-                transaction.onabort = () => fail(transaction.error || new Error('Çöp kutusu geri yükleme işlemi geri alındı.'));
+                const activeTransaction = this.db!.transaction([...sourceStores, 'recycle_bin'], 'readwrite');
+                transaction = activeTransaction;
+                activeTransaction.oncomplete = succeed;
+                activeTransaction.onerror = () => fail(activeTransaction.error || new Error('Çöp kutusu öğesi geri yüklenemedi.'));
+                activeTransaction.onabort = () => fail(activeTransaction.error || new Error('Çöp kutusu geri yükleme işlemi geri alındı.'));
 
-                transaction.objectStore(item.originalStore).put(sanitized);
-                transaction.objectStore('recycle_bin').delete(item.id);
+                restoredItems.forEach(({ storeName, data }) => activeTransaction.objectStore(storeName).put(data));
+                const recycleBinStore = activeTransaction.objectStore('recycle_bin');
+                restoredItems.forEach(({ recycleBinKey }) => recycleBinStore.delete(recycleBinKey));
             } catch (error) {
+                try {
+                    transaction?.abort();
+                } catch {
+                    // The transaction may already be inactive after a request error.
+                }
                 fail(error);
             }
         });

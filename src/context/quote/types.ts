@@ -365,6 +365,15 @@ export interface IndexedDBManager {
     data?: unknown;
     [key: string]: unknown;
   }) => Promise<void>;
+  restoreManyRecycleBinItems: (items: Array<{
+    id: IDBValidKey;
+    originalStore: string;
+    originalId?: IDBValidKey;
+    deletedAt?: string;
+    deletedBy?: string;
+    data?: unknown;
+    [key: string]: unknown;
+  }>) => Promise<void>;
   moveToRecycleBin: (
     storeName: string,
     key: IDBValidKey,

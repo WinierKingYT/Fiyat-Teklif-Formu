@@ -336,6 +336,8 @@
   "errorsExist": "Hatalar var",
   "all": "Tümü",
   "recycleBinEmpty": "Geri dönüşüm kutusu boş",
+  "restoreAll": "Tümünü Kurtar",
+  "emptyBinBtn": "Boşalt",
   "restoreItem": "Geri Yükle",
   "permanentDelete": "Kalıcı Olarak Sil",
   "deletedAt": "Silinme: {date}",

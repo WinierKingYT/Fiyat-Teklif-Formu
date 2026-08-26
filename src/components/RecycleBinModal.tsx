@@ -103,9 +103,7 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 setIsProcessing(true);
                 try {
-                    for (const item of deletedItems) {
-                        await db.restoreRecycleBinItem(item);
-                    }
+                    await db.restoreManyRecycleBinItems(deletedItems);
                     toast.success('Tüm öğeler geri yüklendi');
                     await loadDeletedItems();
                 } catch (error) {

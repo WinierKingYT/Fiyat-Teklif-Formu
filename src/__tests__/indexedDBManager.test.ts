@@ -267,6 +267,26 @@ describe('IndexedDBManager', () => {
         await expect(restorePromise).rejects.toThrow('transaction aborted');
     });
 
+    it('should restore multiple recycle-bin items in one transaction', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const restorePromise = indexedDBManager.restoreManyRecycleBinItems([
+            { id: 99, originalStore: 'customers', originalId: 7, data: { id: 7, name: 'Müşteri' } },
+            { id: 100, originalStore: 'products', originalId: 8, data: { id: 8, name: 'Ürün' } },
+        ]);
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'products', 'recycle_bin'], 'readwrite');
+            expect(mockStore.put).toHaveBeenCalledTimes(2);
+            expect(mockStore.delete).toHaveBeenCalledTimes(2);
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(restorePromise).resolves.toBeUndefined();
+    });
+
     it('should move a record to the recycle bin atomically without reusing its source id', async () => {
         const initPromise = indexedDBManager.initialize();
         triggerSuccess(mockDb);
