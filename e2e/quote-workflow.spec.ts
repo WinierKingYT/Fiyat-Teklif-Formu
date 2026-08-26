@@ -10,10 +10,21 @@ type BackupPayload = {
   stores: Record<string, Array<Record<string, unknown>>>;
 };
 
-const makeBackup = (stores: BackupPayload['stores']): BackupPayload => ({
+const makeBackup = (stores: Partial<BackupPayload['stores']>): BackupPayload => ({
   schemaVersion: 3,
   createdAt: new Date().toISOString(),
-  stores,
+  stores: {
+    customers: [],
+    products: [],
+    quotes: [],
+    templates: [],
+    bankInfo: [],
+    settings: [],
+    recycle_bin: [],
+    drafts: [],
+    quoteVersions: [],
+    ...stores,
+  },
 });
 
 const openBuilder = async (page: Page) => {
@@ -200,22 +211,62 @@ test.describe('Backup and restore workflows', () => {
     expect(payload.stores.quoteVersions).toEqual([]);
   });
 
-  test('replaces pre-existing data atomically so database strictly matches backup snapshot', async ({ page }) => {
+  test('replaces pre-existing data atomically across multiple stores so database strictly matches backup snapshot', async ({ page }) => {
     const staleCustomer = { id: 902, name: 'Eski Müşteri Silinecek', company: 'Eski Ltd.' };
+    const staleProduct = { id: 801, name: 'Eski Ürün Silinecek', price: 500 };
+    const staleQuote = { id: 701, quoteNumber: 'TK-ESKI-01', customerName: 'Eski Müşteri Silinecek' };
+
     const newSnapshotCustomer = { id: 903, name: 'Yeni Snapshot Müşteri', company: 'Yeni A.Ş.' };
+    const newSnapshotProduct = { id: 802, name: 'Yeni Snapshot Ürün', price: 1500 };
 
     await openBackupSettings(page);
-    // Seed initial stale data
-    await importBackup(page, 'seed-stale.json', makeBackup({ customers: [staleCustomer] }));
-    await expect(page.getByText(/Yedekleme geri yüklendi.*1 kayıt/).first()).toBeVisible();
+    // Seed initial stale data across multiple stores
+    await importBackup(page, 'seed-stale.json', makeBackup({
+      customers: [staleCustomer],
+      products: [staleProduct],
+      quotes: [staleQuote],
+    }));
+    await expect(page.getByText(/Yedekleme geri yüklendi.*3 kayıt/).first()).toBeVisible();
 
-    // Import new snapshot containing only newSnapshotCustomer
-    await importBackup(page, 'new-snapshot.json', makeBackup({ customers: [newSnapshotCustomer] }));
-    await expect(page.getByText(/Yedekleme geri yüklendi.*1 kayıt/).last()).toBeVisible();
+    // Import new snapshot containing only newCustomer and newProduct (quotes empty)
+    await importBackup(page, 'new-snapshot.json', makeBackup({
+      customers: [newSnapshotCustomer],
+      products: [newSnapshotProduct],
+      quotes: [],
+    }));
+    await expect(page.getByText(/Yedekleme geri yüklendi.*2 kayıt/).last()).toBeVisible();
 
-    // Export and verify staleCustomer is removed and only newSnapshotCustomer is present
+    // Export and verify stale records are wiped across all stores and only snapshot records exist
     const { payload } = await exportBackup(page);
     expect(payload.stores.customers).toEqual([expect.objectContaining(newSnapshotCustomer)]);
     expect(payload.stores.customers).not.toContainEqual(expect.objectContaining(staleCustomer));
+
+    expect(payload.stores.products).toEqual([expect.objectContaining(newSnapshotProduct)]);
+    expect(payload.stores.products).not.toContainEqual(expect.objectContaining(staleProduct));
+
+    expect(payload.stores.quotes).toEqual([]);
+  });
+
+  test('rejects a schema v3 backup with missing canonical stores without changing existing data', async ({ page }) => {
+    await openBackupSettings(page);
+    await importBackup(page, 'seed-backup.json', makeBackup({ customers: [originalCustomer] }));
+    await expect(page.getByText(/Yedekleme geri yüklendi.*1 kayıt/).first()).toBeVisible();
+
+    // Incomplete v3 backup (missing quotes, products, etc.)
+    const incompleteV3Payload = {
+      schemaVersion: 3,
+      createdAt: new Date().toISOString(),
+      stores: {
+        customers: [{ id: 999, name: 'Geçersiz Eksik Snapshot' }],
+      },
+    };
+
+    await importBackup(page, 'incomplete-v3.json', incompleteV3Payload);
+    await expect(page.getByText(/eksik veri alanları var/i)).toBeVisible();
+
+    // Verify pre-existing customer remains unchanged
+    const { payload } = await exportBackup(page);
+    expect(payload.stores.customers).toContainEqual(expect.objectContaining(originalCustomer));
+    expect(payload.stores.customers).not.toContainEqual(expect.objectContaining({ name: 'Geçersiz Eksik Snapshot' }));
   });
 });

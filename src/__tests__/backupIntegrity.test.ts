@@ -65,18 +65,27 @@ describe('Data Integrity Closure: Backup, Restore & Timestamps', () => {
     });
 
     describe('importDatabaseBackup', () => {
-        it('calls db.restoreStores with mode replace', async () => {
+        it('calls db.restoreStores with mode replace and full canonical snapshot', async () => {
             const fakeDb = {
                 restoreStores: vi.fn().mockResolvedValue(3),
             } as unknown as IndexedDBManager;
 
+            const fullStores: Record<string, unknown[]> = {
+                customers: [{ id: 1, name: 'Ahmet' }],
+                products: [{ id: 10, name: 'Hizmet' }],
+                quotes: [],
+                templates: [],
+                bankInfo: [],
+                settings: [],
+                recycle_bin: [],
+                drafts: [],
+                quoteVersions: [],
+            };
+
             const validBackup = JSON.stringify({
                 schemaVersion: 3,
                 createdAt: new Date().toISOString(),
-                stores: {
-                    customers: [{ id: 1, name: 'Ahmet' }],
-                    products: [{ id: 10, name: 'Hizmet' }],
-                },
+                stores: fullStores,
             });
 
             const file = new File([validBackup], 'backup.json', { type: 'application/json' });
@@ -84,12 +93,27 @@ describe('Data Integrity Closure: Backup, Restore & Timestamps', () => {
 
             expect(count).toBe(3);
             expect(fakeDb.restoreStores).toHaveBeenCalledWith(
-                {
-                    customers: [{ id: 1, name: 'Ahmet' }],
-                    products: [{ id: 10, name: 'Hizmet' }],
-                },
+                fullStores,
                 { mode: 'replace' }
             );
+        });
+
+        it('rejects a schema v3 backup with missing stores', async () => {
+            const fakeDb = {
+                restoreStores: vi.fn(),
+            } as unknown as IndexedDBManager;
+
+            const incompleteBackup = JSON.stringify({
+                schemaVersion: 3,
+                createdAt: new Date().toISOString(),
+                stores: {
+                    customers: [{ id: 1, name: 'Ahmet' }],
+                },
+            });
+
+            const file = new File([incompleteBackup], 'incomplete.json', { type: 'application/json' });
+            await expect(importDatabaseBackup(fakeDb, file)).rejects.toThrow(/eksik veri alanları var/i);
+            expect(fakeDb.restoreStores).not.toHaveBeenCalled();
         });
     });
 

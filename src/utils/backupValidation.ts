@@ -22,7 +22,8 @@ export const parseBackupStores = (value: unknown): Record<string, unknown[]> => 
         throw new Error('Yedek dosyasının kök değeri bir nesne olmalıdır.');
     }
 
-    if ('schemaVersion' in value) {
+    const hasSchemaVersion = 'schemaVersion' in value;
+    if (hasSchemaVersion) {
         const version = value.schemaVersion;
         if (!Number.isInteger(version) || Number(version) < 1 || Number(version) > BACKUP_SCHEMA_VERSION) {
             throw new Error('Yedek dosyası desteklenmeyen bir şema sürümü kullanıyor.');
@@ -39,6 +40,14 @@ export const parseBackupStores = (value: unknown): Record<string, unknown[]> => 
         throw new Error('Yedek dosyasında geri yüklenecek veri bulunamadı.');
     }
 
+    // Schema v3 requires a complete snapshot containing all canonical stores
+    if (hasSchemaVersion && value.schemaVersion === BACKUP_SCHEMA_VERSION) {
+        const missingStores = BACKUP_STORE_NAMES.filter(name => !(name in rawStores));
+        if (missingStores.length > 0) {
+            throw new Error(`Yedek dosyasında eksik veri alanları var: ${missingStores.join(', ')}`);
+        }
+    }
+
     const stores: Record<string, unknown[]> = {};
     for (const [storeName, items] of entries) {
         if (!BACKUP_STORE_NAME_SET.has(storeName)) {
@@ -48,6 +57,13 @@ export const parseBackupStores = (value: unknown): Record<string, unknown[]> => 
             throw new Error(`Yedek dosyasındaki ${storeName} kayıtları geçersiz.`);
         }
         stores[storeName] = items;
+    }
+
+    // For legacy backups (direct-store shape or schemaVersion < 3), normalize into full canonical snapshot
+    for (const storeName of BACKUP_STORE_NAMES) {
+        if (!stores[storeName]) {
+            stores[storeName] = [];
+        }
     }
 
     return stores;
