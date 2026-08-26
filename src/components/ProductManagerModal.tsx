@@ -230,13 +230,7 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
         try {
             const productToDelete = products.find(p => p.id === id);
             if (productToDelete) {
-                await db.add('recycle_bin', {
-                    ...productToDelete,
-                    originalStore: 'products',
-                    deletedAt: new Date().toISOString(),
-                    originalId: id
-                });
-                await db.delete('products', id as IDBValidKey);
+                await db.moveToRecycleBin('products', id as IDBValidKey, productToDelete, { deletedBy: 'user' });
                 toast.success(t('deletedSuccess'));
                 loadProducts();
                 if (selectedProducts.has(id)) {
@@ -278,14 +272,8 @@ const ProductManagerModal: React.FC<ProductManagerModalProps> = ({ isOpen, onClo
                     for (const id of selectedProducts) {
                         const productToDelete = products.find(p => p.id === id);
                         if (productToDelete) {
-                            await db.add('recycle_bin', {
-                                ...productToDelete,
-                                originalStore: 'products',
-                                deletedAt: new Date().toISOString(),
-                                originalId: id
-                            });
+                            await db.moveToRecycleBin('products', id as IDBValidKey, productToDelete, { deletedBy: 'user' });
                         }
-                        await db.delete('products', id as IDBValidKey);
                     }
                     if (currentProduct && selectedProducts.has(currentProduct.id)) {
                         resetForm();

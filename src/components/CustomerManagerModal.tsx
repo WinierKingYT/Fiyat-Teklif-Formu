@@ -123,8 +123,7 @@ const CustomerManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: Cu
                 try {
                     const customerToDelete = customers.find(c => c.id === id);
                     if (customerToDelete) {
-                        await db.add('recycle_bin', { ...customerToDelete, originalStore: 'customers', deletedAt: new Date().toISOString(), originalId: id });
-                        await db.delete('customers', id);
+                        await db.moveToRecycleBin('customers', id, customerToDelete, { deletedBy: 'user' });
                         toast.success(t('customerMovedToBin'));
                         loadCustomers();
                         if (currentCustomer?.id === id) {

@@ -63,15 +63,8 @@ const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
                     for (const deleteId of ids) {
                         const quoteToDelete = quotes.find(q => q.id === deleteId);
                         if (quoteToDelete) {
-                            await db.add('recycle_bin', {
-                                originalStore: 'quotes',
-                                originalId: deleteId,
-                                deletedAt: new Date().toISOString(),
-                                deletedBy: 'user',
-                                data: quoteToDelete
-                            });
+                            await db.moveToRecycleBin('quotes', deleteId, { data: quoteToDelete }, { deletedBy: 'user' });
                         }
-                        await db.delete('quotes', deleteId);
                         if (currentQuoteId === deleteId) setCurrentQuoteId(null);
                     }
                     toast.success(t('quotesMovedToBin').replace('{count}', String(ids.length)));

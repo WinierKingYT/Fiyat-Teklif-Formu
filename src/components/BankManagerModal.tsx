@@ -97,14 +97,8 @@ const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankMa
                 try {
                     const bankToDelete = banks.find(b => b.id === id);
                     if (bankToDelete) {
-                        await db.add('recycle_bin', {
-                            ...bankToDelete,
-                            originalStore: 'bankInfo',
-                            deletedAt: new Date().toISOString(),
-                            originalId: id
-                        });
+                        await db.moveToRecycleBin('bankInfo', id, bankToDelete, { deletedBy: 'user' });
                     }
-                    await db.delete('bankInfo', id);
                     toast.success(t('bankDeleted'));
                     loadBanks();
                     if (editingBank?.id === id) {

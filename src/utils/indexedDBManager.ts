@@ -507,6 +507,65 @@ class IndexedDBManager {
         });
     }
 
+    async moveToRecycleBin(
+        storeName: string,
+        key: IDBValidKey,
+        recycleData: object,
+        options?: { deletedBy?: string }
+    ): Promise<void> {
+        await this.ensureConnection();
+
+        if (storeName === 'recycle_bin') {
+            throw new Error('Çöp kutusu öğesi tekrar çöp kutusuna taşınamaz.');
+        }
+        if (!this.db!.objectStoreNames.contains(storeName) || !this.db!.objectStoreNames.contains('recycle_bin')) {
+            throw new Error(`Silme işlemi için veri alanı bulunamadı: ${storeName}`);
+        }
+
+        const { id: _sourceId, ...recordData } = recycleData as Record<string, unknown>;
+        const recycleRecord = {
+            ...recordData,
+            originalStore: storeName,
+            originalId: key,
+            deletedAt: new Date().toISOString(),
+            ...(options?.deletedBy ? { deletedBy: options.deletedBy } : {}),
+        };
+
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const succeed = () => {
+                if (!settled) {
+                    settled = true;
+                    resolve();
+                }
+            };
+            const fail = (error: unknown) => {
+                if (!settled) {
+                    settled = true;
+                    if (error instanceof Error) {
+                        reject(error);
+                    } else if (error && typeof error === 'object' && 'message' in error) {
+                        reject(new Error(String((error as { message: unknown }).message)));
+                    } else {
+                        reject(new Error('Öğe çöp kutusuna taşınamadı.'));
+                    }
+                }
+            };
+
+            try {
+                const transaction = this.db!.transaction([storeName, 'recycle_bin'], 'readwrite');
+                transaction.oncomplete = succeed;
+                transaction.onerror = () => fail(transaction.error || new Error('Öğe çöp kutusuna taşınamadı.'));
+                transaction.onabort = () => fail(transaction.error || new Error('Öğe taşıma işlemi geri alındı.'));
+
+                transaction.objectStore('recycle_bin').add(this.sanitizeData(recycleRecord));
+                transaction.objectStore(storeName).delete(key);
+            } catch (error) {
+                fail(error);
+            }
+        });
+    }
+
     async delete(storeName: string, key: IDBValidKey): Promise<void> {
         await this.ensureConnection();
 

@@ -266,4 +266,44 @@ describe('IndexedDBManager', () => {
 
         await expect(restorePromise).rejects.toThrow('transaction aborted');
     });
+
+    it('should move a record to the recycle bin atomically without reusing its source id', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const movePromise = indexedDBManager.moveToRecycleBin('customers', 42, {
+            id: 42,
+            name: 'Silinecek müşteri',
+        }, { deletedBy: 'user' });
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'recycle_bin'], 'readwrite');
+            expect(mockStore.add).toHaveBeenCalledWith(expect.objectContaining({
+                name: 'Silinecek müşteri',
+                originalStore: 'customers',
+                originalId: 42,
+                deletedBy: 'user',
+            }));
+            expect(mockStore.add.mock.calls[0][0]).not.toHaveProperty('id');
+            expect(mockStore.delete).toHaveBeenCalledWith(42);
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(movePromise).resolves.toBeUndefined();
+    });
+
+    it('should reject the move when the transaction aborts', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const movePromise = indexedDBManager.moveToRecycleBin('products', 8, { id: 8, name: 'Ürün' });
+
+        await vi.waitFor(() => expect(mockStore.add).toHaveBeenCalled());
+        mockTransaction.error = new DOMException('transaction aborted');
+        mockTransaction.onabort?.();
+
+        await expect(movePromise).rejects.toThrow('transaction aborted');
+    });
 });

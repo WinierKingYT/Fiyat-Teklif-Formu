@@ -94,6 +94,34 @@ const seedRecycleBin = async (page: Page, items: Array<Record<string, unknown>>)
   }, { dbName: DB_NAME, items });
 };
 
+const seedQuoteForDeletion = async (page: Page) => {
+  await page.evaluate(async ({ dbName }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(dbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(['quotes', 'recycle_bin'], 'readwrite');
+      transaction.objectStore('quotes').clear();
+      transaction.objectStore('recycle_bin').clear();
+      transaction.objectStore('quotes').put({
+        id: 950,
+        quoteData: { number: 'E2E-SIL-001', currency: 'TRY' },
+        customerData: { name: 'Silinecek E2E Müşteri', company: 'E2E Silme Testi A.Ş.' },
+        items: [],
+        discount: { type: 'percentage', value: 0 },
+        createdAt: new Date().toISOString(),
+      });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    db.close();
+  }, { dbName: DB_NAME });
+};
+
 test.describe('Critical quote workflows', () => {
   test('saves the active quote and restores it after a reload', async ({ page }) => {
     await openBuilder(page);
@@ -187,6 +215,47 @@ test.describe('Critical quote workflows', () => {
       taxTotalMinor: 80000,
       grandTotalMinor: 480000,
     });
+  });
+});
+
+test.describe('Delete workflows', () => {
+  test('moves a deleted quote to the recycle bin atomically', async ({ page }) => {
+    await page.goto('/');
+    await seedQuoteForDeletion(page);
+    await page.goto('/?view=history');
+
+    await expect(page.getByText('E2E-SIL-001', { exact: true })).toBeVisible();
+    await page.locator('button[title="Sil"]').click();
+    await expect(page.getByRole('heading', { name: 'Sil', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Onayla', exact: true }).last().click();
+
+    await expect(page.getByText('1 teklif geri dönüşüm kutusuna taşındı', { exact: true })).toBeVisible();
+    await expect(page.getByText('Henüz kayıtlı teklif yok', { exact: true })).toBeVisible();
+
+    const persisted = await page.evaluate(async ({ dbName }) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(dbName);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const [quotes, recycleBin] = await Promise.all([
+        new Promise<unknown[]>((resolve, reject) => {
+          const request = db.transaction('quotes', 'readonly').objectStore('quotes').getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        }),
+        new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
+          const request = db.transaction('recycle_bin', 'readonly').objectStore('recycle_bin').getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        }),
+      ]);
+      db.close();
+      return { quotesCount: quotes.length, recycleBinItem: recycleBin.find(item => item.originalId === 950) };
+    }, { dbName: DB_NAME });
+
+    expect(persisted.quotesCount).toBe(0);
+    expect(persisted.recycleBinItem).toEqual(expect.objectContaining({ originalStore: 'quotes', originalId: 950 }));
   });
 });
 
