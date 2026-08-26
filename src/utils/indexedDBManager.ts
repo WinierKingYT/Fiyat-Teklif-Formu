@@ -318,10 +318,12 @@ class IndexedDBManager {
                 const transaction = this.db!.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
 
+                const sanitized = this.sanitizeData(data) as Record<string, unknown>;
+                const now = new Date().toISOString();
                 const item = {
-                    ...this.sanitizeData(data),
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
+                    ...sanitized,
+                    createdAt: (sanitized.createdAt as string) || now,
+                    updatedAt: (sanitized.updatedAt as string) || now,
                     version: this.version
                 };
 
@@ -350,9 +352,11 @@ class IndexedDBManager {
                 const transaction = this.db!.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
 
+                const sanitized = this.sanitizeData(data) as Record<string, unknown>;
+                const now = new Date().toISOString();
                 const item = {
-                    ...this.sanitizeData(data),
-                    updatedAt: new Date().toISOString(),
+                    ...sanitized,
+                    updatedAt: (sanitized.updatedAt as string) || now,
                     version: this.version
                 };
 
@@ -372,9 +376,13 @@ class IndexedDBManager {
         });
     }
 
-    async restoreStores(stores: Record<string, unknown[]>): Promise<number> {
+    async restoreStores(
+        stores: Record<string, unknown[]>,
+        options?: { mode?: 'replace' | 'merge' }
+    ): Promise<number> {
         await this.ensureConnection();
 
+        const mode = options?.mode || 'replace';
         const entries = Object.entries(stores);
         if (entries.length === 0) {
             throw new Error('Geri yüklenecek veri bulunamadı.');
@@ -392,7 +400,7 @@ class IndexedDBManager {
         return new Promise((resolve, reject) => {
             const storeNames = entries.map(([storeName]) => storeName);
             const transaction = this.db!.transaction(storeNames, 'readwrite');
-            const updatedAt = new Date().toISOString();
+            const defaultUpdatedAt = new Date().toISOString();
             let restoredCount = 0;
 
             transaction.oncomplete = () => resolve(restoredCount);
@@ -402,11 +410,14 @@ class IndexedDBManager {
             try {
                 entries.forEach(([storeName, items]) => {
                     const store = transaction.objectStore(storeName);
+                    if (mode === 'replace') {
+                        store.clear();
+                    }
                     items.forEach(item => {
                         const sanitizedItem = this.sanitizeData(item) as Record<string, unknown>;
                         store.put({
                             ...sanitizedItem,
-                            updatedAt,
+                            updatedAt: (sanitizedItem.updatedAt as string) || defaultUpdatedAt,
                             version: this.version,
                         });
                         restoredCount += 1;

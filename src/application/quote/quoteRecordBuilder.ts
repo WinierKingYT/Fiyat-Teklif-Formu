@@ -35,7 +35,7 @@ export function buildQuoteRecord({
   discount,
   bankData,
   createdAt,
-  updatedAt = getLocalDateTimeString(),
+  updatedAt = new Date().toISOString(),
 }: QuoteRecordInput): DbQuote {
   const currency = quoteData.currency || 'TRY';
   const totals = calculateQuoteTotals(items, discount, { currency });
@@ -57,7 +57,7 @@ export function buildQuoteRecord({
     discount,
     bankData,
     updatedAt,
-    ...(createdAt ? { createdAt } : { createdAt: getLocalDateTimeString() }),
+    ...(createdAt ? { createdAt } : { createdAt: new Date().toISOString() }),
   };
 }
 

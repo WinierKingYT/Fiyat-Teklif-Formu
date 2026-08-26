@@ -355,7 +355,7 @@ export interface IndexedDBManager {
   get: <T = unknown>(storeName: string, key: IDBValidKey) => Promise<T | undefined>;
   add: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
   put: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
-  restoreStores: (stores: Record<string, unknown[]>) => Promise<number>;
+  restoreStores: (stores: Record<string, unknown[]>, options?: { mode?: 'replace' | 'merge' }) => Promise<number>;
   delete: (storeName: string, key: IDBValidKey) => Promise<void>;
   clear: (storeName: string) => Promise<void>;
   getByIndex: <T = unknown>(storeName: string, indexName: string, value: IDBValidKey) => Promise<T | undefined>;

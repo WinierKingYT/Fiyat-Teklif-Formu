@@ -199,4 +199,23 @@ test.describe('Backup and restore workflows', () => {
     expect(payload.stores.customers).not.toContainEqual(expect.objectContaining({ name: 'Yarım Kalmış Değişiklik' }));
     expect(payload.stores.quoteVersions).toEqual([]);
   });
+
+  test('replaces pre-existing data atomically so database strictly matches backup snapshot', async ({ page }) => {
+    const staleCustomer = { id: 902, name: 'Eski Müşteri Silinecek', company: 'Eski Ltd.' };
+    const newSnapshotCustomer = { id: 903, name: 'Yeni Snapshot Müşteri', company: 'Yeni A.Ş.' };
+
+    await openBackupSettings(page);
+    // Seed initial stale data
+    await importBackup(page, 'seed-stale.json', makeBackup({ customers: [staleCustomer] }));
+    await expect(page.getByText(/Yedekleme geri yüklendi.*1 kayıt/).first()).toBeVisible();
+
+    // Import new snapshot containing only newSnapshotCustomer
+    await importBackup(page, 'new-snapshot.json', makeBackup({ customers: [newSnapshotCustomer] }));
+    await expect(page.getByText(/Yedekleme geri yüklendi.*1 kayıt/).last()).toBeVisible();
+
+    // Export and verify staleCustomer is removed and only newSnapshotCustomer is present
+    const { payload } = await exportBackup(page);
+    expect(payload.stores.customers).toEqual([expect.objectContaining(newSnapshotCustomer)]);
+    expect(payload.stores.customers).not.toContainEqual(expect.objectContaining(staleCustomer));
+  });
 });

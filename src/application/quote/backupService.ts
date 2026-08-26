@@ -16,12 +16,8 @@ export interface BackupData {
 export async function exportDatabaseBackup(db: IndexedDBManager): Promise<void> {
   const storeEntries = await Promise.all(
     BACKUP_STORE_NAMES.map(async storeName => {
-      try {
-        const items = await db.getAll(storeName);
-        return [storeName, items] as const;
-      } catch {
-        return [storeName, []] as const;
-      }
+      const items = await db.getAll(storeName);
+      return [storeName, items] as const;
     })
   );
 
@@ -57,7 +53,7 @@ export async function importDatabaseBackup(
     const text = await file.text();
     const parsed = JSON.parse(text) as unknown;
     const stores = parseBackupStores(parsed);
-    const restoredCount = await db.restoreStores(stores);
+    const restoredCount = await db.restoreStores(stores, { mode: 'replace' });
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('db-restored'));

@@ -182,7 +182,7 @@ describe('IndexedDBManager', () => {
         expect(mockStore.get).toHaveBeenCalledWith('ver_1_12345');
     });
 
-    it('should restore all backup records in a single transaction', async () => {
+    it('should restore all backup records in a single transaction with atomic clear in replace mode', async () => {
         const initPromise = indexedDBManager.initialize();
         triggerSuccess(mockDb);
         await initPromise;
@@ -190,14 +190,37 @@ describe('IndexedDBManager', () => {
         const restorePromise = indexedDBManager.restoreStores({
             customers: [{ id: 1, name: 'Müşteri' }],
             products: [{ id: 2, name: 'Ürün' }],
-        });
+        }, { mode: 'replace' });
 
         await vi.waitFor(() => {
             expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'products'], 'readwrite');
+            expect(mockStore.clear).toHaveBeenCalledTimes(2);
             expect(mockStore.put).toHaveBeenCalledTimes(2);
         });
 
         mockTransaction.oncomplete?.();
         await expect(restorePromise).resolves.toBe(2);
+    });
+
+    it('should restore in merge mode without clearing stores', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        mockStore.clear.mockClear();
+        mockStore.put.mockClear();
+
+        const restorePromise = indexedDBManager.restoreStores({
+            customers: [{ id: 1, name: 'Müşteri' }],
+        }, { mode: 'merge' });
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers'], 'readwrite');
+            expect(mockStore.clear).not.toHaveBeenCalled();
+            expect(mockStore.put).toHaveBeenCalledTimes(1);
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(restorePromise).resolves.toBe(1);
     });
 });
