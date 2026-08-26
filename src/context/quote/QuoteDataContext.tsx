@@ -6,6 +6,8 @@ import { useDatabase } from '@/context/quote/DatabaseContext';
 import {
     getInitialQuoteData, getInitialCustomerData, getInitialCompanyData, getInitialBankData, getInitialTabData,
 } from '@/context/quote/initialState';
+import { createLegacyBackup, restoreBackupFile } from '@/context/quote/quoteBackup';
+import { buildDbQuote, buildQuoteVersion } from '@/context/quote/quotePersistence';
 import { useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
 import { useTab } from '@/context/quote/TabContext';
 import {
@@ -14,7 +16,6 @@ import {
     type IndexedDBManager, type TabData, type DbQuote, type QuoteVersion,
 } from '@/context/quote/types';
 import tr from '@/i18n/tr.json';
-import { calculateQuoteTotals } from '@/utils/calculations';
 import cleanupService from '@/utils/cleanupService';
 import { getLocalDateString, getLocalDateTimeString } from '@/utils/dateUtils';
 import Logger from '@/utils/logger';
@@ -220,13 +221,18 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             const quoteId = activeTab.savedQuoteId;
             if (!quoteId) return;
             setSaveStatus({ status: 'saving', lastSaved: null });
-            const quote: DbQuote = {
-                id: quoteId, quoteNumber: quoteData.number, customerName: customerData.name,
-                customerCompany: customerData.company, status: 'draft', currency: quoteData.currency,
-                subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0,
-                quoteData, customerData, companyData, items, discount, bankData,
-                updatedAt: getLocalDateTimeString(), createdAt: getLocalDateTimeString(),
-            };
+            const quote = buildDbQuote({
+                id: quoteId,
+                status: 'draft',
+                quoteData,
+                customerData,
+                companyData,
+                items,
+                discount,
+                bankData,
+                calculateTotals: false,
+                createdAt: getLocalDateTimeString(),
+            });
             try {
                 await db.put('quotes', quote);
                 setSaveStatus({ status: 'saved', lastSaved: Date.now() });
@@ -267,18 +273,17 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         const errors = validateQuote(isFinal);
         if (errors.length > 0) { toast.error(tStatic('fixErrors') + '\n' + errors.join('\n'), { duration: 6000 }); return; }
         setSaveStatus({ status: 'saving', lastSaved: null });
-        const { subtotalMinor, taxTotalMinor, grandTotalMinor } = (() => {
-            try {
-                const calc = calculateQuoteTotals(items, discount, { currency: quoteData.currency });
-                return { subtotalMinor: Math.round(calc.subtotal * 100), taxTotalMinor: Math.round(calc.taxTotal * 100), grandTotalMinor: Math.round(calc.grandTotal * 100) };
-            } catch { return { subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0 }; }
-        })();
-        const quote: DbQuote = {
-            id: tabSavedQuoteId || Date.now(), quoteNumber: quoteData.number, customerName: customerData.name,
-            customerCompany: customerData.company, status: isFinal ? 'final' : 'draft', currency: quoteData.currency,
-            subtotalMinor, taxTotalMinor, grandTotalMinor, quoteData, customerData, companyData, items, discount, bankData,
-            updatedAt: getLocalDateTimeString(), createdAt: tabSavedQuoteId ? undefined : getLocalDateTimeString()
-        };
+        const quote = buildDbQuote({
+            id: tabSavedQuoteId || Date.now(),
+            status: isFinal ? 'final' : 'draft',
+            quoteData,
+            customerData,
+            companyData,
+            items,
+            discount,
+            bankData,
+            createdAt: tabSavedQuoteId ? undefined : getLocalDateTimeString(),
+        });
         try {
             if (tabSavedQuoteId) {
                 const existing = await db.get<DbQuote>('quotes', tabSavedQuoteId);
@@ -293,14 +298,7 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
             // Otomatik versiyon snapshot'ı
             try {
-                const versionId = `ver_${quote.id}_${Date.now()}`;
-                const version: QuoteVersion = {
-                    versionId,
-                    quoteId: quote.id,
-                    createdAt: Date.now(),
-                    snapshot: JSON.parse(JSON.stringify(quote)) as DbQuote,
-                    versionName: isFinal ? tStatic('finalVersion') : tStatic('autoSave')
-                };
+                const version = buildQuoteVersion(quote, isFinal ? tStatic('finalVersion') : tStatic('autoSave'));
                 await db.put('quoteVersions', version);
             } catch (e) {
                 Logger.warn('Version snapshot error:', e);
@@ -354,22 +352,9 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
         }
         const activeTab = tabs.find(t => t.id === activeTabId);
         const quoteId = activeTab?.savedQuoteId || Date.now();
-        const { subtotalMinor, taxTotalMinor, grandTotalMinor } = (() => {
-            try {
-                const calc = calculateQuoteTotals(items, discount, { currency: quoteData.currency });
-                return { subtotalMinor: Math.round(calc.subtotal * 100), taxTotalMinor: Math.round(calc.taxTotal * 100), grandTotalMinor: Math.round(calc.grandTotal * 100) };
-            } catch { return { subtotalMinor: 0, taxTotalMinor: 0, grandTotalMinor: 0 }; }
-        })();
-        const snapshot: DbQuote = {
+        const snapshot = buildDbQuote({
             id: quoteId,
-            quoteNumber: quoteData.number,
-            customerName: customerData.name,
-            customerCompany: customerData.company,
             status: 'saved',
-            currency: quoteData.currency,
-            subtotalMinor,
-            taxTotalMinor,
-            grandTotalMinor,
             quoteData,
             customerData,
             companyData,
@@ -377,20 +362,12 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
             discount,
             bankData,
             createdAt: getLocalDateTimeString(),
-            updatedAt: getLocalDateTimeString()
-        };
-        const versionId = `ver_${quoteId}_${Date.now()}`;
-        const version: QuoteVersion = {
-            versionId,
-            quoteId,
-            createdAt: Date.now(),
-            snapshot: JSON.parse(JSON.stringify(snapshot)) as DbQuote,
-            versionName: versionName?.trim() || undefined
-        };
+        });
+        const version = buildQuoteVersion(snapshot, versionName);
         try {
             await db.put('quoteVersions', version);
             toast.success(versionName ? `"${versionName}" ${tStatic('versionSaved')}` : tStatic('versionSnapshotSaved'));
-            return versionId;
+            return version.versionId;
         } catch (error) {
             Logger.error('Error saving quote version:', error);
             toast.error(tStatic('versionSaveFailed'));
@@ -439,40 +416,20 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
 
     const createBackup = useCallback(async () => {
         try {
-            const [customers, products, quotes, templates, banks, quoteVersions, settings] = await Promise.all([
-                db.getAll('customers'), db.getAll('products'), db.getAll('quotes'),
-                db.getAll('templates'), db.getAll('bankInfo'),
-                db.getAll('quoteVersions').catch(() => []),
-                db.getAll('settings').catch(() => [])
-            ]);
-            const data = { customers, products, quotes, templates, banks, quoteVersions, settings, exportDate: new Date().toISOString(), version: '2.4' };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `teklifmaster_backup_${getLocalDateString()}.json`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 1000); toast.success(tStatic('backupDownloaded'));
+            await createLegacyBackup(db);
+            toast.success(tStatic('backupDownloaded'));
         } catch (error) { Logger.error('Backup error:', error); toast.error(tStatic('backupError')); }
     }, [db]);
 
     const restoreBackup = useCallback(async (file: File) => {
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            try {
-                const data = JSON.parse((event.target as FileReader).result as string);
-                if (Array.isArray(data.customers)) await Promise.all(data.customers.map((item: unknown) => db.put('customers', item)));
-                if (Array.isArray(data.products)) await Promise.all(data.products.map((item: unknown) => db.put('products', item)));
-                if (Array.isArray(data.quotes)) await Promise.all(data.quotes.map((item: unknown) => db.put('quotes', item)));
-                if (Array.isArray(data.templates)) await Promise.all(data.templates.map((item: unknown) => db.put('templates', item)));
-                if (Array.isArray(data.banks)) await Promise.all(data.banks.map((item: unknown) => db.put('bankInfo', item)));
-                if (Array.isArray(data.quoteVersions)) await Promise.all(data.quoteVersions.map((item: unknown) => db.put('quoteVersions', item)));
-                if (Array.isArray(data.settings)) await Promise.all(data.settings.map((item: unknown) => db.put('settings', item)));
-                toast.success(tStatic('backupRestored'));
-            } catch (error) { Logger.error('Error restoring backup', error); toast.error(tStatic('backupRestoreError')); }
-        };
-        reader.onerror = () => { toast.error(tStatic('backupRestoreError')); };
-        reader.readAsText(file);
+        try {
+            await restoreBackupFile(db, file);
+            toast.success(tStatic('backupRestored'));
+        } catch (error) {
+            Logger.error('Error restoring backup', error);
+            toast.error(tStatic('backupRestoreError'));
+        }
     }, [db]);
 
     const fillTestData = useCallback(async () => {

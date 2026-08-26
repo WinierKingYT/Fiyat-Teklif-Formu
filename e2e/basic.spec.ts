@@ -39,4 +39,37 @@ test.describe('Application smoke tests', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await expect(page.getByLabel('Teklif Numarası')).toBeVisible();
   });
+
+  test('renders item cards on mobile and the sortable table on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Kalem Ekle', exact: true }).click();
+    await expect(page.locator('[data-row="0"][data-field="name"]')).toBeVisible();
+    await expect(page.locator('tbody')).toHaveCount(0);
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await expect(page.locator('tbody')).toBeVisible();
+  });
+
+  test('supports sorting and bulk discount updates for selected items', async ({ page }) => {
+    await page.goto('/');
+    const addItem = page.getByRole('button', { name: 'Kalem Ekle', exact: true });
+    await addItem.click();
+    await addItem.click();
+
+    await page.locator('[data-row="0"][data-field="name"]').fill('Ucuz Hizmet');
+    await page.locator('[data-row="0"][data-field="price"]').fill('100');
+    await page.locator('[data-row="1"][data-field="name"]').fill('Pahalı Hizmet');
+    await page.locator('[data-row="1"][data-field="price"]').fill('500');
+
+    await page.getByRole('button', { name: 'Tümünü seç', exact: true }).click();
+    await expect(page.getByText('2 seçili', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '%10', exact: true }).first().click();
+    await expect(page.locator('[data-field="discountRate"]').nth(0)).toHaveValue('10');
+    await expect(page.locator('[data-field="discountRate"]').nth(1)).toHaveValue('10');
+
+    await page.getByRole('button', { name: 'Araçlar', exact: true }).click();
+    await page.getByRole('button', { name: 'Pahalıdan Ucuza', exact: true }).click();
+    await expect(page.locator('[data-row="0"][data-field="name"]')).toHaveValue('Pahalı Hizmet');
+  });
 });
