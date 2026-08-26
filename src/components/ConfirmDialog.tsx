@@ -15,7 +15,7 @@ interface ConfirmDialogProps {
     onConfirm: () => void;
     onCancel: () => void;
     title?: string;
-    message?: string;
+    message?: React.ReactNode;
     confirmText?: string;
     cancelText?: string;
     variant?: string;
@@ -90,7 +90,7 @@ const ConfirmDialog = ({
                 </div>
 
                 <div className="p-3.5">
-                    <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">{dialogMessage}</p>
+                    <div className="text-xs text-[var(--color-text-secondary)] leading-relaxed">{dialogMessage}</div>
                 </div>
 
                 <div className="flex gap-2 p-3 border-t border-[var(--color-border)]">

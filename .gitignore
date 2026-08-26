@@ -127,6 +127,9 @@ blob-report/
 # Local MCP config with secrets
 .mcp/config.json
 
+# Local codebase graph artifacts
+graphify-out/
+
 # OpenCode config
 .opencode/
 

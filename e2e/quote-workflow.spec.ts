@@ -53,12 +53,21 @@ const openBackupSettings = async (page: Page) => {
   await expect(page.locator('#backup-file-input')).toBeAttached();
 };
 
-const importBackup = async (page: Page, name: string, payload: unknown) => {
+const importBackup = async (page: Page, name: string, payload: unknown, options: { confirm?: boolean; captureEmergencyBackup?: boolean } = {}) => {
   await page.locator('#backup-file-input').setInputFiles({
     name,
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(payload)),
   });
+  if (options.confirm !== false) {
+    if (options.captureEmergencyBackup) {
+      await expect(page.getByRole('dialog', { name: 'Yedeği geri yükle' })).toContainText('Toplam kayıt');
+    }
+    const emergencyDownloadPromise = options.captureEmergencyBackup ? page.waitForEvent('download') : null;
+    await page.getByRole('button', { name: 'Geri yükle', exact: true }).click();
+    return emergencyDownloadPromise ? await emergencyDownloadPromise : undefined;
+  }
+  return undefined;
 };
 
 const exportBackup = async (page: Page): Promise<{ download: Download; payload: BackupPayload }> => {
@@ -296,14 +305,19 @@ test.describe('Backup and restore workflows', () => {
 
   test('imports a valid backup and exports the restored data', async ({ page }) => {
     await openBackupSettings(page);
-    await importBackup(page, 'valid-backup.json', makeBackup({ customers: [originalCustomer] }));
+    const emergencyDownload = await importBackup(page, 'valid-backup.json', makeBackup({ customers: [originalCustomer] }), { captureEmergencyBackup: true });
 
     await expect(page.getByText(/Yedekleme geri yüklendi.*1 kayıt/)).toBeVisible();
+    expect(emergencyDownload).toBeDefined();
+    expect(emergencyDownload?.suggestedFilename()).toMatch(/^teklif_master_acil_yedek_\d{8}\.json$/);
     const { download, payload } = await exportBackup(page);
 
     expect(download.suggestedFilename()).toMatch(/^teklif_master_yedek_\d{8}\.json$/);
     expect(payload.schemaVersion).toBe(3);
     expect(payload.stores.customers).toContainEqual(expect.objectContaining(originalCustomer));
+
+    await page.goto('/?view=settings&tab=activity');
+    await expect(page.getByText('Yedekten geri yüklendi: 1 kayıt', { exact: true })).toBeVisible();
   });
 
   test('rejects an unsupported backup without changing existing data', async ({ page }) => {
@@ -311,7 +325,7 @@ test.describe('Backup and restore workflows', () => {
     await importBackup(page, 'seed-backup.json', makeBackup({ customers: [originalCustomer] }));
     await expect(page.getByText(/Yedekleme geri yüklendi.*1 kayıt/)).toBeVisible();
 
-    await importBackup(page, 'unsupported-backup.json', makeBackup({ unknownStore: [{ id: 1 }] }));
+    await importBackup(page, 'unsupported-backup.json', makeBackup({ unknownStore: [{ id: 1 }] }), { confirm: false });
     await expect(page.getByText(/desteklenmeyen veri alanı var: unknownStore/)).toBeVisible();
 
     const { payload } = await exportBackup(page);
@@ -385,7 +399,7 @@ test.describe('Backup and restore workflows', () => {
       },
     };
 
-    await importBackup(page, 'incomplete-v3.json', incompleteV3Payload);
+    await importBackup(page, 'incomplete-v3.json', incompleteV3Payload, { confirm: false });
     await expect(page.getByText(/eksik veri alanları var/i)).toBeVisible();
 
     // Verify pre-existing customer remains unchanged

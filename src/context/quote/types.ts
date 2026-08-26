@@ -350,7 +350,7 @@ export interface SaveStatus {
 }
 
 // ─── Audit Log ─────────────────────────────────────────────────────────────
-export type AuditAction = 'delete' | 'moved_to_recycle_bin' | 'restore' | 'permanent_delete' | 'empty_recycle_bin';
+export type AuditAction = 'delete' | 'moved_to_recycle_bin' | 'restore' | 'permanent_delete' | 'empty_recycle_bin' | 'restore_backup';
 
 export interface AuditLogEntry {
   id?: IDBValidKey;

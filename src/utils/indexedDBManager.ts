@@ -248,7 +248,7 @@ class IndexedDBManager {
     }
 
     private createAuditRecord(
-        action: 'delete' | 'moved_to_recycle_bin' | 'restore' | 'permanent_delete' | 'empty_recycle_bin',
+        action: 'delete' | 'moved_to_recycle_bin' | 'restore' | 'permanent_delete' | 'empty_recycle_bin' | 'restore_backup',
         entityType: string,
         entityId?: IDBValidKey,
         entityName?: string,
@@ -467,11 +467,16 @@ class IndexedDBManager {
 
         return new Promise((resolve, reject) => {
             const storeNames = entries.map(([storeName]) => storeName);
-            const transaction = this.db!.transaction(storeNames, 'readwrite');
+            const includeAuditLog = this.hasAuditLogStore() && !storeNames.includes('auditLog');
+            const transactionStoreNames = includeAuditLog ? [...storeNames, 'auditLog'] : storeNames;
+            const transaction = this.db!.transaction(transactionStoreNames, 'readwrite');
             const defaultUpdatedAt = new Date().toISOString();
             let restoredCount = 0;
 
-            transaction.oncomplete = () => resolve(restoredCount);
+            transaction.oncomplete = () => {
+                if (includeAuditLog) this.notifyAuditLogUpdated();
+                resolve(restoredCount);
+            };
             transaction.onerror = () => reject(transaction.error || new Error('Yedek geri yükleme işlemi başarısız oldu.'));
             transaction.onabort = () => reject(transaction.error || new Error('Yedek geri yükleme işlemi geri alındı.'));
 
@@ -491,6 +496,14 @@ class IndexedDBManager {
                         restoredCount += 1;
                     });
                 });
+                if (includeAuditLog) {
+                    transaction.objectStore('auditLog').add(this.createAuditRecord(
+                        'restore_backup',
+                        'backup',
+                        undefined,
+                        `${restoredCount} kayıt`,
+                    ));
+                }
             } catch (error) {
                 transaction.abort();
                 reject(error);

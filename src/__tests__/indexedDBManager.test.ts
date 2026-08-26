@@ -241,6 +241,32 @@ describe('IndexedDBManager', () => {
         await expect(restorePromise).resolves.toBe(1);
     });
 
+    it('should append an audit entry in the same transaction as a backup restore', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+        mockDb.objectStoreNames.contains.mockImplementation((name) => baseStoreNames.includes(name) || name === 'auditLog');
+        mockStore.add.mockClear();
+
+        const restorePromise = indexedDBManager.restoreStores({
+            customers: [{ id: 1, name: 'Geri yüklenen müşteri' }],
+        }, { mode: 'replace' });
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'auditLog'], 'readwrite');
+            expect(mockStore.clear).toHaveBeenCalledTimes(1);
+            expect(mockStore.put).toHaveBeenCalledTimes(1);
+            expect(mockStore.add).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'restore_backup',
+                entityType: 'backup',
+                entityName: '1 kayıt',
+            }));
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(restorePromise).resolves.toBe(1);
+    });
+
     it('should restore a recycle-bin item atomically with its source record', async () => {
         const initPromise = indexedDBManager.initialize();
         triggerSuccess(mockDb);

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { exportDatabaseBackup, importDatabaseBackup } from '@/application/quote/backupService';
+import { exportDatabaseBackup, importDatabaseBackup, previewDatabaseBackup } from '@/application/quote/backupService';
 import { buildQuoteRecord } from '@/application/quote/quoteRecordBuilder';
 import { getInitialBankData, getInitialCompanyData, getInitialCustomerData, getInitialQuoteData } from '@/context/quote/initialState';
 import type { IndexedDBManager } from '@/context/quote/types';
@@ -65,6 +65,37 @@ describe('Data Integrity Closure: Backup, Restore & Timestamps', () => {
     });
 
     describe('importDatabaseBackup', () => {
+        it('previews a valid backup without writing to the database', async () => {
+            const fakeDb = {
+                restoreStores: vi.fn(),
+            } as unknown as IndexedDBManager;
+            const file = new File([JSON.stringify({
+                schemaVersion: 3,
+                createdAt: '2026-08-26T10:00:00.000Z',
+                stores: {
+                    customers: [{ id: 1, name: 'Ahmet' }],
+                    products: [{ id: 2, name: 'Hizmet' }],
+                    quotes: [],
+                    templates: [],
+                    bankInfo: [],
+                    settings: [],
+                    recycle_bin: [],
+                    drafts: [],
+                    quoteVersions: [],
+                },
+            })], 'preview.json', { type: 'application/json' });
+
+            const preview = await previewDatabaseBackup(file);
+
+            expect(preview.fileName).toBe('preview.json');
+            expect(preview.schemaVersion).toBe(3);
+            expect(preview.createdAt).toBe('2026-08-26T10:00:00.000Z');
+            expect(preview.storeCounts.customers).toBe(1);
+            expect(preview.storeCounts.products).toBe(1);
+            expect(preview.totalRecords).toBe(2);
+            expect(fakeDb.restoreStores).not.toHaveBeenCalled();
+        });
+
         it('calls db.restoreStores with mode replace and full canonical snapshot', async () => {
             const fakeDb = {
                 restoreStores: vi.fn().mockResolvedValue(3),

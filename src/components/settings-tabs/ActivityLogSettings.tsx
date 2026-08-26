@@ -20,6 +20,7 @@ const ENTITY_LABEL_KEYS: Record<string, string> = {
   bankInfo: 'banks',
   recycle_bin: 'recycleBin',
   quoteVersions: 'quoteVersions',
+  backup: 'backup',
 };
 
 const ACTION_LABEL_KEYS: Record<AuditLogEntry['action'], string> = {
@@ -28,6 +29,7 @@ const ACTION_LABEL_KEYS: Record<AuditLogEntry['action'], string> = {
   restore: 'auditRestored',
   permanent_delete: 'auditPermanentlyDeleted',
   empty_recycle_bin: 'auditBinEmptied',
+  restore_backup: 'auditBackupRestored',
 };
 
 const ActivityLogSettings: React.FC = () => {
@@ -241,7 +243,7 @@ const ActivityLogSettings: React.FC = () => {
                   <div key={`${String(entry.id ?? 'entry')}-${entry.createdAt}-${index}`} className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-border)]/60 bg-[var(--color-bg-card)] px-3 py-2" role="listitem">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-6 h-6 shrink-0 rounded-full bg-[var(--color-bg-muted)] flex items-center justify-center text-[var(--color-text-muted)]">
-                        {entry.action === 'restore' ? <RefreshCw size={12} /> : <Trash2 size={12} />}
+                        {entry.action === 'restore' || entry.action === 'restore_backup' ? <RefreshCw size={12} /> : <Trash2 size={12} />}
                       </div>
                       <span className="text-xs text-[var(--color-text)] truncate">{formatEntry(entry)}</span>
                     </div>

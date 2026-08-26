@@ -1,12 +1,29 @@
-import { Database, Download, Upload, Trash2, Sparkles, RefreshCw, HardDrive } from 'lucide-react';
+import { Download, Upload, Trash2, Sparkles, HardDrive } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { exportDatabaseBackup, importDatabaseBackup } from '@/application/quote/backupService';
+import { exportDatabaseBackup, importDatabaseBackup, previewDatabaseBackup, type BackupPreview } from '@/application/quote/backupService';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { BACKUP_STORE_NAMES } from '@/utils/backupValidation';
 import Logger from '@/utils/logger';
+
+const BACKUP_STORE_LABEL_KEYS: Record<string, string> = {
+    customers: 'customers',
+    products: 'products',
+    quotes: 'quotes',
+    templates: 'templates',
+    bankInfo: 'banks',
+    settings: 'settings',
+    recycle_bin: 'recycleBin',
+    drafts: 'drafts',
+    quoteVersions: 'quoteVersions',
+};
+
+interface PendingRestore {
+    file: File;
+    preview: BackupPreview;
+}
 
 const DataBackupSettings: React.FC = () => {
     const { quoteData, db, fillTestData } = useQuoteData();
@@ -27,6 +44,9 @@ const DataBackupSettings: React.FC = () => {
         variant: 'info' | 'warning' | 'danger';
     }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [pendingRestore, setPendingRestore] = useState<PendingRestore | null>(null);
+    const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+    const [isRestoring, setIsRestoring] = useState(false);
 
     const loadStats = async () => {
         if (!db) return;
@@ -72,7 +92,26 @@ const DataBackupSettings: React.FC = () => {
         if (!file || !db) return;
 
         try {
-            const restoredCount = await importDatabaseBackup(db, file);
+            const preview = await previewDatabaseBackup(file);
+            setPendingRestore({ file, preview });
+            setRestoreConfirmOpen(true);
+        } catch (err) {
+            Logger.error('Error restoring backup:', err);
+            const detail = err instanceof Error ? ` ${err.message}` : '';
+            toast.error(`${t('backupRestoreError') || 'Yedek dosyası okunamadı veya geçersiz.'}${detail}`);
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleRestore = async () => {
+        if (!db || !pendingRestore || isRestoring) return;
+
+        setRestoreConfirmOpen(false);
+        setIsRestoring(true);
+        try {
+            await exportDatabaseBackup(db, { filenamePrefix: 'teklif_master_acil_yedek' });
+            const restoredCount = await importDatabaseBackup(db, pendingRestore.file);
             toast.success(`${t('backupRestored') || 'Yedek başarıyla geri yüklendi.'} (${restoredCount} kayıt)`);
             await loadStats();
         } catch (err) {
@@ -80,7 +119,8 @@ const DataBackupSettings: React.FC = () => {
             const detail = err instanceof Error ? ` ${err.message}` : '';
             toast.error(`${t('backupRestoreError') || 'Yedek dosyası okunamadı veya geçersiz.'}${detail}`);
         } finally {
-            if (fileInputRef.current) fileInputRef.current.value = '';
+            setPendingRestore(null);
+            setIsRestoring(false);
         }
     };
 
@@ -186,6 +226,7 @@ const DataBackupSettings: React.FC = () => {
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 className="btn btn-outline btn-sm flex items-center justify-center gap-1.5 w-full"
+                                disabled={isRestoring}
                             >
                                 <Upload size={14} />
                                 <span>{t('selectBackupFile') || 'Yedek Dosyası Seç (.json)'}</span>
@@ -223,6 +264,38 @@ const DataBackupSettings: React.FC = () => {
                 onConfirm={confirmDialog.onConfirm}
                 onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
                 variant={confirmDialog.variant}
+            />
+            <ConfirmDialog
+                isOpen={restoreConfirmOpen}
+                title={t('backupRestoreConfirmTitle')}
+                message={pendingRestore ? (
+                    <div className="space-y-3">
+                        <p>{t('backupRestoreWarning')}</p>
+                        <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-2.5 space-y-1.5">
+                            <div><strong>{t('backupFile')}:</strong> {pendingRestore.preview.fileName}</div>
+                            <div><strong>{t('backupCreatedAt')}:</strong> {pendingRestore.preview.createdAt ? new Date(pendingRestore.preview.createdAt).toLocaleString('tr-TR') : t('backupNoDate')}</div>
+                            <div><strong>{t('backupSchemaVersion')}:</strong> {pendingRestore.preview.schemaVersion}</div>
+                            <div><strong>{t('backupTotalRecords')}:</strong> {pendingRestore.preview.totalRecords}</div>
+                        </div>
+                        <div>
+                            <div className="font-semibold mb-1">{t('backupStoreSummary')}</div>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                                {Object.entries(pendingRestore.preview.storeCounts).map(([storeName, count]) => (
+                                    <div key={storeName} className="flex justify-between gap-2">
+                                        <span>{t(BACKUP_STORE_LABEL_KEYS[storeName] || storeName)}</span>
+                                        <strong>{count}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-[var(--color-text-muted)]">{t('backupRestoreEmergencyBackup')}</p>
+                    </div>
+                ) : null}
+                onConfirm={() => void handleRestore()}
+                onCancel={() => { setRestoreConfirmOpen(false); setPendingRestore(null); }}
+                confirmText={t('backupRestoreConfirm')}
+                cancelText={t('cancel')}
+                variant="warning"
             />
         </div>
     );
