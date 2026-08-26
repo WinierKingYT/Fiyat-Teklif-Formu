@@ -1,4 +1,4 @@
-import { History, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, History, RefreshCw, Trash2 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -11,6 +11,7 @@ import Logger from '@/utils/logger';
 import type { AuditLogEntry } from '@/context/quote/types';
 
 const MAX_VISIBLE_ENTRIES = 100;
+const AUDIT_RETENTION_DAYS = 90;
 
 const ENTITY_LABEL_KEYS: Record<string, string> = {
   quotes: 'quotes',
@@ -44,8 +45,14 @@ const ActivityLogSettings: React.FC = () => {
     try {
       setLoading(true);
       const allEntries = await db.getAll<AuditLogEntry>('auditLog');
-      allEntries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setEntries(allEntries.slice(0, MAX_VISIBLE_ENTRIES));
+      const cutoffTime = Date.now() - AUDIT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+      const staleEntries = allEntries.filter(entry => entry.id !== undefined && new Date(entry.createdAt).getTime() < cutoffTime);
+      if (staleEntries.length > 0) {
+        await Promise.all(staleEntries.map(entry => db.delete('auditLog', entry.id as IDBValidKey)));
+      }
+      const recentEntries = allEntries.filter(entry => !staleEntries.includes(entry));
+      recentEntries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setEntries(recentEntries.slice(0, MAX_VISIBLE_ENTRIES));
     } catch (error) {
       Logger.error('Error loading audit log:', error);
       setEntries([]);
@@ -79,6 +86,31 @@ const ActivityLogSettings: React.FC = () => {
     }
   };
 
+  const handleExport = () => {
+    if (entries.length === 0) return;
+
+    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      [t('date'), t('action'), t('dataType'), t('record')],
+      ...entries.map(entry => [
+        new Date(entry.createdAt).toLocaleString('tr-TR'),
+        actionLabel(entry.action),
+        entityLabel(entry.entityType),
+        entry.entityName || `${entityLabel(entry.entityType)} #${String(entry.entityId ?? '-')}`,
+      ]),
+    ];
+    const csv = `\uFEFF${rows.map(row => row.map(escapeCsv).join(';')).join('\r\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `islem-gecmisi-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success(t('auditLogExported'));
+  };
+
   const entityLabel = (entityType: string) => {
     const key = ENTITY_LABEL_KEYS[entityType];
     return key ? t(key) : entityType;
@@ -108,6 +140,9 @@ const ActivityLogSettings: React.FC = () => {
           <button type="button" className="btn btn-outline btn-xs" onClick={() => void loadEntries()} disabled={loading} title={t('refresh')}>
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             <span className="hidden sm:inline">{t('refresh')}</span>
+          </button>
+          <button type="button" className="btn btn-outline btn-xs" onClick={handleExport} disabled={entries.length === 0} aria-label={t('exportActivityLog')}>
+            <Download size={13} /> <span className="hidden sm:inline">{t('exportActivityLog')}</span>
           </button>
           <button type="button" className="btn btn-danger btn-xs" onClick={() => setConfirmOpen(true)} disabled={entries.length === 0 || isClearing}>
             <Trash2 size={13} /> {t('clearActivityLog')}

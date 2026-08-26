@@ -566,6 +566,13 @@ test.describe('Recycle bin workflows', () => {
         entityName: 'Denetim Ürünü',
         createdAt: new Date(Date.now() - 60_000).toISOString(),
       },
+      {
+        action: 'delete',
+        entityType: 'quotes',
+        entityId: 953,
+        entityName: '90 Günden Eski Kayıt',
+        createdAt: new Date(Date.now() - 91 * 24 * 60 * 60 * 1000).toISOString(),
+      },
     ]);
 
     await page.goto('/?view=settings&tab=activity');
@@ -573,5 +580,11 @@ test.describe('Recycle bin workflows', () => {
     await expect(page.getByRole('button', { name: 'İşlem Geçmişi', exact: true })).toBeVisible();
     await expect(page.getByText('Çöp kutusuna taşındı: Denetim Müşterisi', { exact: true })).toBeVisible();
     await expect(page.getByText('Geri yüklendi: Denetim Ürünü', { exact: true })).toBeVisible();
+    await expect(page.getByText('90 Günden Eski Kayıt', { exact: true })).toHaveCount(0);
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'CSV Dışa Aktar', exact: true }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^islem-gecmisi-\d{8}\.csv$/);
   });
 });
