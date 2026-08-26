@@ -223,4 +223,47 @@ describe('IndexedDBManager', () => {
         mockTransaction.oncomplete?.();
         await expect(restorePromise).resolves.toBe(1);
     });
+
+    it('should restore a recycle-bin item atomically with its source record', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const restorePromise = indexedDBManager.restoreRecycleBinItem({
+            id: 99,
+            originalStore: 'customers',
+            originalId: '7',
+            deletedAt: new Date().toISOString(),
+            deletedBy: 'user',
+            data: { id: 7, name: 'Geri yüklenen müşteri' },
+        });
+
+        await vi.waitFor(() => {
+            expect(mockDb.transaction).toHaveBeenCalledWith(['customers', 'recycle_bin'], 'readwrite');
+            expect(mockStore.put).toHaveBeenCalledWith(expect.objectContaining({ id: '7', name: 'Geri yüklenen müşteri' }));
+            expect(mockStore.delete).toHaveBeenCalledWith(99);
+        });
+
+        mockTransaction.oncomplete?.();
+        await expect(restorePromise).resolves.toBeUndefined();
+    });
+
+    it('should reject recycle-bin restore when the transaction aborts', async () => {
+        const initPromise = indexedDBManager.initialize();
+        triggerSuccess(mockDb);
+        await initPromise;
+
+        const restorePromise = indexedDBManager.restoreRecycleBinItem({
+            id: 100,
+            originalStore: 'products',
+            originalId: 3,
+            data: { id: 3, name: 'Ürün' },
+        });
+
+        await vi.waitFor(() => expect(mockStore.put).toHaveBeenCalled());
+        mockTransaction.error = new DOMException('transaction aborted');
+        mockTransaction.onabort?.();
+
+        await expect(restorePromise).rejects.toThrow('transaction aborted');
+    });
 });

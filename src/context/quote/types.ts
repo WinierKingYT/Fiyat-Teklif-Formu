@@ -356,6 +356,15 @@ export interface IndexedDBManager {
   add: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
   put: <T = unknown>(storeName: string, data: T) => Promise<unknown>;
   restoreStores: (stores: Record<string, unknown[]>, options?: { mode?: 'replace' | 'merge' }) => Promise<number>;
+  restoreRecycleBinItem: (item: {
+    id: IDBValidKey;
+    originalStore: string;
+    originalId?: IDBValidKey;
+    deletedAt?: string;
+    deletedBy?: string;
+    data?: unknown;
+    [key: string]: unknown;
+  }) => Promise<void>;
   delete: (storeName: string, key: IDBValidKey) => Promise<void>;
   clear: (storeName: string) => Promise<void>;
   getByIndex: <T = unknown>(storeName: string, indexName: string, value: IDBValidKey) => Promise<T | undefined>;

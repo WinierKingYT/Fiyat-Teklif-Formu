@@ -98,6 +98,7 @@ describe('Autosave Financial Consistency Regression Test', () => {
       }),
       clear: vi.fn(async () => { storeMap.clear(); }),
       restoreStores: vi.fn(),
+      restoreRecycleBinItem: vi.fn(),
     };
 
     // 1. Initial manual save (or initial draft save)

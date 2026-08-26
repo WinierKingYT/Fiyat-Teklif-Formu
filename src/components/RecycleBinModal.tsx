@@ -12,7 +12,7 @@ import Logger from '@/utils/logger';
 interface DeletedItem {
     id: string | number;
     originalStore: string;
-    originalId?: string;
+    originalId?: IDBValidKey;
     deletedAt: string;
     deletedBy?: string;
     data?: unknown;
@@ -34,6 +34,7 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
     const [deletedItems, setDeletedItems] = useState<DeletedItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('all');
+    const [isProcessing, setIsProcessing] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState<{
         isOpen: boolean;
         title: string;
@@ -58,33 +59,17 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
     };
 
     const handleRestore = async (item: DeletedItem) => {
+        if (isProcessing) return;
+        setIsProcessing(true);
         try {
-            await db.delete('recycle_bin', item.id);
-            const parseId = (rawId: unknown) => {
-                if (typeof rawId === 'number') return rawId;
-                if (typeof rawId === 'string' && /^\d+$/.test(rawId)) {
-                    const num = Number(rawId);
-                    if (!isNaN(num)) return num;
-                }
-                return rawId;
-            };
-            const targetId = parseId(item.originalId);
-
-            if (item.originalStore === 'quotes' && item.data && typeof item.data === 'object') {
-                const quoteObj = item.data as Record<string, unknown>;
-                await db.put('quotes', { ...quoteObj, id: targetId ?? quoteObj.id });
-            } else if (item.data && typeof item.data === 'object') {
-                const dataObj = item.data as Record<string, unknown>;
-                await db.put(item.originalStore, { ...dataObj, id: targetId ?? dataObj.id });
-            } else {
-                const { id: _ignoredId, originalStore, deletedAt: _ignoredDeletedAt, originalId, data: _ignoredData, ...originalData } = item;
-                await db.put(originalStore, { ...originalData, id: targetId });
-            }
+            await db.restoreRecycleBinItem(item);
             toast.success(t('itemRestored'));
-            loadDeletedItems();
+            await loadDeletedItems();
         } catch (error) {
             Logger.error('Restore error:', error);
             toast.error(t('restoreError'));
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -109,22 +94,25 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
     };
 
     const handleRestoreAll = async () => {
-        if (deletedItems.length === 0) return;
+        if (deletedItems.length === 0 || isProcessing) return;
         setConfirmDialog({
             isOpen: true,
             title: t('restoreAll') || 'Tümünü Geri Yükle',
             message: `${deletedItems.length} öğenin tamamını geri yüklemek istediğinize emin misiniz?`,
             onConfirm: async () => {
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                setIsProcessing(true);
                 try {
                     for (const item of deletedItems) {
-                        await handleRestore(item);
+                        await db.restoreRecycleBinItem(item);
                     }
                     toast.success('Tüm öğeler geri yüklendi');
-                    loadDeletedItems();
+                    await loadDeletedItems();
                 } catch (error) {
                     Logger.error('Restore all error:', error);
                     toast.error('Geri yükleme sırasında hata oluştu');
+                } finally {
+                    setIsProcessing(false);
                 }
             },
             variant: 'info'
@@ -211,10 +199,10 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                         </div>
                         {deletedItems.length > 0 && (
                             <>
-                                <button type="button" className="btn btn-outline btn-xs whitespace-nowrap text-[var(--color-success)]" onClick={handleRestoreAll}>
+                                <button type="button" className="btn btn-outline btn-xs whitespace-nowrap text-[var(--color-success)]" onClick={handleRestoreAll} disabled={isProcessing}>
                                     <RefreshCw size={13} /> {t('restoreAll') || 'Tümünü Kurtar'}
                                 </button>
-                                <button type="button" className="btn btn-danger btn-xs whitespace-nowrap" onClick={handleEmptyBin}>
+                                <button type="button" className="btn btn-danger btn-xs whitespace-nowrap" onClick={handleEmptyBin} disabled={isProcessing}>
                                     <Trash2 size={13} /> {t('emptyBinBtn') || t('emptyBin') || 'Boşalt'}
                                 </button>
                             </>
@@ -242,10 +230,10 @@ const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, lang
                                         <div className="text-xs font-semibold text-[var(--color-text)] truncate">{getItemTitle(item)}</div>
                                     </div>
                                     <div className="flex gap-1">
-                                        <button type="button" className="btn btn-xs btn-outline p-1.5 text-[var(--color-success)]" onClick={() => handleRestore(item)} title={t('restoreItem')}>
+                                        <button type="button" className="btn btn-xs btn-outline p-1.5 text-[var(--color-success)]" onClick={() => handleRestore(item)} title={t('restoreItem')} disabled={isProcessing}>
                                             <RefreshCw size={13} />
                                         </button>
-                                        <button type="button" className="btn btn-xs btn-danger p-1.5" onClick={() => handlePermanentDelete(item.id)} title={t('permanentDelete')}>
+                                        <button type="button" className="btn btn-xs btn-danger p-1.5" onClick={() => handlePermanentDelete(item.id)} title={t('permanentDelete')} disabled={isProcessing}>
                                             <Trash2 size={13} />
                                         </button>
                                     </div>
