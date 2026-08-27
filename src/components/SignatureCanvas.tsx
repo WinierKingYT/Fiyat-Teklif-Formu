@@ -1,4 +1,4 @@
-import { Eraser, Check, Upload, X } from 'lucide-react';
+import { Eraser, Upload } from 'lucide-react';
 import React, { useRef, useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import ImageOptimizer from '@/utils/imageOptimizer';

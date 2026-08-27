@@ -1,13 +1,10 @@
 import {
-    Hash,
     Sparkles,
     Settings,
     Layers,
     Plus,
     Trash,
-    Check,
-    HelpCircle,
-    Copy
+    Check
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';

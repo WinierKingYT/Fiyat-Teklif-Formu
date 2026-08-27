@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building, Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, Phone, Globe, MapPin, Image, Upload, Trash, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import React, { useRef, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -39,12 +39,11 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stampInputRef = useRef<HTMLInputElement>(null);
   const { quoteData } = useQuoteData();
-  const { companyDefaults, saveCompanyDefaults } = useCompanyDefaults();
+  const { saveCompanyDefaults } = useCompanyDefaults();
   const { t } = useTranslation(quoteData?.language);
   const [showDetails, setShowDetails] = useState(false);
   const [confirmClear, setConfirmClear] = useState<{ field: string; isOpen: boolean }>({ field: '', isOpen: false });
 
-  const isFilled = data?.name && (data?.phone || data?.email);
   const schema = React.useMemo(() => createCompanyInfoSchema(t), [t]);
 
   const {

@@ -26,7 +26,6 @@ const sampleItems = [
     { name: 'Laptop', description: '16GB', quantity: 2, price: 100, unit: 'Adet', taxRate: 20, discountRate: 10, netTotal: 180 },
 ];
 
-import type { MockInstance } from 'vitest';
 
 describe('excelExporter (CSV)', () => {
     let clickSpy: ReturnType<typeof vi.fn>;

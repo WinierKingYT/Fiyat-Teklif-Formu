@@ -136,7 +136,3 @@ graphify-out/
 # Bundle analysis
 stats.html
 
-# Stray artifacts
-'
-git
-

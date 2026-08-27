@@ -8,7 +8,6 @@ class IndexedDBManager {
     private isInitialized: boolean;
     private initializationPromise: Promise<IDBDatabase> | null;
     private isConnectionOpen: boolean;
-    private writeCache: unknown;
 
     constructor() {
         this.dbName = 'TeklifMasterDB';
@@ -17,7 +16,6 @@ class IndexedDBManager {
         this.isInitialized = false;
         this.initializationPromise = null;
         this.isConnectionOpen = false;
-        this.writeCache = null;
     }
 
 

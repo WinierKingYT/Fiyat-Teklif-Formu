@@ -10,7 +10,7 @@ import { useCompanyDefaults } from '@/context/quote/CompanyDefaultsContext';
 import { useConfirm } from '@/context/quote/ConfirmContext';
 import { useDatabase } from '@/context/quote/DatabaseContext';
 import {
-    getInitialQuoteData, getInitialCustomerData, getInitialCompanyData, getInitialBankData, getInitialTabData,
+    getInitialQuoteData, getInitialBankData, getInitialTabData,
 } from '@/context/quote/initialState';
 import { useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
 import { useTab } from '@/context/quote/TabContext';

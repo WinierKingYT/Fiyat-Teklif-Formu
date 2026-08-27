@@ -1,6 +1,5 @@
-import { screen, waitFor } from '@testing-library/dom';
+import { screen } from '@testing-library/dom';
 import { render, act, renderHook } from '@testing-library/react';
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QuoteProvider, useQuote } from '@/context/QuoteContext';
 import { getLocalDateString } from '@/utils/dateUtils';

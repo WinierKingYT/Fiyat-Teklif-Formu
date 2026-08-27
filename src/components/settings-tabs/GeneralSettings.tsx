@@ -1,8 +1,8 @@
 import { Save, Settings2, Check, Sparkles, Palette } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { AppColor, AppTheme, ViewMode, AppLayout } from '@/context/UIContext';
+import type { AppColor, AppTheme } from '@/context/UIContext';
 
 interface GeneralSettingsProps {
   performanceMode: boolean;

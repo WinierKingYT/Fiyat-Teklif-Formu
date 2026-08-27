@@ -5,8 +5,6 @@ import {
     Plus,
     Trash,
     Check,
-    HelpCircle,
-    Copy,
     Save
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -18,8 +16,7 @@ import Logger from '@/utils/logger';
 import {
     NUMBER_PRESETS,
     previewQuoteNumber,
-    getActiveSeries,
-    generateNextQuoteNumber
+    getActiveSeries
 } from '@/utils/numberGenerator';
 import type { QuoteNumberConfig, QuoteNumberSeries } from '@/context/quote/types';
 

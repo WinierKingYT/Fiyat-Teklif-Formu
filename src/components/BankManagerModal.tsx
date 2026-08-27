@@ -1,4 +1,4 @@
-import { Plus, Trash, Edit, Save, X } from 'lucide-react';
+import { Plus, Trash, Edit, Save } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';

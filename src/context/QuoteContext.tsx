@@ -4,7 +4,7 @@ import { ConfirmProvider, useConfirm, useConfirmState } from '@/context/quote/Co
 import { DatabaseProvider, useDatabase } from '@/context/quote/DatabaseContext';
 import { PdfConfigProvider, usePdfConfig } from '@/context/quote/PdfConfigContext';
 import { QuoteDataProvider, useQuoteData } from '@/context/quote/QuoteDataContext';
-import { SaveStatusProvider, useSaveStatus, useSaveStatusSetter } from '@/context/quote/SaveStatusContext';
+import { SaveStatusProvider, useSaveStatus } from '@/context/quote/SaveStatusContext';
 import { TabProvider, useTab } from '@/context/quote/TabContext';
 import type { QuoteContextValue } from '@/context/quote/types';
 

@@ -1,5 +1,5 @@
-import { Palette, Layout, AlignLeft, RefreshCcw, AlertTriangle } from 'lucide-react';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Palette, Layout, AlignLeft, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import PdfPageNavigator from '@/components/pdf-preview/PdfPageNavigator';
 import PdfPreviewCanvas from '@/components/pdf-preview/PdfPreviewCanvas';
@@ -9,13 +9,12 @@ import PdfZoomToolbar from '@/components/pdf-preview/PdfZoomToolbar';
 import { PdfDesignTab, PdfLayoutTab, PdfTextsTab } from '@/components/pdf-tabs';
 import PopupEditor from '@/components/PopupEditor';
 import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
+import { useUI } from '@/context/UIContext';
 import useDebounce from '@/hooks/useDebounce';
 import { usePdfExport } from '@/hooks/usePdfExport';
 import { usePdfPageObserver } from '@/hooks/usePdfPageObserver';
 import { usePdfTemplates } from '@/hooks/usePdfTemplates';
 import { useTranslation } from '@/hooks/useTranslation';
-import { deepEqual } from '@/utils/deepEqual';
-import type { PageSize, PdfQuality } from '@/utils/pdfGenerator';
 
 // Hooks
 
@@ -37,17 +36,14 @@ const PdfPreviewPanel = React.memo(() => {
         saveVersion,
     } = useQuoteData();
     const { pdfLayout, pdfConfig, setPdfConfig } = usePdfConfig();
+    const { performanceMode } = useUI();
     const { t } = useTranslation(quoteData?.language);
 
     const [activeTab, setActiveTab] = useState('design');
     const [versionNameInput, setVersionNameInput] = useState('');
     const [showVersionModal, setShowVersionModal] = useState(false);
     const [signature, setSignature] = useState<string | null>(null);
-    const [performanceMode, setPerformanceMode] = useState(false);
-    const [manualRefreshMode, setManualRefreshMode] = useState(false);
     const [renderedConfig, setRenderedConfig] = useState(pdfConfig);
-    const [pageSize, setPageSize] = useState<PageSize>('a4');
-    const [quality, setQuality] = useState<PdfQuality>('high');
     
     const [showControls, setShowControls] = useState(() => {
         try { return localStorage.getItem('pdf_preview_controls_open') === 'true'; } 
@@ -115,29 +111,17 @@ const PdfPreviewPanel = React.memo(() => {
         items,
         discount,
         pdfConfig,
-        pageSize,
-        quality,
+        pageSize: 'a4',
+        quality: 'high',
         t
     });
 
-    // Debounce the config for preview rendering (used when Manual Mode is OFF)
+    // Debounce the config to avoid expensive PDF re-renders while editing.
     const debouncedPdfConfig = useDebounce(pdfConfig, performanceMode ? 1500 : 300);
 
     useEffect(() => {
-        if (!manualRefreshMode) {
-            setRenderedConfig(debouncedPdfConfig);
-        }
-    }, [debouncedPdfConfig, manualRefreshMode]);
-
-    const handleManualRefresh = () => {
-        setRenderedConfig(pdfConfig);
-        toast.success(t('previewUpdated'));
-    };
-
-    const hasPendingChanges = useMemo(
-        () => manualRefreshMode && !deepEqual(renderedConfig, pdfConfig),
-        [manualRefreshMode, renderedConfig, pdfConfig]
-    );
+        setRenderedConfig(debouncedPdfConfig);
+    }, [debouncedPdfConfig]);
 
     // Popup Editor State
     const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -286,19 +270,6 @@ const PdfPreviewPanel = React.memo(() => {
 
                 {/* Right: Preview (Zoomable) */}
                 <div className="flex-1 bg-[var(--color-bg-muted)] overflow-hidden flex flex-col relative">
-                    {/* Manual Refresh Button Overlay */}
-                    {manualRefreshMode && hasPendingChanges && (
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-                            <button type="button"
-                                onClick={handleManualRefresh}
-                                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-info)] hover:opacity-90 text-white rounded-full shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-lg)] transition-all animate-bounce"
-                            >
-                                <RefreshCcw size={16} />
-                                <span>{t('refreshPreview')}</span>
-                            </button>
-                        </div>
-                    )}
-
                     {/* Overflow Warning */}
                     {overflowPages.length > 0 && (
                         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-2 bg-amber-500/90 text-white text-xs rounded-lg shadow-[var(--shadow-lg)]">
@@ -327,7 +298,7 @@ const PdfPreviewPanel = React.memo(() => {
                     </div>
 
                     <PdfZoomToolbar
-                        pageSize={pageSize}
+                        pageSize="a4"
                         estimatedPages={estimatedPages}
                         t={t}
                         zoomLevel={zoomLevel}

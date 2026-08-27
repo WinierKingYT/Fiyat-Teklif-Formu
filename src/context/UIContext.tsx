@@ -1,10 +1,8 @@
 import React from 'react';
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
-export type ViewMode = 'desktop' | 'mobile';
 export type AppTheme = 'light' | 'dark';
 export type AppColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate' | 'indigo' | 'teal' | 'cyan';
-export type AppLayout = 'modern' | 'classic';
 
 export interface UIContextValue {
   appTheme: AppTheme;
@@ -45,38 +43,6 @@ const setLocalStorage = (key: string, value: unknown): void => {
 };
 
 export const UIProvider = ({ children }: { children: React.ReactNode }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) return 'mobile';
-    return getLocalStorage('viewMode', 'desktop');
-  });
-
-  const [isManualViewMode, setIsManualViewMode] = useState(false);
-
-  const handleSetViewMode = useCallback((newModeOrFn: ViewMode | ((prev: ViewMode) => ViewMode)) => {
-    if (typeof newModeOrFn === 'function') {
-      setViewMode((prev) => {
-        const newMode = newModeOrFn(prev);
-        setLocalStorage('viewMode', newMode);
-        return newMode;
-      });
-    } else {
-      setViewMode(newModeOrFn);
-      setLocalStorage('viewMode', newModeOrFn);
-    }
-    setIsManualViewMode(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isManualViewMode) {
-      const handleResize = () => {
-        if (window.innerWidth < 768 && viewMode !== 'mobile') setViewMode('mobile');
-        else if (window.innerWidth >= 768 && viewMode === 'mobile') setViewMode('desktop');
-      };
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, [viewMode, isManualViewMode]);
-
   const [appTheme, setAppTheme] = useState<AppTheme>(() => getLocalStorage('appTheme', 'light'));
   useEffect(() => {
     setLocalStorage('appTheme', appTheme);

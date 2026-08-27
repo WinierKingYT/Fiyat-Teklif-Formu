@@ -1,11 +1,10 @@
 // @ts-ignore
 import { registerSW } from 'virtual:pwa-register';
-import React, { StrictMode } from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import toast from 'react-hot-toast';
 import App from '@/App';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import Logger from '@/utils/logger';
 import '@/index.css';
 
 // Register Service Worker

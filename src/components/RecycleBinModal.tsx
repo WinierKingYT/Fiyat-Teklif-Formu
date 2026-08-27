@@ -1,4 +1,4 @@
-import { Trash2, RefreshCw, Search, AlertTriangle } from 'lucide-react';
+import { Trash2, RefreshCw, Search } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';

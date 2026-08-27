@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { buildQuoteRecord, buildQuoteVersionRecord } from '@/application/quote/quoteRecordBuilder';
 import { getInitialBankData, getInitialCompanyData, getInitialCustomerData, getInitialQuoteData } from '@/context/quote/initialState';
-import { buildDbQuote, buildQuoteVersion, calculateQuoteTotalsMinor } from '@/context/quote/quotePersistence';
+import { calculateQuoteTotals } from '@/utils/calculations';
+import { toMinorUnit } from '@/utils/money';
 import type { Discount, QuoteItem } from '@/context/quote/types';
 
 const items: QuoteItem[] = [
@@ -10,7 +12,12 @@ const discount: Discount = { type: 'percentage', value: 10 };
 
 describe('quote persistence helpers', () => {
     it('converts calculated totals to minor units', () => {
-        expect(calculateQuoteTotalsMinor(items, discount, 'TRY')).toEqual({
+        const totals = calculateQuoteTotals(items, discount, { currency: 'TRY' });
+        expect({
+            subtotalMinor: toMinorUnit(totals.subtotal, 'TRY'),
+            taxTotalMinor: toMinorUnit(totals.taxTotal, 'TRY'),
+            grandTotalMinor: toMinorUnit(totals.grandTotal, 'TRY'),
+        }).toEqual({
             subtotalMinor: 20000,
             taxTotalMinor: 3600,
             grandTotalMinor: 21600,
@@ -19,7 +26,7 @@ describe('quote persistence helpers', () => {
 
     it('builds a database quote without changing the context data shape', () => {
         const quoteData = { ...getInitialQuoteData(), number: 'Q-001', currency: 'TRY' };
-        const quote = buildDbQuote({
+        const quote = buildQuoteRecord({
             id: 42,
             status: 'draft',
             quoteData,
@@ -45,7 +52,7 @@ describe('quote persistence helpers', () => {
     });
 
     it('creates a version snapshot with an immutable copy', () => {
-        const quote = buildDbQuote({
+        const quote = buildQuoteRecord({
             id: 7,
             status: 'saved',
             quoteData: { ...getInitialQuoteData(), number: 'Q-007' },
@@ -55,7 +62,7 @@ describe('quote persistence helpers', () => {
             discount,
             bankData: getInitialBankData(),
         });
-        const version = buildQuoteVersion(quote, 'Milestone', 1234);
+        const version = buildQuoteVersionRecord(quote, 'Milestone', 1234);
 
         expect(version.versionId).toBe('ver_7_1234');
         expect(version.versionName).toBe('Milestone');

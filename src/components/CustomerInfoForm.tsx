@@ -3,7 +3,7 @@ import { User, Users, Mail, Phone, MapPin, ChevronDown, ChevronUp, Search, Plus,
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { InputField, TextAreaField } from '@/components/ui';
+import { InputField } from '@/components/ui';
 import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';

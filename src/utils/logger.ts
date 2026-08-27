@@ -2,27 +2,21 @@
 const PII_PATTERNS: Array<[RegExp, string]> = [
     [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]'],
     [/\+?\d[\d\s\-()]{8,}\d/g, '[REDACTED_PHONE]'],
-    /\bTR\d{2}\s?(\d{4}\s?){5}\d{2}\b/gi as unknown as [RegExp, string],
-].map(p => Array.isArray(p) ? p as [RegExp, string] : [p as unknown as RegExp, '[REDACTED_IBAN]']) as Array<[RegExp, string]>;
+    [/\bTR\d{2}\s?(\d{4}\s?){5}\d{2}\b/gi, '[REDACTED_IBAN]'],
+];
 
-// ensure IBAN pattern included
-const IBAN_RE = /\bTR\d{2}\s?(\d{4}\s?){5}\d{2}\b/gi;
+const scrubString = (value: string): string =>
+    PII_PATTERNS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), value);
 
 function scrubPII(args: unknown[]): unknown[] {
     return args.map(arg => {
         if (typeof arg === 'string') {
-            let s = arg;
-            s = s.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]');
-            s = s.replace(IBAN_RE, '[REDACTED_IBAN]');
-            // phone heuristik: 10+ haneli sayı grupları – basit
-            return s;
+            return scrubString(arg);
         }
         if (arg && typeof arg === 'object') {
             try {
                 const json = JSON.stringify(arg);
-                const scrubbed = json
-                    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
-                    .replace(IBAN_RE, '[REDACTED_IBAN]');
+                const scrubbed = scrubString(json);
                 return JSON.parse(scrubbed);
             } catch {
                 return arg;

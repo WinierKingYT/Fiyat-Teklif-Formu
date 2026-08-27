@@ -1,5 +1,6 @@
 import { QuoteItem, Discount } from '@/context/quote/types';
 import { roundToCurrency } from '@/utils/money';
+import { parseLocaleNumber } from '@/utils/parseLocaleNumber';
 
 interface CalculatedItem extends QuoteItem {
   quantity: number;
@@ -146,28 +147,8 @@ function roundMoney(value: number, currency: string = 'TRY'): number {
 }
 
 function parseTrNumber(val: unknown): number {
-  const s = String(val ?? '').trim();
-  if (!s) return 0;
-  const normalized = s.replace(/[^\d.,-]/g, '');
-  if (!normalized) return 0;
-  const hasDot = normalized.includes('.');
-  const hasComma = normalized.includes(',');
-  let out = normalized;
-  if (hasDot && hasComma) {
-    out = normalized.lastIndexOf(',') > normalized.lastIndexOf('.') ? normalized.replace(/\./g, '').replace(',', '.') : normalized.replace(/,/g, '');
-  } else if (hasComma) {
-    const c = (normalized.match(/,/g) || []).length;
-    out = c > 1 ? normalized.replace(/,/g, '') : normalized.replace(',', '.');
-  } else if (hasDot) {
-    const d = (normalized.match(/\./g) || []).length;
-    if (d > 1) out = normalized.replace(/\./g, '');
-    else {
-      const parts = normalized.split('.');
-      if (parts[1]?.length === 3 && parts[0].length <= 3 && Number(parts[0]) >= 0) out = normalized.replace('.', '');
-    }
-  }
-  const n = Number(out);
-  return Number.isFinite(n) ? n : 0;
+  const parsed = parseLocaleNumber(val);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 export function calculateLineTotal(item: {
   quantity: number | string;

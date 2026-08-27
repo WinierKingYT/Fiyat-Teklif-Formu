@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { formatTaxOfficeDisplay, formatContactItems } from '@/utils/themeHelpers';
-import { PdfWatermark, PdfContinuationHeader, PdfPageNumber, PdfFooter, PdfBankInfo, PdfTermsList, PdfSignatures, PdfAmountInWords, PdfCustomFields } from './common';
+import { PdfWatermark, PdfPageNumber, PdfFooter, PdfBankInfo, PdfSignatures, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
 
@@ -10,11 +10,9 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         containerStyles,
         config,
         color = '#2563eb',
-        activeLayout,
         companyData,
         quoteData,
         customerData,
-        items,
         bankData,
         signature,
         t,
@@ -26,9 +24,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         total,
         currentLocale,
         hasLineItemDiscounts,
-        onEdit
     } = props;
-    const { layoutMap, showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
+    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
 
 

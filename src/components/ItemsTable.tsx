@@ -16,7 +16,6 @@ import {
   Package,
 } from 'lucide-react';
 import React, { useCallback } from 'react';
-import toast from 'react-hot-toast';
 import { ItemsBatchBar } from '@/components/items/ItemsBatchBar';
 import { ItemsHeaderControls } from '@/components/items/ItemsHeaderControls';
 import SortableRow from '@/components/items/SortableRow';
@@ -259,7 +258,6 @@ const ItemsTable = ({
                   index={index}
                   handleItemChange={handleItemChange}
                   onSelectProduct={handleProductSelect}
-                  onCreateProduct={handleCreateProduct}
                   removeItem={removeItem}
                   duplicateItem={duplicateItem}
                   formatCurrency={formatItemCurrency}

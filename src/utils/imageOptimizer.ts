@@ -6,13 +6,11 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp
 class ImageOptimizer {
     private maxWidth: number;
     private maxHeight: number;
-    private quality: number;
     private maxFileSize: number;
 
     constructor() {
         this.maxWidth = 800; // Increased resolution for better quality
         this.maxHeight = 600;
-        this.quality = 0.7;
         this.maxFileSize = 300 * 1024; // Increased target output size to 300KB
     }
 

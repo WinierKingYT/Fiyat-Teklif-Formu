@@ -1,4 +1,4 @@
-import { Trash2, Edit, Plus, Search, Download, Upload } from 'lucide-react';
+import { Trash2, Plus, Search, Download, Upload } from 'lucide-react';
 import React from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';

@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface SkeletonProps {
   variant?: 'text' | 'title' | 'card' | 'row';
   count?: number;

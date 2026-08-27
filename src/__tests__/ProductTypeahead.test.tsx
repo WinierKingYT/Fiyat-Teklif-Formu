@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import React, { useState } from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import ProductTypeahead, { type ProductTypeaheadItem } from '@/components/items/ProductTypeahead';
 

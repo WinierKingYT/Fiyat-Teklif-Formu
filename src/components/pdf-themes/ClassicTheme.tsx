@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban, formatTaxOfficeDisplay, formatContactItems } from '@/utils/themeHelpers';
+import { formatIban, formatTaxOfficeDisplay } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';

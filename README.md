@@ -7,7 +7,7 @@ Hızlı ve kolay fiyat teklifi oluşturmanıza yarayan, tarayıcıda çalışan 
 - Tek aktif teklif düzenleyicisi (yeni / kaydet / yükle / kopyala / sil / geri dönüşüm)
 - Müşteri, firma, banka bilgileri yönetimi ve ürün kataloğu
 - Vergi (KDV) ve indirim hesaplamaları, para birimi desteği ve döviz çevirici
-- **PDF çıktısı**: 6 tema (Modern, Klasik, Minimal, Kurumsal, Pro, Bold) ve kapsamlı görünüm/yerleşim/tipografi ayarları
+- **PDF çıktısı**: 7 tema (Modern, Klasik, Minimal, Kurumsal, Pro, Bold, Invoice) ve kapsamlı görünüm/yerleşim/tipografi ayarları
 - Excel ve CSV içe / dışa aktarım
 - Doğrulamalı ve transaction tabanlı veritabanı yedekleme / geri yükleme, verileri temizleme
 - Türkçe arayüz
@@ -85,7 +85,7 @@ Bileşenler ihtiyaç duydukları context'i doğrudan tüketir (`useTab`, `useQuo
 
 ## PDF Temaları ve Ayarlar
 
-`src/components/pdf-themes/` altında 6 tema bulunur; hepsi `PdfConfig` içindeki ortak ayarları tutarlı şekilde uygular: bölüm aç/kapa, logo konumu/boyutu, filigran, sayfa numaraları, tablo başlığı / çizgi / zebra renkleri, tipografi (başlık / özet / alt bilgi), kenar boşlukları ve sayfa yönü, özel alt bilgi (`customFooter`) ve koşullar / notlar.
+`src/components/pdf-themes/` altında 7 tema bulunur; hepsi `PdfConfig` içindeki ortak ayarları tutarlı şekilde uygular: bölüm aç/kapa, logo konumu/boyutu, filigran, sayfa numaraları, tablo başlığı / çizgi / zebra renkleri, tipografi (başlık / özet / alt bilgi), kenar boşlukları ve sayfa yönü, özel alt bilgi (`customFooter`) ve koşullar / notlar.
 
 Tema seçimi ve ayrıntılı ayarlar **PDF önizleme paneli**nden yapılır; ayarlar `localStorage`'a kaydedilir.
 
@@ -97,14 +97,13 @@ src/
 ├── context/        # Uygulama durumu (quote context'leri + UI)
 ├── hooks/          # useIndexedDB, useDebounce, useTranslation, ...
 ├── utils/          # hesap, PDF üretimi, Excel, IndexedDB, temalar, yardımcılar
-├── types/          # Tip tanımları (varlıklar, teklif, ayarlar)
 ├── styles/         # CSS token'ları, bileşen ve animasyon stilleri
 └── __tests__/      # Vitest birim testleri
 ```
 
 ## Docker / Nginx
 
-Depoda hazır `Dockerfile`, `docker-compose.yml` ve `nginx.conf` (SPA yönlendirme, gzip, güvenlik başlıkları) bulunur. Build çıktısı (`dist/`) Nginx'e kopyalanır.
+Depoda hazır `Dockerfile`, `docker-compose.yml` ve `nginx.conf` (SPA yönlendirme, gzip, güvenlik başlıkları) bulunur. Docker ve CI aynı Node 24 çalışma sürümünü kullanır; build çıktısı (`dist/`) Nginx'e kopyalanır.
 
 ## Lisans
 

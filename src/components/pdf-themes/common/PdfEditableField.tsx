@@ -1,5 +1,4 @@
-import React, { memo } from 'react';
-import type { PdfConfig } from '@/context/quote/types';
+import { memo } from 'react';
 
 interface PdfEditableFieldProps {
     value: unknown;

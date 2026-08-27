@@ -45,7 +45,7 @@ export default defineConfig(({ command, mode }) => ({
           }
         ]
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Fiyat Teklif Formu',
         short_name: 'TeklifApp',

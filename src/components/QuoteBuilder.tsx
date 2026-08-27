@@ -1,6 +1,5 @@
 import {
-  FileText, Landmark, Undo2, Redo2,
-  Save, Plus, Building2, LogOut,
+  Landmark, Building2, Tag, LogOut,
   StickyNote, Columns2, Calendar, Hash, Clock, Sparkles, Settings2
 } from 'lucide-react';
 import React, { useState, useEffect, Suspense, lazy } from 'react';
@@ -16,10 +15,9 @@ import { getDefaultQuoteNumberConfig } from '@/context/quote/initialState';
 import { useQuoteData, useTab } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
-import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 import { generateNextQuoteNumber } from '@/utils/numberGenerator';
-import type { Customer, Product, Quote, QuoteItem, QuoteNumberConfig } from '@/context/quote/types';
+import type { Customer, Product, QuoteItem, QuoteNumberConfig } from '@/context/quote/types';
 
 const TermsAndNotes = lazy(() => import('@/components/TermsAndNotes'));
 const BankInfoForm = lazy(() => import('@/components/BankInfoForm'));
@@ -37,14 +35,10 @@ const ModalLoadingFallback = () => (
 );
 
 export interface QuoteBuilderProps {
-  onNavigate?: (view: string) => void;
-  onOpenProductManager?: () => void;
-  onOpenCustomerManager?: () => void;
   onOpenBankManager?: () => void;
 }
 
 export const QuoteBuilder = React.memo(({
-  onOpenCustomerManager,
   onOpenBankManager,
 }: QuoteBuilderProps) => {
   const {
@@ -55,20 +49,18 @@ export const QuoteBuilder = React.memo(({
     discount, setDiscount,
     bankData, updateBankData,
     saveQuote,
-    loadQuote,
     resetQuote,
     db
   } = useQuoteData();
-  const { undo, redo, canUndo, canRedo, addTab } = useTab();
+  const { undo, redo, addTab } = useTab();
 
   const { setIsLivePreviewMode, splitPreviewMode, setSplitPreviewMode } = useUI();
-  const { t } = useTranslation(quoteData?.language);
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isNumberConfigModalOpen, setIsNumberConfigModalOpen] = useState(false);
   const [numberConfig, setNumberConfig] = useState<QuoteNumberConfig>(getDefaultQuoteNumberConfig);
-  const [activeSideTab, setActiveSideTab] = useState<'terms' | 'bank' | 'company'>('terms');
+  const [activeSideTab, setActiveSideTab] = useState<'terms' | 'bank' | 'company' | 'custom'>('terms');
   const [confirmReset, setConfirmReset] = useState(false);
 
   // Load quote number config from IndexedDB
@@ -154,10 +146,6 @@ export const QuoteBuilder = React.memo(({
     }));
     setItems(prev => [...prev, ...newItems]);
     toast.success(`${newItems.length} ürün eklendi`);
-  };
-
-  const handleLoadQuote = (quote: Quote) => {
-    loadQuote(quote);
   };
 
   return (
@@ -347,6 +335,19 @@ export const QuoteBuilder = React.memo(({
                     <Building2 size={13} />
                     <span>Firma</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveSideTab('custom')}
+                    className={`flex-1 py-1 px-2 text-xs font-semibold rounded-[var(--radius)] transition-colors flex items-center justify-center gap-1.5 ${
+                      activeSideTab === 'custom'
+                        ? 'bg-[var(--color-primary-muted)] text-[var(--color-primary)] shadow-xs'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
+                    }`}
+                  >
+                    <Tag size={13} />
+                    <span>Özel Alanlar</span>
+                  </button>
                 </div>
               </div>
 
@@ -364,6 +365,7 @@ export const QuoteBuilder = React.memo(({
                 {activeSideTab === 'company' && (
                   <CompanyInfoForm data={companyData} onChange={updateCompanyData} />
                 )}
+                {activeSideTab === 'custom' && <CustomFieldsSection />}
               </div>
             </div>
           </div>

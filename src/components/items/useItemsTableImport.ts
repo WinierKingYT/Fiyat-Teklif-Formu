@@ -1,5 +1,6 @@
 import { useCallback, type ClipboardEvent, type ChangeEvent } from 'react';
 import toast from 'react-hot-toast';
+import { parseLocaleNumber } from '@/utils/parseLocaleNumber';
 import { sanitizeInput } from '@/utils/sanitize';
 import type { QuoteItem } from '@/context/quote/types';
 
@@ -7,19 +8,6 @@ interface UseItemsTableImportParams {
   onItemsChange: (items: QuoteItem[] | ((prev: QuoteItem[]) => QuoteItem[])) => void;
   t: (key: string) => string;
 }
-
-const parseTr = (value: unknown): number => {
-  const input = String(value ?? '').trim().replace(/[^\d.,-]/g, '');
-  if (!input) return NaN;
-  const hasDot = input.includes('.');
-  const hasComma = input.includes(',');
-  let normalized = input;
-  if (hasDot && hasComma) normalized = input.lastIndexOf(',') > input.lastIndexOf('.') ? input.replace(/\./g, '').replace(',', '.') : input.replace(/,/g, '');
-  else if (hasComma) normalized = (input.match(/,/g) || []).length > 1 ? input.replace(/,/g, '') : input.replace(',', '.');
-  else if (hasDot && (input.match(/\./g) || []).length > 1) normalized = input.replace(/\./g, '');
-  const number = Number(normalized);
-  return Number.isFinite(number) ? number : NaN;
-};
 
 const createItemId = () => `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
@@ -35,9 +23,9 @@ export const useItemsTableImport = ({ onItemsChange, t }: UseItemsTableImportPar
     lines.forEach(line => {
       const columns = line.split('\t');
       if (!columns[0]?.trim()) return;
-      const quantity = parseTr(columns[2]);
-      const price = parseTr(columns[4]);
-      const tax = parseTr(columns[5]);
+      const quantity = parseLocaleNumber(columns[2]);
+      const price = parseLocaleNumber(columns[4]);
+      const tax = parseLocaleNumber(columns[5]);
       parsedItems.push({
         id: createItemId(),
         name: String(sanitizeInput(columns[0].trim().slice(0, 200)) || ''),
@@ -72,10 +60,10 @@ export const useItemsTableImport = ({ onItemsChange, t }: UseItemsTableImportPar
         for (let index = 1; index < rows.length; index += 1) {
           const row = rows[index] || [];
           if (row.length === 0) continue;
-          const quantity = parseTr(row[2]);
-          const price = parseTr(row[4]);
-          const tax = parseTr(row[5]);
-          const discount = parseTr(row[6]);
+          const quantity = parseLocaleNumber(row[2]);
+          const price = parseLocaleNumber(row[4]);
+          const tax = parseLocaleNumber(row[5]);
+          const discount = parseLocaleNumber(row[6]);
           newItems.push({
             id: createItemId(),
             name: String(sanitizeInput(String(row[0] ?? '').slice(0, 200)) || ''),

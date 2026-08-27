@@ -12,7 +12,6 @@ interface SortableRowCardProps {
   index: number;
   handleItemChange: (index: number, field: string, value: unknown) => void;
   onSelectProduct?: (index: number, product: ProductTypeaheadItem) => void;
-  onCreateProduct?: (index: number, name: string) => void;
   removeItem: (index: number) => void;
   duplicateItem: (index: number) => void;
   formatCurrency: (amount: number) => string;
@@ -28,7 +27,7 @@ interface SortableRowCardProps {
 }
 
 const SortableRowCard = memo(
-  ({ item, index, handleItemChange, onSelectProduct, onCreateProduct, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem, products = [], currency = 'TRY', taxMode = 'exclusive' }: SortableRowCardProps) => {
+  ({ item, index, handleItemChange, onSelectProduct, removeItem, duplicateItem, formatCurrency, t, getFieldClass, handleRowBlur, rowErrors, selected, toggleSelectItem, products = [], currency = 'TRY', taxMode = 'exclusive' }: SortableRowCardProps) => {
     const {
       attributes,
       listeners,

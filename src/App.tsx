@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Layout from '@/components/Layout';
 import QuoteBuilder from '@/components/QuoteBuilder';
@@ -88,9 +88,6 @@ function App() {
           {currentView === 'builder' && (
             <div className="page-enter" key="builder">
               <QuoteBuilder
-                onNavigate={setCurrentView}
-                onOpenProductManager={openProductManager}
-                onOpenCustomerManager={openCustomerManager}
                 onOpenBankManager={openBankManager}
               />
             </div>

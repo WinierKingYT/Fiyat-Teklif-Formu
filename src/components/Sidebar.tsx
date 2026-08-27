@@ -1,6 +1,6 @@
 import {
   FileText, PlusCircle, List,
-  Users, Package, LayoutTemplate, Database, Landmark, Trash2,
+  Users, Package, Database, Landmark, Trash2,
   Settings, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import React, { useMemo } from 'react';
