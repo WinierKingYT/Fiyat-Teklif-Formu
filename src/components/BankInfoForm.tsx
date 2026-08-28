@@ -25,7 +25,7 @@ interface BankInfoFormProps {
 
 const BankInfoForm: React.FC<BankInfoFormProps> = ({ data = {}, onChange, onOpenManager }) => {
   const { quoteData, db } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const [showExtra, setShowExtra] = useState(Boolean(data.branch || data.accountNumber));
   const [savedBanks, setSavedBanks] = useState<Array<Record<string, string>>>([]);
 

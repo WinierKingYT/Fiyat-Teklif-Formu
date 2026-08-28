@@ -1,11 +1,10 @@
 import React from 'react';
-import { useSaveStatus, useQuoteData } from '@/context/QuoteContext';
+import { useSaveStatus } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const AutoSaveIndicator = () => {
     const saveStatus = useSaveStatus();
-    const { quoteData } = useQuoteData();
-    const { t } = useTranslation(quoteData?.language);
+    const { t } = useTranslation();
 
     if (!saveStatus || saveStatus.status === 'idle') return null;
 

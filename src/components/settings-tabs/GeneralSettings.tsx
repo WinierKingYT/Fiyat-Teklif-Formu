@@ -1,10 +1,13 @@
 import { Save, Settings2, Check, Sparkles, Palette } from "lucide-react";
 import { useState } from "react";
-import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { AppColor, AppTheme } from '@/context/UIContext';
+import type { AppColor, AppLanguage, AppTheme } from '@/context/UIContext';
 
 interface GeneralSettingsProps {
+  appLanguage: AppLanguage;
+  setAppLanguage: (value: AppLanguage) => void;
+  quoteLanguage: string;
+  setQuoteLanguage: (value: string) => void;
   performanceMode: boolean;
   setPerformanceMode: (value: boolean) => void;
   compactMode: boolean;
@@ -29,6 +32,8 @@ interface ColorOption {
 }
 
 const GeneralSettings = ({
+  appLanguage, setAppLanguage,
+  quoteLanguage, setQuoteLanguage,
   performanceMode, setPerformanceMode,
   compactMode, setCompactMode,
   appFontSize, setAppFontSize,
@@ -36,8 +41,7 @@ const GeneralSettings = ({
   appColor, setAppColor,
   onSave,
 }: GeneralSettingsProps) => {
-  const { quoteData } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const [hoveredColor, setHoveredColor] = useState<AppColor | null>(null);
 
   const colorOptions: ColorOption[] = [
@@ -77,6 +81,38 @@ const GeneralSettings = ({
         </button>
       </div>
       <div className="card-body space-y-6">
+        <div className="form-group">
+          <label className="form-label" htmlFor="app-language">{t('language')}</label>
+          <p className="text-xs text-[var(--color-text-muted)] mb-2">{t('languageDesc')}</p>
+          <select
+            id="app-language"
+            data-testid="app-language-select"
+            className="form-input w-full max-w-xs"
+            value={appLanguage}
+            onChange={(event) => setAppLanguage(event.target.value as AppLanguage)}
+          >
+            <option value="tr">{t('languageTurkish')}</option>
+            <option value="en">{t('languageEnglish')}</option>
+            <option value="de">{t('languageGerman')}</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="quote-language">{t('quoteLanguage')}</label>
+          <p className="text-xs text-[var(--color-text-muted)] mb-2">{t('quoteLanguageDesc')}</p>
+          <select
+            id="quote-language"
+            data-testid="quote-language-select"
+            className="form-input w-full max-w-xs"
+            value={quoteLanguage}
+            onChange={(event) => setQuoteLanguage(event.target.value)}
+          >
+            <option value="tr">{t('languageTurkish')}</option>
+            <option value="en">{t('languageEnglish')}</option>
+            <option value="de">{t('languageGerman')}</option>
+          </select>
+        </div>
+
         {/* Theme Mode Selection */}
         <div className="form-group">
           <label className="form-label">{t('themeMode')}</label>

@@ -44,7 +44,7 @@ const CompanyDefaults = ({
   onSave,
 }: CompanyDefaultsProps) => {
   const { quoteData, db } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const [isNumberModalOpen, setIsNumberModalOpen] = useState(false);
   const [numberConfig, setNumberConfig] = useState<QuoteNumberConfig>(getDefaultQuoteNumberConfig);
 

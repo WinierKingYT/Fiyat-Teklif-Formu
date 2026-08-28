@@ -15,7 +15,7 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Eye, EyeOff, Layers } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, Layers, FileText, Gauge, RotateCw } from 'lucide-react';
 import React from 'react';
 import { usePdfConfig } from '@/context/QuoteContext';
 import type { PdfConfig, PdfLayoutItem } from '@/context/quote/types';
@@ -180,6 +180,57 @@ const PdfLayoutTab: React.FC<PdfLayoutTabProps> = ({
                         ))}
                     </div>
                 </div>
+            </div>
+
+            {/* Output Quality & Page Format */}
+            <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
+                <div className="flex items-center gap-1.5 border-b pb-1">
+                    <FileText size={14} className="text-[var(--color-info)]" />
+                    <h4 className="font-semibold text-xs text-[var(--color-text)]">{t('pdfOutputSettings') || 'PDF Çıktı Ayarları'}</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <label className="block text-xs font-medium text-[var(--color-text)]">
+                        <span className="mb-1 flex items-center gap-1"><FileText size={12} />{t('pageSize')}</span>
+                        <select
+                            value={pdfConfig.pageSize || 'a4'}
+                            onChange={(event) => handleConfigChange('pageSize', event.target.value)}
+                            className="w-full px-2 py-1.5 text-xs font-normal border border-[var(--color-border)] rounded bg-[var(--color-bg-card)] focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                        >
+                            <option value="a4">A4</option>
+                            <option value="a5">A5</option>
+                            <option value="letter">Letter</option>
+                            <option value="legal">Legal</option>
+                        </select>
+                    </label>
+                    <label className="block text-xs font-medium text-[var(--color-text)]">
+                        <span className="mb-1 flex items-center gap-1"><Gauge size={12} />{t('quality')}</span>
+                        <select
+                            value={pdfConfig.pdfQuality || 'high'}
+                            onChange={(event) => handleConfigChange('pdfQuality', event.target.value)}
+                            className="w-full px-2 py-1.5 text-xs font-normal border border-[var(--color-border)] rounded bg-[var(--color-bg-card)] focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                        >
+                            <option value="draft">{t('draft')}</option>
+                            <option value="normal">{t('normal')}</option>
+                            <option value="high">{t('qualityHigh') || 'Yüksek'}</option>
+                            <option value="print">{t('qualityPrint') || 'Baskı'}</option>
+                            <option value="ultra">{t('qualityUltra') || 'Ultra'}</option>
+                        </select>
+                    </label>
+                </div>
+                <label className="block text-xs font-medium text-[var(--color-text)]">
+                    <span className="mb-1 flex items-center gap-1"><RotateCw size={12} />{t('orientation')}</span>
+                    <select
+                        value={pdfConfig.pageOrientation || 'portrait'}
+                        onChange={(event) => handleConfigChange('pageOrientation', event.target.value)}
+                        className="w-full px-2 py-1.5 text-xs font-normal border border-[var(--color-border)] rounded bg-[var(--color-bg-card)] focus:outline-none focus:ring-2 focus:ring-[var(--color-info)]"
+                    >
+                        <option value="portrait">{t('portrait')}</option>
+                        <option value="landscape">{t('landscape')}</option>
+                    </select>
+                </label>
+                <p className="text-[10px] leading-relaxed text-[var(--color-text-muted)]">
+                    {t('pdfOutputSettingsDesc') || 'Yüksek ve Baskı seçenekleri daha keskin görseller üretir; dosya boyutu artabilir.'}
+                </p>
             </div>
 
             {/* Table Options */}

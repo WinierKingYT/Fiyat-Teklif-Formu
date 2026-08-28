@@ -278,6 +278,7 @@ const QUALITY_MAP: Record<PdfQuality, { scale: number; letterRendering: boolean 
 };
 interface PdfDocumentLike {
     addPage: () => void;
+    deletePage?: (pageNumber: number) => void;
     addImage: (imageData: string, format: string, x: number, y: number, width: number, height: number) => void;
     output: (type: 'blob') => Blob;
     save: (filename: string) => void;
@@ -302,12 +303,16 @@ const getEffectivePdfScale = (element: HTMLElement, requestedScale: number, maxC
     return Math.max(0.5, Math.min(requestedScale, Math.floor(maxCanvasDimension / maxDimension)));
 };
 
-const addCanvasToPdf = (pdf: PdfDocumentLike, canvas: HTMLCanvasElement, pageWidth: number, margin: number) => {
+const addCanvasToPdf = (pdf: PdfDocumentLike, canvas: HTMLCanvasElement, pageWidth: number, pageHeight: number, margin: number) => {
     if (canvas.width <= 0 || canvas.height <= 0) return;
     const innerWidth = Math.max(1, pageWidth - (margin * 2));
-    const renderedHeight = canvas.height * innerWidth / canvas.width;
+    const innerHeight = Math.max(1, pageHeight - (margin * 2));
+    const fitScale = Math.min(innerWidth / canvas.width, innerHeight / canvas.height);
+    const renderedWidth = canvas.width * fitScale;
+    const renderedHeight = canvas.height * fitScale;
+    const x = margin + Math.max(0, (innerWidth - renderedWidth) / 2);
     const imageData = canvas.toDataURL('image/png', 1.0);
-    pdf.addImage(imageData, 'PNG', margin, margin, innerWidth, renderedHeight);
+    pdf.addImage(imageData, 'PNG', x, margin, renderedWidth, renderedHeight);
 };
 
 export const generatePDF = async (elementId: string, filename?: string, options: GeneratePdfOptions = {}): Promise<PdfGenerationResult | undefined> => {
@@ -438,7 +443,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
             });
 
             let pdfBlob: Blob;
-            if (pageElements.length > 1) {
+            if (pageElements.length > 0) {
                 // Rendering the complete quote as one canvas makes the scale shrink
                 // with every additional page. Render each designed page separately
                 // so a long quote keeps the same print quality as a one-page quote.
@@ -460,8 +465,18 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                     .from(element);
                 try {
                     const firstCanvasWorker = firstWorker.toCanvas();
+                    const firstCanvas = await firstCanvasWorker.get('canvas') as unknown as HTMLCanvasElement;
                     const firstPdfWorker = firstCanvasWorker.toPdf();
                     const pdf = await firstPdfWorker.get('pdf') as unknown as PdfDocumentLike;
+
+                    // html2pdf creates the first page as part of the worker chain.
+                    // Remove that unbounded image and add every page with the same
+                    // fit-to-page logic so long content cannot be clipped.
+                    if (pdf.deletePage) {
+                        pdf.deletePage(1);
+                        pdf.addPage();
+                    }
+                    addCanvasToPdf(pdf, firstCanvas, size.width, size.height, margin);
 
                     for (let pageIndex = 1; pageIndex < pageElements.length; pageIndex++) {
                         showOnlyPage(pageElements[pageIndex]);
@@ -471,20 +486,35 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                         const pageCanvasWorker = pageWorker.toCanvas();
                         const pageCanvas = await pageCanvasWorker.get('canvas') as unknown as HTMLCanvasElement;
                         pdf.addPage();
-                        addCanvasToPdf(pdf, pageCanvas, size.width, margin);
+                        addCanvasToPdf(pdf, pageCanvas, size.width, size.height, margin);
                     }
 
                     pdfBlob = pdf.output('blob');
-                    if (saveFile) pdf.save(docFilename);
+                    if (saveFile) {
+                        onStage?.('save');
+                        pdf.save(docFilename);
+                    }
                 } finally {
                     restorePageDisplays();
                 }
             } else {
                 const worker = html2pdf()
-                    .set(buildOptions(effectiveScale, true) as unknown as Html2PdfOptions)
+                    .set(buildOptions(effectiveScale, false) as unknown as Html2PdfOptions)
                     .from(element);
-                pdfBlob = await worker.outputPdf('blob');
-                if (saveFile) await worker.save();
+                const canvasWorker = worker.toCanvas();
+                const canvas = await canvasWorker.get('canvas') as unknown as HTMLCanvasElement;
+                const pdfWorker = canvasWorker.toPdf();
+                const pdf = await pdfWorker.get('pdf') as unknown as PdfDocumentLike;
+                if (pdf.deletePage) {
+                    pdf.deletePage(1);
+                    pdf.addPage();
+                }
+                addCanvasToPdf(pdf, canvas, size.width, size.height, margin);
+                pdfBlob = pdf.output('blob');
+                if (saveFile) {
+                    onStage?.('save');
+                    pdf.save(docFilename);
+                }
             }
             const realSizeKB = Math.round(pdfBlob.size / 1024);
 

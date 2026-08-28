@@ -224,7 +224,23 @@ describe('pdfConfigSchema and getDefaultPdfConfig', () => {
 
     expect(config.color).toBe('#ff0000');
     expect(config.tableCellPadding).toBe('4px');
+    expect(config.pdfQuality).toBe('high');
     expect(config).not.toHaveProperty('removedFeature');
+  });
+
+  it('keeps supported PDF output settings and rejects invalid quality values', () => {
+    const config = parseStoredPdfConfig(JSON.stringify({
+      pageSize: 'letter',
+      pageOrientation: 'landscape',
+      pdfQuality: 'print',
+    }));
+
+    expect(config.pageSize).toBe('letter');
+    expect(config.pageOrientation).toBe('landscape');
+    expect(config.pdfQuality).toBe('print');
+
+    const invalid = parseStoredPdfConfig(JSON.stringify({ pdfQuality: 'lossless' }));
+    expect(invalid).toEqual(getDefaultPdfConfig());
   });
 
   it('falls back to defaults when a stored setting has an invalid type', () => {

@@ -1,22 +1,37 @@
 import { useMemo } from 'react';
+import { useOptionalUI, type AppLanguage } from '@/context/UIContext';
+import de from '@/i18n/de.json';
+import en from '@/i18n/en.json';
 import tr from '@/i18n/tr.json';
-import Logger from '@/utils/logger';
 import { translations as pdfTranslations } from '@/utils/translations';
 
-const uiTranslations: Record<string, string> = tr;
+type TranslationDictionary = Record<string, string>;
 
-export function useTranslation(_language = 'tr') {
+const uiTranslations: Record<AppLanguage, TranslationDictionary> = { tr, en, de };
+
+const normalizeLanguage = (language?: string): AppLanguage => {
+  const normalized = language?.toLowerCase().split('-')[0] as AppLanguage | undefined;
+  return normalized && normalized in uiTranslations ? normalized : 'tr';
+};
+
+export function useTranslation(language?: string) {
+  const uiContext = useOptionalUI();
+  const selectedLanguage = normalizeLanguage(language ?? uiContext?.appLanguage);
+
   return useMemo(() => {
-    const ui = uiTranslations;
-    const pdf = (pdfTranslations.tr || pdfTranslations) as Record<string, string>;
+    const ui = uiTranslations[selectedLanguage];
+    const fallbackUi = uiTranslations.tr;
+    const pdf = (pdfTranslations[selectedLanguage] || pdfTranslations.tr) as TranslationDictionary;
+    const fallbackPdf = pdfTranslations.tr as TranslationDictionary;
 
     const t = (key: string) => {
       if (ui[key] !== undefined) return ui[key];
       if (pdf[key] !== undefined) return pdf[key];
-      Logger.warn(`Translation key not found: "${key}"`);
+      if (fallbackUi[key] !== undefined) return fallbackUi[key];
+      if (fallbackPdf[key] !== undefined) return fallbackPdf[key];
       return key;
     };
 
-    return { t, lang: 'tr' };
-  }, []);
+    return { t, lang: selectedLanguage };
+  }, [selectedLanguage]);
 }

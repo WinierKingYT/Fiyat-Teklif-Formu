@@ -63,7 +63,7 @@ export const getDefaultPdfConfig = (): PdfConfig => ({
     showTerms: true, showNotes: true, showSummary: true,
     title: 'FİYAT TEKLİFİ', fontFamily: 'Inter', fontSize: 12,
     tableHeaderFontSize: 14, tableRowHeight: 35, borderRadius: 6,
-    tableHeaderBg: '#f1f5f9', margins: 'normal', pageOrientation: 'portrait',
+    tableHeaderBg: '#f1f5f9', margins: 'normal', pageOrientation: 'portrait', pdfQuality: 'high', pageSize: 'a4',
     showTableImages: true, showTableUnit: true, showTableTax: true,
     showWatermark: false,
     watermarkText: 'TASLAK', watermarkOpacity: 0.1, watermarkColor: '#000000',

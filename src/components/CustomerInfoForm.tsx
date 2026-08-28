@@ -30,7 +30,7 @@ interface CustomerInfoFormProps {
 
 const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onSelectCustomer }) => {
   const { quoteData, db, setCustomerData } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<CustomerData[]>([]);
   const [recentCustomers, setRecentCustomers] = useState<CustomerData[]>([]);

@@ -40,7 +40,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ data, onChange }) => 
   const stampInputRef = useRef<HTMLInputElement>(null);
   const { quoteData } = useQuoteData();
   const { saveCompanyDefaults } = useCompanyDefaults();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const [showDetails, setShowDetails] = useState(false);
   const [confirmClear, setConfirmClear] = useState<{ field: string; isOpen: boolean }>({ field: '', isOpen: false });
 

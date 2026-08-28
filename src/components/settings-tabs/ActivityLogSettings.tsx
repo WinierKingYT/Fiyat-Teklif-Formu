@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
 import Skeleton from '@/components/Skeleton';
-import { useQuoteData } from '@/context/QuoteContext';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
 import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
@@ -33,9 +32,8 @@ const ACTION_LABEL_KEYS: Record<AuditLogEntry['action'], string> = {
 };
 
 const ActivityLogSettings: React.FC = () => {
-  const { quoteData } = useQuoteData();
   const { db, isReady } = useIndexedDB();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isClearing, setIsClearing] = useState(false);

@@ -44,7 +44,7 @@ const TermsAndNotes: React.FC<TermsAndNotesProps> = ({ data, onChange }) => {
     const { quoteData } = useQuoteData();
     const { pdfConfig, setPdfConfig } = usePdfConfig();
     const currentLang = quoteData?.language || 'tr';
-    const { t } = useTranslation(currentLang);
+    const { t } = useTranslation();
 
     const watermarkMap = useMemo(() =>
         WATERMARK_PRESETS_BY_LANG[currentLang] || WATERMARK_PRESETS_BY_LANG.tr,

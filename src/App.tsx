@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import QuoteBuilder from '@/components/QuoteBuilder';
 import { QuoteProvider, useQuoteData } from '@/context/QuoteContext';
 import { UIProvider } from '@/context/UIContext';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { BankData } from '@/context/quote/types';
 
 const Settings = lazy(() => import('@/components/Settings'));
@@ -13,14 +14,17 @@ const ProductManagerModal = lazy(() => import('@/components/ProductManagerModal'
 const BankManagerModal = lazy(() => import('@/components/BankManagerModal'));
 const RecycleBinModal = lazy(() => import('@/components/RecycleBinModal'));
 
-const ModalLoadingFallback = () => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    <div className="bg-[var(--color-bg-card)] p-6 rounded-[var(--radius-lg)] flex flex-col items-center gap-3 shadow-lg">
-      <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[var(--color-primary)]"></div>
-      <p className="text-sm text-[var(--color-text-muted)]">Yükleniyor...</p>
+const ModalLoadingFallback = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-[var(--color-bg-card)] p-6 rounded-[var(--radius-lg)] flex flex-col items-center gap-3 shadow-lg">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[var(--color-primary)]"></div>
+        <p className="text-sm text-[var(--color-text-muted)]">{t('loading')}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface BankManagerModalWithSelectProps {
   isOpen: boolean;

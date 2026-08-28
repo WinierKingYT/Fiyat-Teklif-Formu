@@ -8,6 +8,7 @@ Hızlı ve kolay fiyat teklifi oluşturmanıza yarayan, tarayıcıda çalışan 
 - Müşteri, firma, banka bilgileri yönetimi ve ürün kataloğu
 - Vergi (KDV) ve indirim hesaplamaları, para birimi desteği ve döviz çevirici
 - **PDF çıktısı**: 7 tema (Modern, Klasik, Minimal, Kurumsal, Pro, Bold, Invoice) ve kapsamlı görünüm/yerleşim/tipografi ayarları
+- **Çoklu dil arayüzü**: Türkçe, İngilizce ve Almanca dil seçimi; seçim tarayıcıda kalıcıdır ve eksik anahtarlar Türkçe ile güvenli şekilde tamamlanır
 - Excel ve CSV içe / dışa aktarım
 - Doğrulamalı ve transaction tabanlı veritabanı yedekleme / geri yükleme, verileri temizleme
 - Türkçe arayüz
@@ -37,6 +38,10 @@ npm run typecheck    # tsc --noEmit (tip denetimi)
 npm run lint         # ESLint
 npm run test:run     # Vitest (birim testleri)
 npx playwright test  # E2E testler (önce dev sunucusu açık: npm run dev)
+npm run test:e2e:visual       # PDF görsel regression testleri
+npm run test:e2e:visual:update # Görsel baseline'ları bilinçli değişiklikte güncelle
+npm run test:e2e:performance  # Export paketlerinin gecikmeli yükleme kontrolü
+npm run size                  # Bundle ve PDF chunk boyut sınırları
 ```
 
 ## Cast Sayacı
@@ -85,9 +90,15 @@ Bileşenler ihtiyaç duydukları context'i doğrudan tüketir (`useTab`, `useQuo
 
 ## PDF Temaları ve Ayarlar
 
-`src/components/pdf-themes/` altında 7 tema bulunur; hepsi `PdfConfig` içindeki ortak ayarları tutarlı şekilde uygular: bölüm aç/kapa, logo konumu/boyutu, filigran, sayfa numaraları, tablo başlığı / çizgi / zebra renkleri, tipografi (başlık / özet / alt bilgi), kenar boşlukları ve sayfa yönü, özel alt bilgi (`customFooter`) ve koşullar / notlar.
+`src/components/pdf-themes/` altında 7 tema bulunur; hepsi `PdfConfig` içindeki ortak ayarları tutarlı şekilde uygular: bölüm aç/kapa, logo konumu/boyutu, filigran, sayfa numaraları, tablo başlığı / çizgi / zebra renkleri, tipografi (başlık / özet / alt bilgi), kenar boşlukları, sayfa boyutu ve yönü, PDF kalite seviyesi, özel alt bilgi (`customFooter`) ve koşullar / notlar.
 
 Tema seçimi ve ayrıntılı ayarlar **PDF önizleme paneli**nden yapılır; ayarlar `localStorage`'a kaydedilir.
+
+PDF önizlemesinin A4/dikey ve Letter/yatay görünümleri Playwright screenshot baseline'larıyla korunur. Tema veya sayfa düzeninde bilinçli bir değişiklik yapıldığında `npm run test:e2e:visual:update` ile baseline'lar güncellenir. `html2pdf.js` ve `xlsx` yalnızca ilgili dışa aktarma işlemi istendiğinde yüklenir; başlangıç paketine dahil edilmez.
+
+## Dil Ayarı
+
+Uygulama dili **Ayarlar > Genel Ayarlar** ekranındaki dil seçicisinden değiştirilebilir. Seçim `localStorage` içinde `appLanguage` anahtarıyla saklanır. Teklifin PDF dili ise teklif verisindeki `language` alanından bağımsız olarak korunur; böylece arayüz dili değişirken mevcut teklif çıktılarının dili değişmez.
 
 ## Klasör Yapısı
 

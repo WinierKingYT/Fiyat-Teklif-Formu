@@ -37,7 +37,7 @@ const PdfPreviewPanel = React.memo(() => {
     } = useQuoteData();
     const { pdfLayout, pdfConfig, setPdfConfig } = usePdfConfig();
     const { performanceMode } = useUI();
-    const { t } = useTranslation(quoteData?.language);
+    const { t } = useTranslation();
 
     const [activeTab, setActiveTab] = useState('design');
     const [versionNameInput, setVersionNameInput] = useState('');
@@ -111,8 +111,8 @@ const PdfPreviewPanel = React.memo(() => {
         items,
         discount,
         pdfConfig,
-        pageSize: 'a4',
-        quality: 'high',
+        pageSize: pdfConfig.pageSize || 'a4',
+        quality: pdfConfig.pdfQuality || 'high',
         t
     });
 
@@ -298,7 +298,7 @@ const PdfPreviewPanel = React.memo(() => {
                     </div>
 
                     <PdfZoomToolbar
-                        pageSize="a4"
+                        pageSize={pdfConfig.pageSize || 'a4'}
                         estimatedPages={estimatedPages}
                         t={t}
                         zoomLevel={zoomLevel}

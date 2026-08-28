@@ -6,7 +6,7 @@ import type { CustomField } from '@/context/quote/types';
 
 export const CustomFieldsSection: React.FC = () => {
     const { quoteData, updateQuoteData } = useQuoteData();
-    const { t } = useTranslation(quoteData?.language);
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
 
     const customFields = quoteData.customFields || [];

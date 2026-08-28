@@ -220,6 +220,7 @@ export const pdfConfigSchema = z.object({
   tableHeaderBg: z.string(),
   margins: z.string(),
   pageOrientation: z.enum(['portrait', 'landscape']),
+  pdfQuality: z.enum(['draft', 'normal', 'high', 'print', 'ultra']).default('high'),
   showTableImages: z.boolean(),
   showTableUnit: z.boolean(),
   showTableTax: z.boolean(),

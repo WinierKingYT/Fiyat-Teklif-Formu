@@ -205,6 +205,114 @@ test.describe('Critical quote workflows', () => {
     expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
   });
 
+  test('applies PDF page format, orientation and quality settings', async ({ page }) => {
+    test.setTimeout(60_000);
+    await openBuilder(page);
+    await fillRequiredQuote(page);
+
+    await page.getByRole('button', { name: 'PDF Önizle & İndir', exact: true }).click();
+    await page.getByRole('button', { name: 'Kontrolleri Göster', exact: true }).click();
+    await page.getByRole('button', { name: 'Düzen', exact: true }).click();
+
+    await page.getByLabel('Sayfa Boyutu').selectOption('letter');
+    await page.getByLabel('Kalite').selectOption('print');
+    const orientationSelect = page.locator('label').filter({ hasText: 'Yön' }).locator('select');
+    await orientationSelect.selectOption('landscape');
+
+    await expect(page.getByLabel('Sayfa Boyutu')).toHaveValue('letter');
+    await expect(page.getByLabel('Kalite')).toHaveValue('print');
+    await expect(orientationSelect).toHaveValue('landscape');
+
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('pdfConfig') || '{}')) as {
+      pageSize?: string;
+      pdfQuality?: string;
+      pageOrientation?: string;
+    };
+    expect(stored).toEqual(expect.objectContaining({
+      pageSize: 'letter',
+      pdfQuality: 'print',
+      pageOrientation: 'landscape',
+    }));
+  });
+
+  test('switches and persists the application language', async ({ page }) => {
+    await page.goto('/?view=settings&tab=general');
+    await expect(page.getByRole('heading', { name: 'Uygulama Ayarları' })).toBeVisible();
+
+    const languageSelect = page.getByTestId('app-language-select');
+    await expect(languageSelect).toHaveValue('tr');
+    await languageSelect.selectOption('en');
+
+    await expect(page.getByRole('heading', { name: 'Application settings' })).toBeVisible();
+    await expect(page.getByText('Appearance settings', { exact: true })).toBeVisible();
+    await expect(languageSelect).toHaveValue('en');
+    expect(await page.evaluate(() => localStorage.getItem('appLanguage'))).toBe('"en"');
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Application settings' })).toBeVisible();
+    await expect(page.getByTestId('app-language-select')).toHaveValue('en');
+  });
+
+  test('keeps quote PDF language independent from the application language', async ({ page }) => {
+    await page.goto('/?view=settings&tab=general');
+    await expect(page.getByRole('heading', { name: 'Uygulama Ayarları' })).toBeVisible();
+
+    await page.getByTestId('quote-language-select').selectOption('en');
+    await page.getByRole('button', { name: 'Yeni Teklif', exact: true }).click();
+    await expect(page.getByLabel('Teklif Numarası')).toBeVisible();
+    await fillRequiredQuote(page);
+
+    await page.getByRole('button', { name: 'PDF Önizle & İndir', exact: true }).click();
+    const printableQuote = page.locator('#printable-quote-container-panel');
+    await expect(printableQuote).toBeVisible();
+    await expect(printableQuote).toContainText('SUMMARY');
+    await expect(printableQuote).toContainText('GRAND TOTAL');
+  });
+
+  test('matches the A4 portrait printable quote visual baseline', async ({ page }) => {
+    await openBuilder(page);
+    await fillRequiredQuote(page);
+    await page.locator('input[type="date"]').first().fill('2026-01-15');
+
+    await page.getByRole('button', { name: 'PDF Önizle & İndir', exact: true }).click();
+    const printableQuote = page.locator('#printable-quote-container-panel');
+    await expect(printableQuote).toBeVisible();
+    const printablePage = printableQuote.locator('.pdf-page').first();
+    await expect(printablePage).toBeVisible();
+    await expect(printablePage).toHaveScreenshot('quote-a4-portrait.png', {
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'css',
+      maxDiffPixels: 800,
+    });
+  });
+
+  test('matches the Letter landscape printable quote visual baseline', async ({ page }) => {
+    await openBuilder(page);
+    await fillRequiredQuote(page);
+    await page.locator('input[type="date"]').first().fill('2026-01-15');
+
+    await page.getByRole('button', { name: 'PDF Önizle & İndir', exact: true }).click();
+    const printableQuote = page.locator('#printable-quote-container-panel');
+    await expect(printableQuote).toBeVisible();
+    await page.getByRole('button', { name: 'Kontrolleri Göster', exact: true }).click();
+    await page.getByRole('button', { name: 'Düzen', exact: true }).click();
+    await page.getByLabel('Sayfa Boyutu').selectOption('letter');
+    const orientationSelect = page.locator('label').filter({ hasText: 'Yön' }).locator('select');
+    await orientationSelect.selectOption('landscape');
+    await expect(page.getByLabel('Sayfa Boyutu')).toHaveValue('letter');
+    await expect(orientationSelect).toHaveValue('landscape');
+
+    const printablePage = printableQuote.locator('.pdf-page').first();
+    await expect(printablePage).toBeVisible();
+    await expect(printablePage).toHaveScreenshot('quote-letter-landscape.png', {
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'css',
+      maxDiffPixels: 800,
+    });
+  });
+
   test('persists accurate non-zero financial minor units to IndexedDB on autosave after edit', async ({ page }) => {
     await openBuilder(page);
     await fillRequiredQuote(page);
@@ -616,5 +724,29 @@ test.describe('Recycle bin workflows', () => {
     await page.getByRole('button', { name: 'CSV Dışa Aktar', exact: true }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/^islem-gecmisi-\d{8}\.csv$/);
+  });
+});
+
+test.describe('Performance guardrails', () => {
+  test('defers export-only bundles until an export is requested', async ({ page }) => {
+    await openBuilder(page);
+    await fillRequiredQuote(page);
+
+    const heavyExportResources = async () => page.evaluate(() => (
+      performance.getEntriesByType('resource')
+        .map(entry => entry.name)
+        .filter(name => /html2pdf|xlsx/i.test(name))
+    ));
+
+    await expect.poll(heavyExportResources).toHaveLength(0);
+
+    await page.getByRole('button', { name: 'PDF Önizle & İndir', exact: true }).click();
+    await expect(page.getByRole('button', { name: /PDF İNDİR/i })).toBeVisible();
+    await expect.poll(heavyExportResources).toHaveLength(0);
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: /PDF İNDİR/i }).click();
+    await downloadPromise;
+    await expect.poll(heavyExportResources, { timeout: 20_000 }).not.toHaveLength(0);
   });
 });

@@ -16,7 +16,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import React from "react";
-import { useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface SortableItemProps {
@@ -72,8 +71,7 @@ interface PdfLayoutSettingsProps {
 }
 
 const PdfLayoutSettings = ({ pdfLayout, setPdfLayout }: PdfLayoutSettingsProps) => {
-  const { quoteData } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {

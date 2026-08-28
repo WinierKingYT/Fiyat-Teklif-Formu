@@ -28,7 +28,7 @@ interface HistoryListProps {
 const HistoryList: React.FC<HistoryListProps> = ({ onNavigate }) => {
     const { db, isReady } = useIndexedDB();
     const { currentQuoteId, setCurrentQuoteId, loadQuote, revertToVersion, quoteData } = useQuoteData();
-    const { t } = useTranslation(quoteData?.language);
+    const { t } = useTranslation();
 
     const [activeTab, setActiveTab] = useState<'quotes' | 'versions'>('quotes');
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());

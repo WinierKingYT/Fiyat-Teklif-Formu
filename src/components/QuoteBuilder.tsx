@@ -15,6 +15,7 @@ import { getDefaultQuoteNumberConfig } from '@/context/quote/initialState';
 import { useQuoteData, useTab } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
+import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 import { generateNextQuoteNumber } from '@/utils/numberGenerator';
 import type { Customer, Product, QuoteItem, QuoteNumberConfig } from '@/context/quote/types';
@@ -29,7 +30,7 @@ const ModalLoadingFallback = () => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
     <div className="bg-[var(--color-bg-card)] p-6 rounded-[var(--radius-lg)] flex flex-col items-center gap-3 shadow-lg">
       <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[var(--color-primary)]"></div>
-      <p className="text-sm text-[var(--color-text-muted)]">Yükleniyor...</p>
+      <p className="text-sm text-[var(--color-text-muted)]">{useTranslation().t('loading')}</p>
     </div>
   </div>
 );
@@ -55,6 +56,7 @@ export const QuoteBuilder = React.memo(({
   const { undo, redo, addTab } = useTab();
 
   const { setIsLivePreviewMode, splitPreviewMode, setSplitPreviewMode } = useUI();
+  const { t } = useTranslation();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -91,10 +93,10 @@ export const QuoteBuilder = React.memo(({
       if (db) {
         await db.put('settings', { id: 'quote_number_config', key: 'quote_number_config', ...updatedConfig });
       }
-      toast.success(`Teklif No oluşturuldu: ${formattedNumber}`);
+      toast.success(t('quoteNumberGenerated').replace('{number}', formattedNumber));
     } catch (err) {
       Logger.error('Error generating quote number:', err);
-      toast.error('Teklif numarası oluşturulamadı');
+      toast.error(t('quoteNumberGenerateError'));
     }
   };
 
@@ -127,7 +129,7 @@ export const QuoteBuilder = React.memo(({
       taxOffice: customer.taxOffice || '',
       taxNumber: customer.taxNumber || customer.taxNo || ''
     });
-    toast.success('Müşteri bilgileri yüklendi');
+    toast.success(t('customerInfoLoaded'));
   };
 
   const handleProductSelect = (products: Product | Product[]) => {
@@ -145,7 +147,7 @@ export const QuoteBuilder = React.memo(({
       image: product.image ?? undefined
     }));
     setItems(prev => [...prev, ...newItems]);
-    toast.success(`${newItems.length} ürün eklendi`);
+    toast.success(t('itemsAddedCount').replace('{count}', String(newItems.length)));
   };
 
   return (
@@ -161,16 +163,16 @@ export const QuoteBuilder = React.memo(({
               type="text"
               value={quoteData.number || ''}
               onChange={(e) => updateQuoteData('number', e.target.value)}
-              placeholder="Teklif No"
+              placeholder={t('quoteNumber')}
               className="bg-transparent border-0 outline-none w-24 text-xs font-mono font-bold text-[var(--color-text)]"
-              aria-label="Teklif Numarası"
+              aria-label={t('quoteNumberLabel')}
             />
             <button
               type="button"
               onClick={handleAutoGenerateQuoteNumber}
               className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] p-0.5 transition-colors"
-              title="Otomatik Numara Üret"
-              aria-label="Otomatik Numara Üret"
+              title={t('autoGenerateNumber')}
+              aria-label={t('autoGenerateNumber')}
             >
               <Sparkles size={11} />
             </button>
@@ -178,8 +180,8 @@ export const QuoteBuilder = React.memo(({
               type="button"
               onClick={() => setIsNumberConfigModalOpen(true)}
               className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] p-0.5 transition-colors"
-              title="Numaratör Ayarları (Şablon & Sayaç)"
-              aria-label="Numaratör Ayarları"
+              title={t('numberSettings')}
+              aria-label={t('numberSettings')}
             >
               <Settings2 size={11} />
             </button>
@@ -193,7 +195,7 @@ export const QuoteBuilder = React.memo(({
               value={quoteData.date || ''}
               onChange={(e) => updateQuoteData('date', e.target.value)}
               className="bg-transparent border-0 outline-none text-xs font-medium text-[var(--color-text)] cursor-pointer"
-              aria-label="Teklif Tarihi"
+              aria-label={t('quoteDateLabel')}
             />
           </div>
 
@@ -207,9 +209,9 @@ export const QuoteBuilder = React.memo(({
               value={quoteData.validUntilDays || '10'}
               onChange={(e) => updateQuoteData('validUntilDays', e.target.value)}
               className="bg-transparent border-0 outline-none w-7 text-xs font-semibold text-[var(--color-text)] text-center"
-              aria-label="Geçerlilik Gün Sayısı"
+              aria-label={t('validityDaysLabel')}
             />
-            <span className="text-[var(--color-text-muted)] text-[10px] mr-1">gün</span>
+            <span className="text-[var(--color-text-muted)] text-[10px] mr-1">{t('day')}</span>
             <div className="flex gap-0.5 border-l border-[var(--color-border)] pl-1">
               {[7, 15, 30].map(days => (
                 <button
@@ -217,7 +219,7 @@ export const QuoteBuilder = React.memo(({
                   type="button"
                   onClick={() => updateQuoteData('validUntilDays', String(days))}
                   className={`px-1 py-0.2 text-[9px] rounded font-medium transition-colors ${String(quoteData.validUntilDays) === String(days) ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}`}
-                  title={`${days} gün geçerli`}
+                  title={t('validForDays').replace('{days}', String(days))}
                 >
                   +{days}
                 </button>
@@ -253,19 +255,19 @@ export const QuoteBuilder = React.memo(({
             type="button"
             onClick={() => setSplitPreviewMode(prev => !prev)}
             className={`top-bar-btn hidden xl:flex items-center gap-1 text-xs px-2.5 ${splitPreviewMode ? 'top-bar-btn-active bg-[var(--color-primary-muted)] text-[var(--color-primary)] font-semibold' : ''}`}
-            title="Canlı Yan Yana PDF Önizleme"
-            aria-label="Canlı Yan Yana PDF Önizleme"
+            title={t('liveSideBySidePdf')}
+            aria-label={t('liveSideBySidePdf')}
           >
             <Columns2 size={14} />
-            <span>Canlı PDF</span>
+            <span>{t('livePdf')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setConfirmReset(true)}
             className="top-bar-btn text-[var(--color-text-muted)] hover:text-[var(--color-error)]"
-            title="Teklifi Sıfırla"
-            aria-label="Teklifi Sıfırla"
+            title={t('resetQuote')}
+            aria-label={t('resetQuote')}
           >
             <LogOut size={14} />
           </button>
@@ -307,7 +309,7 @@ export const QuoteBuilder = React.memo(({
                     }`}
                   >
                     <StickyNote size={13} />
-                    <span>Şartlar & Notlar</span>
+                    <span>{t('termsAndNotes')}</span>
                   </button>
 
                   <button
@@ -320,7 +322,7 @@ export const QuoteBuilder = React.memo(({
                     }`}
                   >
                     <Landmark size={13} />
-                    <span>Banka</span>
+                    <span>{t('bank')}</span>
                   </button>
 
                   <button
@@ -333,7 +335,7 @@ export const QuoteBuilder = React.memo(({
                     }`}
                   >
                     <Building2 size={13} />
-                    <span>Firma</span>
+                    <span>{t('company')}</span>
                   </button>
 
                   <button
@@ -346,19 +348,19 @@ export const QuoteBuilder = React.memo(({
                     }`}
                   >
                     <Tag size={13} />
-                    <span>Özel Alanlar</span>
+                    <span>{t('customFields')}</span>
                   </button>
                 </div>
               </div>
 
               <div className="card-body p-3">
                 {activeSideTab === 'terms' && (
-                  <Suspense fallback={<div className="text-sm text-[var(--color-text-muted)]">Yükleniyor...</div>}>
+                  <Suspense fallback={<div className="text-sm text-[var(--color-text-muted)]">{t('loading')}</div>}>
                     <TermsAndNotes data={quoteData} onChange={updateQuoteData} />
                   </Suspense>
                 )}
                 {activeSideTab === 'bank' && (
-                  <Suspense fallback={<div className="text-sm text-[var(--color-text-muted)]">Yükleniyor...</div>}>
+                  <Suspense fallback={<div className="text-sm text-[var(--color-text-muted)]">{t('loading')}</div>}>
                     <BankInfoForm data={bankData} onChange={updateBankData} onOpenManager={onOpenBankManager} />
                   </Suspense>
                 )}
@@ -401,8 +403,8 @@ export const QuoteBuilder = React.memo(({
 
       <ConfirmDialog
         isOpen={confirmReset}
-        title="Teklifi Sıfırla"
-        message="Tüm veriler silinecek ve yeni bir teklif başlatılacak. Devam etmek istediğinize emin misiniz?"
+        title={t('resetQuote')}
+        message={t('resetQuoteConfirm')}
         onConfirm={async () => { setConfirmReset(false); await resetQuote(); }}
         onCancel={() => setConfirmReset(false)}
         variant="danger"

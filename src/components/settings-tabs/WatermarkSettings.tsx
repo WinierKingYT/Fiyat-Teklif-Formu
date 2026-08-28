@@ -11,7 +11,7 @@ interface WatermarkSettingsProps {
 
 const WatermarkSettings = ({ pdfConfig, setPdfConfig }: WatermarkSettingsProps) => {
   const { quoteData } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const watermarkPresets = React.useMemo(() => {
     const lang = quoteData?.language || 'tr';
     if (lang === 'en') return ['DRAFT', 'PREVIEW', 'CONFIDENTIAL', 'APPROVED'];

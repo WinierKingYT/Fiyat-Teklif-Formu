@@ -3,8 +3,13 @@ import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 export type AppTheme = 'light' | 'dark';
 export type AppColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'rose' | 'slate' | 'indigo' | 'teal' | 'cyan';
+export type AppLanguage = 'tr' | 'en' | 'de';
+
+export const APP_LANGUAGES: readonly AppLanguage[] = ['tr', 'en', 'de'];
 
 export interface UIContextValue {
+  appLanguage: AppLanguage;
+  setAppLanguage: (language: AppLanguage | ((prev: AppLanguage) => AppLanguage)) => void;
   appTheme: AppTheme;
   setAppTheme: (theme: AppTheme | ((prev: AppTheme) => AppTheme)) => void;
   appColor: AppColor;
@@ -31,6 +36,8 @@ export const useUI = (): UIContextValue => {
   return context;
 };
 
+export const useOptionalUI = (): UIContextValue | null => useContext(UIContext);
+
 const getLocalStorage = <T,>(key: string, defaultValue: T): T => {
   try {
     const item = localStorage.getItem(key);
@@ -43,6 +50,15 @@ const setLocalStorage = (key: string, value: unknown): void => {
 };
 
 export const UIProvider = ({ children }: { children: React.ReactNode }) => {
+  const [appLanguage, setAppLanguage] = useState<AppLanguage>(() => {
+    const savedLanguage = getLocalStorage<string>('appLanguage', 'tr');
+    return APP_LANGUAGES.includes(savedLanguage as AppLanguage) ? savedLanguage as AppLanguage : 'tr';
+  });
+  useEffect(() => {
+    setLocalStorage('appLanguage', appLanguage);
+    document.documentElement.setAttribute('lang', appLanguage);
+  }, [appLanguage]);
+
   const [appTheme, setAppTheme] = useState<AppTheme>(() => getLocalStorage('appTheme', 'light'));
   useEffect(() => {
     setLocalStorage('appTheme', appTheme);
@@ -85,6 +101,7 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
   }, [splitPreviewMode]);
 
   const value = useMemo<UIContextValue>(() => ({
+    appLanguage, setAppLanguage,
     appTheme, setAppTheme,
     appColor, setAppColor,
     appFontSize, setAppFontSize,
@@ -93,7 +110,7 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
     focusMode, setFocusMode,
     isLivePreviewMode, setIsLivePreviewMode,
     splitPreviewMode, setSplitPreviewMode,
-  }), [appTheme, appColor, appFontSize, performanceMode, compactMode, focusMode, isLivePreviewMode, splitPreviewMode]);
+  }), [appLanguage, appTheme, appColor, appFontSize, performanceMode, compactMode, focusMode, isLivePreviewMode, splitPreviewMode]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 };

@@ -3,7 +3,7 @@ import React from "react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { GeneralSettings, CompanyDefaults, QuoteNumberSettingsTab, PdfLayoutSettings, WatermarkSettings, DataBackupSettings, ActivityLogSettings } from '@/components/settings-tabs';
-import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
+import { usePdfConfig, useQuoteData } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import { useIndexedDB } from '@/hooks/useIndexedDB';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -16,9 +16,11 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ initialTab = "general" }) => {
   const { db } = useIndexedDB();
   const { pdfLayout, setPdfLayout, pdfConfig, setPdfConfig } = usePdfConfig();
-  const { quoteData } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { quoteData, updateQuoteData } = useQuoteData();
+  const { t } = useTranslation();
   const {
+    appLanguage,
+    setAppLanguage,
     performanceMode,
     setPerformanceMode,
     compactMode,
@@ -147,6 +149,10 @@ const Settings: React.FC<SettingsProps> = ({ initialTab = "general" }) => {
       </div>
       {activeTab === "general" && (
         <GeneralSettings
+          appLanguage={appLanguage}
+          setAppLanguage={setAppLanguage}
+          quoteLanguage={quoteData?.language || 'tr'}
+          setQuoteLanguage={(language) => updateQuoteData('language', language)}
           performanceMode={performanceMode}
           setPerformanceMode={setPerformanceMode}
           compactMode={compactMode}

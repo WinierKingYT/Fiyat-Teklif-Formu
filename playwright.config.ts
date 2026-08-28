@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
+const e2ePort = process.env.PLAYWRIGHT_PORT || '5173';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -9,13 +11,13 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: `http://localhost:${e2ePort}`,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'node ./node_modules/vite/bin/vite.js --host 127.0.0.1',
-    url: 'http://localhost:5173',
+    command: `node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${e2ePort}`,
+    url: `http://localhost:${e2ePort}`,
     reuseExistingServer: !process.env.CI,
   },
 });

@@ -27,7 +27,7 @@ interface PendingRestore {
 
 const DataBackupSettings: React.FC = () => {
     const { quoteData, db, fillTestData } = useQuoteData();
-    const { t } = useTranslation(quoteData?.language);
+    const { t } = useTranslation();
     const [stats, setStats] = useState({
         customers: 0,
         products: 0,

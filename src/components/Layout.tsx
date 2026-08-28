@@ -83,7 +83,7 @@ const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
   return (
     <div className="top-bar">
       <div className="top-bar-left">
-        <button type="button" onClick={onToggleMobile} className="top-bar-mobile-toggle" aria-label="Menüyü Aç/Kapat">
+        <button type="button" onClick={onToggleMobile} className="top-bar-mobile-toggle" aria-label={t('menuToggle')}>
           <Menu size={18} />
         </button>
         {currentView === 'builder' && (
@@ -155,8 +155,8 @@ const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
 
         <button type="button"
           onClick={() => setAppTheme(prev => prev === 'light' ? 'dark' : 'light')}
-          className="top-bar-btn" title={appTheme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
-          aria-label={appTheme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
+          className="top-bar-btn" title={appTheme === 'dark' ? t('lightMode') : t('darkMode')}
+          aria-label={appTheme === 'dark' ? t('lightMode') : t('darkMode')}
         >
           {appTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
@@ -178,8 +178,8 @@ const TopBar = React.memo(({ currentView, onToggleMobile }: TopBarProps) => {
           <Download size={15} />
         </button>
         {isOffline && (
-          <span className="top-bar-btn text-[var(--color-warning)] text-xs font-semibold" title="Çevrimdışı mod">
-            ⚡ Çevrimdışı
+          <span className="top-bar-btn text-[var(--color-warning)] text-xs font-semibold" title={t('offlineMode')}>
+            ⚡ {t('offline')}
           </span>
         )}
       </div>
@@ -204,6 +204,7 @@ const Layout = React.memo(({
   onOpenDatabaseManager, onOpenBankManager, onOpenRecycleBin,
 }: LayoutProps) => {
   const { focusMode, setFocusMode, isLivePreviewMode, splitPreviewMode } = useUI();
+  const { t } = useTranslation();
   const { addTab } = useTab();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
@@ -236,7 +237,7 @@ const Layout = React.memo(({
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link">
-        İçeriğe atla
+        {t('skipToContent')}
       </a>
       <Sidebar
         currentView={currentView}
@@ -264,7 +265,7 @@ const Layout = React.memo(({
         {focusMode && (
           <div className="focus-mode-bar">
             <button type="button" onClick={() => setFocusMode(false)} className="focus-mode-exit-btn">
-              Odak Modundan Çık
+              {t('exitFocusMode')}
             </button>
           </div>
         )}
@@ -291,9 +292,7 @@ const Layout = React.memo(({
           ) : (
             /* ── Normal Mode ── */
             <>
-              <div style={{ display: isLivePreviewMode ? 'none' : 'block' }}>
-                {children}
-              </div>
+              {!isLivePreviewMode && children}
 
               {isLivePreviewMode && (
                 <Suspense fallback={

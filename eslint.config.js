@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import { importX as pluginImportX } from 'eslint-plugin-import-x'
 
 export default defineConfig([
-  globalIgnores(['dist', 'dev-dist', 'node_modules', 'modules', '*.config.js', 'playwright.config.ts']),
+  globalIgnores(['dist', 'dev-dist', 'node_modules', 'modules', 'playwright-report', 'test-results', '*.config.js', 'playwright.config.ts']),
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],

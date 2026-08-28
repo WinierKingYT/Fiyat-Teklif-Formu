@@ -20,7 +20,7 @@ interface CustomerManagerModalProps {
 }
 
 const CustomerManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: CustomerManagerModalProps) => {
-    const { t } = useTranslation(language);
+    const { t } = useTranslation();
     const { db } = useIndexedDB();
     const [customers, setCustomers] = useState<CustomerData[]>([]);
     const [searchTerm, setSearchTerm] = useState('');

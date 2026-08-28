@@ -29,7 +29,7 @@ interface RecycleBinModalProps {
 }
 
 const RecycleBinModal: React.FC<RecycleBinModalProps> = ({ isOpen, onClose, language = 'tr' }) => {
-    const { t } = useTranslation(language);
+    const { t } = useTranslation();
     const { db } = useIndexedDB();
     const [deletedItems, setDeletedItems] = useState<DeletedItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');

@@ -82,6 +82,25 @@ describe('chunkQuoteItems', () => {
         expect(chunks.flat()).toEqual(items);
     });
 
+    it('should avoid sparse middle pages for landscape quotes', () => {
+        const items = Array.from({ length: 22 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items, {
+            isLandscape: true,
+            showSummary: true,
+            showBankInfo: true,
+            hasBankData: false,
+            showTerms: true,
+            hasTerms: false,
+            showNotes: true,
+            hasNotes: false,
+            showSignatures: true,
+        });
+
+        expect(chunks).toHaveLength(3);
+        expect(chunks.map(chunk => chunk.length)).toEqual([7, 7, 8]);
+        expect(chunks.flat()).toEqual(items);
+    });
+
     it('should respect custom itemsPerPage when specified and different from 14', () => {
         const items = Array.from({ length: 6 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items, { itemsPerPage: 2 });

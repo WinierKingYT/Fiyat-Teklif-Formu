@@ -174,45 +174,32 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         ];
     }
 
-    // For 3+ pages:
+    // For 3+ pages, choose the smallest page count that fits and distribute
+    // rows across the available pages. The previous greedy split could leave a
+    // middle page with only 1-2 rows (especially in landscape mode), wasting a
+    // full sheet and making the final PDF look unfinished.
+    let pageCount = 3;
+    while (firstPageLimit + ((pageCount - 2) * middlePageLimit) + lastPageLimit < items.length) {
+        pageCount += 1;
+    }
+
+    // Keep the final page within its stricter bottom-section limit while using
+    // an approximately even target for the other pages.
+    const lastCount = Math.min(lastPageLimit, Math.max(1, Math.ceil(items.length / pageCount)));
+    let remainingCount = items.length - lastCount;
+    let offset = 0;
     const chunks: T[][] = [];
-    let remaining = [...items];
 
-    // Total pages estimate
-    const estRemainingPages = Math.ceil((items.length - lastPageLimit) / middlePageLimit);
-    const avgPerPage = Math.max(4, Math.ceil((items.length - lastPageLimit) / Math.max(1, estRemainingPages)));
-    const p1Limit = Math.min(firstPageLimit, avgPerPage);
-
-    // Page 1
-    chunks.push(remaining.slice(0, p1Limit));
-    remaining = remaining.slice(p1Limit);
-
-    while (remaining.length > 0) {
-        if (remaining.length <= lastPageLimit) {
-            chunks.push(remaining);
-            break;
-        }
-
-        if (remaining.length <= middlePageLimit + lastPageLimit) {
-            const pMidCount = Math.min(middlePageLimit, Math.max(2, remaining.length - lastPageLimit));
-            chunks.push(remaining.slice(0, pMidCount));
-            chunks.push(remaining.slice(pMidCount));
-            break;
-        }
-
-        chunks.push(remaining.slice(0, middlePageLimit));
-        remaining = remaining.slice(middlePageLimit);
+    for (let pageIndex = 0; pageIndex < pageCount - 1; pageIndex += 1) {
+        const pagesLeft = pageCount - 1 - pageIndex;
+        const pageLimit = pageIndex === 0 ? firstPageLimit : middlePageLimit;
+        const targetCount = Math.ceil(remainingCount / pagesLeft);
+        const count = Math.min(pageLimit, Math.max(1, targetCount));
+        chunks.push(items.slice(offset, offset + count));
+        offset += count;
+        remainingCount -= count;
     }
 
-    // Post-balancing: if the last page has only 1 item and previous page has plenty, move 1-2 items over
-    if (chunks.length > 1) {
-        const lastChunk = chunks[chunks.length - 1];
-        const prevChunk = chunks[chunks.length - 2];
-        if (lastChunk.length === 1 && prevChunk.length > 3) {
-            const moved = prevChunk.pop()!;
-            lastChunk.unshift(moved);
-        }
-    }
-
+    chunks.push(items.slice(offset));
     return chunks;
 }

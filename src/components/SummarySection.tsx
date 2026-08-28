@@ -30,7 +30,7 @@ const SummarySection = React.memo(({
     onPreviewPdf,
     isSaving = false
 }: SummarySectionProps) => {
-    const { t } = useTranslation(language);
+    const { t } = useTranslation();
     const calc = useMemo(() => calculateQuoteTotals(items, discount, { currency }), [items, discount, currency]);
     const [localShowWords, setLocalShowWords] = useState(showAmountInWords ?? false);
     const isShowingWords = showAmountInWords !== undefined ? showAmountInWords : localShowWords;

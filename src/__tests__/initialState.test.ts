@@ -104,6 +104,8 @@ describe('getDefaultPdfConfig', () => {
     expect(config.theme).toBe('modern');
     expect(config.fontFamily).toBe('Inter');
     expect(config.itemsPerPage).toBe(14);
+    expect(config.pageSize).toBe('a4');
+    expect(config.pdfQuality).toBe('high');
   });
 
   it('should have all font size properties', () => {

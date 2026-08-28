@@ -36,7 +36,7 @@ const ItemsTable = ({
   onAddProduct,
 }: ItemsTableProps) => {
   const { quoteData, updateQuoteData, db } = useQuoteData();
-  const { t } = useTranslation(quoteData?.language);
+  const { t } = useTranslation();
   const {
     viewMode, visibleColumns, toggleColumn, taxMode, toggleTaxMode,
     totalQuantity, sortItems, formatItemCurrency,

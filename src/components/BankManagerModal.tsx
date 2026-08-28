@@ -21,7 +21,7 @@ interface BankManagerModalProps {
 }
 
 const BankManagerModal = ({ isOpen, onClose, onSelect, language = 'tr' }: BankManagerModalProps) => {
-    const { t } = useTranslation(language);
+    const { t } = useTranslation();
     const { db } = useIndexedDB();
     const [banks, setBanks] = useState<StoredBank[]>([]);
     const [editingBank, setEditingBank] = useState<StoredBank | null>(null);

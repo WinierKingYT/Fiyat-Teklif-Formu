@@ -11,7 +11,7 @@ interface SignatureCanvasProps {
 }
 
 const SignatureCanvas = ({ onSave, onClear, savedSignature, language = 'tr' }: SignatureCanvasProps) => {
-    const { t } = useTranslation(language);
+    const { t } = useTranslation();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const lastSavedUrlRef = useRef<string | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
