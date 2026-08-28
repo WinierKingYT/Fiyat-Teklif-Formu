@@ -8,6 +8,7 @@ import ModernTheme from '@/components/pdf-themes/ModernTheme';
 import ProTheme from '@/components/pdf-themes/ProTheme';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { PAGE_SIZES, type PageSize } from '@/utils/pdfGenerator';
+import { hasValidItemContent } from '@/utils/themeHelpers';
 import { translations } from '@/utils/translations';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '@/context/quote/types';
 
@@ -72,7 +73,7 @@ const PrintableQuote = React.memo(({
     const customerData = useMemo(() => _customerData || {}, [_customerData]);
     const companyData = useMemo(() => _companyData || {}, [_companyData]);
     const bankData = useMemo(() => _bankData || {}, [_bankData]);
-    const items = useMemo(() => _items || [], [_items]);
+    const items = useMemo(() => (_items || []).filter(hasValidItemContent), [_items]);
     const discount = useMemo(() => (_discount || {}) as Discount, [_discount]);
 
     const language = quoteData.language || 'tr';

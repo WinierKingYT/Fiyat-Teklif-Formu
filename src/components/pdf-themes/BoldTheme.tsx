@@ -319,7 +319,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                     {/* Customer & Quote Details */}
                     {showSection('customer') && pageIndex === 0 && hasCustomerData && (
                         <>
-                        <div className="bold-parties-grid">
+                        <div style={{ marginBottom: '12px' }}>
                             {/* Customer Box */}
                             <div className="bold-party-box">
                                 <div className="bold-party-title">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
@@ -357,21 +357,6 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                                         {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Quote Info Box */}
-                            <div className="bold-party-box">
-                                <div className="bold-party-title">{t.details}</div>
-                                <div style={{ fontSize: '8.5pt', color: '#334155', lineHeight: '1.4' }}>
-                                    <div><strong>{t.quoteNo}:</strong> {quoteData.number ? `#${quoteData.number}` : '-'}</div>
-                                    <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
-                                    <div><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</div>
-                                    {config.showNotes && quoteData.notes && (
-                                        <div style={{ marginTop: '2px', fontSize: '8pt', color: '#64748b', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
-                                            {renderEditable(quoteData.notes, 'notes', 'textarea')}
-                                        </div>
-                                    )}
-                                </div>
                             </div>
                         </div>
                         <PdfCustomFields customFields={quoteData.customFields} themeColor={color} />

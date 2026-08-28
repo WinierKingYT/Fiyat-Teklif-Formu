@@ -347,7 +347,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                     {/* Customer Info Card */}
                     {showSection('customer') && pageIndex === 0 && hasCustomerData && (
                         <>
-                        <div className="pro-customer-grid">
+                        <div style={{ marginBottom: '10px' }}>
                             <div className="pro-card">
                                 <div className="pro-card-title">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
                                 {customerData.company && <div style={{ fontWeight: '700', fontSize: '9pt', color: '#0f172a', marginBottom: '2px' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
@@ -377,23 +377,9 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
                                 {(customerData.taxOffice || customerData.taxNumber) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
                                         {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
-                                        {customerData.taxNumber && <span>No: ${customerData.taxNumber}</span>}
+                                        {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
                                     </div>
                                 )}
-                            </div>
-
-                            <div className="pro-card">
-                                <div className="pro-card-title">{t.details}</div>
-                                <div style={{ fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
-                                    <div><strong>{t.quoteNo}:</strong> {quoteData.number ? `#${quoteData.number}` : '-'}</div>
-                                    <div><strong>{t.date}:</strong> {formatDate(quoteData.date, currentLocale)}</div>
-                                    <div><strong>{t.validUntil}:</strong> {formatDate(quoteData.validUntil, currentLocale)}</div>
-                                    {config.showNotes && quoteData.notes && (
-                                        <div style={{ marginTop: '3px', color: '#64748b', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
-                                            {renderEditable(quoteData.notes, 'notes', 'textarea')}
-                                        </div>
-                                    )}
-                                </div>
                             </div>
                         </div>
                         <PdfCustomFields customFields={quoteData.customFields} themeColor={color} />

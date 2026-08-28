@@ -531,19 +531,21 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                         <img src={companyData.logo} alt="Logo" />
                                     </div>
                                 )}
-                                <div className="company-info-box">
-                                    <div className="company-title">{renderEditable(companyData.name || 'Firma Adı', 'companyName')}</div>
-                                    {companyData.authorized && <div><strong>{t.authorized || 'Yetkili'}:</strong> {companyData.authorized}</div>}
-                                    {companyData.phone && <div><strong>{t.phone || 'Tel'}:</strong> {companyData.phone}</div>}
-                                    {companyData.address && <div><strong>{t.address || 'Adres'}:</strong> {companyData.address}</div>}
-                                    {companyData.email && <div><strong>{t.email || 'E-posta'}:</strong> {companyData.email}</div>}
-                                    {companyData.website && <div><strong>{t.website || 'Web'}:</strong> {companyData.website}</div>}
-                                    {(companyData.taxOffice || companyData.taxNumber) && (
-                                        <div>
-                                            <strong>{t.taxOffice || 'Vergi'}:</strong> {companyData.taxOffice ? `${formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} ` : ''}{companyData.taxNumber ? `No: ${companyData.taxNumber}` : ''}
-                                        </div>
-                                    )}
-                                </div>
+                                {(companyData.name || companyData.authorized || companyData.phone || companyData.address || companyData.email || companyData.website || companyData.taxOffice || companyData.taxNumber) && (
+                                    <div className="company-info-box">
+                                        {companyData.name && <div className="company-title">{renderEditable(companyData.name, 'companyName')}</div>}
+                                        {companyData.authorized && <div><strong>{t.authorized || 'Yetkili'}:</strong> {companyData.authorized}</div>}
+                                        {companyData.phone && <div><strong>{t.phone || 'Tel'}:</strong> {companyData.phone}</div>}
+                                        {companyData.address && <div><strong>{t.address || 'Adres'}:</strong> {companyData.address}</div>}
+                                        {companyData.email && <div><strong>{t.email || 'E-posta'}:</strong> {companyData.email}</div>}
+                                        {companyData.website && <div><strong>{t.website || 'Web'}:</strong> {companyData.website}</div>}
+                                        {(companyData.taxOffice || companyData.taxNumber) && (
+                                            <div>
+                                                <strong>{t.taxOffice || 'Vergi'}:</strong> {companyData.taxOffice ? `${formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} ` : ''}{companyData.taxNumber ? `No: ${companyData.taxNumber}` : ''}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             <div className="quote-info-box">
                                 <div className="quote-title">{renderEditable(formatPdfTitle(quoteData.title || config.title || t.quoteTitle, quoteData.language), 'quoteTitle')}</div>

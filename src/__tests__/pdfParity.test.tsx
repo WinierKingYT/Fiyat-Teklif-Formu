@@ -190,6 +190,62 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks[0].map(i => i.name)).toEqual(['Gerçek Ürün 1', 'Gerçek Ürün 2']);
     });
 
+    it('allows 0 TL items with valid product names in PDF export and renders them accurately', () => {
+        const zeroPriceItems: QuoteItem[] = [
+            { id: '1', name: 'Ücretsiz Kurulum & Destek', quantity: 1, price: 0, taxRate: 20, total: 0, unit: 'Adet' }
+        ];
+
+        const chunks = chunkQuoteItems(zeroPriceItems);
+        expect(chunks.length).toBe(1);
+        expect(chunks[0].length).toBe(1);
+        expect(chunks[0][0].name).toBe('Ücretsiz Kurulum & Destek');
+
+        const config = getDefaultPdfConfig();
+        const { container } = render(
+            <PdfExportSurface
+                id="canonical-pdf-export-surface"
+                quoteData={mockQuoteData}
+                customerData={mockCustomerData}
+                companyData={mockCompanyData}
+                bankData={mockBankData}
+                items={zeroPriceItems}
+                discount={mockDiscount}
+                pdfConfig={config}
+            />
+        );
+
+        expect(container.textContent).toContain('Ücretsiz Kurulum & Destek');
+        expect(container.textContent).toContain('₺0,00');
+    });
+
+    it('completely suppresses customer box when customerData is empty', () => {
+        const config = getDefaultPdfConfig();
+        const emptyCustomer: CustomerData = {
+            name: '',
+            company: '',
+            email: '',
+            phone: '',
+            address: '',
+            taxOffice: '',
+            taxNumber: ''
+        };
+
+        const { container } = render(
+            <PdfExportSurface
+                id="canonical-pdf-export-surface"
+                quoteData={mockQuoteData}
+                customerData={emptyCustomer}
+                companyData={mockCompanyData}
+                bankData={mockBankData}
+                items={generateItems(3)}
+                discount={mockDiscount}
+                pdfConfig={config}
+            />
+        );
+
+        expect(container.querySelector('.customer-section')).toBeNull();
+    });
+
     it('suppresses empty bank info box and does not render placeholder dashes', () => {
         const config = getDefaultPdfConfig();
         const emptyBankData: BankData = {
@@ -215,6 +271,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
 
         expect(container.querySelector('.payment-info-box')).toBeNull();
         expect(container.textContent).not.toContain('Belirtilmemiş');
+        expect(container.textContent).not.toContain('Firma Adı');
     });
 
     it('does not render duplicate seller box in customer area', () => {
