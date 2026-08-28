@@ -171,29 +171,33 @@ const SummarySection = React.memo(({
 
                     {/* Prominent Action Buttons (CTAs) */}
                     {(onSaveQuote || onPreviewPdf) && (
-                        <div className="pt-2 space-y-2 border-t border-[var(--color-border)]">
+                        <div className="pt-3 space-y-2 border-t border-[var(--color-border)]">
                             {onPreviewPdf && (
                                 <button
                                     type="button"
                                     onClick={onPreviewPdf}
-                                    className="w-full btn btn-primary flex items-center justify-center gap-2 py-2.5 font-semibold text-sm shadow-sm"
-                                    title={`${t('previewAndDownloadPdf') || 'PDF Önizle & İndir'} (Ctrl+P)`}
+                                    className="w-full btn btn-primary flex items-center justify-center gap-2 py-3 font-bold text-sm shadow-md rounded-[var(--radius-md)] tracking-wide cursor-pointer transition-all hover:brightness-105 active:scale-[0.99]"
+                                    title={`${t('previewAndDownloadPdf') || 'PDF İndir'} (Ctrl+P)`}
                                 >
-                                    <FileText size={16} />
-                                    <span>{t('previewAndDownloadPdf') || 'PDF Önizle & İndir'}</span>
+                                    <FileText size={18} />
+                                    <span>{t('previewAndDownloadPdf') || 'PDF İNDİR'}</span>
                                 </button>
                             )}
                             {onSaveQuote && (
-                                <button
-                                    type="button"
-                                    onClick={onSaveQuote}
-                                    disabled={isSaving}
-                                    className="w-full btn btn-outline flex items-center justify-center gap-2 py-2 text-xs font-medium text-[var(--color-text)]"
-                                    title={`${t('saveQuoteAction') || 'Teklifi Kaydet'} (Ctrl+S)`}
-                                >
-                                    <Save size={14} className="text-[var(--color-info)]" />
-                                    <span>{isSaving ? (t('saving') || 'Kaydediliyor...') : (t('saveQuoteAction') || 'Teklifi Kaydet')}</span>
-                                </button>
+                                <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] pt-1 px-1">
+                                    <span className="flex items-center gap-1 text-[var(--color-success)] text-[11px] font-medium">
+                                        ✓ Otomatik kaydedildi
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={onSaveQuote}
+                                        disabled={isSaving}
+                                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] underline text-[11px] transition-colors"
+                                        title="Teklifi Manuel Kaydet (Ctrl+S)"
+                                    >
+                                        {isSaving ? (t('saving') || 'Kaydediliyor...') : (t('saveQuoteAction') || 'Şimdi Kaydet')}
+                                    </button>
+                                </div>
                             )}
                         </div>
                     )}
