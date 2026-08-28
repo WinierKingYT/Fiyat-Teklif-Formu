@@ -63,7 +63,7 @@
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-hook-form": "^7.83.0",
+    "react-hook-form": "^7.85.0",
     "react-hot-toast": "^2.6.0",
     "react-hotkeys-hook": "^5.2.1",
     "xlsx": "^0.18.5",
