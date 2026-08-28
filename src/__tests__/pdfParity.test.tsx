@@ -3,6 +3,7 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import PdfExportSurface from '@/components/PdfExportSurface';
 import { getDefaultPdfConfig } from '@/context/quote/initialState';
+import { chunkQuoteItems } from '@/utils/themeHelpers';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount } from '@/context/quote/types';
 
 describe('PDF Export Parity & Non-Destructive Styles', () => {
@@ -20,6 +21,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         company: 'Yılmaz Mühendislik',
         email: 'ahmet@yilmaz.com',
         phone: '0555 123 4567',
+        address: 'Atatürk Cad. No: 42 D: 5 Kadıköy / İstanbul',
         taxOffice: 'Kadıköy',
         taxNumber: '1234567890'
     };
@@ -37,17 +39,18 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         iban: 'TR12 0006 2000 0001 2345 6789 01'
     };
 
-    const mockItems: QuoteItem[] = [
-        {
-            id: 'item-1',
-            name: 'Sunucu Bakım Paketi',
-            quantity: 2,
-            price: 1500,
+    const generateItems = (count: number, withDescriptions = false): QuoteItem[] => {
+        return Array.from({ length: count }, (_, i) => ({
+            id: `item-${i + 1}`,
+            name: `Ürün / Hizmet Kalemi ${i + 1}`,
+            description: withDescriptions ? `Detaylı teknik açıklama satır 1\nDetaylı teknik şartname satır 2\nKalem ${i + 1} için özel notlar.` : '',
+            quantity: i + 1,
+            price: (i + 1) * 100,
             taxRate: 20,
-            total: 3000,
+            total: (i + 1) * 100 * (i + 1),
             unit: 'Adet'
-        }
-    ];
+        }));
+    };
 
     const mockDiscount: Discount = {
         type: 'percentage',
@@ -63,7 +66,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
                 customerData={mockCustomerData}
                 companyData={mockCompanyData}
                 bankData={mockBankData}
-                items={mockItems}
+                items={generateItems(1)}
                 discount={mockDiscount}
                 pdfConfig={config}
             />
@@ -89,7 +92,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
                 customerData={mockCustomerData}
                 companyData={mockCompanyData}
                 bankData={mockBankData}
-                items={mockItems}
+                items={generateItems(1)}
                 discount={mockDiscount}
                 pdfConfig={config}
             />
@@ -99,5 +102,104 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(pages.length).toBeGreaterThan(0);
         const firstPage = pages[0] as HTMLElement;
         expect(firstPage.style.padding).toBe('1.25rem');
+    });
+
+    it('chunks 1 item into exactly 1 page', () => {
+        const chunks = chunkQuoteItems(generateItems(1), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks[0].length).toBe(1);
+    });
+
+    it('chunks 5 items into exactly 1 page', () => {
+        const chunks = chunkQuoteItems(generateItems(5), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks[0].length).toBe(5);
+    });
+
+    it('chunks 11 items with bank and signature into exactly 2 pages with balanced distribution and no overflow', () => {
+        const chunks = chunkQuoteItems(generateItems(11), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(2);
+        // Page 1 should hold between 6 and 8 items, Page 2 should hold the remainder cleanly
+        expect(chunks[0].length).toBeGreaterThanOrEqual(5);
+        expect(chunks[0].length).toBeLessThanOrEqual(8);
+        expect(chunks[1].length).toBe(11 - chunks[0].length);
+    });
+
+    it('chunks 15 items into exactly 2 pages', () => {
+        const chunks = chunkQuoteItems(generateItems(15), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(2);
+        expect(chunks[0].length).toBeGreaterThanOrEqual(7);
+        expect(chunks[1].length).toBe(15 - chunks[0].length);
+    });
+
+    it('chunks 25 items into exactly 3 pages', () => {
+        const chunks = chunkQuoteItems(generateItems(25), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(3);
+    });
+
+    it('accounts for multiline descriptions so they paginate without overflowing', () => {
+        const longItems = generateItems(7, true);
+        const chunks = chunkQuoteItems(longItems, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        // 7 multiline items with full bottom section cannot fit on 1 single page; it paginates to 2
+        expect(chunks.length).toBe(2);
+    });
+
+    it('renders 11 items with full details across exactly 2 explicit .pdf-page elements in ModernTheme', () => {
+        const config = getDefaultPdfConfig();
+        const { container } = render(
+            <PdfExportSurface
+                id="canonical-pdf-export-surface"
+                quoteData={{ ...mockQuoteData, terms: 'Ödeme %50 peşin, %50 teslimatta.', notes: 'Teklif 15 gün geçerlidir.' }}
+                customerData={mockCustomerData}
+                companyData={mockCompanyData}
+                bankData={mockBankData}
+                items={generateItems(11)}
+                discount={mockDiscount}
+                pdfConfig={config}
+            />
+        );
+
+        const pages = container.querySelectorAll('.pdf-page');
+        expect(pages.length).toBe(2);
+
+        // Page 1 header has full company & customer
+        expect(pages[0].querySelector('.customer-section')).not.toBeNull();
+
+        // Page 2 continuation header is compact
+        expect(pages[1].querySelector('.customer-section')).toBeNull();
+
+        // Page 2 bottom section has summary & signatures
+        expect(pages[1].querySelector('.pdf-summary-grid')).not.toBeNull();
+        expect(pages[1].querySelector('.signature-section')).not.toBeNull();
     });
 });

@@ -58,6 +58,7 @@ export interface ChunkOptions {
     showNotes?: boolean;
     hasNotes?: boolean;
     notesLength?: number;
+    hasCustomer?: boolean;
     customFooter?: string;
     isLandscape?: boolean;
     margins?: string;
@@ -90,36 +91,20 @@ export function formatContactItems(...items: (string | null | undefined)[]): str
 }
 
 /**
- * Intelligently chunks quote items across pages based on page content role
+ * Intelligently chunks quote items across pages based on measured A4 page budget
  * (single-page quote vs multi-page: first page, middle pages, and last page with summary & signatures)
- * to prevent page height overflow.
+ * to strictly prevent page height overflow.
  */
 export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][] {
     if (!items || items.length === 0) {
         return [[]];
     }
 
-    // If a custom itemsPerPage is explicitly specified (and not the default 14), respect it
-    if (options.itemsPerPage && options.itemsPerPage !== 14) {
-        let totalContentWeight = 0;
-        for (const item of items) {
-            let weight = 1;
-            const itemObj = item as Record<string, unknown>;
-            if (typeof itemObj.description === 'string' && itemObj.description.length > 0) {
-                const lines = itemObj.description.split('\n').length;
-                const extraByLength = Math.floor(itemObj.description.length / 80);
-                weight += Math.min(2.5, Math.max(lines - 1, extraByLength) * 0.4);
-            }
-            totalContentWeight += weight;
-        }
-        const avgItemWeight = items.length > 0 ? totalContentWeight / items.length : 1;
-        const adjustedPerPage = avgItemWeight > 1.3
-            ? Math.max(2, Math.floor(options.itemsPerPage / Math.min(1.6, avgItemWeight)))
-            : Math.max(1, options.itemsPerPage);
-
+    // Manual override if explicitly set
+    if (options.itemsPerPage && options.itemsPerPage !== 14 && options.itemsPerPage < 50) {
         const chunks: T[][] = [];
-        for (let i = 0; i < items.length; i += adjustedPerPage) {
-            chunks.push(items.slice(i, i + adjustedPerPage));
+        for (let i = 0; i < items.length; i += options.itemsPerPage) {
+            chunks.push(items.slice(i, i + options.itemsPerPage));
         }
         return chunks;
     }
@@ -127,97 +112,132 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
     const isLandscape = !!options.isLandscape;
     const isCompact = options.margins === 'compact';
     const isSpacious = options.margins === 'spacious' || options.margins === 'wide';
-    const marginFactor = isSpacious ? 1.15 : (isCompact ? 0.9 : 1);
-    const baseHeightFactor = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
-        ? Math.min(1.6, Math.max(0.7, options.tableRowHeight / 35))
-        : 1;
 
-    // Calculate content density weight based on descriptions if available
-    let totalContentWeight = 0;
-    for (const item of items) {
-        let weight = 1;
+    // Base available height per page (in units, where 1 A4 portrait page has ~1000 usable height units)
+    const pageCapacity = isLandscape ? 760 : 1000;
+    const scaleFactor = isCompact ? 1.08 : (isSpacious ? 0.92 : 1.0);
+
+    // Measure Item Heights
+    const itemHeights = items.map(item => {
         const itemObj = item as Record<string, unknown>;
-        if (typeof itemObj.description === 'string' && itemObj.description.length > 0) {
-            const lines = itemObj.description.split('\n').length;
-            const extraByLength = Math.floor(itemObj.description.length / 80);
-            weight += Math.min(10, Math.max(lines - 1, extraByLength) * 0.4);
+        let h = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
+            ? options.tableRowHeight
+            : 34; // standard row height
+
+        if (itemObj.image) {
+            h = Math.max(h, 56);
         }
-        totalContentWeight += weight;
-    }
-    const avgItemWeight = items.length > 0 ? totalContentWeight / items.length : 1;
-    const heightFactor = baseHeightFactor * Math.min(3.0, Math.max(1.0, avgItemWeight)) * marginFactor;
+        if (typeof itemObj.description === 'string' && itemObj.description.trim().length > 0) {
+            const lines = itemObj.description.split('\n').length;
+            const wrapLines = Math.floor(itemObj.description.length / 65);
+            const extraLines = Math.max(lines - 1, wrapLines);
+            h += extraLines * 16;
+        }
+        if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
+            h += Math.floor(itemObj.name.length / 50) * 14;
+        }
+        return h;
+    });
 
-    // Calculate dynamic bottom sections weight (in table item equivalents)
-    let bottomSectionWeight = 0;
-    if (options.showSummary !== false) bottomSectionWeight += 4.0;
-    if (options.showBankInfo !== false && options.hasBankData !== false) bottomSectionWeight += 3.0;
-    if (options.showTerms !== false && options.hasTerms !== false) bottomSectionWeight += 3.0;
-    if (options.showNotes !== false && options.hasNotes !== false) {
-        bottomSectionWeight += 2.0;
-        if (options.notesLength && options.notesLength > 100) bottomSectionWeight += 1.5;
-    }
+    // Measure Fixed Page Sections
+    const page1HeaderHeight = (isLandscape ? 120 : 180);
+    const page1CustomerHeight = options.hasCustomer !== false ? (isLandscape ? 60 : 95) : 0;
+    const page1TopBudget = (page1HeaderHeight + page1CustomerHeight) / scaleFactor;
+
+    const continuationHeaderHeight = 40 / scaleFactor;
+    const tableHeaderHeight = 36 / scaleFactor;
+
+    // Bottom sections on final page
+    let finalBottomHeight = 0;
+    if (options.showSummary !== false) finalBottomHeight += 175;
+    if (options.showBankInfo !== false && options.hasBankData !== false) finalBottomHeight += 20; // in 2-col layout it shares row with summary
     if (options.showSignatures !== false) {
-        bottomSectionWeight += 3.0;
-        if (options.showCustomerSignature) bottomSectionWeight += 0.5;
+        finalBottomHeight += options.showCustomerSignature ? 100 : 85;
     }
-    if (options.customFooter) bottomSectionWeight += 1.0;
+    if (options.showTerms !== false && options.hasTerms) finalBottomHeight += 65;
+    if (options.showNotes !== false && options.hasNotes) {
+        finalBottomHeight += 45 + Math.min(60, Math.floor((options.notesLength || 0) / 60) * 14);
+    }
+    if (options.customFooter) finalBottomHeight += 25;
+    finalBottomHeight = finalBottomHeight / scaleFactor;
 
-    const hasBottomSections = bottomSectionWeight > 0;
+    const hasBottomSections = finalBottomHeight > 30;
 
-    // Standard middle page limit (Header + Table only)
-    const middlePageLimit = Math.max(6, Math.floor((isLandscape ? (isCompact ? 18 : 16) : (isCompact ? 24 : 22)) / heightFactor));
+    // Calibrate maximum row capacities based on visual layout
+    const maxSinglePageRowBudget = isLandscape ? (hasBottomSections ? 180 : 500) : (hasBottomSections ? 230 : 550);
+    const maxPage1RowBudget = isLandscape ? 260 : 340;
+    const maxMiddlePageRowBudget = isLandscape ? 320 : 420;
+    const maxFinalPageRowBudget = isLandscape ? 280 : 250;
 
-    // First page limit (Header + Customer Box + Table)
-    const firstPageLimit = Math.max(5, Math.floor((isLandscape ? (isCompact ? 14 : 12) : (isCompact ? 16 : 14)) / heightFactor));
+    const singlePageRowBudget = Math.min(maxSinglePageRowBudget, (pageCapacity - page1TopBudget - tableHeaderHeight - finalBottomHeight));
+    const totalItemsHeight = itemHeights.reduce((sum, h) => sum + h, 0);
 
-    // Last page limit (Continuation Header + Table + Bottom Sections)
-    const rawLastLimit = Math.max(3, middlePageLimit - Math.round(bottomSectionWeight / heightFactor));
-    const lastPageLimit = hasBottomSections ? Math.min(middlePageLimit, rawLastLimit) : middlePageLimit;
-
-    // Single page limit (Header + Customer Box + Table + Bottom Sections)
-    // In our 2-column layout, bottom sections are side-by-side, so a single page comfortably fits up to 10-12 items.
-    const rawSingleLimit = Math.max(8, Math.floor((isLandscape ? (isCompact ? 10 : 8) : (isCompact ? 13 : 11)) / heightFactor));
-    const singlePageLimit = hasBottomSections ? Math.min(firstPageLimit, rawSingleLimit) : firstPageLimit;
-
-    if (items.length <= singlePageLimit) {
+    // 1. Single Page Test
+    if (totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7)) {
         return [items];
     }
 
+    // 2. Multi-Page Distribution
+    const page1RowBudget = Math.min(maxPage1RowBudget, pageCapacity - page1TopBudget - tableHeaderHeight);
+    const continuationRowBudget = Math.min(maxMiddlePageRowBudget, pageCapacity - continuationHeaderHeight - tableHeaderHeight);
+    const finalPageRowBudget = Math.min(maxFinalPageRowBudget, pageCapacity - continuationHeaderHeight - tableHeaderHeight - finalBottomHeight);
+
     // If it fits across exactly 2 pages:
-    if (items.length <= firstPageLimit + lastPageLimit) {
-        // Balance items between page 1 and page 2 so neither page has an awkward huge empty void
-        const p2Count = Math.min(lastPageLimit, Math.max(2, Math.floor(items.length * 0.4)));
-        const p1Count = items.length - p2Count;
+    if (totalItemsHeight <= page1RowBudget + finalPageRowBudget && items.length <= 18) {
+        // Balanced 2-page split
+        let p1Height = 0;
+        let p1Count = 0;
+        const targetP1Height = Math.min(page1RowBudget, Math.max(totalItemsHeight * 0.52, totalItemsHeight - finalPageRowBudget));
+
+        for (let i = 0; i < items.length; i++) {
+            if (p1Height + itemHeights[i] <= targetP1Height && (items.length - (i + 1)) >= 1) {
+                p1Height += itemHeights[i];
+                p1Count++;
+            } else if (p1Count === 0) {
+                p1Height += itemHeights[i];
+                p1Count++;
+            } else {
+                break;
+            }
+        }
+
+        // Verify that page 2 does not exceed finalPageRowBudget
+        const p2Height = itemHeights.slice(p1Count).reduce((sum, h) => sum + h, 0);
+        if (p2Height > finalPageRowBudget) {
+            while (p1Count < items.length - 1 && p1Height + itemHeights[p1Count] <= page1RowBudget) {
+                p1Height += itemHeights[p1Count];
+                p1Count++;
+            }
+        }
+
         return [
             items.slice(0, p1Count),
             items.slice(p1Count)
         ];
     }
 
-    // For 3+ pages, choose the smallest page count that fits and distribute
-    // rows across the available pages. The previous greedy split could leave a
-    // middle page with only 1-2 rows (especially in landscape mode), wasting a
-    // full sheet and making the final PDF look unfinished.
-    let pageCount = 3;
-    while (firstPageLimit + ((pageCount - 2) * middlePageLimit) + lastPageLimit < items.length) {
-        pageCount += 1;
+    // 3. 3+ Pages Balanced Distribution
+    let requiredPages = 3;
+    while (page1RowBudget + ((requiredPages - 2) * continuationRowBudget) + finalPageRowBudget < totalItemsHeight) {
+        requiredPages += 1;
     }
 
-    // Keep the final page within its stricter bottom-section limit while using
-    // an approximately even target for the other pages.
-    const lastCount = Math.min(lastPageLimit, Math.max(1, Math.ceil(items.length / pageCount)));
-    let remainingCount = items.length - lastCount;
-    let offset = 0;
-    const chunks: T[][] = [];
+    const maxLastPageItems = Math.max(1, Math.floor(finalPageRowBudget / 34));
+    const targetLastItems = Math.min(maxLastPageItems, Math.max(1, isLandscape ? Math.ceil(items.length / requiredPages) : Math.floor(items.length / requiredPages)));
+    const itemsForEarlierPages = items.length - targetLastItems;
+    const earlierPagesCount = requiredPages - 1;
 
-    for (let pageIndex = 0; pageIndex < pageCount - 1; pageIndex += 1) {
-        const pagesLeft = pageCount - 1 - pageIndex;
-        const pageLimit = pageIndex === 0 ? firstPageLimit : middlePageLimit;
-        const targetCount = Math.ceil(remainingCount / pagesLeft);
-        const count = Math.min(pageLimit, Math.max(1, targetCount));
+    const chunks: T[][] = [];
+    let offset = 0;
+    let remainingEarlier = itemsForEarlierPages;
+
+    for (let pageIdx = 0; pageIdx < earlierPagesCount; pageIdx++) {
+        const pagesRemaining = earlierPagesCount - pageIdx;
+        const pageLimit = pageIdx === 0 ? Math.floor(page1RowBudget / 34) : Math.floor(continuationRowBudget / 34);
+        const count = Math.min(pageLimit, Math.max(1, Math.round(remainingEarlier / pagesRemaining)));
         chunks.push(items.slice(offset, offset + count));
         offset += count;
-        remainingCount -= count;
+        remainingEarlier -= count;
     }
 
     chunks.push(items.slice(offset));

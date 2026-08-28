@@ -27,6 +27,16 @@ export function usePdfTheme(props: PdfThemeProps) {
         const hasTerms = !!(quoteData && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms));
         const hasNotes = !!(quoteData && quoteData.notes && quoteData.notes.trim().length > 0);
         const notesLength = quoteData?.notes?.length || 0;
+        const customerData = props.customerData;
+        const hasCustomer = !!(
+            (customerData?.name && customerData.name.trim().length > 0) ||
+            (customerData?.company && customerData.company.trim().length > 0) ||
+            (customerData?.phone && customerData.phone.trim().length > 0) ||
+            (customerData?.email && customerData.email.trim().length > 0) ||
+            (customerData?.address && customerData.address.trim().length > 0) ||
+            (customerData?.taxOffice && customerData.taxOffice.trim().length > 0) ||
+            (customerData?.taxNumber && customerData.taxNumber.trim().length > 0)
+        );
 
         return chunkQuoteItems(items, {
             itemsPerPage: effectiveItemsPerPage,
@@ -40,12 +50,13 @@ export function usePdfTheme(props: PdfThemeProps) {
             showNotes: config.showNotes !== false && layoutMap['notes'] !== false,
             hasNotes,
             notesLength,
+            hasCustomer,
             customFooter: config.customFooter,
             isLandscape: config.pageOrientation === 'landscape',
             margins: config.margins,
             tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined
         });
-    }, [items, config, layoutMap, props.bankData, quoteData]);
+    }, [items, config, layoutMap, props.bankData, props.customerData, quoteData]);
 
     const vatBreakdown = useMemo(() => {
         const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
