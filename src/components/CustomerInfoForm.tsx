@@ -36,7 +36,17 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
   const [recentCustomers, setRecentCustomers] = useState<CustomerData[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchIndex, setSearchIndex] = useState(-1);
-  const [showDetails, setShowDetails] = useState(false);
+  
+  const hasOptionalData = Boolean(
+    (data.email && data.email.trim().length > 0) ||
+    (data.phone && data.phone.trim().length > 0) ||
+    (data.address && data.address.trim().length > 0) ||
+    (data.taxOffice && data.taxOffice.trim().length > 0) ||
+    (data.taxNumber && data.taxNumber.trim().length > 0)
+  );
+  const [manualShowDetails, setManualShowDetails] = useState<boolean | null>(null);
+  const showDetails = manualShowDetails !== null ? manualShowDetails : hasOptionalData;
+
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -176,10 +186,10 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
           <button
             type="button"
             className="btn btn-ghost btn-xs text-[var(--color-text-secondary)]"
-            onClick={() => setShowDetails(!showDetails)}
+            onClick={() => setManualShowDetails(!showDetails)}
           >
             {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            <span>{showDetails ? (t('hide') || 'Gizle') : (t('details') || 'Detaylar')}</span>
+            <span>{showDetails ? (t('hide') || 'Gizle') : (t('details') || '+ Ek Bilgiler')}</span>
           </button>
           <button type="button" className="btn btn-outline btn-xs" onClick={onSelectCustomer}>
             <Users size={12} />
@@ -313,6 +323,24 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
                 placeholder={t('phone')}
                 autoComplete="tel"
                 onChange={handleChange}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <input
+                id="customerTaxOffice"
+                name="taxOffice"
+                value={data.taxOffice || ''}
+                placeholder="Vergi Dairesi (Opsiyonel)"
+                onChange={(e) => onChange('taxOffice', e.target.value)}
+                className="form-control text-xs py-1.5"
+              />
+              <input
+                id="customerTaxNumber"
+                name="taxNumber"
+                value={data.taxNumber || ''}
+                placeholder="Vergi / TC No (Opsiyonel)"
+                onChange={(e) => onChange('taxNumber', e.target.value)}
+                className="form-control text-xs py-1.5"
               />
             </div>
             <div className="relative">
