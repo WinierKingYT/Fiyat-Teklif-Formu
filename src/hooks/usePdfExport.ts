@@ -87,13 +87,21 @@ export const usePdfExport = ({
         onStage
     });
 
+    const getTargetElementId = () => {
+        if (document.getElementById('canonical-pdf-export-surface')) {
+            return 'canonical-pdf-export-surface';
+        }
+        return 'printable-quote-container-panel';
+    };
+
     const handleDownload = async () => {
         setIsGenerating(true);
         setGenerationStage(t('pdfPreparing'));
         try {
             const filename = buildPdfFilename();
             await new Promise(resolve => setTimeout(resolve, 100));
-            const result = await generatePDF('printable-quote-container-panel', filename, buildPdfGenerationOptions(
+            const targetId = getTargetElementId();
+            const result = await generatePDF(targetId, filename, buildPdfGenerationOptions(
                 true,
                 (stage) => setGenerationStage(generationStageLabels[stage] || t('pdfPreparing'))
             ));
@@ -107,7 +115,8 @@ export const usePdfExport = ({
     };
 
     const handlePrint = () => {
-        printQuote('printable-quote-container-panel', {
+        const targetId = getTargetElementId();
+        printQuote(targetId, {
             language: quoteData.language || 'tr',
             backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
             pageSize,
@@ -118,7 +127,8 @@ export const usePdfExport = ({
     const handleShare = async () => {
         try {
             const filename = buildPdfFilename();
-            const result = await generatePDF('printable-quote-container-panel', filename, buildPdfGenerationOptions(false));
+            const targetId = getTargetElementId();
+            const result = await generatePDF(targetId, filename, buildPdfGenerationOptions(false));
             if (!result) return;
             const meta = getPdfMetadata(quoteData.language || 'tr');
             await shareQuote(result.blob, filename, {

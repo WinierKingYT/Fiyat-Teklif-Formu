@@ -7,6 +7,7 @@ import PdfPreviewHeader from '@/components/pdf-preview/PdfPreviewHeader';
 import PdfVersionModal from '@/components/pdf-preview/PdfVersionModal';
 import PdfZoomToolbar from '@/components/pdf-preview/PdfZoomToolbar';
 import { PdfDesignTab, PdfLayoutTab, PdfTextsTab } from '@/components/pdf-tabs';
+import PdfExportSurface from '@/components/PdfExportSurface';
 import PopupEditor from '@/components/PopupEditor';
 import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
@@ -337,6 +338,22 @@ const PdfPreviewPanel = React.memo(() => {
                 type={editConfig.type}
                 options={editConfig.options}
             />
+
+            {/* Dedicated Canonical A4 Surface for 1-Click PDF Generation */}
+            {isGenerating && (
+                <PdfExportSurface
+                    id="canonical-pdf-export-surface"
+                    quoteData={quoteData}
+                    customerData={customerData}
+                    companyData={companyData}
+                    bankData={bankData}
+                    items={items}
+                    discount={discount}
+                    pdfConfig={pdfConfig}
+                    pdfLayout={pdfLayout}
+                    signature={signature}
+                />
+            )}
         </div>
     );
 });

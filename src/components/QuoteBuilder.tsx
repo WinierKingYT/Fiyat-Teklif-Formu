@@ -9,7 +9,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import CustomerInfoForm from '@/components/CustomerInfoForm';
 import CustomFieldsSection from '@/components/CustomFieldsSection';
 import ItemsTable from '@/components/ItemsTable';
-import PrintableQuote from '@/components/PrintableQuoteV2';
+import PdfExportSurface from '@/components/PdfExportSurface';
 import { QuoteNumberConfigModal } from '@/components/quote-number';
 import SummarySection from '@/components/SummarySection';
 import { getDefaultQuoteNumberConfig } from '@/context/quote/initialState';
@@ -429,35 +429,20 @@ export const QuoteBuilder = React.memo(({
           </div>
         </div>
 
-        {/* Off-screen Printable Container for Instant 1-Click PDF Generation */}
-        {isDynamicPdfGenerating && !splitPreviewMode && (
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'fixed',
-              left: '-9999px',
-              top: 0,
-              width: '210mm',
-              opacity: 0,
-              pointerEvents: 'none',
-              zIndex: -1
-            }}
-          >
-            <PrintableQuote
-              id="printable-quote-container-panel"
-              theme={pdfConfig.theme}
-              color={pdfConfig.color}
-              quoteData={quoteData}
-              items={items}
-              customerData={customerData}
-              companyData={companyData}
-              bankData={bankData}
-              discount={discount}
-              layout={pdfLayout}
-              signature={null}
-              config={pdfConfig}
-            />
-          </div>
+        {/* Dedicated Canonical A4 Surface for 1-Click PDF Generation */}
+        {isDynamicPdfGenerating && (
+          <PdfExportSurface
+            id="canonical-pdf-export-surface"
+            quoteData={quoteData}
+            customerData={customerData}
+            companyData={companyData}
+            bankData={bankData}
+            items={items}
+            discount={discount}
+            pdfConfig={pdfConfig}
+            pdfLayout={pdfLayout}
+            signature={null}
+          />
         )}
 
         {/* ── SPLIT-SCREEN LIVE PDF PREVIEW (Right Side on XL) ── */}

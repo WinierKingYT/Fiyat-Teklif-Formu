@@ -144,8 +144,7 @@ const injectPageBreakStyles = (containerId?: string) => {
     const style = document.createElement('style');
     style.id = PAGE_BREAK_STYLE_ID;
     style.textContent = `
-        ${prefix} { padding: 0 !important; margin: 0 !important; }
-        ${prefix}.pdf-page { margin: 0 !important; margin-bottom: 0 !important; padding: 0 !important; page-break-after: always !important; break-after: page !important; page-break-before: auto !important; break-before: auto !important; }
+        ${prefix}.pdf-page { page-break-after: always !important; break-after: page !important; page-break-before: auto !important; break-before: auto !important; }
         ${prefix}.pdf-page:last-child { page-break-after: auto !important; break-after: auto !important; }
         ${prefix}.pdf-section, ${prefix}[class*="pdf-section"] { page-break-inside: avoid !important; break-inside: avoid !important; }
         ${prefix}.pdf-header, ${prefix}[class*="pdf-header"], ${prefix}.header-container { page-break-inside: avoid !important; break-inside: avoid !important; }
