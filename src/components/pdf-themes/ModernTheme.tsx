@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatTaxOfficeDisplay, formatPdfTitle } from '@/utils/themeHelpers';
+import { formatTaxOfficeDisplay, formatPdfTitle, formatIban } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -547,10 +547,18 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                             </div>
                             <div className="quote-info-box">
                                 <div className="quote-title">{renderEditable(formatPdfTitle(quoteData.title || config.title || t.quoteTitle, quoteData.language), 'quoteTitle')}</div>
-                                <div className="quote-meta-line"><strong>{t.quoteNumber || 'Teklif No'}:</strong> <span style={{ fontWeight: 600, color: color }}>#{quoteData.number || 'Belirtilmemiş'}</span></div>
-                                <div className="quote-meta-line"><strong>{t.date || 'Tarih'}:</strong> <span>{formatDate(quoteData.date, currentLocale) || 'Belirtilmemiş'}</span></div>
-                                <div className="quote-meta-line"><strong>{t.validUntil || 'Teslimat'}:</strong> <span>{formatDate(quoteData.validUntil, currentLocale) || 'Belirtilmemiş'}</span></div>
-                                <div className="quote-meta-line"><strong>{t.payment || 'Ödeme'}:</strong> <span>{quoteData.terms || 'Ödeme koşulları belirtilmemiş'}</span></div>
+                                {quoteData.number && (
+                                    <div className="quote-meta-line"><strong>{t.quoteNumber || 'Teklif No'}:</strong> <span style={{ fontWeight: 600, color: color }}>#{quoteData.number}</span></div>
+                                )}
+                                {quoteData.date && (
+                                    <div className="quote-meta-line"><strong>{t.date || 'Tarih'}:</strong> <span>{formatDate(quoteData.date, currentLocale)}</span></div>
+                                )}
+                                {quoteData.validUntil && (
+                                    <div className="quote-meta-line"><strong>{t.validUntil || 'Geçerlilik'}:</strong> <span>{formatDate(quoteData.validUntil, currentLocale)}</span></div>
+                                )}
+                                {quoteData.terms && (
+                                    <div className="quote-meta-line"><strong>{t.payment || 'Ödeme'}:</strong> <span>{quoteData.terms}</span></div>
+                                )}
                             </div>
                         </div>
                     ) : (
@@ -614,7 +622,10 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                     {(customerData.taxOffice || customerData.taxNumber) && (
                                         <div className="info-line">
                                             <span className="info-label">{t.taxOffice || 'Vergi'}:</span>
-                                            <span className="info-value">{customerData.taxOffice ? `${formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} ` : ''}{customerData.taxNumber ? `No: ${customerData.taxNumber}` : ''}</span>
+                                            <span className="info-value">
+                                                {customerData.taxOffice && <span>{formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} </span>}
+                                                {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -639,8 +650,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     {pageIndex === itemChunks.length - 1 && (
                         <div style={{ marginTop: '1.25rem', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {config.showSummary && (
-                                <div className="pdf-summary-grid">
-                                    <div className="totals-section">
+                                <div className="pdf-summary-grid" style={!(config.showBankInfo && (bankData.bankName || bankData.iban || bankData.accountNumber)) ? { display: 'flex', justifyContent: 'flex-end' } : undefined}>
+                                    <div className="totals-section" style={!(config.showBankInfo && (bankData.bankName || bankData.iban || bankData.accountNumber)) ? { width: '100%', maxWidth: '340px' } : undefined}>
                                         <div className="section-title">
                                             <span>🧮</span> <span>{t.summary || 'ÖZET'}</span>
                                         </div>
@@ -677,38 +688,46 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                             <span>{t.generalTotal || 'GENEL TOPLAM'}:</span>
                                             <span style={{ color: color, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
                                         </div>
-                                        <div style={{ fontSize: '6.8pt', color: '#64748b', fontStyle: 'italic', marginTop: '4px', textAlign: 'right', wordBreak: 'break-word', whiteSpace: 'normal' }}>
-                                            {amountInWords}
-                                        </div>
+                                        {amountInWords && (
+                                            <div style={{ fontSize: '6.8pt', color: '#64748b', fontStyle: 'italic', marginTop: '4px', textAlign: 'right', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                                                {amountInWords}
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <div className="payment-info-box">
-                                        <div className="section-title">
-                                            {t.bankInfo || 'ÖDEME BİLGİLERİ'}
+                                    {config.showBankInfo && (bankData.bankName || bankData.iban || bankData.accountNumber) && (
+                                        <div className="payment-info-box">
+                                            <div className="section-title">
+                                                {t.bankInfo || 'ÖDEME BİLGİLERİ'}
+                                            </div>
+                                            <div className="info-grid">
+                                                {bankData.bankName && (
+                                                    <div className="info-line">
+                                                        <span className="info-label">{t.bank || 'Banka'}:</span>
+                                                        <span className="info-value"><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</span>
+                                                    </div>
+                                                )}
+                                                {bankData.accountNumber && (
+                                                    <div className="info-line">
+                                                        <span className="info-label">{t.accountNo || 'Hesap No'}:</span>
+                                                        <span className="info-value">{bankData.accountNumber}</span>
+                                                    </div>
+                                                )}
+                                                {bankData.iban && (
+                                                    <div className="info-line">
+                                                        <span className="info-label">{t.iban || 'IBAN'}:</span>
+                                                        <span className="info-value" style={{ fontFamily: 'monospace', fontWeight: 600 }}>{formatIban(bankData.iban)}</span>
+                                                    </div>
+                                                )}
+                                                {bankData.accountHolder && (
+                                                    <div className="info-line">
+                                                        <span className="info-label">{t.accountHolder || 'Hesap Sahibi'}:</span>
+                                                        <span className="info-value">{bankData.accountHolder}</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="info-grid">
-                                            <div className="info-line">
-                                                <span className="info-label">{t.bank || 'Banka'}:</span>
-                                                <span className="info-value"><strong>{bankData.bankName || '-'}</strong></span>
-                                            </div>
-                                            <div className="info-line">
-                                                <span className="info-label">{t.branch || 'Şube'}:</span>
-                                                <span className="info-value">{bankData.branch || '-'}</span>
-                                            </div>
-                                            <div className="info-line">
-                                                <span className="info-label">{t.accountNo || 'Hesap No'}:</span>
-                                                <span className="info-value">{bankData.accountNumber || '-'}</span>
-                                            </div>
-                                            <div className="info-line">
-                                                <span className="info-label">{t.iban || 'IBAN'}:</span>
-                                                <span className="info-value" style={{ fontFamily: 'monospace', fontWeight: 600 }}>{bankData.iban || '-'}</span>
-                                            </div>
-                                            <div className="info-line">
-                                                <span className="info-label">{t.accountHolder || 'Hesap Sahibi'}:</span>
-                                                <span className="info-value">{bankData.accountHolder || '-'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
@@ -740,30 +759,34 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                             {(showSection('terms') || showSection('notes')) && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.notes) && (
                                 <div className="terms-section">
                                     <div className="terms-grid">
-                                        <div className="term-card">
-                                            <h3>{t.deliveryConditions || t.delivery || 'Teslimat Koşulları'}</h3>
-                                            <div className="term-content">
-                                                {quoteData.deliveryTerms || 'Teslimat koşulları belirtilmemiş.'}
+                                        {quoteData.deliveryTerms && (
+                                            <div className="term-card">
+                                                <h3>{t.deliveryConditions || t.delivery || 'Teslimat Koşulları'}</h3>
+                                                <div className="term-content">
+                                                    {quoteData.deliveryTerms}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="term-card">
-                                            <h3>{t.warrantyConditions || t.warranty || 'Garanti Koşulları'}</h3>
-                                            <div className="term-content">
-                                                {quoteData.warrantyTerms || 'Garanti koşulları belirtilmemiş.'}
+                                        )}
+                                        {quoteData.warrantyTerms && (
+                                            <div className="term-card">
+                                                <h3>{t.warrantyConditions || t.warranty || 'Garanti Koşulları'}</h3>
+                                                <div className="term-content">
+                                                    {quoteData.warrantyTerms}
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
 
                             {/* Footer */}
-                            {showSection('footer') && (
+                            {showSection('footer') && (companyData.name || companyData.address || companyData.phone || companyData.email) && (
                                 <div className="pdf-footer">
                                     <div>
-                                        <div><strong>{companyData.name || 'Firma Adı'}</strong></div>
-                                        <div>{companyData.address || 'Adres belirtilmemiş'}</div>
-                                        <div><strong>{t.phone || 'Tel'}:</strong> {companyData.phone || 'Belirtilmemiş'}</div>
-                                        <div><strong>{t.email || 'E-posta'}:</strong> {companyData.email || 'Belirtilmemiş'}</div>
+                                        {companyData.name && <div><strong>{companyData.name}</strong></div>}
+                                        {companyData.address && <div>{companyData.address}</div>}
+                                        {companyData.phone && <div><strong>{t.phone || 'Tel'}:</strong> {companyData.phone}</div>}
+                                        {companyData.email && <div><strong>{t.email || 'E-posta'}:</strong> {companyData.email}</div>}
                                     </div>
                                     <div className="footer-thanks">
                                         <div className="thanks-text">{t.thankYou || 'Teşekkür ederiz!'}</div>

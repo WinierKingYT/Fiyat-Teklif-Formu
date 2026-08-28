@@ -91,11 +91,32 @@ export function formatContactItems(...items: (string | null | undefined)[]): str
 }
 
 /**
+ * Returns true if an item has valid content (not an empty placeholder row).
+ */
+export function hasValidItemContent(item: unknown): boolean {
+    if (item === null || item === undefined) return false;
+    if (typeof item === 'number' || typeof item === 'string') return true;
+    if (typeof item === 'object') {
+        const obj = item as Record<string, unknown>;
+        const name = typeof obj.name === 'string' ? obj.name.trim() : '';
+        const desc = typeof obj.description === 'string' ? obj.description.trim() : '';
+        const price = typeof obj.price === 'number' ? obj.price : (typeof obj.price === 'string' ? parseFloat(obj.price) || 0 : 0);
+        const qty = typeof obj.quantity === 'number' ? obj.quantity : (typeof obj.quantity === 'string' ? parseFloat(obj.quantity) || 0 : 0);
+        if ('name' in obj || 'price' in obj || 'description' in obj || 'quantity' in obj) {
+            return name.length > 0 || desc.length > 0 || (price > 0 && qty > 0);
+        }
+        return true;
+    }
+    return false;
+}
+
+/**
  * Intelligently chunks quote items across pages based on measured A4 page budget
  * (single-page quote vs multi-page: first page, middle pages, and last page with summary & signatures)
  * to strictly prevent page height overflow.
  */
-export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][] {
+export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T[][] {
+    const items = (rawItems || []).filter(hasValidItemContent);
     if (!items || items.length === 0) {
         return [[]];
     }

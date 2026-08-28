@@ -20,6 +20,7 @@ import { usePdfExport } from '@/hooks/usePdfExport';
 import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 import { generateNextQuoteNumber } from '@/utils/numberGenerator';
+import { hasValidItemContent } from '@/utils/themeHelpers';
 import type { Customer, Product, QuoteItem, QuoteNumberConfig } from '@/context/quote/types';
 
 const TermsAndNotes = lazy(() => import('@/components/TermsAndNotes'));
@@ -84,6 +85,25 @@ export const QuoteBuilder = React.memo(({
   const [isDynamicPdfGenerating, setIsDynamicPdfGenerating] = useState(false);
 
   const handleDirectDownload = async () => {
+    const validItems = (items || []).filter(hasValidItemContent);
+    if (validItems.length === 0) {
+      toast.error('Lütfen PDF indirmeden önce en az bir geçerli ürün ekleyin.');
+      return;
+    }
+
+    if (!quoteData.number || quoteData.number.trim() === '') {
+      try {
+        const { formattedNumber, updatedConfig } = generateNextQuoteNumber(numberConfig);
+        updateQuoteData('number', formattedNumber);
+        setNumberConfig(updatedConfig);
+        if (db) {
+          await db.put('settings', { id: 'quote_number_config', key: 'quote_number_config', ...updatedConfig });
+        }
+      } catch (err) {
+        Logger.error('Error auto-generating quote number on download:', err);
+      }
+    }
+
     setIsDynamicPdfGenerating(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 80));

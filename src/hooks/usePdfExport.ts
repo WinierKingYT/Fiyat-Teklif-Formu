@@ -4,6 +4,7 @@ import { calculateQuoteTotals } from '@/utils/calculations';
 import { shareQuote } from '@/utils/emailService';
 import { exportQuoteToExcel, exportQuoteToCSV } from '@/utils/excelExporter';
 import { generatePDF, printQuote, getPdfMetadata, type PageSize, type PdfQuality } from '@/utils/pdfGenerator';
+import { hasValidItemContent } from '@/utils/themeHelpers';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount } from '@/context/quote/types';
 import type { PdfConfig } from '@/context/quote/types';
 
@@ -95,6 +96,12 @@ export const usePdfExport = ({
     };
 
     const handleDownload = async () => {
+        const validItems = (items || []).filter(hasValidItemContent);
+        if (validItems.length === 0) {
+            toast.error(t('addAtLeastOneProduct') || 'Lütfen PDF indirmeden önce en az bir geçerli ürün ekleyin.');
+            return;
+        }
+
         setIsGenerating(true);
         setGenerationStage(t('pdfPreparing'));
         try {
@@ -115,6 +122,12 @@ export const usePdfExport = ({
     };
 
     const handlePrint = () => {
+        const validItems = (items || []).filter(hasValidItemContent);
+        if (validItems.length === 0) {
+            toast.error(t('addAtLeastOneProduct') || 'Lütfen PDF yazdırmadan önce en az bir geçerli ürün ekleyin.');
+            return;
+        }
+
         const targetId = getTargetElementId();
         printQuote(targetId, {
             language: quoteData.language || 'tr',
@@ -125,6 +138,12 @@ export const usePdfExport = ({
     };
 
     const handleShare = async () => {
+        const validItems = (items || []).filter(hasValidItemContent);
+        if (validItems.length === 0) {
+            toast.error(t('addAtLeastOneProduct') || 'Lütfen paylaşmadan önce en az bir geçerli ürün ekleyin.');
+            return;
+        }
+
         try {
             const filename = buildPdfFilename();
             const targetId = getTargetElementId();

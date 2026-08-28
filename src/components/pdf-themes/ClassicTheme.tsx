@@ -350,91 +350,51 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ))}
 
-                    {/* Customer & Quote Details Box */}
-                    {pageIndex === 0 && (
+                    {/* Customer Details Box */}
+                    {pageIndex === 0 && showSection('customer') && hasCustomerData && (
                     <>
-                        <div style={{ display: 'grid', gridTemplateColumns: config.showCompanyDetails !== false ? '1fr 1fr' : '1fr', gap: '8px', marginBottom: '10px' }}>
-                            {/* Seller Box */}
-                            {config.showCompanyDetails !== false && (
-                                <div className="classic-section-box">
-                                    <div className="classic-section-header">
-                                        {t.seller}
-                                    </div>
-                                    <div style={{ padding: '6px 8px', fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
+                        <div style={{ marginBottom: '10px' }}>
+                            <div className="classic-section-box">
+                                <div className="classic-section-header">
+                                    {t.customer}
+                                </div>
+                                <div style={{ padding: '6px 8px', fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
+                                    {customerData.company && (
                                         <div style={{ fontWeight: '700', fontSize: '9pt', color: '#0f172a', marginBottom: '2px' }}>
-                                            {renderEditable(companyData.name, 'companyName')}
+                                            {renderEditable(customerData.company, 'customerCompany')}
                                         </div>
-                                        {companyData.phone && (
-                                            <div>
-                                                <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
-                                                <span>{companyData.phone}</span>
-                                            </div>
-                                        )}
-                                        {companyData.email && (
-                                            <div>
-                                                <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
-                                                <span>{companyData.email}</span>
-                                            </div>
-                                        )}
-                                        {companyData.address && (
-                                            <div style={{ marginTop: '2px', color: '#64748b' }}>
-                                                {companyData.address}
-                                            </div>
-                                        )}
-                                        {(companyData.taxOffice || companyData.taxNumber) && (
-                                            <div style={{ fontSize: '7.5pt', color: '#475569', marginTop: '2px' }}>
-                                                {companyData.taxOffice && <span>{formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} </span>}
-                                                {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
-                                            </div>
-                                        )}
-                                    </div>
+                                    )}
+                                    {customerData.name && (
+                                        <div>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
+                                            <span style={{ fontWeight: '600' }}>{renderEditable(customerData.name, 'customerName')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.phone && (
+                                        <div>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
+                                            <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.email && (
+                                        <div>
+                                            <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
+                                            <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.address && (
+                                        <div style={{ marginTop: '2px', color: '#64748b' }}>
+                                            {customerData.address}
+                                        </div>
+                                    )}
+                                    {(customerData.taxOffice || customerData.taxNumber) && (
+                                        <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
+                                            {customerData.taxOffice && <span>{formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} </span>}
+                                            {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-
-                            {/* Customer Details Box */}
-                            {showSection('customer') && hasCustomerData && (
-                                <div className="classic-section-box">
-                                    <div className="classic-section-header">
-                                        {t.customer}
-                                    </div>
-                                    <div style={{ padding: '6px 8px', fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
-                                        {customerData.company && (
-                                            <div style={{ fontWeight: '700', fontSize: '9pt', color: '#0f172a', marginBottom: '2px' }}>
-                                                {renderEditable(customerData.company, 'customerCompany')}
-                                            </div>
-                                        )}
-                                        {customerData.name && (
-                                            <div>
-                                                <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
-                                                <span style={{ fontWeight: '600' }}>{renderEditable(customerData.name, 'customerName')}</span>
-                                            </div>
-                                        )}
-                                        {customerData.phone && (
-                                            <div>
-                                                <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
-                                                <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
-                                            </div>
-                                        )}
-                                        {customerData.email && (
-                                            <div>
-                                                <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
-                                                <span>{renderEditable(customerData.email, 'customerEmail')}</span>
-                                            </div>
-                                        )}
-                                        {customerData.address && (
-                                            <div style={{ marginTop: '2px', color: '#64748b' }}>
-                                                {customerData.address}
-                                            </div>
-                                        )}
-                                        {(customerData.taxOffice || customerData.taxNumber) && (
-                                            <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
-                                                {customerData.taxOffice && <span>{formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} </span>}
-                                                {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
                         <PdfCustomFields customFields={quoteData.customFields} themeColor="#3b82f6" />
                     </>
@@ -458,15 +418,15 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                             <div style={{ display: 'flex', marginTop: '6px', gap: '8px' }}>
                                 {/* Left Side: Bank & Notes */}
                                 <div style={{ flex: 1 }}>
-                                    {config.showBankInfo && (
+                                    {config.showBankInfo && (bankData.bankName || bankData.iban || bankData.accountNumber) && (
                                         <div className="classic-section-box" style={{ marginBottom: '6px' }}>
                                             <div className="classic-section-header">
                                                 {t.bankInfo}
                                             </div>
                                             <div style={{ padding: '5px 8px', fontSize: '8pt', color: '#334155' }}>
-                                                <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>
-                                                <div style={{ fontFamily: 'monospace', fontSize: '8.5pt', fontWeight: 600, color: '#0f172a' }}>{formatIban(bankData.iban)}</div>
-                                                <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>
+                                                {bankData.bankName && <div><strong>{bankData.bankName}</strong> {bankData.branch && <span>({bankData.branch})</span>}</div>}
+                                                {bankData.iban && <div style={{ fontFamily: 'monospace', fontSize: '8.5pt', fontWeight: 600, color: '#0f172a' }}>{formatIban(bankData.iban)}</div>}
+                                                {bankData.accountHolder && <div style={{ color: '#64748b' }}>{bankData.accountHolder}</div>}
                                             </div>
                                         </div>
                                     )}

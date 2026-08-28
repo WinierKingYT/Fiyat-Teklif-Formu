@@ -306,26 +306,10 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ))}
 
-                    {/* Customer & Seller Information Grid - Page 1 */}
+                    {/* Customer Information Grid - Page 1 */}
                     {showSection('customer') && pageIndex === 0 && hasCustomerData && (
                         <>
-                        <div className="invoice-parties-grid">
-                            {/* Seller / Düzenleyen Box */}
-                            <div className="invoice-party-card">
-                                <div className="invoice-party-label">{t.seller} / {t.from || 'Düzenleyen'}</div>
-                                <div style={{ fontSize: '9.5pt', fontWeight: 700, color: '#0f172a' }}>{renderEditable(companyData.name, 'companyName')}</div>
-                                <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px', lineHeight: '1.35' }}>
-                                    {companyData.address && <div>{companyData.address}</div>}
-                                    <div>{companyData.phone} | {companyData.email}</div>
-                                    {(companyData.taxOffice || companyData.taxNumber) && (
-                                        <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '2px' }}>
-                                            {companyData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${companyData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${companyData.taxOffice} `}</span>}
-                                            {companyData.taxNumber && <span>No: {companyData.taxNumber}</span>}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
+                        <div style={{ marginBottom: '10px' }}>
                             {/* Customer / Alıcı Box */}
                             <div className="invoice-party-card">
                                 <div className="invoice-party-label">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>

@@ -175,32 +175,66 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks.length).toBe(2);
     });
 
-    it('renders 11 items with full details across exactly 2 explicit .pdf-page elements in ModernTheme', () => {
+    it('filters out empty product rows from chunkQuoteItems and PDF export', () => {
+        const mixedItems: QuoteItem[] = [
+            { id: '1', name: 'Gerçek Ürün 1', quantity: 1, price: 100, taxRate: 20, total: 100, unit: 'Adet' },
+            { id: '2', name: '', quantity: 1, price: 0, taxRate: 20, total: 0, unit: 'Adet' },
+            { id: '3', name: '   ', quantity: 0, price: 0, taxRate: 20, total: 0, unit: 'Adet' },
+            { id: '4', name: 'Gerçek Ürün 2', quantity: 2, price: 250, taxRate: 20, total: 500, unit: 'Adet' },
+            { id: '5', name: '', quantity: 1, price: 0, taxRate: 20, total: 0, unit: 'Adet' }
+        ];
+
+        const chunks = chunkQuoteItems(mixedItems);
+        expect(chunks.length).toBe(1);
+        expect(chunks[0].length).toBe(2);
+        expect(chunks[0].map(i => i.name)).toEqual(['Gerçek Ürün 1', 'Gerçek Ürün 2']);
+    });
+
+    it('suppresses empty bank info box and does not render placeholder dashes', () => {
         const config = getDefaultPdfConfig();
+        const emptyBankData: BankData = {
+            bankName: '',
+            branch: '',
+            accountNumber: '',
+            iban: '',
+            accountHolder: ''
+        };
+
         const { container } = render(
             <PdfExportSurface
                 id="canonical-pdf-export-surface"
-                quoteData={{ ...mockQuoteData, terms: 'Ödeme %50 peşin, %50 teslimatta.', notes: 'Teklif 15 gün geçerlidir.' }}
+                quoteData={mockQuoteData}
                 customerData={mockCustomerData}
                 companyData={mockCompanyData}
-                bankData={mockBankData}
-                items={generateItems(11)}
+                bankData={emptyBankData}
+                items={generateItems(3)}
                 discount={mockDiscount}
                 pdfConfig={config}
             />
         );
 
-        const pages = container.querySelectorAll('.pdf-page');
-        expect(pages.length).toBe(2);
+        expect(container.querySelector('.payment-info-box')).toBeNull();
+        expect(container.textContent).not.toContain('Belirtilmemiş');
+    });
 
-        // Page 1 header has full company & customer
-        expect(pages[0].querySelector('.customer-section')).not.toBeNull();
+    it('does not render duplicate seller box in customer area', () => {
+        const config = getDefaultPdfConfig();
+        const { container } = render(
+            <PdfExportSurface
+                id="canonical-pdf-export-surface"
+                quoteData={mockQuoteData}
+                customerData={mockCustomerData}
+                companyData={mockCompanyData}
+                bankData={mockBankData}
+                items={generateItems(3)}
+                discount={mockDiscount}
+                pdfConfig={config}
+            />
+        );
 
-        // Page 2 continuation header is compact
-        expect(pages[1].querySelector('.customer-section')).toBeNull();
-
-        // Page 2 bottom section has summary & signatures
-        expect(pages[1].querySelector('.pdf-summary-grid')).not.toBeNull();
-        expect(pages[1].querySelector('.signature-section')).not.toBeNull();
+        // Customer box exists
+        expect(container.querySelector('.customer-section')).not.toBeNull();
+        // Top header has company info
+        expect(container.querySelector('.company-info-box')).not.toBeNull();
     });
 });

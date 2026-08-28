@@ -1,12 +1,14 @@
 import { useMemo, useCallback } from 'react';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { numberToWords } from '@/utils/numberToWordsTurkish';
-import { chunkQuoteItems } from '@/utils/themeHelpers';
+import { chunkQuoteItems, hasValidItemContent } from '@/utils/themeHelpers';
 import { PdfEditableField } from '../common';
 import type { PdfThemeProps } from '@/context/quote/types';
 
 export function usePdfTheme(props: PdfThemeProps) {
     const { activeLayout, items, config, total, quoteData, onEdit, t } = props;
+
+    const validItems = useMemo(() => (items || []).filter(hasValidItemContent), [items]);
 
     const layoutMap = useMemo(() => {
         const map: Record<string, boolean> = {};
@@ -16,7 +18,7 @@ export function usePdfTheme(props: PdfThemeProps) {
 
     const showSection = useCallback((sectionId: string) => layoutMap[sectionId] !== false, [layoutMap]);
 
-    const hasAnyImage = useMemo(() => items.some((item) => !!item.image), [items]);
+    const hasAnyImage = useMemo(() => validItems.some((item) => !!item.image), [validItems]);
 
     const itemChunks = useMemo(() => {
         if (layoutMap['items'] === false) {
