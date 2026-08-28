@@ -13,6 +13,25 @@ export const getAdjustedFontSize = (size: unknown, factor: number = 0.9, default
 };
 
 /**
+ * Uppercases visible PDF titles with the locale-aware rules required by
+ * Turkish dotted/dotless I characters (and the other supported quote
+ * languages). The stored value remains unchanged for editing.
+ */
+export function formatPdfTitle(value: unknown, language = 'tr'): string {
+    const text = String(value ?? '');
+    const locale = language.toLowerCase().startsWith('tr')
+        ? 'tr-TR'
+        : language.toLowerCase().startsWith('de')
+            ? 'de-DE'
+            : 'en-US';
+    try {
+        return text.toLocaleUpperCase(locale);
+    } catch {
+        return text.toUpperCase();
+    }
+}
+
+/**
  * Formats an IBAN string into 4-character blocks for optimal readability.
  * E.g., "TR123456789012345678901234" -> "TR12 3456 7890 1234 5678 9012 34"
  */
@@ -130,15 +149,15 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
 
     // Calculate dynamic bottom sections weight (in table item equivalents)
     let bottomSectionWeight = 0;
-    if (options.showSummary !== false) bottomSectionWeight += 4.5;
+    if (options.showSummary !== false) bottomSectionWeight += 4.0;
     if (options.showBankInfo !== false && options.hasBankData !== false) bottomSectionWeight += 3.0;
     if (options.showTerms !== false && options.hasTerms !== false) bottomSectionWeight += 3.0;
     if (options.showNotes !== false && options.hasNotes !== false) {
-        bottomSectionWeight += 2.5;
+        bottomSectionWeight += 2.0;
         if (options.notesLength && options.notesLength > 100) bottomSectionWeight += 1.5;
     }
     if (options.showSignatures !== false) {
-        bottomSectionWeight += 3.5;
+        bottomSectionWeight += 3.0;
         if (options.showCustomerSignature) bottomSectionWeight += 0.5;
     }
     if (options.customFooter) bottomSectionWeight += 1.0;
@@ -156,7 +175,8 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
     const lastPageLimit = hasBottomSections ? Math.min(middlePageLimit, rawLastLimit) : middlePageLimit;
 
     // Single page limit (Header + Customer Box + Table + Bottom Sections)
-    const rawSingleLimit = Math.max(2, firstPageLimit - Math.round(bottomSectionWeight / heightFactor));
+    // In our 2-column layout, bottom sections are side-by-side, so a single page comfortably fits up to 10-12 items.
+    const rawSingleLimit = Math.max(8, Math.floor((isLandscape ? (isCompact ? 10 : 8) : (isCompact ? 13 : 11)) / heightFactor));
     const singlePageLimit = hasBottomSections ? Math.min(firstPageLimit, rawSingleLimit) : firstPageLimit;
 
     if (items.length <= singlePageLimit) {
@@ -174,45 +194,32 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         ];
     }
 
-    // For 3+ pages:
+    // For 3+ pages, choose the smallest page count that fits and distribute
+    // rows across the available pages. The previous greedy split could leave a
+    // middle page with only 1-2 rows (especially in landscape mode), wasting a
+    // full sheet and making the final PDF look unfinished.
+    let pageCount = 3;
+    while (firstPageLimit + ((pageCount - 2) * middlePageLimit) + lastPageLimit < items.length) {
+        pageCount += 1;
+    }
+
+    // Keep the final page within its stricter bottom-section limit while using
+    // an approximately even target for the other pages.
+    const lastCount = Math.min(lastPageLimit, Math.max(1, Math.ceil(items.length / pageCount)));
+    let remainingCount = items.length - lastCount;
+    let offset = 0;
     const chunks: T[][] = [];
-    let remaining = [...items];
 
-    // Total pages estimate
-    const estRemainingPages = Math.ceil((items.length - lastPageLimit) / middlePageLimit);
-    const avgPerPage = Math.max(4, Math.ceil((items.length - lastPageLimit) / Math.max(1, estRemainingPages)));
-    const p1Limit = Math.min(firstPageLimit, avgPerPage);
-
-    // Page 1
-    chunks.push(remaining.slice(0, p1Limit));
-    remaining = remaining.slice(p1Limit);
-
-    while (remaining.length > 0) {
-        if (remaining.length <= lastPageLimit) {
-            chunks.push(remaining);
-            break;
-        }
-
-        if (remaining.length <= middlePageLimit + lastPageLimit) {
-            const pMidCount = Math.min(middlePageLimit, Math.max(2, remaining.length - lastPageLimit));
-            chunks.push(remaining.slice(0, pMidCount));
-            chunks.push(remaining.slice(pMidCount));
-            break;
-        }
-
-        chunks.push(remaining.slice(0, middlePageLimit));
-        remaining = remaining.slice(middlePageLimit);
+    for (let pageIndex = 0; pageIndex < pageCount - 1; pageIndex += 1) {
+        const pagesLeft = pageCount - 1 - pageIndex;
+        const pageLimit = pageIndex === 0 ? firstPageLimit : middlePageLimit;
+        const targetCount = Math.ceil(remainingCount / pagesLeft);
+        const count = Math.min(pageLimit, Math.max(1, targetCount));
+        chunks.push(items.slice(offset, offset + count));
+        offset += count;
+        remainingCount -= count;
     }
 
-    // Post-balancing: if the last page has only 1 item and previous page has plenty, move 1-2 items over
-    if (chunks.length > 1) {
-        const lastChunk = chunks[chunks.length - 1];
-        const prevChunk = chunks[chunks.length - 2];
-        if (lastChunk.length === 1 && prevChunk.length > 3) {
-            const moved = prevChunk.pop()!;
-            lastChunk.unshift(moved);
-        }
-    }
-
+    chunks.push(items.slice(offset));
     return chunks;
 }

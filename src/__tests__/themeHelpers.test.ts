@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems } from '@/utils/themeHelpers';
+import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {
@@ -82,6 +82,25 @@ describe('chunkQuoteItems', () => {
         expect(chunks.flat()).toEqual(items);
     });
 
+    it('should avoid sparse middle pages for landscape quotes', () => {
+        const items = Array.from({ length: 22 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items, {
+            isLandscape: true,
+            showSummary: true,
+            showBankInfo: true,
+            hasBankData: false,
+            showTerms: true,
+            hasTerms: false,
+            showNotes: true,
+            hasNotes: false,
+            showSignatures: true,
+        });
+
+        expect(chunks).toHaveLength(3);
+        expect(chunks.map(chunk => chunk.length)).toEqual([7, 7, 8]);
+        expect(chunks.flat()).toEqual(items);
+    });
+
     it('should respect custom itemsPerPage when specified and different from 14', () => {
         const items = Array.from({ length: 6 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items, { itemsPerPage: 2 });
@@ -89,6 +108,18 @@ describe('chunkQuoteItems', () => {
         expect(chunks[0]).toEqual([1, 2]);
         expect(chunks[1]).toEqual([3, 4]);
         expect(chunks[2]).toEqual([5, 6]);
+    });
+});
+
+describe('formatPdfTitle', () => {
+    it('preserves Turkish dotted and dotless I characters', () => {
+        expect(formatPdfTitle('Fiyat Teklifi', 'tr')).toBe('FİYAT TEKLİFİ');
+        expect(formatPdfTitle('İndirimli ürün', 'tr')).toBe('İNDİRİMLİ ÜRÜN');
+    });
+
+    it('uses the selected locale for non-Turkish titles', () => {
+        expect(formatPdfTitle('price quote', 'en')).toBe('PRICE QUOTE');
+        expect(formatPdfTitle('preisangebot', 'de')).toBe('PREISANGEBOT');
     });
 });
 

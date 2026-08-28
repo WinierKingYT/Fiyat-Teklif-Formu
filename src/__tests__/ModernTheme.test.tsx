@@ -115,7 +115,7 @@ describe('ModernTheme', () => {
         renderTheme();
 
         expect(screen.getAllByText('Bizim A.Ş.').length).toBeGreaterThan(0);
-        expect(screen.getByText('Hizmet Teklifi')).toBeInTheDocument();
+        expect(screen.getByText('HİZMET TEKLİFİ')).toBeInTheDocument();
         expect(screen.getAllByText(/#2026-001/).length).toBeGreaterThanOrEqual(1);
     });
 
