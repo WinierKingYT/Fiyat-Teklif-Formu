@@ -9,12 +9,15 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import CustomerInfoForm from '@/components/CustomerInfoForm';
 import CustomFieldsSection from '@/components/CustomFieldsSection';
 import ItemsTable from '@/components/ItemsTable';
+import PrintableQuote from '@/components/PrintableQuoteV2';
 import { QuoteNumberConfigModal } from '@/components/quote-number';
 import SummarySection from '@/components/SummarySection';
 import { getDefaultQuoteNumberConfig } from '@/context/quote/initialState';
-import { useQuoteData, useTab } from '@/context/QuoteContext';
+import { useQuoteData, usePdfConfig, useTab } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
+import { usePdfExport } from '@/hooks/usePdfExport';
+import { useTranslation } from '@/hooks/useTranslation';
 import Logger from '@/utils/logger';
 import { generateNextQuoteNumber } from '@/utils/numberGenerator';
 import type { Customer, Product, QuoteItem, QuoteNumberConfig } from '@/context/quote/types';
@@ -54,8 +57,23 @@ export const QuoteBuilder = React.memo(({
     db
   } = useQuoteData();
   const { undo, redo, addTab } = useTab();
+  const { pdfConfig, pdfLayout } = usePdfConfig();
+  const { t } = useTranslation(quoteData?.language);
 
   const { setIsLivePreviewMode, splitPreviewMode, setSplitPreviewMode } = useUI();
+
+  const { handleDownload: handleDirectPdfDownload, isGenerating: isPdfGenerating } = usePdfExport({
+    quoteData,
+    customerData,
+    companyData,
+    bankData,
+    items,
+    discount,
+    pdfConfig,
+    pageSize: 'a4',
+    quality: 'high',
+    t
+  });
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -63,6 +81,17 @@ export const QuoteBuilder = React.memo(({
   const [numberConfig, setNumberConfig] = useState<QuoteNumberConfig>(getDefaultQuoteNumberConfig);
   const [activeSideTab, setActiveSideTab] = useState<'terms' | 'bank' | 'company' | 'custom'>('terms');
   const [confirmReset, setConfirmReset] = useState(false);
+  const [isDynamicPdfGenerating, setIsDynamicPdfGenerating] = useState(false);
+
+  const handleDirectDownload = async () => {
+    setIsDynamicPdfGenerating(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 80));
+      await handleDirectPdfDownload();
+    } finally {
+      setIsDynamicPdfGenerating(false);
+    }
+  };
 
   // Load quote number config from IndexedDB
   useEffect(() => {
@@ -81,7 +110,7 @@ export const QuoteBuilder = React.memo(({
   }, [db]);
 
   const handleSaveShortcut = () => { saveQuote(); };
-  const handlePdfShortcut = () => { setIsLivePreviewMode(prev => !prev); };
+  const handlePdfShortcut = () => { handleDirectDownload(); };
   const handleNewQuote = async () => { addTab(); };
 
   const handleAutoGenerateQuoteNumber = async () => {
@@ -393,10 +422,43 @@ export const QuoteBuilder = React.memo(({
               showAmountInWords={quoteData.showAmountInWords}
               onToggleAmountInWords={(val) => updateQuoteData('showAmountInWords', val)}
               onSaveQuote={saveQuote}
+              onDownloadPdf={handleDirectDownload}
               onPreviewPdf={() => setIsLivePreviewMode(true)}
+              isSaving={isPdfGenerating || isDynamicPdfGenerating}
             />
           </div>
         </div>
+
+        {/* Off-screen Printable Container for Instant 1-Click PDF Generation */}
+        {isDynamicPdfGenerating && !splitPreviewMode && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              left: '-9999px',
+              top: 0,
+              width: '210mm',
+              opacity: 0,
+              pointerEvents: 'none',
+              zIndex: -1
+            }}
+          >
+            <PrintableQuote
+              id="printable-quote-container-panel"
+              theme={pdfConfig.theme}
+              color={pdfConfig.color}
+              quoteData={quoteData}
+              items={items}
+              customerData={customerData}
+              companyData={companyData}
+              bankData={bankData}
+              discount={discount}
+              layout={pdfLayout}
+              signature={null}
+              config={pdfConfig}
+            />
+          </div>
+        )}
 
         {/* ── SPLIT-SCREEN LIVE PDF PREVIEW (Right Side on XL) ── */}
         {splitPreviewMode && (

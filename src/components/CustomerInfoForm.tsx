@@ -76,7 +76,8 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
       phone: data.phone || '',
       address: data.address || '',
     });
-  }, [data.name, data.company, data.email, data.phone, data.address, reset]);
+    setManualShowDetails(null);
+  }, [data.name, data.company, data.email, data.phone, data.address, data.taxOffice, data.taxNumber, reset]);
 
   // Load recent customers for quick select
   useEffect(() => {
@@ -189,7 +190,7 @@ const CustomerInfoForm: React.FC<CustomerInfoFormProps> = ({ data, onChange, onS
             onClick={() => setManualShowDetails(!showDetails)}
           >
             {showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            <span>{showDetails ? (t('hide') || 'Gizle') : (t('details') || '+ Ek Bilgiler')}</span>
+            <span>{showDetails ? (t('hideCustomerExtraInfo') || 'Gizle') : (t('customerExtraInfo') || '+ Ek Bilgiler')}</span>
           </button>
           <button type="button" className="btn btn-outline btn-xs" onClick={onSelectCustomer}>
             <Users size={12} />

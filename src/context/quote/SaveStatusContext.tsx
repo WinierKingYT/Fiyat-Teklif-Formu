@@ -20,8 +20,7 @@ export const SaveStatusProvider = ({ children }: { children: React.ReactNode }) 
 
 export const useSaveStatus = () => {
     const context = useContext(SaveStatusValueContext);
-    if (!context) throw new Error('useSaveStatus must be used within a SaveStatusProvider');
-    return context;
+    return context || { status: 'idle', lastSaved: null };
 };
 
 export const useSaveStatusSetter = () => {

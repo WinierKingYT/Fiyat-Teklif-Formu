@@ -1,5 +1,6 @@
-import { Calculator, Receipt, Save, FileText } from 'lucide-react';
+import { Calculator, Receipt, Save, FileText, Eye } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
+import { useSaveStatus } from '@/context/quote/SaveStatusContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { calculateQuoteTotals, formatCurrency } from '@/utils/calculations';
 import { numberToWordsTurkish } from '@/utils/numberToWordsTurkish';
@@ -14,6 +15,7 @@ interface SummarySectionProps {
     showAmountInWords?: boolean;
     onToggleAmountInWords?: (show: boolean) => void;
     onSaveQuote?: () => void;
+    onDownloadPdf?: () => void;
     onPreviewPdf?: () => void;
     isSaving?: boolean;
 }
@@ -27,10 +29,14 @@ const SummarySection = React.memo(({
     showAmountInWords,
     onToggleAmountInWords,
     onSaveQuote,
+    onDownloadPdf,
     onPreviewPdf,
     isSaving = false
 }: SummarySectionProps) => {
     const { t } = useTranslation(language);
+    const saveStatusObj = useSaveStatus();
+    const currentSaveStatus = saveStatusObj?.status || 'idle';
+    const isSaveInProgress = isSaving || currentSaveStatus === 'saving';
     const calc = useMemo(() => calculateQuoteTotals(items, discount, { currency }), [items, discount, currency]);
     const [localShowWords, setLocalShowWords] = useState(showAmountInWords ?? false);
     const isShowingWords = showAmountInWords !== undefined ? showAmountInWords : localShowWords;
@@ -170,32 +176,64 @@ const SummarySection = React.memo(({
                     </div>
 
                     {/* Prominent Action Buttons (CTAs) */}
-                    {(onSaveQuote || onPreviewPdf) && (
+                    {(onSaveQuote || onDownloadPdf || onPreviewPdf) && (
                         <div className="pt-3 space-y-2 border-t border-[var(--color-border)]">
-                            {onPreviewPdf && (
+                            <div className="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    onClick={onPreviewPdf}
-                                    className="w-full btn btn-primary flex items-center justify-center gap-2 py-3 font-bold text-sm shadow-md rounded-[var(--radius-md)] tracking-wide cursor-pointer transition-all hover:brightness-105 active:scale-[0.99]"
-                                    title={`${t('previewAndDownloadPdf') || 'PDF İndir'} (Ctrl+P)`}
+                                    onClick={onDownloadPdf || onPreviewPdf}
+                                    className="flex-1 btn btn-primary flex items-center justify-center gap-2 py-3 font-bold text-sm shadow-md rounded-[var(--radius-md)] tracking-wide cursor-pointer transition-all hover:brightness-105 active:scale-[0.99]"
+                                    title="PDF İndir (Ctrl+P)"
+                                    aria-label="PDF İNDİR"
                                 >
                                     <FileText size={18} />
-                                    <span>{t('previewAndDownloadPdf') || 'PDF İNDİR'}</span>
+                                    <span>PDF İNDİR</span>
                                 </button>
-                            )}
+                                {onPreviewPdf && (
+                                    <button
+                                        type="button"
+                                        onClick={onPreviewPdf}
+                                        className="btn btn-outline flex items-center justify-center gap-1.5 py-3 px-3 text-xs font-semibold text-[var(--color-text)] rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)] cursor-pointer"
+                                        title="PDF Önizle"
+                                        aria-label={t('previewAndDownloadPdf') || 'PDF Önizle & İndir'}
+                                    >
+                                        <Eye size={16} />
+                                        <span className="hidden sm:inline">Önizle</span>
+                                    </button>
+                                )}
+                            </div>
                             {onSaveQuote && (
                                 <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] pt-1 px-1">
-                                    <span className="flex items-center gap-1 text-[var(--color-success)] text-[11px] font-medium">
-                                        ✓ Otomatik kaydedildi
-                                    </span>
+                                    {currentSaveStatus === 'saving' ? (
+                                        <span className="flex items-center gap-1 text-[var(--color-primary)] text-[11px] font-medium animate-pulse">
+                                            ⏳ {t('saving') || 'Kaydediliyor...'}
+                                        </span>
+                                    ) : currentSaveStatus === 'saved' ? (
+                                        <span className="flex items-center gap-1 text-[var(--color-success)] text-[11px] font-medium">
+                                            ✓ {t('saved') || 'Kaydedildi'}
+                                        </span>
+                                    ) : currentSaveStatus === 'error' ? (
+                                        <span className="flex items-center gap-1 text-[var(--color-error)] text-[11px] font-medium">
+                                            ⚠️ {t('saveFailed') || 'Kaydedilemedi'}
+                                        </span>
+                                    ) : saveStatusObj?.lastSaved ? (
+                                        <span className="flex items-center gap-1 text-[var(--color-text-muted)] text-[11px]">
+                                            ✓ {t('saved') || 'Kaydedildi'}
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1 text-[var(--color-text-muted)] text-[11px]">
+                                            {t('draft') || 'Taslak'}
+                                        </span>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={onSaveQuote}
-                                        disabled={isSaving}
-                                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] underline text-[11px] transition-colors"
-                                        title="Teklifi Manuel Kaydet (Ctrl+S)"
+                                        disabled={isSaveInProgress}
+                                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] underline text-[11px] transition-colors cursor-pointer"
+                                        title={`${t('saveQuoteAction') || 'Teklifi Kaydet'} (Ctrl+S)`}
+                                        aria-label={t('saveQuoteAction') || 'Teklifi Kaydet'}
                                     >
-                                        {isSaving ? (t('saving') || 'Kaydediliyor...') : (t('saveQuoteAction') || 'Şimdi Kaydet')}
+                                        {isSaveInProgress ? (t('saving') || 'Kaydediliyor...') : (t('saveQuoteAction') || 'Şimdi Kaydet')}
                                     </button>
                                 </div>
                             )}
