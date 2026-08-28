@@ -50,6 +50,7 @@ export const QuoteBuilder = React.memo(({
     bankData, updateBankData,
     saveQuote,
     resetQuote,
+    fillTestData,
     db
   } = useQuoteData();
   const { undo, redo, addTab } = useTab();
@@ -248,6 +249,18 @@ export const QuoteBuilder = React.memo(({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Test / Örnek Veri Doldur Butonu */}
+          <button
+            type="button"
+            onClick={fillTestData}
+            className="top-bar-btn flex items-center gap-1 text-xs px-2.5 text-[var(--color-primary)] bg-[var(--color-primary-muted)] font-medium hover:bg-[var(--color-primary)] hover:text-white transition-all shadow-2xs cursor-pointer"
+            title="Formu Test / Örnek Verilerle Doldur"
+            aria-label="Örnek Veri Doldur"
+          >
+            <Sparkles size={13} />
+            <span>Örnek Doldur</span>
+          </button>
+
           {/* Split Screen Button (Large Screens) */}
           <button
             type="button"
@@ -263,7 +276,7 @@ export const QuoteBuilder = React.memo(({
           <button
             type="button"
             onClick={() => setConfirmReset(true)}
-            className="top-bar-btn text-[var(--color-text-muted)] hover:text-[var(--color-error)]"
+            className="top-bar-btn text-[var(--color-text-muted)] hover:text-[var(--color-error)] cursor-pointer"
             title="Teklifi Sıfırla"
             aria-label="Teklifi Sıfırla"
           >

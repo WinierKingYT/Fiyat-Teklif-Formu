@@ -450,25 +450,65 @@ export const QuoteDataProvider = ({ children }: { children: React.ReactNode }) =
     }, [db]);
 
     const fillTestData = useCallback(async () => {
+        const today = getLocalDateString();
         const testData = {
-            quoteData: { ...getInitialQuoteData(), title: 'Kapsamlı Kurumsal Web Projesi', number: 'T-2023-TEST-001' },
-            customerData: { name: 'Ahmet Yılmaz', company: 'Yılmaz Teknoloji A.Ş.', email: 'ahmet@yilmazteknoloji.com', phone: '+90 555 123 45 67', address: 'Teknopark İstanbul' },
-            companyData: { name: 'TeklifMaster Bilişim Ltd.', authorized: 'Mehmet Demir', email: 'kurumsal@teklifmaster.com', phone: '+90 850 987 65 43', website: 'https://www.teklifmaster.com', address: 'Maslak, İstanbul' },
+            quoteData: {
+                ...getInitialQuoteData(),
+                title: 'HİZMET VE ÜRÜN SATIŞ TEKLİFİ',
+                number: 'TK-2026-001',
+                date: today,
+                validUntilDays: '15',
+                validUntil: '',
+                description: 'Kurumsal dijital dönüşüm ve altyapı geliştirme projesi.',
+                deliveryTerms: 'Sipariş onayından sonra 3 iş günü içinde kargo/teslimat yapılacaktır.',
+                warrantyTerms: 'Tüm ürün ve hizmetler 24 ay distribütör/firma garantilidir.',
+                terms: '%50 peşin, %50 teslimatta havale/EFT.',
+                notes: 'Fiyatlarımıza montaj ve teknik destek dahildir. Teklifimiz 15 gün süreyle geçerlidir.'
+            },
+            customerData: {
+                name: 'Mehmet Özdemir',
+                company: 'Mega Lojistik ve Ticaret Ltd. Şti.',
+                email: 'mehmet@megalojistik.com',
+                phone: '+90 (532) 555 98 76',
+                address: 'Atatürk Mah. Sanayi Cad. No: 28 Kadıköy / İstanbul',
+                taxOffice: 'Kadıköy',
+                taxNumber: '9876543210'
+            },
+            companyData: {
+                name: 'Atlas Bilişim ve Danışmanlık A.Ş.',
+                authorized: 'Ahmet Yılmaz',
+                email: 'iletisim@atlasbilisim.com',
+                phone: '+90 (212) 555 01 23',
+                website: 'www.atlasbilisim.com',
+                address: 'Büyükdere Cad. No: 142 Levent / İstanbul',
+                taxOffice: 'Beşiktaş',
+                taxNumber: '1234567890',
+                logo: null,
+                signature: null,
+                stamp: null
+            },
             items: [
-                { id: '1', name: 'Kurumsal Web Tasarımı', quantity: 1, unit: 'Proje', price: 25000, taxRate: 20 },
-                { id: '2', name: 'Frontend Geliştirme', quantity: 1, unit: 'Hizmet', price: 35000, taxRate: 20 },
+                { id: 'item-test-1', name: 'Kurumsal Web Sitesi Tasarımı ve Geliştirme', description: 'Responsive ve SEO uyumlu özel arayüz tasarımı', quantity: 1, unit: 'Hizmet', price: 25000, taxRate: 20, discountRate: 0, total: 25000 },
+                { id: 'item-test-2', name: 'Bulut Sunucu ve Güvenlik Altyapısı', description: 'Yıllık yüksek erişilebilir bulut sunucu paketi', quantity: 1, unit: 'Adet', price: 8500, taxRate: 20, discountRate: 10, total: 7650 },
+                { id: 'item-test-3', name: 'SEO & Dijital Pazarlama Danışmanlığı', description: 'Aylık arama motoru optimizasyonu ve raporlama', quantity: 3, unit: 'Ay', price: 4500, taxRate: 20, discountRate: 0, total: 13500 },
+                { id: 'item-test-4', name: 'SSL Sertifikası ve Kurumsal E-Posta Paketi', description: '25 kullanıcı için kurumsal e-posta ve güvenlik sertifikası', quantity: 1, unit: 'Paket', price: 1800, taxRate: 20, discountRate: 0, total: 1800 },
+                { id: 'item-test-5', name: 'Kullanıcı Eğitimi ve Teknik Destek', description: 'Sistem kullanımı ve operasyonel destek', quantity: 5, unit: 'Saat', price: 1200, taxRate: 20, discountRate: 5, total: 5700 },
             ],
-            bankData: { bankName: 'Garanti BBVA', branch: 'Maslak', accountNumber: '9876543', iban: 'TR12 0006 2000 0001 2345 6789 01', accountHolder: 'TeklifMaster' },
-            discount: { type: 'percentage' as const, value: 10 }
+            bankData: {
+                bankName: 'Garanti BBVA',
+                branch: 'Levent Ticari Şubesi (Kod: 1234)',
+                accountNumber: '6298745',
+                iban: 'TR120006200000000006298745',
+                accountHolder: 'Atlas Bilişim ve Danışmanlık A.Ş.'
+            },
+            discount: { type: 'percentage' as const, value: 5 }
         };
-        const confirmed = await showConfirm(tStatic('testDataTitle'), tStatic('testDataConfirm'), 'warning');
-        if (!confirmed) return;
         setTabs(prev => prev.map(tab => {
             if (isCurrentTab(tab.id)) return { ...tab, data: testData as TabData };
             return tab;
         }));
-        toast.success(tStatic('testDataAdded'));
-    }, [showConfirm, setTabs, isCurrentTab]);
+        toast.success(tStatic('testDataAdded') || 'Örnek test verileri yüklendi!');
+    }, [setTabs, isCurrentTab]);
 
     const currentQuoteId = activeTab?.savedQuoteId || null;
     const setCurrentQuoteId = useCallback((id: number | null) => {

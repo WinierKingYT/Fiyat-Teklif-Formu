@@ -91,38 +91,30 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         
         .modern-theme-container .header-left {
             display: flex;
+            flex-direction: column;
             align-items: flex-start;
-            gap: 1rem;
             flex: 1;
             padding-right: 1rem;
         }
 
         .modern-theme-container .company-logo-box {
-            width: 110px;
-            height: 58px;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
+            max-width: 140px;
+            max-height: 60px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #94a3b8;
-            font-size: 0.65rem;
-            font-weight: 700;
-            text-align: center;
-            padding: 4px;
+            justify-content: flex-start;
+            margin-bottom: 0.35rem;
             overflow: hidden;
-            flex-shrink: 0;
         }
 
         .modern-theme-container .company-logo-box img {
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 140px;
+            max-height: 60px;
             object-fit: contain;
         }
 
         .modern-theme-container .company-info-box {
-            flex: 1;
+            width: 100%;
             font-size: 7.2pt;
             color: #475569;
             line-height: 1.35;
@@ -163,9 +155,6 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
         /* CUSTOMER SECTION */
         .modern-theme-container .customer-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.85rem;
             margin-bottom: 0.75rem;
             page-break-inside: avoid;
             break-inside: avoid;
@@ -190,9 +179,10 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             letter-spacing: 0.04em;
         }
 
-        .modern-theme-container .info-grid {
+        .modern-theme-container .customer-box .info-grid {
             display: grid;
-            gap: 0.2rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.25rem 1rem;
             font-size: 7.2pt;
         }
 
@@ -536,20 +526,23 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                     {showSection('header') && (pageIndex === 0 ? (
                         <div className="pdf-header">
                             <div className="header-left">
-                                <div className="company-logo-box">
-                                    {config.showLogo && companyData.logo ? (
+                                {config.showLogo && companyData.logo && (
+                                    <div className="company-logo-box">
                                         <img src={companyData.logo} alt="Logo" />
-                                    ) : (
-                                        <span>LOGO</span>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                                 <div className="company-info-box">
                                     <div className="company-title">{renderEditable(companyData.name || 'Firma Adı', 'companyName')}</div>
-                                    <div><strong>{t.phone || 'Tel'}:</strong> {companyData.phone || 'Belirtilmemiş'}</div>
-                                    <div><strong>{t.address || 'Adres'}:</strong> {companyData.address || 'Adres belirtilmemiş'}</div>
-                                    <div><strong>{t.email || 'E-posta'}:</strong> {companyData.email || 'Belirtilmemiş'}</div>
-                                    <div><strong>{t.website || 'Web'}:</strong> {companyData.website || 'Belirtilmemiş'}</div>
-                                    <div><strong>{t.authorized || 'Yetkili'}:</strong> {companyData.authorized || 'Belirtilmemiş'}</div>
+                                    {companyData.authorized && <div><strong>{t.authorized || 'Yetkili'}:</strong> {companyData.authorized}</div>}
+                                    {companyData.phone && <div><strong>{t.phone || 'Tel'}:</strong> {companyData.phone}</div>}
+                                    {companyData.address && <div><strong>{t.address || 'Adres'}:</strong> {companyData.address}</div>}
+                                    {companyData.email && <div><strong>{t.email || 'E-posta'}:</strong> {companyData.email}</div>}
+                                    {companyData.website && <div><strong>{t.website || 'Web'}:</strong> {companyData.website}</div>}
+                                    {(companyData.taxOffice || companyData.taxNumber) && (
+                                        <div>
+                                            <strong>{t.taxOffice || 'Vergi'}:</strong> {companyData.taxOffice ? `${formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} ` : ''}{companyData.taxNumber ? `No: ${companyData.taxNumber}` : ''}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="quote-info-box">
@@ -571,52 +564,53 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                         </div>
                     ))}
 
-                    {/* Customer & Seller Section - Only Page 1 */}
+                    {/* Customer Section - Only Page 1 and only if customer has data */}
                     {showSection('customer') && pageIndex === 0 && (
+                        (customerData.name && customerData.name.trim().length > 0) ||
+                        (customerData.company && customerData.company.trim().length > 0) ||
+                        (customerData.phone && customerData.phone.trim().length > 0) ||
+                        (customerData.email && customerData.email.trim().length > 0) ||
+                        (customerData.address && customerData.address.trim().length > 0) ||
+                        (customerData.taxOffice && customerData.taxOffice.trim().length > 0) ||
+                        (customerData.taxNumber && customerData.taxNumber.trim().length > 0) ||
+                        (quoteData.customFields && quoteData.customFields.length > 0)
+                    ) && (
                         <div className="customer-section">
-                            <div className="customer-box">
-                                <div className="section-title">
-                                    <span>🏢</span> <span>{t.seller || 'SATICI'}</span>
-                                </div>
-                                <div className="info-grid">
-                                    <div className="info-line">
-                                        <span className="info-label">{t.company || 'Firma'}:</span>
-                                        <span className="info-value"><strong>{companyData.name || 'Firma Adı'}</strong></span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.authorized || 'Yetkili'}:</span>
-                                        <span className="info-value">{companyData.authorized || 'Belirtilmemiş'}</span>
-                                    </div>
-                                    {(companyData.taxOffice || companyData.taxNumber) && (
-                                        <div className="info-line">
-                                            <span className="info-label">{t.taxOffice || 'Vergi'}:</span>
-                                            <span className="info-value">{companyData.taxOffice ? `${formatTaxOfficeDisplay(companyData.taxOffice, t.taxOffice || 'V.D.')} ` : ''}{companyData.taxNumber ? `No: ${companyData.taxNumber}` : ''}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
                             <div className="customer-box">
                                 <div className="section-title">
                                     <span>👤</span> <span>{t.customer || 'MÜŞTERİ'}</span>
                                 </div>
                                 <div className="info-grid">
-                                    <div className="info-line">
-                                        <span className="info-label">{t.company || 'Firma'}:</span>
-                                        <span className="info-value"><strong>{renderEditable(customerData.company, 'customerCompany') || 'Belirtilmemiş'}</strong></span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.authorized || 'Yetkili'}:</span>
-                                        <span className="info-value">{renderEditable(customerData.name, 'customerName') || '-'}</span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.phone || 'Tel'}:</span>
-                                        <span className="info-value">{renderEditable(customerData.phone, 'customerPhone') || '-'}</span>
-                                    </div>
-                                    <div className="info-line">
-                                        <span className="info-label">{t.email || 'E-posta'}:</span>
-                                        <span className="info-value">{renderEditable(customerData.email, 'customerEmail') || '-'}</span>
-                                    </div>
+                                    {customerData.company && (
+                                        <div className="info-line">
+                                            <span className="info-label">{t.company || 'Firma'}:</span>
+                                            <span className="info-value"><strong>{renderEditable(customerData.company, 'customerCompany')}</strong></span>
+                                        </div>
+                                    )}
+                                    {customerData.name && (
+                                        <div className="info-line">
+                                            <span className="info-label">{t.authorized || 'Yetkili'}:</span>
+                                            <span className="info-value">{renderEditable(customerData.name, 'customerName')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.phone && (
+                                        <div className="info-line">
+                                            <span className="info-label">{t.phone || 'Tel'}:</span>
+                                            <span className="info-value">{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.email && (
+                                        <div className="info-line">
+                                            <span className="info-label">{t.email || 'E-posta'}:</span>
+                                            <span className="info-value">{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        </div>
+                                    )}
+                                    {customerData.address && (
+                                        <div className="info-line" style={{ gridColumn: '1 / -1' }}>
+                                            <span className="info-label">{t.address || 'Adres'}:</span>
+                                            <span className="info-value">{renderEditable(customerData.address, 'customerAddress')}</span>
+                                        </div>
+                                    )}
                                     {(customerData.taxOffice || customerData.taxNumber) && (
                                         <div className="info-line">
                                             <span className="info-label">{t.taxOffice || 'Vergi'}:</span>
