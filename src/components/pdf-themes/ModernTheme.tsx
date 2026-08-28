@@ -591,42 +591,42 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                     <span>👤</span> <span>{t.customer || 'MÜŞTERİ'}</span>
                                 </div>
                                 <div className="info-grid">
-                                    {customerData.company && (
+                                    {customerData.company?.trim() && (
                                         <div className="info-line">
                                             <span className="info-label">{t.company || 'Firma'}:</span>
-                                            <span className="info-value"><strong>{renderEditable(customerData.company, 'customerCompany')}</strong></span>
+                                            <span className="info-value"><strong>{renderEditable(customerData.company.trim(), 'customerCompany')}</strong></span>
                                         </div>
                                     )}
-                                    {customerData.name && (
+                                    {customerData.name?.trim() && (
                                         <div className="info-line">
                                             <span className="info-label">{t.authorized || 'Yetkili'}:</span>
-                                            <span className="info-value">{renderEditable(customerData.name, 'customerName')}</span>
+                                            <span className="info-value">{renderEditable(customerData.name.trim(), 'customerName')}</span>
                                         </div>
                                     )}
-                                    {customerData.phone && (
+                                    {customerData.phone?.trim() && (
                                         <div className="info-line">
                                             <span className="info-label">{t.phone || 'Tel'}:</span>
-                                            <span className="info-value">{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                            <span className="info-value">{renderEditable(customerData.phone.trim(), 'customerPhone')}</span>
                                         </div>
                                     )}
-                                    {customerData.email && (
+                                    {customerData.email?.trim() && (
                                         <div className="info-line">
                                             <span className="info-label">{t.email || 'E-posta'}:</span>
-                                            <span className="info-value">{renderEditable(customerData.email, 'customerEmail')}</span>
+                                            <span className="info-value">{renderEditable(customerData.email.trim(), 'customerEmail')}</span>
                                         </div>
                                     )}
-                                    {customerData.address && (
+                                    {customerData.address?.trim() && (
                                         <div className="info-line" style={{ gridColumn: '1 / -1' }}>
                                             <span className="info-label">{t.address || 'Adres'}:</span>
-                                            <span className="info-value">{renderEditable(customerData.address, 'customerAddress')}</span>
+                                            <span className="info-value">{renderEditable(customerData.address.trim(), 'customerAddress')}</span>
                                         </div>
                                     )}
-                                    {(customerData.taxOffice || customerData.taxNumber) && (
+                                    {(customerData.taxOffice?.trim() || customerData.taxNumber?.trim()) && (
                                         <div className="info-line">
                                             <span className="info-label">{t.taxOffice || 'Vergi'}:</span>
                                             <span className="info-value">
-                                                {customerData.taxOffice && <span>{formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} </span>}
-                                                {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                                {customerData.taxOffice?.trim() && <span>{formatTaxOfficeDisplay(customerData.taxOffice.trim(), t.taxOffice || 'V.D.')} </span>}
+                                                {customerData.taxNumber?.trim() && <span>No: {customerData.taxNumber.trim()}</span>}
                                             </span>
                                         </div>
                                     )}

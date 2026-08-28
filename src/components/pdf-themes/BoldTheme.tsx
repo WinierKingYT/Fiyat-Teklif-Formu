@@ -323,38 +323,38 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                             {/* Customer Box */}
                             <div className="bold-party-box">
                                 <div className="bold-party-title">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
-                                {customerData.company && (
+                                {customerData.company?.trim() && (
                                     <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '2px' }}>
-                                        {renderEditable(customerData.company, 'customerCompany')}
+                                        {renderEditable(customerData.company.trim(), 'customerCompany')}
                                     </div>
                                 )}
-                                {customerData.name && (
+                                {customerData.name?.trim() && (
                                     <div style={{ fontSize: '8.5pt', color: '#334155' }}>
                                         <span style={{ color: '#64748b', fontWeight: '700' }}>{t.authorized}: </span>
-                                        <span>{renderEditable(customerData.name, 'customerName')}</span>
+                                        <span>{renderEditable(customerData.name.trim(), 'customerName')}</span>
                                     </div>
                                 )}
-                                {customerData.phone && (
+                                {customerData.phone?.trim() && (
                                     <div style={{ fontSize: '8pt', color: '#334155' }}>
                                         <span style={{ color: '#64748b', fontWeight: '700' }}>{t.phone}: </span>
-                                        <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                        <span>{renderEditable(customerData.phone.trim(), 'customerPhone')}</span>
                                     </div>
                                 )}
-                                {customerData.email && (
+                                {customerData.email?.trim() && (
                                     <div style={{ fontSize: '8pt', color: '#334155' }}>
                                         <span style={{ color: '#64748b', fontWeight: '700' }}>{t.email}: </span>
-                                        <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                        <span>{renderEditable(customerData.email.trim(), 'customerEmail')}</span>
                                     </div>
                                 )}
-                                {customerData.address && (
+                                {customerData.address?.trim() && (
                                     <div style={{ fontSize: '8pt', color: '#64748b', marginTop: '2px' }}>
-                                        {customerData.address}
+                                        {customerData.address.trim()}
                                     </div>
                                 )}
-                                {(customerData.taxOffice || customerData.taxNumber) && (
+                                {(customerData.taxOffice?.trim() || customerData.taxNumber?.trim()) && (
                                     <div style={{ fontSize: '7.5pt', color: '#94a3b8', marginTop: '2px' }}>
-                                        {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
-                                        {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                        {customerData.taxOffice?.trim() && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice.trim()} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice.trim()} `}</span>}
+                                        {customerData.taxNumber?.trim() && <span>No: {customerData.taxNumber.trim()}</span>}
                                     </div>
                                 )}
                             </div>

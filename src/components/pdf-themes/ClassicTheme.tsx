@@ -359,38 +359,38 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
                                     {t.customer}
                                 </div>
                                 <div style={{ padding: '6px 8px', fontSize: '8pt', color: '#334155', lineHeight: '1.4' }}>
-                                    {customerData.company && (
+                                    {customerData.company?.trim() && (
                                         <div style={{ fontWeight: '700', fontSize: '9pt', color: '#0f172a', marginBottom: '2px' }}>
-                                            {renderEditable(customerData.company, 'customerCompany')}
+                                            {renderEditable(customerData.company.trim(), 'customerCompany')}
                                         </div>
                                     )}
-                                    {customerData.name && (
+                                    {customerData.name?.trim() && (
                                         <div>
                                             <span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>
-                                            <span style={{ fontWeight: '600' }}>{renderEditable(customerData.name, 'customerName')}</span>
+                                            <span style={{ fontWeight: '600' }}>{renderEditable(customerData.name.trim(), 'customerName')}</span>
                                         </div>
                                     )}
-                                    {customerData.phone && (
+                                    {customerData.phone?.trim() && (
                                         <div>
                                             <span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>
-                                            <span>{renderEditable(customerData.phone, 'customerPhone')}</span>
+                                            <span>{renderEditable(customerData.phone.trim(), 'customerPhone')}</span>
                                         </div>
                                     )}
-                                    {customerData.email && (
+                                    {customerData.email?.trim() && (
                                         <div>
                                             <span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>
-                                            <span>{renderEditable(customerData.email, 'customerEmail')}</span>
+                                            <span>{renderEditable(customerData.email.trim(), 'customerEmail')}</span>
                                         </div>
                                     )}
-                                    {customerData.address && (
+                                    {customerData.address?.trim() && (
                                         <div style={{ marginTop: '2px', color: '#64748b' }}>
-                                            {customerData.address}
+                                            {customerData.address.trim()}
                                         </div>
                                     )}
-                                    {(customerData.taxOffice || customerData.taxNumber) && (
+                                    {(customerData.taxOffice?.trim() || customerData.taxNumber?.trim()) && (
                                         <div style={{ fontSize: '8pt', color: '#475569', marginTop: '2px' }}>
-                                            {customerData.taxOffice && <span>{formatTaxOfficeDisplay(customerData.taxOffice, t.taxOffice || 'V.D.')} </span>}
-                                            {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                            {customerData.taxOffice?.trim() && <span>{formatTaxOfficeDisplay(customerData.taxOffice.trim(), t.taxOffice || 'V.D.')} </span>}
+                                            {customerData.taxNumber?.trim() && <span>No: {customerData.taxNumber.trim()}</span>}
                                         </div>
                                     )}
                                 </div>

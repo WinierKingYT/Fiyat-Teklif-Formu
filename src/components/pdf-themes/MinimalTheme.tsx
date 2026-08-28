@@ -239,15 +239,15 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                         <div className="minimal-box" style={{ marginBottom: '10px' }}>
                             <div className="minimal-box-title">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '3px 12px', alignItems: 'center' }}>
-                                {customerData.company && <div style={{ gridColumn: '1 / -1', fontSize: '9pt', fontWeight: '700', color: '#0f172a' }}>{renderEditable(customerData.company, 'customerCompany')}</div>}
-                                {customerData.name && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>{renderEditable(customerData.name, 'customerName')}</div>}
-                                {customerData.phone && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>{renderEditable(customerData.phone, 'customerPhone')}</div>}
-                                {customerData.email && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>{renderEditable(customerData.email, 'customerEmail')}</div>}
-                                {customerData.address && <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#64748b' }}>{customerData.address}</div>}
-                                {(customerData.taxOffice || customerData.taxNumber) && (
+                                {customerData.company?.trim() && <div style={{ gridColumn: '1 / -1', fontSize: '9pt', fontWeight: '700', color: '#0f172a' }}>{renderEditable(customerData.company.trim(), 'customerCompany')}</div>}
+                                {customerData.name?.trim() && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.authorized}: </span>{renderEditable(customerData.name.trim(), 'customerName')}</div>}
+                                {customerData.phone?.trim() && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.phone}: </span>{renderEditable(customerData.phone.trim(), 'customerPhone')}</div>}
+                                {customerData.email?.trim() && <div style={{ fontSize: '7.5pt', color: '#334155' }}><span style={{ color: '#64748b', fontWeight: '600' }}>{t.email}: </span>{renderEditable(customerData.email.trim(), 'customerEmail')}</div>}
+                                {customerData.address?.trim() && <div style={{ gridColumn: '1 / -1', fontSize: '7.5pt', color: '#64748b' }}>{customerData.address.trim()}</div>}
+                                {(customerData.taxOffice?.trim() || customerData.taxNumber?.trim()) && (
                                     <div style={{ gridColumn: '1 / -1', fontSize: '7pt', color: '#94a3b8' }}>
-                                        {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
-                                        {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                        {customerData.taxOffice?.trim() && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice.trim()} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice.trim()} `}</span>}
+                                        {customerData.taxNumber?.trim() && <span>No: {customerData.taxNumber.trim()}</span>}
                                     </div>
                                 )}
                             </div>

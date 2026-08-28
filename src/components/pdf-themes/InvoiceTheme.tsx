@@ -314,23 +314,23 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                             <div className="invoice-party-card">
                                 <div className="invoice-party-label">{[t.customer, t.to].filter(Boolean).join(' / ')}</div>
                                 <div style={{ fontWeight: 700, fontSize: '9.5pt', color: '#0f172a', marginBottom: '2px' }}>
-                                    {renderEditable(customerData.company || customerData.name, 'customerCompany')}
+                                    {renderEditable(customerData.company?.trim() || customerData.name?.trim() || '', 'customerCompany')}
                                 </div>
                                 <div style={{ fontSize: '8pt', color: '#475569', lineHeight: '1.35' }}>
-                                    {customerData.name && customerData.company && (
-                                        <div><span style={{ fontWeight: 600, color: '#64748b' }}>{t.authorized}: </span>{renderEditable(customerData.name, 'customerName')}</div>
+                                    {customerData.name?.trim() && customerData.company?.trim() && (
+                                        <div><span style={{ fontWeight: 600, color: '#64748b' }}>{t.authorized}: </span>{renderEditable(customerData.name.trim(), 'customerName')}</div>
                                     )}
-                                    {customerData.phone && (
-                                        <div><span style={{ fontWeight: 600, color: '#64748b' }}>{t.phone}: </span>{renderEditable(customerData.phone, 'customerPhone')}</div>
+                                    {customerData.phone?.trim() && (
+                                        <div><span style={{ fontWeight: 600, color: '#64748b' }}>{t.phone}: </span>{renderEditable(customerData.phone.trim(), 'customerPhone')}</div>
                                     )}
-                                    {customerData.email && (
-                                        <div><span style={{ fontWeight: 600, color: '#64748b' }}>{t.email}: </span>{renderEditable(customerData.email, 'customerEmail')}</div>
+                                    {customerData.email?.trim() && (
+                                        <div><span style={{ fontWeight: 600, color: '#64748b' }}>{t.email}: </span>{renderEditable(customerData.email.trim(), 'customerEmail')}</div>
                                     )}
-                                    {customerData.address && <div>{customerData.address}</div>}
-                                    {(customerData.taxOffice || customerData.taxNumber) && (
+                                    {customerData.address?.trim() && <div>{customerData.address.trim()}</div>}
+                                    {(customerData.taxOffice?.trim() || customerData.taxNumber?.trim()) && (
                                         <div style={{ fontSize: '7.5pt', color: '#64748b', marginTop: '2px' }}>
-                                            {customerData.taxOffice && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice} `}</span>}
-                                            {customerData.taxNumber && <span>No: {customerData.taxNumber}</span>}
+                                            {customerData.taxOffice?.trim() && <span>{(currentLocale || 'tr').startsWith('tr') ? `${customerData.taxOffice.trim()} (${t.taxOffice || 'V.D.'}) ` : `${t.taxOffice || 'Tax Office'}: ${customerData.taxOffice.trim()} `}</span>}
+                                            {customerData.taxNumber?.trim() && <span>No: {customerData.taxNumber.trim()}</span>}
                                         </div>
                                     )}
                                 </div>

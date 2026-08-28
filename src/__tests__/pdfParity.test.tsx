@@ -274,24 +274,39 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(container.textContent).not.toContain('Firma Adı');
     });
 
-    it('does not render duplicate seller box in customer area', () => {
+    it('renders only company and authorized name when other customer fields are empty', () => {
         const config = getDefaultPdfConfig();
+        const partialCustomer: CustomerData = {
+            name: 'Ali Yılmaz',
+            company: 'Yılmaz İnşaat Ltd.',
+            email: '',
+            phone: '',
+            address: '',
+            taxOffice: '',
+            taxNumber: ''
+        };
+
         const { container } = render(
             <PdfExportSurface
                 id="canonical-pdf-export-surface"
                 quoteData={mockQuoteData}
-                customerData={mockCustomerData}
+                customerData={partialCustomer}
                 companyData={mockCompanyData}
                 bankData={mockBankData}
-                items={generateItems(3)}
+                items={generateItems(2)}
                 discount={mockDiscount}
                 pdfConfig={config}
             />
         );
 
-        // Customer box exists
-        expect(container.querySelector('.customer-section')).not.toBeNull();
-        // Top header has company info
-        expect(container.querySelector('.company-info-box')).not.toBeNull();
+        const customerBox = container.querySelector('.customer-section') || container.querySelector('.customer-box');
+        expect(customerBox).not.toBeNull();
+        expect(customerBox?.textContent).toContain('Yılmaz İnşaat Ltd.');
+        expect(customerBox?.textContent).toContain('Ali Yılmaz');
+        // Unspecified fields should not have labels or empty lines
+        expect(customerBox?.textContent).not.toContain('Tel:');
+        expect(customerBox?.textContent).not.toContain('E-posta:');
+        expect(customerBox?.textContent).not.toContain('Adres:');
+        expect(customerBox?.textContent).not.toContain('Vergi:');
     });
 });
