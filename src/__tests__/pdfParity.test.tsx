@@ -126,7 +126,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks[0].length).toBe(5);
     });
 
-    it('chunks 11 items with bank and signature into exactly 2 pages with balanced distribution and no overflow', () => {
+    it('chunks 11 items with bank and signature into exactly 2 pages with maximized page utilization and no orphan items', () => {
         const chunks = chunkQuoteItems(generateItems(11), {
             hasCustomer: true,
             hasBankData: true,
@@ -134,9 +134,10 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
             showSignatures: true
         });
         expect(chunks.length).toBe(2);
-        // Page 1 should hold between 6 and 8 items, Page 2 should hold the remainder cleanly
-        expect(chunks[0].length).toBeGreaterThanOrEqual(5);
-        expect(chunks[0].length).toBeLessThanOrEqual(8);
+        // Page 1 maximizes utilization (7 to 9 items), Page 2 cleanly holds the rest (>= 2)
+        expect(chunks[0].length).toBeGreaterThanOrEqual(7);
+        expect(chunks[0].length).toBeLessThanOrEqual(9);
+        expect(chunks[1].length).toBeGreaterThanOrEqual(2);
         expect(chunks[1].length).toBe(11 - chunks[0].length);
     });
 

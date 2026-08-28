@@ -358,10 +358,10 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Items Table */}
                     {showSection('items') && (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                         {pageIndex < itemChunks.length - 1 && (
-                            <div style={{ marginTop: 'auto', paddingTop: '0.5rem', paddingBottom: '0.2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic' }}>
+                            <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', paddingBottom: '0.2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic' }}>
                                 <span>{t.continuedOnNextPage || 'Teklif devamı sonraki sayfadadır ➔'}</span>
                             </div>
                         )}
@@ -370,7 +370,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Summary & Footer on Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <div style={{ marginTop: '1.25rem', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             <div className="invoice-summary-wrap">
                                 {/* Left Side: Bank / Notes / Terms */}
                                 <div>

@@ -256,13 +256,13 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                     )}
 
                     {/* Items Table */}
-                    <div style={{ flex: 1 }}>
+                    <div>
                         {showSection('items') && renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                     </div>
 
                     {/* Totals Section & Footer - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <div style={{ marginTop: '1.25rem', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {config.showSummary && (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '12px', marginTop: '8px', borderTop: '1px solid #0f172a', paddingTop: '6px' }}>
                                     <div>

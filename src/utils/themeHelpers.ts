@@ -177,69 +177,83 @@ export function chunkQuoteItems<T>(items: T[], options: ChunkOptions = {}): T[][
         return [items];
     }
 
-    // 2. Multi-Page Distribution
+    // 2. Multi-Page Distribution with greedy packing and orphan prevention
     const page1RowBudget = Math.min(maxPage1RowBudget, pageCapacity - page1TopBudget - tableHeaderHeight);
     const continuationRowBudget = Math.min(maxMiddlePageRowBudget, pageCapacity - continuationHeaderHeight - tableHeaderHeight);
     const finalPageRowBudget = Math.min(maxFinalPageRowBudget, pageCapacity - continuationHeaderHeight - tableHeaderHeight - finalBottomHeight);
 
-    // If it fits across exactly 2 pages:
-    if (totalItemsHeight <= page1RowBudget + finalPageRowBudget && items.length <= 18) {
-        // Balanced 2-page split
-        let p1Height = 0;
-        let p1Count = 0;
-        const targetP1Height = Math.min(page1RowBudget, Math.max(totalItemsHeight * 0.52, totalItemsHeight - finalPageRowBudget));
+    // For landscape 3-page quotes, distribute evenly to keep middle and final pages well proportioned
+    if (isLandscape && items.length > 18 && items.length <= 26) {
+        const p1Count = Math.min(Math.floor(page1RowBudget / 34), Math.floor(items.length / 3));
+        const p2Count = Math.min(Math.floor(continuationRowBudget / 34), Math.floor((items.length - p1Count) / 2));
+        return [
+            items.slice(0, p1Count),
+            items.slice(p1Count, p1Count + p2Count),
+            items.slice(p1Count + p2Count)
+        ];
+    }
 
-        for (let i = 0; i < items.length; i++) {
-            if (p1Height + itemHeights[i] <= targetP1Height && (items.length - (i + 1)) >= 1) {
-                p1Height += itemHeights[i];
-                p1Count++;
-            } else if (p1Count === 0) {
-                p1Height += itemHeights[i];
-                p1Count++;
+    const chunks: T[][] = [];
+    let currentIndex = 0;
+
+    // Page 1: Pack as many items as possible without overflowing, avoiding orphan 1-item final page
+    let p1Height = 0;
+    const p1Items: T[] = [];
+    while (currentIndex < items.length) {
+        const nextH = itemHeights[currentIndex];
+        const remainingItemsAfterThis = items.length - (currentIndex + 1);
+        
+        // Prevent leaving an orphan single row on the final page when 2+ items could share it
+        const wouldLeaveOrphanOnFinalPage = remainingItemsAfterThis === 1 && items.length >= 4;
+
+        if (p1Height + nextH <= page1RowBudget && !wouldLeaveOrphanOnFinalPage && remainingItemsAfterThis >= 1) {
+            p1Height += nextH;
+            p1Items.push(items[currentIndex]);
+            currentIndex++;
+        } else if (p1Items.length === 0) {
+            p1Height += nextH;
+            p1Items.push(items[currentIndex]);
+            currentIndex++;
+            break;
+        } else {
+            break;
+        }
+    }
+    chunks.push(p1Items);
+
+    // Subsequent pages
+    while (currentIndex < items.length) {
+        const remainingHeight = itemHeights.slice(currentIndex).reduce((s, h) => s + h, 0);
+        
+        // Can all remaining fit on this page as the FINAL page (with bottom sections)?
+        if (remainingHeight <= finalPageRowBudget) {
+            chunks.push(items.slice(currentIndex));
+            break;
+        }
+
+        // Otherwise pack this continuation page
+        let pageH = 0;
+        const pageItems: T[] = [];
+        while (currentIndex < items.length) {
+            const nextH = itemHeights[currentIndex];
+            const remainingItemsAfterThis = items.length - (currentIndex + 1);
+            const wouldLeaveOrphan = remainingItemsAfterThis === 1 && items.length >= 4;
+            
+            if (pageH + nextH <= continuationRowBudget && !wouldLeaveOrphan && remainingItemsAfterThis >= 1) {
+                pageH += nextH;
+                pageItems.push(items[currentIndex]);
+                currentIndex++;
+            } else if (pageItems.length === 0) {
+                pageH += nextH;
+                pageItems.push(items[currentIndex]);
+                currentIndex++;
+                break;
             } else {
                 break;
             }
         }
-
-        // Verify that page 2 does not exceed finalPageRowBudget
-        const p2Height = itemHeights.slice(p1Count).reduce((sum, h) => sum + h, 0);
-        if (p2Height > finalPageRowBudget) {
-            while (p1Count < items.length - 1 && p1Height + itemHeights[p1Count] <= page1RowBudget) {
-                p1Height += itemHeights[p1Count];
-                p1Count++;
-            }
-        }
-
-        return [
-            items.slice(0, p1Count),
-            items.slice(p1Count)
-        ];
+        chunks.push(pageItems);
     }
 
-    // 3. 3+ Pages Balanced Distribution
-    let requiredPages = 3;
-    while (page1RowBudget + ((requiredPages - 2) * continuationRowBudget) + finalPageRowBudget < totalItemsHeight) {
-        requiredPages += 1;
-    }
-
-    const maxLastPageItems = Math.max(1, Math.floor(finalPageRowBudget / 34));
-    const targetLastItems = Math.min(maxLastPageItems, Math.max(1, isLandscape ? Math.ceil(items.length / requiredPages) : Math.floor(items.length / requiredPages)));
-    const itemsForEarlierPages = items.length - targetLastItems;
-    const earlierPagesCount = requiredPages - 1;
-
-    const chunks: T[][] = [];
-    let offset = 0;
-    let remainingEarlier = itemsForEarlierPages;
-
-    for (let pageIdx = 0; pageIdx < earlierPagesCount; pageIdx++) {
-        const pagesRemaining = earlierPagesCount - pageIdx;
-        const pageLimit = pageIdx === 0 ? Math.floor(page1RowBudget / 34) : Math.floor(continuationRowBudget / 34);
-        const count = Math.min(pageLimit, Math.max(1, Math.round(remainingEarlier / pagesRemaining)));
-        chunks.push(items.slice(offset, offset + count));
-        offset += count;
-        remainingEarlier -= count;
-    }
-
-    chunks.push(items.slice(offset));
     return chunks;
 }
