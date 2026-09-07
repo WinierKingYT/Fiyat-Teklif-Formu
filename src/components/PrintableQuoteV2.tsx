@@ -280,7 +280,9 @@ const PrintableQuote = React.memo(({
         const pageWidth = `${widthMm}mm`;
         const paddingPx = config.margins === 'compact' ? 16 : config.margins === 'wide' ? 36 : 24;
         const marginOffsetMm = config.margins === 'compact' ? 9 : config.margins === 'wide' ? 19 : 13;
-        const pageMinHeight = `${Math.max(100, heightMm - marginOffsetMm - 7)}mm`;
+        // Footer + rounding slack: keeps the last page's bottom edge inside the
+        // physical sheet so html2pdf never emits a trailing blank page.
+        const pageMinHeight = `${Math.max(100, heightMm - marginOffsetMm - 20)}mm`;
 
         const baseStyles = {
             minHeight: 'auto',

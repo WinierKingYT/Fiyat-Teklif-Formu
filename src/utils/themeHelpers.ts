@@ -262,7 +262,9 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     let rowFactor = 1;
     if (squeeze) {
         scaleFactor = Math.max(scaleFactor, 1.08);
-        rowFactor = 0.88;
+        // Compact tier rows are genuinely shorter (4px vs 8px vertical padding):
+        // calibrated against rendered output (10 described rows + summary fit one A4).
+        rowFactor = 0.78;
     }
 
     // Measure Item Heights
@@ -278,7 +280,8 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         if (typeof itemObj.description === 'string' && itemObj.description.trim().length > 0) {
             const lines = itemObj.description.split('\n').length;
             const wrapLines = Math.floor(itemObj.description.length / 65);
-            const extraLines = Math.max(lines - 1, wrapLines);
+            // Any description renders as (at least) a second row line — never cost 0.
+            const extraLines = Math.max(1, lines - 1, wrapLines);
             h += extraLines * 16;
         }
         if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
@@ -312,7 +315,7 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const hasBottomSections = finalBottomHeight > 30;
 
     // Calibrate maximum row capacities based on visual layout.
-    // Squeezed single page (compact tier): 14 rows x ~30 units ≈ 420 + header/customer/summary fits 1000.
+    // Squeezed single page (compact tier): 14 plain rows x ~27 units fit 1000 with header/customer/summary.
     const maxSinglePageRowBudget = isLandscape
         ? (hasBottomSections ? 180 : 500)
         : squeeze ? 430 : (hasBottomSections ? 230 : 550);

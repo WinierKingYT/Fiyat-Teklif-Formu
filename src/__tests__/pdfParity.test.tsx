@@ -170,6 +170,57 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks.length).toBe(2);
     });
 
+    // Regression: 12 two-line rows + terms must NOT collapse into one overflowing
+    // page (summary orphaned on p2 with wrong 1/1 numbering). Paginates cleanly.
+    it('paginates 12 described items with terms into 2 pages without orphans', () => {
+        const items = Array.from({ length: 12 }, (_, i) => ({
+            id: `item-${i + 1}`,
+            name: `Kurumsal Web Sitesi Tasarımı ve Geliştirme ${i + 1}`,
+            description: 'Responsive ve SEO uyumlu özel arayüz tasarımı',
+            quantity: 1,
+            price: 100,
+            taxRate: 20,
+            total: 100,
+            unit: 'Adet'
+        }));
+        const chunks = chunkQuoteItems(items, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true,
+            showTerms: true,
+            hasTerms: true
+        });
+        expect(chunks.length).toBe(2);
+        expect(chunks.flat()).toHaveLength(12);
+        // No orphan rows and no orphaned summary: last page keeps >= 2 rows
+        expect(chunks[1].length).toBeGreaterThanOrEqual(2);
+    });
+
+    // Regression: 10 described items + terms fit a single squeezed page.
+    it('keeps 10 described items with terms on a single page', () => {
+        const items = Array.from({ length: 10 }, (_, i) => ({
+            id: `item-${i + 1}`,
+            name: `Bulut Sunucu ve Güvenlik Altyapısı ${i + 1}`,
+            description: 'Yıllık yüksek erişilebilir bulut sunucu paketi',
+            quantity: 1,
+            price: 100,
+            taxRate: 20,
+            total: 100,
+            unit: 'Adet'
+        }));
+        const chunks = chunkQuoteItems(items, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true,
+            showTerms: true,
+            hasTerms: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks[0]).toHaveLength(10);
+    });
+
     it('does not squeeze when spacious density is explicitly set', () => {
         const chunks = chunkQuoteItems(generateItems(11), {
             hasCustomer: true,
