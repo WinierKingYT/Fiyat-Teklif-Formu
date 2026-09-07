@@ -609,6 +609,8 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
                 @media print {
                     body { margin: 0; padding: 0; }
                     .no-print, .pdf-placeholder { display: none !important; }
+                    /* D18: shadows waste ink and get clipped in print — force flat */
+                    *, *::before, *::after { box-shadow: none !important; text-shadow: none !important; }
                     /* C9: same pagination as downloaded PDF — chunk per physical page */
                     .pdf-page { margin-bottom: 0 !important; }
                     .pdf-page:not(:last-child) { page-break-after: always !important; break-after: page !important; }
