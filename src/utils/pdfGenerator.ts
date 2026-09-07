@@ -180,9 +180,15 @@ const removePageBreakStyles = () => {
 /**
  * Ensures all images within the container are loaded before rasterization.
  */
-const waitForAllImages = async (container: HTMLElement): Promise<void> => {
+/**
+ * Waits for all images to finish loading/decoding before capture.
+ * Returns the images that failed (broken URL, CORS, timeout) so callers can
+ * hide them instead of printing empty boxes — and warn the user.
+ */
+export const waitForAllImages = async (container: HTMLElement, timeoutMs = 3000): Promise<HTMLImageElement[]> => {
     const images = Array.from(container.querySelectorAll<HTMLImageElement>('img[src]'));
-    if (images.length === 0) return;
+    const failed: HTMLImageElement[] = [];
+    if (images.length === 0) return failed;
     // Ensure all lazy images are eager so they start loading immediately
     images.forEach(img => {
         if (img.loading === 'lazy') {
@@ -190,15 +196,32 @@ const waitForAllImages = async (container: HTMLElement): Promise<void> => {
             img.removeAttribute('loading');
         }
     });
+    const isReady = (img: HTMLImageElement) => img.complete && img.naturalWidth > 0;
     const promises = images.map(img => {
-        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        if (isReady(img)) {
+            try {
+                const decoded = (img as HTMLImageElement & { decode?: () => Promise<void> }).decode?.();
+                if (decoded && typeof decoded.then === 'function') {
+                    return decoded.then(() => undefined).catch(() => undefined);
+                }
+            } catch { /* decode unsupported — already complete */ }
+            return Promise.resolve();
+        }
         return new Promise<void>(resolve => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            setTimeout(resolve, 3000);
+            let settled = false;
+            const done = (ok: boolean) => {
+                if (settled) return;
+                settled = true;
+                if (!ok) failed.push(img);
+                resolve();
+            };
+            img.addEventListener('load', () => done(true), { once: true });
+            img.addEventListener('error', () => done(false), { once: true });
+            setTimeout(() => done(isReady(img)), timeoutMs);
         });
     });
     await Promise.all(promises);
+    return failed;
 };
 
 /**
@@ -211,9 +234,11 @@ const replaceImagesWithCanvas = (container: HTMLElement, scale: number): (() => 
 
     images.forEach(img => {
         if (!img.src || img.src.startsWith('data:image/svg')) return;
+        // Skip broken/unloaded images — they are hidden separately with a user warning.
+        if (!img.naturalWidth || !img.naturalHeight) return;
         const canvas = document.createElement('canvas');
-        let w = (img.naturalWidth || img.width) * scale || 100;
-        let h = (img.naturalHeight || img.height) * scale || 100;
+        let w = img.naturalWidth * scale || 100;
+        let h = img.naturalHeight * scale || 100;
         if (w < 5 || h < 5) return;
         const maxDim = Math.max(w, h);
         if (maxDim > MAX_IMAGE_DIMENSION) {
@@ -357,8 +382,17 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         injectPageBreakStyles(elementId);
 
         onStage?.('images');
-        // Ensure all images are fully loaded before capturing
-        await waitForAllImages(element);
+        // Ensure all images are fully loaded before capturing.
+        // C7: failed images are hidden for this export (no empty boxes) + user is warned.
+        const failedImages = await waitForAllImages(element);
+        const hiddenForExport: Array<{ img: HTMLImageElement; display: string }> = [];
+        failedImages.forEach(img => {
+            hiddenForExport.push({ img, display: img.style.display });
+            img.style.display = 'none';
+        });
+        if (failedImages.length > 0) {
+            toast(`⚠️ ${failedImages.length} görsel yüklenemedi — PDF'te gizlendi. İnterneti kontrol edip tekrar deneyin.`, { duration: 5000 });
+        }
 
         // Calculate max allowed scale based on actual DOM pixel dimensions (HTML5 canvas limit max 16384px, iOS Safari max 4096px)
         const isIos = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
@@ -496,6 +530,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
             return { blob: pdfBlob, sizeKB, elapsedMs, sizeText, elapsedText };
         } finally {
             restoreImages();
+            hiddenForExport.forEach(({ img, display }) => { img.style.display = display; });
             scaledAncestors.forEach(({ el, originalTransform, originalZoom }) => {
                 el.style.transform = originalTransform;
                 if (originalZoom) {

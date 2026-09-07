@@ -355,4 +355,21 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(tr.pdfOverflowConfirmTitle).toBeTruthy();
         expect(tr.pdfOverflowConfirmMessage).toContain('{pages}');
     });
+
+    it('waitForAllImages returns empty for containers without images (C7)', async () => {
+        const { waitForAllImages } = await import('@/utils/pdfGenerator');
+        const div = document.createElement('div');
+        div.innerHTML = '<p>no images here</p>';
+        await expect(waitForAllImages(div, 50)).resolves.toEqual([]);
+    });
+
+    it('waitForAllImages reports unloadable images as failed (C7)', async () => {
+        const { waitForAllImages } = await import('@/utils/pdfGenerator');
+        const div = document.createElement('div');
+        // jsdom never loads images → complete=false → reported as failed after timeout
+        div.innerHTML = '<img src="https://example.invalid/broken.png" alt="broken" />';
+        const failed = await waitForAllImages(div, 50);
+        expect(failed).toHaveLength(1);
+        expect(failed[0].tagName).toBe('IMG');
+    });
 });
