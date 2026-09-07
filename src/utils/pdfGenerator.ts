@@ -609,9 +609,15 @@ export const printQuote = (elementId: string, options: PrintQuoteOptions = {}) =
                 @media print {
                     body { margin: 0; padding: 0; }
                     .no-print, .pdf-placeholder { display: none !important; }
+                    /* C9: same pagination as downloaded PDF — chunk per physical page */
+                    .pdf-page { margin-bottom: 0 !important; }
+                    .pdf-page:not(:last-child) { page-break-after: always !important; break-after: page !important; }
                     .pdf-section { page-break-inside: avoid; }
                     .pdf-page-break { page-break-before: always; }
                     .pdf-table-row { page-break-inside: avoid; }
+                    tr, tbody tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+                    thead { display: table-header-group !important; }
+                    .summary-section, .signatures-grid, .terms-box, .pdf-footer { page-break-inside: avoid !important; break-inside: avoid !important; }
                 }
                 @page :first { margin-top: 0; }
             </style>
