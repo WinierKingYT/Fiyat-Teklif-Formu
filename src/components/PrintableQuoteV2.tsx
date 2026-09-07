@@ -8,7 +8,7 @@ import ModernTheme from '@/components/pdf-themes/ModernTheme';
 import ProTheme from '@/components/pdf-themes/ProTheme';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { PAGE_SIZES, type PageSize } from '@/utils/pdfGenerator';
-import { hasValidItemContent } from '@/utils/themeHelpers';
+import { hasValidItemContent, shouldSqueezeSinglePage } from '@/utils/themeHelpers';
 import { translations } from '@/utils/translations';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '@/context/quote/types';
 
@@ -111,7 +111,8 @@ const PrintableQuote = React.memo(({
     const total = calc.grandTotal;
 
     // Default configuration
-    const config = useMemo(() => ({
+    const config = useMemo(() => {
+        const merged = {
         // Standard Options
         showLogo: true,
         showBankInfo: true,
@@ -249,7 +250,26 @@ const PrintableQuote = React.memo(({
         pageSize: undefined,
 
         ...(_config || {})
-    }), [_config]);
+        };
+        // Squeeze-to-single-page: 8-14 plain items render with the existing compact tier
+        // so items + summary fit one page (no orphaned summary on page 2).
+        // Flows to all themes + chunker, hence preview/download/print stay identical.
+        const mergedRecord = merged as Record<string, unknown>;
+        const squeeze = shouldSqueezeSinglePage(_items || [], {
+            isLandscape: mergedRecord.pageOrientation === 'landscape',
+            margins: typeof mergedRecord.margins === 'string' ? mergedRecord.margins : undefined,
+            tableRowHeight: typeof mergedRecord.tableRowHeight === 'number' ? mergedRecord.tableRowHeight : undefined,
+            tableDensity: mergedRecord.tableDensity as string | undefined,
+            sectionSpacing: typeof mergedRecord.sectionSpacing === 'number' ? mergedRecord.sectionSpacing as number : undefined,
+            tableCellPadding: mergedRecord.tableCellPadding as string | undefined,
+        });
+        if (squeeze && mergedRecord.tableDensity !== 'spacious') {
+            mergedRecord.tableDensity = 'compact';
+            const rh = typeof mergedRecord.tableRowHeight === 'number' ? mergedRecord.tableRowHeight : 35;
+            mergedRecord.tableRowHeight = Math.min(rh, 30);
+        }
+        return merged;
+    }, [_config, _items]);
 
     const getContainerStyles = () => {
         const isLandscape = config.pageOrientation === 'landscape';

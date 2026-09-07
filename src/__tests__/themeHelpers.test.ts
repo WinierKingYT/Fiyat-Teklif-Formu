@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason } from '@/utils/themeHelpers';
+import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason, shouldSqueezeSinglePage } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {
@@ -108,6 +108,39 @@ describe('chunkQuoteItems', () => {
         expect(chunks[0]).toEqual([1, 2]);
         expect(chunks[1]).toEqual([3, 4]);
         expect(chunks[2]).toEqual([5, 6]);
+    });
+});
+
+describe('shouldSqueezeSinglePage', () => {
+    const plain = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `i${i}`, name: `Ürün ${i}` }));
+
+    it('accepts 8-14 plain portrait items', () => {
+        expect(shouldSqueezeSinglePage(plain(8))).toBe(true);
+        expect(shouldSqueezeSinglePage(plain(11))).toBe(true);
+        expect(shouldSqueezeSinglePage(plain(14))).toBe(true);
+    });
+
+    it('rejects counts outside 8-14', () => {
+        expect(shouldSqueezeSinglePage(plain(7))).toBe(false);
+        expect(shouldSqueezeSinglePage(plain(15))).toBe(false);
+        expect(shouldSqueezeSinglePage([])).toBe(false);
+    });
+
+    it('rejects landscape, spacious, explicit spacing/padding, tall rows, images and long text', () => {
+        expect(shouldSqueezeSinglePage(plain(11), { isLandscape: true })).toBe(false);
+        expect(shouldSqueezeSinglePage(plain(11), { tableDensity: 'spacious' })).toBe(false);
+        expect(shouldSqueezeSinglePage(plain(11), { margins: 'wide' })).toBe(false);
+        expect(shouldSqueezeSinglePage(plain(11), { sectionSpacing: 1 })).toBe(false);
+        expect(shouldSqueezeSinglePage(plain(11), { tableCellPadding: '8px 8px' })).toBe(false);
+        expect(shouldSqueezeSinglePage(plain(11), { tableRowHeight: 42 })).toBe(false);
+        expect(shouldSqueezeSinglePage([{ id: 'x', name: 'A', image: 'data:abc' }].concat(plain(10) as never[]))).toBe(false);
+        expect(shouldSqueezeSinglePage(plain(10).concat([{ id: 'y', name: 'A', description: 'x'.repeat(121) }] as never[]))).toBe(false);
+    });
+
+    it('squeezes 12 plain items with bottom sections into a single chunk', () => {
+        const chunks = chunkQuoteItems(plain(12), { showSummary: true, showSignatures: true, hasCustomer: true, hasBankData: true });
+        expect(chunks.length).toBe(1);
+        expect(chunks[0]).toHaveLength(12);
     });
 });
 

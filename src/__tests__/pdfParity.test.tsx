@@ -126,19 +126,59 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks[0].length).toBe(5);
     });
 
-    it('chunks 11 items with bank and signature into exactly 2 pages with maximized page utilization and no orphan items', () => {
+    it('squeezes 11 plain items with bank and signature into exactly 1 page (no orphaned summary)', () => {
         const chunks = chunkQuoteItems(generateItems(11), {
             hasCustomer: true,
             hasBankData: true,
             showSummary: true,
             showSignatures: true
         });
+        expect(chunks.length).toBe(1);
+        expect(chunks[0].length).toBe(11);
+    });
+
+    it('squeezes 14 plain items into exactly 1 page', () => {
+        const chunks = chunkQuoteItems(generateItems(14), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks[0].length).toBe(14);
+    });
+
+    it('does not squeeze 15 items — paginates into exactly 2 pages', () => {
+        const chunks = chunkQuoteItems(generateItems(15), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
         expect(chunks.length).toBe(2);
-        // Page 1 maximizes utilization (7 to 9 items), Page 2 cleanly holds the rest (>= 2)
-        expect(chunks[0].length).toBeGreaterThanOrEqual(7);
-        expect(chunks[0].length).toBeLessThanOrEqual(9);
-        expect(chunks[1].length).toBeGreaterThanOrEqual(2);
-        expect(chunks[1].length).toBe(11 - chunks[0].length);
+        expect(chunks.flat()).toHaveLength(15);
+    });
+
+    it('does not squeeze when items have images', () => {
+        const withImages = generateItems(11).map((item, i) => i === 0 ? { ...item, image: 'data:image/png;base64,abc' } : item);
+        const chunks = chunkQuoteItems(withImages, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(2);
+    });
+
+    it('does not squeeze when spacious density is explicitly set', () => {
+        const chunks = chunkQuoteItems(generateItems(11), {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true,
+            tableDensity: 'spacious'
+        });
+        expect(chunks.length).toBe(2);
     });
 
     it('chunks 15 items into exactly 2 pages', () => {

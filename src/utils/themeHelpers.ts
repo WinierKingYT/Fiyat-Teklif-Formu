@@ -82,6 +82,38 @@ export function getSectionSpacing(density?: unknown): string {
     return '0.6rem';
 }
 
+export const SQUEEZE_MIN_ITEMS = 8;
+export const SQUEEZE_MAX_ITEMS = 14;
+
+/**
+ * Squeeze-to-single-page eligibility: 8-14 plain portrait items are auto-compacted
+ * (existing compact tier) so the summary never ends up orphaned on page 2.
+ * Pure eligibility check — the chunker independently re-verifies the height budget,
+ * so enabling squeeze can never cause overflow.
+ */
+export function shouldSqueezeSinglePage<T>(rawItems: T[], options: ChunkOptions = {}): boolean {
+    const items = (rawItems || []).filter(hasValidItemContent);
+    if (items.length < SQUEEZE_MIN_ITEMS || items.length > SQUEEZE_MAX_ITEMS) return false;
+    if (options.isLandscape) return false;
+    const optRecord = options as Record<string, unknown>;
+    if (optRecord.tableDensity === 'spacious') return false;
+    const margins = options.margins;
+    if (margins === 'spacious' || margins === 'wide') return false;
+    if (typeof optRecord.sectionSpacing === 'number') return false;
+    if (optRecord.tableCellPadding != null && String(optRecord.tableCellPadding).trim() !== '') return false;
+    const rh = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0 ? options.tableRowHeight : 35;
+    if (rh > 36) return false;
+    for (const it of items) {
+        const o = it as Record<string, unknown>;
+        if (o && typeof o === 'object') {
+            if (o.image) return false;
+            if (typeof o.name === 'string' && o.name.length > 50) return false;
+            if (typeof o.description === 'string' && o.description.length > 120) return false;
+        }
+    }
+    return true;
+}
+
 export function estimateAutoItemsPerPage(availableHeightPx: number, rowHeight?: number): number {
     const h = typeof rowHeight === 'number' && rowHeight > 0 ? rowHeight : 35;
     const raw = Math.floor(availableHeightPx / h);
@@ -108,6 +140,7 @@ export interface ChunkOptions {
     fontSize?: number;
     tableDensity?: string;
     sectionSpacing?: number;
+    tableCellPadding?: string;
     measuredContentHeight?: number;
 }
 
@@ -222,7 +255,15 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
 
     // Base available height per page (in units, where 1 A4 portrait page has ~1000 usable height units)
     const pageCapacity = isLandscape ? 760 : 1000;
-    const scaleFactor = isCompact ? 1.08 : (isSpacious ? 0.92 : 1.0);
+    // Squeeze: measure 8-14 plain items with the compact tier so they + summary fit one page.
+    // The single-page budget gate below still enforces the fit — squeeze never overflows.
+    const squeeze = shouldSqueezeSinglePage(items, options);
+    let scaleFactor = isCompact ? 1.08 : (isSpacious ? 0.92 : 1.0);
+    let rowFactor = 1;
+    if (squeeze) {
+        scaleFactor = Math.max(scaleFactor, 1.08);
+        rowFactor = 0.88;
+    }
 
     // Measure Item Heights
     const itemHeights = items.map(item => {
@@ -243,7 +284,7 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
             h += Math.floor(itemObj.name.length / 50) * 14;
         }
-        return h;
+        return h * rowFactor;
     });
 
     // Measure Fixed Page Sections
@@ -270,8 +311,11 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
 
     const hasBottomSections = finalBottomHeight > 30;
 
-    // Calibrate maximum row capacities based on visual layout
-    const maxSinglePageRowBudget = isLandscape ? (hasBottomSections ? 180 : 500) : (hasBottomSections ? 230 : 550);
+    // Calibrate maximum row capacities based on visual layout.
+    // Squeezed single page (compact tier): 14 rows x ~30 units ≈ 420 + header/customer/summary fits 1000.
+    const maxSinglePageRowBudget = isLandscape
+        ? (hasBottomSections ? 180 : 500)
+        : squeeze ? 430 : (hasBottomSections ? 230 : 550);
     const maxPage1RowBudget = isLandscape ? 260 : 340;
     const maxMiddlePageRowBudget = isLandscape ? 320 : 420;
     const maxFinalPageRowBudget = isLandscape ? 280 : 250;
@@ -279,8 +323,8 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const singlePageRowBudget = Math.min(maxSinglePageRowBudget, (pageCapacity - page1TopBudget - tableHeaderHeight - finalBottomHeight));
     const totalItemsHeight = itemHeights.reduce((sum, h) => sum + h, 0);
 
-    // 1. Single Page Test
-    if (totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7)) {
+    // 1. Single Page Test (squeezed 8-14 items included — budget gate still enforced)
+    if (totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7 || squeeze)) {
         return [items];
     }
 
