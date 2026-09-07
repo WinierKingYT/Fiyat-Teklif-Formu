@@ -268,11 +268,19 @@ export const pdfConfigSchema = z.object({
   summaryTotalFontWeight: z.string(),
   footerFontSize: z.string(),
   footerFontWeight: z.string(),
-  itemsPerPage: z.number(),
+  itemsPerPage: z.preprocess(
+    (v) => {
+      if (v === undefined || v === null || v === '') return undefined;
+      if (v === 'auto') return 'auto';
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
+    },
+    z.union([z.number(), z.literal('auto')]).optional()
+  ),
   // Additional fields used by PdfPreviewPanel
   sectionSpacing: z.number().optional(),
   boxBorderStyle: z.string().optional(),
-  tableDensity: z.string().optional(),
+  tableDensity: z.enum(['compact', 'comfortable', 'spacious']).optional(),
   tableHeaderColor: z.string().optional(),
   tableBorderColor: z.string().optional(),
   tableStriped: z.boolean().optional(),

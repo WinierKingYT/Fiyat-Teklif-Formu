@@ -118,6 +118,24 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
             border-bottom: 1px solid #f1f5f9;
             padding-bottom: 2px;
         }
+
+        .minimal-theme-container .bottom-section {
+            margin-top: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .minimal-theme-container .signatures-grid {
+            margin-top: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .minimal-theme-container .terms-box {
+            margin-top: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
     `, [config]);
 
 
@@ -181,7 +199,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles?.pageMinHeight || '284mm',
+                    minHeight: containerStyles?.pageMinHeight || '277mm',
                     padding: '0',
                     display: 'flex',
                     flexDirection: 'column',
@@ -256,13 +274,20 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                     )}
 
                     {/* Items Table */}
-                    <div>
-                        {showSection('items') && renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
+                    {showSection('items') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
+                        {pageIndex < itemChunks.length - 1 && (
+                            <div style={{ marginTop: '0.6rem', paddingTop: '0.5rem', paddingBottom: '0.2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '7.5pt', color: '#64748b', fontStyle: 'italic' }}>
+                                <span>{t.continuedOnNextPage || 'Teklif devamı sonraki sayfadadır ➔'}</span>
+                            </div>
+                        )}
                     </div>
+                    )}
 
                     {/* Totals Section & Footer - Only Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: '1.25rem', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <div className="bottom-section" style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {config.showSummary && (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '12px', marginTop: '8px', borderTop: '1px solid #0f172a', paddingTop: '6px' }}>
                                     <div>

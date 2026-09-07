@@ -112,6 +112,7 @@ const PdfPreviewPanel = React.memo(() => {
         items,
         discount,
         pdfConfig,
+        renderedConfig,
         pageSize: 'a4',
         quality: 'high',
         t

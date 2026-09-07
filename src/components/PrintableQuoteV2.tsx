@@ -260,7 +260,7 @@ const PrintableQuote = React.memo(({
         const pageWidth = `${widthMm}mm`;
         const paddingPx = config.margins === 'compact' ? 16 : config.margins === 'wide' ? 36 : 24;
         const marginOffsetMm = config.margins === 'compact' ? 9 : config.margins === 'wide' ? 19 : 13;
-        const pageMinHeight = `${Math.max(100, heightMm - marginOffsetMm - 2)}mm`;
+        const pageMinHeight = `${Math.max(100, heightMm - marginOffsetMm - 7)}mm`;
 
         const baseStyles = {
             minHeight: 'auto',
@@ -277,9 +277,9 @@ const PrintableQuote = React.memo(({
             padding: `${paddingPx}px`,
             backgroundColor: config.pageBackgroundColor || 'white',
             backgroundImage: config.pageBgPattern === 'dots'
-                ? 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.30) 1px, transparent 0)'
+                ? 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.08) 1px, transparent 0)'
                 : config.pageBgPattern === 'grid'
-                    ? 'linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)'
+                    ? 'linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)'
                     : config.pageBgPattern === 'gradient'
                         ? `linear-gradient(160deg, ${(/^#[0-9A-Fa-f]{6}$/.test(config.color || '') ? (config.color + '14') : 'rgba(37,99,235,0.08)')} 0%, transparent 45%)`
                         : 'none',

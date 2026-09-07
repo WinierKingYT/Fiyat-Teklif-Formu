@@ -46,8 +46,50 @@ export function formatIban(iban?: string | null): string {
     return clean.match(/.{1,4}/g)?.join(' ') || clean;
 }
 
+export type TableDensity = 'compact' | 'comfortable' | 'spacious';
+
+export function resolveTableDensity(value: unknown): TableDensity {
+    if (value === 'compact' || value === 'comfortable' || value === 'spacious') return value as TableDensity;
+    return 'comfortable';
+}
+
+export function getCellPaddingForRowHeight(rowHeight?: number): string {
+    const h = typeof rowHeight === 'number' && rowHeight > 0 ? rowHeight : 35;
+    if (h <= 32) return '4px 6px';
+    if (h <= 36) return '6px 6px';
+    if (h <= 42) return '8px 6px';
+    return '8px 8px';
+}
+
+export function getDensityTableHeaderPadding(density?: unknown): string {
+    const d = resolveTableDensity(density);
+    if (d === 'compact') return '5px 6px';
+    if (d === 'spacious') return '9px 6px';
+    return '7px 6px';
+}
+
+export function getDensityHeaderFontSize(density?: unknown): string {
+    const d = resolveTableDensity(density);
+    if (d === 'compact') return '7.5pt';
+    if (d === 'spacious') return '8.5pt';
+    return '8pt';
+}
+
+export function getSectionSpacing(density?: unknown): string {
+    const d = resolveTableDensity(density);
+    if (d === 'compact') return '0.4rem';
+    if (d === 'spacious') return '0.8rem';
+    return '0.6rem';
+}
+
+export function estimateAutoItemsPerPage(availableHeightPx: number, rowHeight?: number): number {
+    const h = typeof rowHeight === 'number' && rowHeight > 0 ? rowHeight : 35;
+    const raw = Math.floor(availableHeightPx / h);
+    return Math.min(20, Math.max(4, raw));
+}
+
 export interface ChunkOptions {
-    itemsPerPage?: number;
+    itemsPerPage?: number | string;
     showSummary?: boolean;
     showBankInfo?: boolean;
     hasBankData?: boolean;
@@ -64,6 +106,9 @@ export interface ChunkOptions {
     margins?: string;
     tableRowHeight?: number;
     fontSize?: number;
+    tableDensity?: string;
+    sectionSpacing?: number;
+    measuredContentHeight?: number;
 }
 
 /**
@@ -107,6 +152,34 @@ export function hasValidItemContent(item: unknown): boolean {
     return false;
 }
 
+export interface ExportBlockReasonParams {
+    items?: unknown[] | null;
+    customerName?: string | null;
+    customerCompany?: string | null;
+}
+
+/**
+ * Pure export guard — kalem + müşteri yoksa bozuk PDF üretme.
+ * Dönen string hata mesajıdır; null ise export serbest.
+ * t: çeviri fonksiyonu (yoksa TR varsayılan).
+ */
+export function getExportBlockReason(
+    { items, customerName, customerCompany }: ExportBlockReasonParams,
+    t?: (key: string) => string
+): string | null {
+    const fallback = (key: string, def: string) => {
+        try { return t?.(key) || def; } catch { return def; }
+    };
+    const validItems = (items || []).filter(hasValidItemContent);
+    if (validItems.length === 0) {
+        return fallback('addAtLeastOneProduct', 'Lütfen PDF indirmeden önce en az bir geçerli ürün ekleyin.');
+    }
+    if (!customerName?.trim() && !customerCompany?.trim()) {
+        return fallback('validationCustomerRequired', 'Lütfen önce müşteri bilgisi girin.');
+    }
+    return null;
+}
+
 /**
  * Intelligently chunks quote items across pages based on measured A4 page budget
  * (single-page quote vs multi-page: first page, middle pages, and last page with summary & signatures)
@@ -118,18 +191,34 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         return [[]];
     }
 
-    // Manual override if explicitly set
-    if (options.itemsPerPage && options.itemsPerPage !== 14 && options.itemsPerPage < 50) {
+    // Manual override if explicitly set (numeric). 'auto' falls through to height-based pagination with max 20 cap.
+    const ippRaw = options.itemsPerPage;
+    const ippNum = typeof ippRaw === 'number' ? ippRaw : (typeof ippRaw === 'string' && ippRaw !== 'auto' ? Number(ippRaw) : NaN);
+    if (!Number.isNaN(ippNum) && ippNum !== 14 && ippNum > 0 && ippNum < 50) {
+        const capped = Math.min(20, Math.max(1, Math.floor(ippNum)));
         const chunks: T[][] = [];
-        for (let i = 0; i < items.length; i += options.itemsPerPage) {
-            chunks.push(items.slice(i, i + options.itemsPerPage));
+        for (let i = 0; i < items.length; i += capped) {
+            chunks.push(items.slice(i, i + capped));
+        }
+        return chunks;
+    }
+    // Auto: if measuredContentHeight provided, derive itemsPerPage with max 20 cap via estimateAutoItemsPerPage
+    if (ippRaw === 'auto' && typeof options.measuredContentHeight === 'number' && options.measuredContentHeight > 0) {
+        const auto = estimateAutoItemsPerPage(options.measuredContentHeight, options.tableRowHeight);
+        const chunks: T[][] = [];
+        for (let i = 0; i < items.length; i += auto) {
+            chunks.push(items.slice(i, i + auto));
         }
         return chunks;
     }
 
     const isLandscape = !!options.isLandscape;
-    const isCompact = options.margins === 'compact';
-    const isSpacious = options.margins === 'spacious' || options.margins === 'wide';
+    const rawDensity = (options as Record<string, unknown>).tableDensity as unknown;
+    const fallbackDensity = options.margins === 'compact' ? 'compact' : (options.margins === 'spacious' || options.margins === 'wide' ? 'spacious' : undefined);
+    const density = resolveTableDensity(rawDensity ?? fallbackDensity);
+    // isCompact logic considers both margins and tableDensity
+    const isCompact = options.margins === 'compact' || density === 'compact';
+    const isSpacious = options.margins === 'spacious' || options.margins === 'wide' || density === 'spacious';
 
     // Base available height per page (in units, where 1 A4 portrait page has ~1000 usable height units)
     const pageCapacity = isLandscape ? 760 : 1000;
@@ -273,5 +362,11 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         chunks.push(pageItems);
     }
 
-    return chunks;
+    // Enforce max 20 cap per page (auto pagination guard)
+    const capped: T[][] = [];
+    for (const ch of chunks) {
+        if (ch.length <= 20) { capped.push(ch); continue; }
+        for (let i = 0; i < ch.length; i += 20) capped.push(ch.slice(i, i + 20));
+    }
+    return capped;
 }

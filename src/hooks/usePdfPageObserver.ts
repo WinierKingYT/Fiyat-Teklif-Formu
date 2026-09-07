@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, type RefObject } from 'react';
 import useDebounce from '@/hooks/useDebounce';
 import { PAGE_SIZES } from '@/utils/pdfGenerator';
+import { estimateAutoItemsPerPage } from '@/utils/themeHelpers';
 import type { PdfConfig, QuoteItem } from '@/context/quote/types';
 
 interface UsePdfPageObserverProps {
@@ -32,8 +33,9 @@ export const usePdfPageObserver = ({
     const [pageCount, setPageCount] = useState(1);
     const [activePage, setActivePage] = useState(1);
     const [overflowPages, setOverflowPages] = useState<number[]>([]);
+    const [autoItemsPerPage, setAutoItemsPerPage] = useState<number>(14);
 
-    // Estimate page count from content height
+    // Estimate page count from content height and auto itemsPerPage (max 20 cap) via themeHelpers
     useEffect(() => {
         const el = contentRef.current;
         if (!el) return;
@@ -45,10 +47,25 @@ export const usePdfPageObserver = ({
             const pxPerMm = el.offsetWidth / pageWidthMm;
             const pageHeightPx = pageHeightMm * pxPerMm;
             setEstimatedPages(Math.max(1, Math.ceil(el.scrollHeight / pageHeightPx)));
+            // B10: itemsPerPage auto – ölçülmüş içerik yüksekliği ile max 20 cap, themeHelpers ile entegre
+            const rawItemsPerPage = (pdfConfig as Record<string, unknown>).itemsPerPage;
+            if (rawItemsPerPage === 'auto') {
+                const rowH = typeof (pdfConfig as Record<string, unknown>).tableRowHeight === 'number' ? (pdfConfig as Record<string, unknown>).tableRowHeight as number : 35;
+                // usable height approx 55-60% of page after header/customer/summary; estimate via measured pageHeight
+                const usable = pageHeightPx * 0.55;
+                const auto = estimateAutoItemsPerPage(usable, rowH);
+                setAutoItemsPerPage(Math.min(20, auto));
+            } else if (typeof rawItemsPerPage === 'number' && rawItemsPerPage > 0) {
+                setAutoItemsPerPage(Math.min(20, Math.max(4, Math.floor(rawItemsPerPage))));
+            } else {
+                // when not auto, still expose height-derived estimate capped 20 for optional use
+                const rowH2 = typeof (pdfConfig as Record<string, unknown>).tableRowHeight === 'number' ? (pdfConfig as Record<string, unknown>).tableRowHeight as number : 35;
+                setAutoItemsPerPage(estimateAutoItemsPerPage(pageHeightPx * 0.5, rowH2));
+            }
         });
         obs.observe(el);
         return () => obs.disconnect();
-    }, [pdfConfig.pageOrientation, pdfConfig.pageSize, items.length, renderedConfig, contentRef]);
+    }, [pdfConfig.pageOrientation, pdfConfig.pageSize, pdfConfig.tableRowHeight, (pdfConfig as Record<string, unknown>).itemsPerPage, items.length, renderedConfig, contentRef]);
 
     // Real page count from rendered .pdf-page blocks
     useEffect(() => {
@@ -184,6 +201,7 @@ export const usePdfPageObserver = ({
         pageCount,
         activePage,
         overflowPages,
+        autoItemsPerPage,
         scrollToPage
     };
 };

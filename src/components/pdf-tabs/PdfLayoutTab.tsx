@@ -154,6 +154,35 @@ const PdfLayoutTab: React.FC<PdfLayoutTabProps> = ({
                 </DndContext>
             </div>
 
+            {/* Density */}
+            <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
+                <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('density') || 'Yoğunluk'}</h4>
+                <div>
+                    <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('density') || 'Tablo Yoğunluğu'}</label>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { val: 'compact', label: 'Sıkışık' },
+                            { val: 'comfortable', label: 'Rahat' },
+                            { val: 'spacious', label: 'Ferah' }
+                        ].map(opt => (
+                            <button
+                                type="button"
+                                key={opt.val}
+                                onClick={() => handleConfigChange('tableDensity', opt.val)}
+                                className={`py-1.5 text-xs rounded border transition-colors font-medium ${
+                                    ((pdfConfig as Record<string, unknown>).tableDensity as string || 'comfortable') === opt.val
+                                        ? 'bg-[var(--color-info)] text-white border-[var(--color-info)] shadow-xs'
+                                        : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)] text-[var(--color-text)]'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5">Satır aralığı: 0.4 / 0.6 / 0.8 rem • Başlık: 5/7/9px, 7.5/8/8.5pt • Hücre: satır yüksekliğine bağlı 4/6/8px</p>
+                </div>
+            </div>
+
             {/* Spacing & Margins */}
             <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
                 <h4 className="font-semibold text-xs text-[var(--color-text)] border-b pb-1">{t('spacing')}</h4>

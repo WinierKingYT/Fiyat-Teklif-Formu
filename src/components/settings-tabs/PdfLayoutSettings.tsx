@@ -16,7 +16,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import React from "react";
-import { useQuoteData } from '@/context/QuoteContext';
+import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface SortableItemProps {
@@ -73,7 +73,9 @@ interface PdfLayoutSettingsProps {
 
 const PdfLayoutSettings = ({ pdfLayout, setPdfLayout }: PdfLayoutSettingsProps) => {
   const { quoteData } = useQuoteData();
+  const { pdfConfig, setPdfConfig } = usePdfConfig();
   const { t } = useTranslation(quoteData?.language);
+  const density = ((pdfConfig as Record<string, unknown>).tableDensity as string) || 'comfortable';
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -135,6 +137,25 @@ const PdfLayoutSettings = ({ pdfLayout, setPdfLayout }: PdfLayoutSettingsProps) 
             ))}
           </SortableContext>
         </DndContext>
+        <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+          <h4 className="font-semibold text-sm mb-2">{t('density') || 'Yoğunluk'}</h4>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { val: 'compact', label: 'Sıkışık' },
+              { val: 'comfortable', label: 'Rahat' },
+              { val: 'spacious', label: 'Ferah' }
+            ].map(opt => (
+              <button
+                type="button"
+                key={opt.val}
+                onClick={() => setPdfConfig(prev => ({ ...prev, tableDensity: opt.val as never }))}
+                className={`py-2 text-sm rounded border font-medium ${density === opt.val ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

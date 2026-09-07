@@ -81,6 +81,7 @@ export const getDefaultPdfConfig = (): PdfConfig => ({
     summaryValueFontSize: 'inherit', summaryValueFontWeight: '500',
     summaryTotalFontSize: '0.9rem', summaryTotalFontWeight: '700',
     footerFontSize: '0.7rem', footerFontWeight: 'normal', itemsPerPage: 14,
+    tableDensity: 'comfortable' as const, sectionSpacing: undefined,
     pageBackgroundColor: '#ffffff'
 });
 

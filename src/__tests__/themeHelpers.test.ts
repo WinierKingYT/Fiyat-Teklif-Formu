@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle } from '@/utils/themeHelpers';
+import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {
@@ -168,5 +168,31 @@ describe('formatIban', () => {
     it('should strip existing spaces and special characters then reformat', () => {
         const input = 'tr12 3456-7890_1234 5678 9012 34';
         expect(formatIban(input)).toBe('TR12 3456 7890 1234 5678 9012 34');
+    });
+});
+
+describe('getExportBlockReason', () => {
+    const t = (key: string) => key;
+    const validItems = [{ id: '1', name: 'Ürün A', quantity: 1, price: 100 }];
+
+    it('blocks when there are no valid items', () => {
+        expect(getExportBlockReason({ items: [], customerName: 'Ali', customerCompany: '' }, t)).toBe('addAtLeastOneProduct');
+        expect(getExportBlockReason({ items: [{ id: '1', name: '   ' }], customerName: 'Ali', customerCompany: '' }, t)).toBe('addAtLeastOneProduct');
+        expect(getExportBlockReason({ items: null, customerName: 'Ali', customerCompany: '' }, t)).toBe('addAtLeastOneProduct');
+    });
+
+    it('blocks when customer name and company are both missing', () => {
+        expect(getExportBlockReason({ items: validItems, customerName: '', customerCompany: '' }, t)).toBe('validationCustomerRequired');
+        expect(getExportBlockReason({ items: validItems, customerName: '   ', customerCompany: null }, t)).toBe('validationCustomerRequired');
+    });
+
+    it('allows export when items and customer (name or company) exist', () => {
+        expect(getExportBlockReason({ items: validItems, customerName: 'Ali', customerCompany: '' }, t)).toBeNull();
+        expect(getExportBlockReason({ items: validItems, customerName: '', customerCompany: 'ABC Ltd.' }, t)).toBeNull();
+    });
+
+    it('falls back to Turkish defaults without a translator', () => {
+        expect(getExportBlockReason({ items: [] })).toContain('ürün');
+        expect(getExportBlockReason({ items: validItems, customerName: '', customerCompany: '' })).toContain('müşteri');
     });
 });

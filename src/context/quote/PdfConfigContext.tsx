@@ -31,8 +31,18 @@ export const parseStoredPdfConfig = (savedConfig: string | null): PdfConfig => {
         }
 
         const allowedKeys = new Set<string>(pdfConfigSchema.keyof().options);
+        const isValidItemsPerPage = (v: unknown): boolean => {
+            if (v === 'auto') return true;
+            if (typeof v === 'number') return Number.isFinite(v) && v > 0;
+            if (typeof v === 'string' && v.trim() !== '') {
+                const n = Number(v);
+                return Number.isFinite(n) && n > 0;
+            }
+            return false;
+        };
         const supportedEntries = Object.entries(parsed as Record<string, unknown>)
-            .filter(([key]) => allowedKeys.has(key));
+            .filter(([key]) => allowedKeys.has(key))
+            .filter(([key, value]) => key !== 'itemsPerPage' || isValidItemsPerPage(value));
         const result = pdfConfigSchema.safeParse({ ...defaults, ...Object.fromEntries(supportedEntries) });
 
         if (!result.success) {

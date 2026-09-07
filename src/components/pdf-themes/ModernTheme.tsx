@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatTaxOfficeDisplay, formatPdfTitle, formatIban } from '@/utils/themeHelpers';
+import { formatTaxOfficeDisplay, formatPdfTitle, formatIban, getCellPaddingForRowHeight, getDensityTableHeaderPadding, getDensityHeaderFontSize, getSectionSpacing, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -26,6 +26,19 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         hasLineItemDiscounts,
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
+
+    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const derivedCellPadding = (config as Record<string, string>).tableCellPadding || getCellPaddingForRowHeight(config.tableRowHeight as number | undefined);
+    const derivedHeaderPadding = (config as Record<string, string>).tableHeaderPadding || getDensityTableHeaderPadding(density);
+    const derivedHeaderFontSize = (() => {
+        const raw = (config as Record<string, unknown>).tableHeaderFontSize;
+        if (typeof raw === 'number' && raw !== 14) return `${raw}px`;
+        if (typeof raw === 'string' && raw.trim().length > 0) return raw;
+        return getDensityHeaderFontSize(density);
+    })();
+    const sectionSpacing = typeof (config as Record<string, unknown>).sectionSpacing === 'number'
+        ? `${(config as Record<string, unknown>).sectionSpacing as number}rem`
+        : getSectionSpacing(density);
 
     const modernStyles = useMemo(() => `
         .modern-theme-container {
@@ -82,7 +95,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 0.85rem;
+            margin-bottom: ${sectionSpacing};
             padding-bottom: 0.75rem;
             border-bottom: 1px solid #e2e8f0;
             page-break-inside: avoid;
@@ -155,7 +168,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
         /* CUSTOMER SECTION */
         .modern-theme-container .customer-section {
-            margin-bottom: 0.75rem;
+            margin-bottom: ${sectionSpacing};
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -207,7 +220,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         .modern-theme-container .pdf-items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 0.75rem;
+            margin-bottom: ${sectionSpacing};
             font-size: 7.5pt;
             background: #ffffff;
             border-radius: 6px;
@@ -217,18 +230,18 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
         .modern-theme-container .pdf-items-table th {
             background: ${config.tableHeaderBg || '#f1f5f9'};
-            padding: ${config.tableHeaderPadding || '5px 6px'};
+            padding: ${derivedHeaderPadding};
             text-align: left;
             font-weight: ${config.tableHeaderFontWeight || '600'};
             color: ${config.tableHeaderColor || '#475569'};
-            font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '7pt')} !important;
+            font-size: ${derivedHeaderFontSize} !important;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             border-bottom: 1px solid #e2e8f0;
         }
 
         .modern-theme-container .pdf-items-table td {
-            padding: ${config.tableCellPadding || '4px 6px'};
+            padding: ${derivedCellPadding};
             border-bottom: 1px solid #f1f5f9;
             vertical-align: middle;
             font-size: ${config.tableBodyFontSize || '7.5pt'};
@@ -294,11 +307,11 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             background: #f8fafc;
             border-radius: 6px;
             padding: 0.65rem 0.8rem;
-            margin-bottom: 0.65rem;
+            margin-bottom: ${sectionSpacing};
             border: 1px solid #e2e8f0;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.85rem;
+            gap: ${sectionSpacing};
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -341,8 +354,8 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         .modern-theme-container .signature-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.85rem;
-            margin-bottom: 0.65rem;
+            gap: ${sectionSpacing};
+            margin-bottom: ${sectionSpacing};
             padding-top: 0.4rem;
             border-top: 1px solid #e2e8f0;
             page-break-inside: avoid;
@@ -388,7 +401,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
         /* TERMS SECTION */
         .modern-theme-container .terms-section {
-            margin-bottom: 0.65rem;
+            margin-bottom: ${sectionSpacing};
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -396,7 +409,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         .modern-theme-container .terms-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.85rem;
+            gap: ${sectionSpacing};
         }
 
         .modern-theme-container .term-card {
@@ -429,7 +442,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             border-top: 1px solid #e2e8f0;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.85rem;
+            gap: ${sectionSpacing};
             font-size: 6.8pt;
             color: #64748b;
             page-break-inside: avoid;
@@ -445,7 +458,25 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             color: #1e293b;
             margin-bottom: 0.15rem;
         }
-    `, [color, config]);
+
+        .modern-theme-container .bottom-section {
+            margin-top: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .modern-theme-container .signatures-grid {
+            margin-top: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .modern-theme-container .terms-box {
+            margin-top: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+    `, [color, config, density, derivedCellPadding, derivedHeaderPadding, derivedHeaderFontSize, sectionSpacing]);
 
     const showImageCol = config.showTableImages && hasAnyImage;
 
@@ -512,7 +543,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             {itemChunks.map((chunk, pageIndex) => (
                 <div key={pageIndex} className="pdf-preview pdf-page" style={{
                     position: 'relative',
-                    minHeight: containerStyles?.pageMinHeight || '284mm',
+                    minHeight: containerStyles?.pageMinHeight || '277mm',
                     padding: '1.25rem',
                     display: 'flex',
                     flexDirection: 'column',
@@ -638,7 +669,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Items Table */}
                     {showSection('items') && (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                         {renderTable(chunk, itemChunks.slice(0, pageIndex).reduce((acc, c) => acc + c.length, 0))}
                         {pageIndex < itemChunks.length - 1 && (
                             <div style={{ marginTop: '0.6rem', paddingTop: '0.4rem', paddingBottom: '0.2rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '7pt', color: '#64748b', fontStyle: 'italic' }}>
@@ -650,7 +681,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
 
                     {/* Bottom Section - Only on Last Page */}
                     {pageIndex === itemChunks.length - 1 && (
-                        <div style={{ marginTop: '1.25rem', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <div className="bottom-section" style={{ marginTop: 'auto', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             {config.showSummary && (
                                 <div className="pdf-summary-grid" style={!(config.showBankInfo && (bankData.bankName || bankData.iban || bankData.accountNumber)) ? { display: 'flex', justifyContent: 'flex-end' } : undefined}>
                                     <div className="totals-section" style={!(config.showBankInfo && (bankData.bankName || bankData.iban || bankData.accountNumber)) ? { width: '100%', maxWidth: '340px' } : undefined}>

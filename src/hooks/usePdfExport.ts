@@ -4,7 +4,7 @@ import { calculateQuoteTotals } from '@/utils/calculations';
 import { shareQuote } from '@/utils/emailService';
 import { exportQuoteToExcel, exportQuoteToCSV } from '@/utils/excelExporter';
 import { generatePDF, printQuote, getPdfMetadata, type PageSize, type PdfQuality } from '@/utils/pdfGenerator';
-import { hasValidItemContent } from '@/utils/themeHelpers';
+import { getExportBlockReason } from '@/utils/themeHelpers';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount } from '@/context/quote/types';
 import type { PdfConfig } from '@/context/quote/types';
 
@@ -16,6 +16,7 @@ interface UsePdfExportProps {
     items: QuoteItem[];
     discount: Discount;
     pdfConfig: PdfConfig;
+    renderedConfig?: PdfConfig;
     pageSize: PageSize;
     quality: PdfQuality;
     t: (key: string) => string;
@@ -29,6 +30,7 @@ export const usePdfExport = ({
     items,
     discount,
     pdfConfig,
+    renderedConfig,
     pageSize,
     quality,
     t
@@ -72,21 +74,33 @@ export const usePdfExport = ({
         done: t('pdfSaving')
     };
 
+    // Önizlemede görünen config (renderedConfig) ile indirilen birebir aynı olsun.
+    // Manuel refresh / debounce aralığında pdfConfig önden gidebilir.
+    const effectiveConfig = renderedConfig ?? pdfConfig;
+
     const buildPdfGenerationOptions = (saveFile: boolean, onStage?: (stage: 'fonts' | 'images' | 'render' | 'save' | 'done') => void) => ({
-        theme: pdfConfig.theme,
-        color: pdfConfig.color,
+        theme: effectiveConfig.theme,
+        color: effectiveConfig.color,
         pageSize,
         quality,
-        orientation: pdfConfig.pageOrientation || 'portrait',
+        orientation: effectiveConfig.pageOrientation || 'portrait',
         margin: 0,
-        title: quoteData.title || pdfConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
+        title: quoteData.title || effectiveConfig.title || getPdfMetadata(quoteData.language || 'tr').title,
         author: companyData.name || 'TeklifApp',
         language: quoteData.language || 'tr',
-        fontFamilies: [pdfConfig.globalFontFamily, pdfConfig.titleFontFamily, pdfConfig.labelFontFamily, pdfConfig.bodyFontFamily, pdfConfig.fontFamily].filter((f): f is string => Boolean(f)),
-        backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
+        fontFamilies: [effectiveConfig.globalFontFamily, effectiveConfig.titleFontFamily, effectiveConfig.labelFontFamily, effectiveConfig.bodyFontFamily, effectiveConfig.fontFamily].filter((f): f is string => Boolean(f)),
+        backgroundColor: effectiveConfig.pageBackgroundColor || '#ffffff',
         saveFile,
         onStage
     });
+
+    // A1: Ortak export guard — kalem + müşteri yoksa bozuk PDF üretme.
+    const guardExportReady = useCallback((): string | null => {
+        return getExportBlockReason(
+            { items, customerName: customerData.name, customerCompany: customerData.company },
+            t
+        );
+    }, [items, customerData.name, customerData.company, t]);
 
     const getTargetElementId = () => {
         if (document.getElementById('canonical-pdf-export-surface')) {
@@ -96,9 +110,9 @@ export const usePdfExport = ({
     };
 
     const handleDownload = async () => {
-        const validItems = (items || []).filter(hasValidItemContent);
-        if (validItems.length === 0) {
-            toast.error(t('addAtLeastOneProduct') || 'Lütfen PDF indirmeden önce en az bir geçerli ürün ekleyin.');
+        const guardError = guardExportReady();
+        if (guardError) {
+            toast.error(guardError);
             return;
         }
 
@@ -122,25 +136,25 @@ export const usePdfExport = ({
     };
 
     const handlePrint = () => {
-        const validItems = (items || []).filter(hasValidItemContent);
-        if (validItems.length === 0) {
-            toast.error(t('addAtLeastOneProduct') || 'Lütfen PDF yazdırmadan önce en az bir geçerli ürün ekleyin.');
+        const guardError = guardExportReady();
+        if (guardError) {
+            toast.error(guardError);
             return;
         }
 
         const targetId = getTargetElementId();
         printQuote(targetId, {
             language: quoteData.language || 'tr',
-            backgroundColor: pdfConfig.pageBackgroundColor || '#ffffff',
+            backgroundColor: effectiveConfig.pageBackgroundColor || '#ffffff',
             pageSize,
-            orientation: pdfConfig.pageOrientation || 'portrait'
+            orientation: effectiveConfig.pageOrientation || 'portrait'
         });
     };
 
     const handleShare = async () => {
-        const validItems = (items || []).filter(hasValidItemContent);
-        if (validItems.length === 0) {
-            toast.error(t('addAtLeastOneProduct') || 'Lütfen paylaşmadan önce en az bir geçerli ürün ekleyin.');
+        const guardError = guardExportReady();
+        if (guardError) {
+            toast.error(guardError);
             return;
         }
 

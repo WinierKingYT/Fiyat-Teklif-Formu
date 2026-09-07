@@ -24,7 +24,7 @@ export function usePdfTheme(props: PdfThemeProps) {
         if (layoutMap['items'] === false) {
             return [[]];
         }
-        const effectiveItemsPerPage = config.itemsPerPage || 14;
+        const effectiveItemsPerPage = ((config as Record<string, unknown>).itemsPerPage as number | string | undefined) ?? 14;
         const hasBankData = !!(props.bankData && (props.bankData.bankName || props.bankData.iban || props.bankData.accountNumber));
         const hasTerms = !!(quoteData && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms));
         const hasNotes = !!(quoteData && quoteData.notes && quoteData.notes.trim().length > 0);
@@ -56,7 +56,9 @@ export function usePdfTheme(props: PdfThemeProps) {
             customFooter: config.customFooter,
             isLandscape: config.pageOrientation === 'landscape',
             margins: config.margins,
-            tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined
+            tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined,
+            tableDensity: (config as Record<string, unknown>).tableDensity as string | undefined,
+            sectionSpacing: typeof (config as Record<string, unknown>).sectionSpacing === 'number' ? (config as Record<string, unknown>).sectionSpacing as number : undefined
         });
     }, [items, config, layoutMap, props.bankData, props.customerData, quoteData]);
 
