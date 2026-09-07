@@ -349,4 +349,10 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(customerBox?.textContent).not.toContain('Adres:');
         expect(customerBox?.textContent).not.toContain('Vergi:');
     });
+
+    it('has overflow-confirm copy for the download gate (A2)', async () => {
+        const tr = (await import('@/i18n/tr.json')).default as Record<string, string>;
+        expect(tr.pdfOverflowConfirmTitle).toBeTruthy();
+        expect(tr.pdfOverflowConfirmMessage).toContain('{pages}');
+    });
 });

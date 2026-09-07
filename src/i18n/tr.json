@@ -445,6 +445,8 @@
   "presetModern": "Modern",
   "presetApplied": "Önayar uygulandı",
   "pdfOverflowWarning": "PDF sayfaları taşıyor (sayfa {pages}). Satır yüksekliğini veya yazı boyutunu azaltmayı ya da kompakt kenar boşluklarını deneyin.",
+  "pdfOverflowConfirmTitle": "Sayfa taşması var",
+  "pdfOverflowConfirmMessage": "PDF sayfaları taşıyor (sayfa {pages}). İndirilen PDF'te içerik kesilebilir. Yine de indirmek istiyor musunuz?",
   "pageBgPattern": "Arka Plan Deseni",
   "logoMaxHeight": "Maks. Logo Yüksekliği",
   "showPageNumbers": "Sayfa Numaraları",

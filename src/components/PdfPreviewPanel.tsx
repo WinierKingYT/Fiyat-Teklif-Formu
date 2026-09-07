@@ -9,7 +9,7 @@ import PdfZoomToolbar from '@/components/pdf-preview/PdfZoomToolbar';
 import { PdfDesignTab, PdfLayoutTab, PdfTextsTab } from '@/components/pdf-tabs';
 import PdfExportSurface from '@/components/PdfExportSurface';
 import PopupEditor from '@/components/PopupEditor';
-import { useQuoteData, usePdfConfig } from '@/context/QuoteContext';
+import { useQuoteData, usePdfConfig, useConfirm } from '@/context/QuoteContext';
 import { useUI } from '@/context/UIContext';
 import useDebounce from '@/hooks/useDebounce';
 import { usePdfExport } from '@/hooks/usePdfExport';
@@ -118,6 +118,21 @@ const PdfPreviewPanel = React.memo(() => {
         t
     });
 
+    const { showConfirm } = useConfirm();
+
+    // A2: Taşma varken indirme kör geçmesin — kullanıcıdan onay al.
+    const handleDownloadRequest = useCallback(async () => {
+        if (overflowPages.length > 0) {
+            const ok = await showConfirm(
+                t('pdfOverflowConfirmTitle'),
+                t('pdfOverflowConfirmMessage').replace('{pages}', overflowPages.join(', ')),
+                'warning'
+            );
+            if (!ok) return;
+        }
+        handleDownload();
+    }, [overflowPages, showConfirm, handleDownload, t]);
+
     // Debounce the config to avoid expensive PDF re-renders while editing.
     const debouncedPdfConfig = useDebounce(pdfConfig, performanceMode ? 1500 : 300);
 
@@ -213,7 +228,7 @@ const PdfPreviewPanel = React.memo(() => {
                 handlePrint={handlePrint}
                 handleShare={handleShare}
                 setShowVersionModal={setShowVersionModal}
-                handleDownload={handleDownload}
+                handleDownload={handleDownloadRequest}
                 isGenerating={isGenerating}
                 showControls={showControls}
                 toggleControls={toggleControls}
