@@ -127,4 +127,21 @@ describe('ItemsTable', () => {
         fireEvent.change(vatSelect, { target: { value: '10' } });
         expect(vatSelect.value).toBe('10');
     });
+
+    it('shows no page-break guide when all items fit a single page', async () => {
+        await renderHarness([{ id: 'x', name: 'Item 1', description: '', quantity: 1, unit: 'Adet', price: 100, taxRate: 20, discountRate: 0, total: 100 }]);
+
+        expect(screen.queryByText(/Sayfa — A4 Baskı Sınırı/)).not.toBeInTheDocument();
+    });
+
+    it('shows page-break guides at real PDF chunk boundaries for many items', async () => {
+        const many = Array.from({ length: 25 }, (_, i) => ({
+            id: `p${i}`, name: `Ürün ${i + 1}`, description: '', quantity: 1, unit: 'Adet', price: 100, taxRate: 20, discountRate: 0, total: 100
+        }));
+        await renderHarness(many);
+
+        // 25 plain rows paginate to 3 pages → guides before pages 2 and 3
+        expect(screen.getByText(/2\. Sayfa — A4 Baskı Sınırı/)).toBeInTheDocument();
+        expect(screen.getByText(/3\. Sayfa — A4 Baskı Sınırı/)).toBeInTheDocument();
+    });
 });

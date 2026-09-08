@@ -15,7 +15,7 @@ import {
 import {
   Package,
 } from 'lucide-react';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ItemsBatchBar } from '@/components/items/ItemsBatchBar';
 import { ItemsHeaderControls } from '@/components/items/ItemsHeaderControls';
 import SortableRow from '@/components/items/SortableRow';
@@ -25,8 +25,9 @@ import { useItemsTableImport } from '@/components/items/useItemsTableImport';
 import { useItemsTablePreferences } from '@/components/items/useItemsTablePreferences';
 import { useItemsTableSelection } from '@/components/items/useItemsTableSelection';
 import { useItemsTableValidation } from '@/components/items/useItemsTableValidation';
-import { useQuoteData } from '@/context/QuoteContext';
+import { usePdfConfig, useQuoteData } from '@/context/QuoteContext';
 import { useTranslation } from '@/hooks/useTranslation';
+import { chunkQuoteItems, hasValidItemContent } from '@/utils/themeHelpers';
 import type { ItemsTableProps } from '@/components/items/itemsTableTypes';
 
 const ItemsTable = ({
@@ -35,8 +36,50 @@ const ItemsTable = ({
   currency = 'TRY',
   onAddProduct,
 }: ItemsTableProps) => {
-  const { quoteData, updateQuoteData, db } = useQuoteData();
+  const { quoteData, customerData, bankData, updateQuoteData, db } = useQuoteData();
+  const { pdfConfig } = usePdfConfig();
   const { t } = useTranslation(quoteData?.language);
+
+  // PDF ile birebir aynı sayfa kırılımları: statik tahmin yerine gerçek chunk hesabı.
+  // Map: global satır indexi -> o satırdan sonra başlayan sayfa numarası.
+  const pageBreaks = useMemo(() => {
+    const breaks = new Map<number, number>();
+    if (!items || items.length === 0) return breaks;
+    const cfg = (pdfConfig || {}) as Record<string, unknown>;
+    const chunks = chunkQuoteItems(items, {
+      showSummary: true,
+      showBankInfo: true,
+      hasBankData: !!(bankData && (bankData.bankName || bankData.iban || bankData.accountNumber)),
+      showSignatures: true,
+      showTerms: true,
+      hasTerms: !!(quoteData && (quoteData.deliveryTerms || quoteData.warrantyTerms || quoteData.terms)),
+      showNotes: true,
+      hasNotes: !!(quoteData && quoteData.notes && quoteData.notes.trim().length > 0),
+      notesLength: quoteData?.notes?.length || 0,
+      hasCustomer: ['name', 'company', 'phone', 'email', 'address', 'taxOffice', 'taxNumber'].some(
+        (f) => typeof (customerData as Record<string, unknown> | undefined)?.[f] === 'string' && ((customerData as Record<string, unknown>)[f] as string).trim().length > 0
+      ),
+      isLandscape: cfg.pageOrientation === 'landscape',
+      margins: typeof cfg.margins === 'string' ? cfg.margins : undefined,
+      tableRowHeight: typeof cfg.tableRowHeight === 'number' ? cfg.tableRowHeight : undefined,
+      tableDensity: typeof cfg.tableDensity === 'string' ? cfg.tableDensity : undefined,
+    });
+    if (chunks.length <= 1) return breaks;
+    let chunkIdx = 0;
+    let inChunk = 0;
+    items.forEach((item, idx) => {
+      if (!hasValidItemContent(item)) return;
+      inChunk++;
+      if (inChunk > chunks[chunkIdx].length) {
+        chunkIdx++;
+        inChunk = 1;
+      }
+      if (inChunk === chunks[chunkIdx].length && chunkIdx < chunks.length - 1) {
+        breaks.set(idx, chunkIdx + 2);
+      }
+    });
+    return breaks;
+  }, [items, pdfConfig, quoteData, customerData, bankData]);
   const {
     viewMode, visibleColumns, toggleColumn, taxMode, toggleTaxMode,
     totalQuantity, sortItems, formatItemCurrency,
@@ -215,11 +258,11 @@ const ItemsTable = ({
                 <tbody>
                   {items.map((item, index) => (
                     <React.Fragment key={item.id}>
-                      {/* A4 Page Break Indicator guideline after 20th row (tek sayfa 20) */}
-                      {index === 20 && (
+                      {/* A4 Page Break Indicator — PDF ile birebir aynı kırılımda */}
+                      {pageBreaks.has(index) && (
                         <tr className="bg-[var(--color-primary-muted)]/20 border-y-2 border-dashed border-[var(--color-primary)]/40 text-center select-none">
-                          <td colSpan={11} className="py-1.5 text-[11px] font-semibold text-[var(--color-primary)] tracking-wide">
-                            📄 1. Sayfa Sonu (A4 Baskı Sınırı — Aşağıdaki Kalemler 2. Sayfaya Taşar)
+                          <td colSpan={12} className="py-1.5 text-[11px] font-semibold text-[var(--color-primary)] tracking-wide">
+                            📄 {pageBreaks.get(index)}. Sayfa — A4 Baskı Sınırı (aşağıdaki kalemler PDF'te {pageBreaks.get(index)}. sayfada)
                           </td>
                         </tr>
                       )}
