@@ -253,8 +253,10 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const isCompact = options.margins === 'compact' || density === 'compact';
     const isSpacious = options.margins === 'spacious' || options.margins === 'wide' || density === 'spacious';
 
-    // Base available height per page (in units, where 1 A4 portrait page has ~1000 usable height units)
-    const pageCapacity = isLandscape ? 760 : 1000;
+    // Base available height per page in model units. A4 portrait is 1122px tall;
+    // 1060 keeps ~60px slack for rounding/epsilon overflow (the old 1000 rejected
+    // small quotes like 7 described rows that genuinely fit one physical sheet).
+    const pageCapacity = isLandscape ? 760 : 1060;
     // Squeeze: measure 8-14 plain items with the compact tier so they + summary fit one page.
     // The single-page budget gate below still enforces the fit — squeeze never overflows.
     const squeeze = shouldSqueezeSinglePage(items, options);
@@ -316,9 +318,12 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
 
     // Calibrate maximum row capacities based on visual layout.
     // Squeezed single page (compact tier): 14 plain rows x ~27 units fit 1000 with header/customer/summary.
+    // Portrait cap 360: small quotes (<=7 rows, even described) genuinely fit one physical
+    // A4 (~1040px incl. sections) — a tighter cap forces absurd [3,2]/[4,2] orphan splits.
+    // The computed budget above still enforces the true physical fit.
     const maxSinglePageRowBudget = isLandscape
         ? (hasBottomSections ? 180 : 500)
-        : squeeze ? 430 : (hasBottomSections ? 230 : 550);
+        : squeeze ? 430 : (hasBottomSections ? 360 : 550);
     const maxPage1RowBudget = isLandscape ? 260 : 340;
     const maxMiddlePageRowBudget = isLandscape ? 320 : 420;
     const maxFinalPageRowBudget = isLandscape ? 280 : 250;

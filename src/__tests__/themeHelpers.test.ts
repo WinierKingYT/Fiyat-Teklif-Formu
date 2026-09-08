@@ -142,6 +142,16 @@ describe('shouldSqueezeSinglePage', () => {
         expect(chunks.length).toBe(1);
         expect(chunks[0]).toHaveLength(12);
     });
+
+    it('keeps small described quotes (4-7 rows) on one page without orphan splits', () => {
+        const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, showTerms: true, hasTerms: true, hasCustomer: true };
+        for (const n of [4, 5, 6, 7]) {
+            const items = Array.from({ length: n }, (_, i) => ({ id: `d${i}`, name: `Ürün ${i + 1}`, description: 'Kısa açıklama' }));
+            const chunks = chunkQuoteItems(items, opts);
+            expect(chunks.length).toBe(1);
+            expect(chunks.flat()).toHaveLength(n);
+        }
+    });
 });
 
 describe('formatPdfTitle', () => {
