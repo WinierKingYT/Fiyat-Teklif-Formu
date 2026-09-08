@@ -289,7 +289,9 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
             textH += Math.floor(itemObj.name.length / 50) * 14;
         }
-        const imageH = itemObj.image ? Math.max(base, 56) : 0;
+        // Measured theme image boxes: Modern 32px, Corporate 36px, Classic ~38px,
+        // Pro min 38px — plus cell padding the rendered row is ~44 units, not 56.
+        const imageH = itemObj.image ? Math.max(base, 44) : 0;
         return Math.max(textH, imageH) * rowFactor;
     });
 

@@ -153,6 +153,16 @@ describe('shouldSqueezeSinglePage', () => {
         expect(chunks.flat()).toHaveLength(6);
     });
 
+    it('keeps 7 image rows with short descriptions on one page (no [5,2] orphan split)', () => {
+        const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, hasCustomer: true };
+        const items = Array.from({ length: 7 }, (_, i) => ({
+            id: `q${i}`, name: `Ürün ${i + 1}`, description: 'Kısa açıklama', image: 'data:image/png;base64,abc'
+        }));
+        const chunks = chunkQuoteItems(items, opts);
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(7);
+    });
+
     it('still accounts long descriptions on image rows (text taller than image)', () => {
         const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, hasCustomer: true };
         const items = Array.from({ length: 12 }, (_, i) => ({
