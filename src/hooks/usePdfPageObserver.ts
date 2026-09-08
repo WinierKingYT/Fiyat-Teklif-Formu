@@ -108,18 +108,36 @@ export const usePdfPageObserver = ({
         }
     }, [contentRef]);
 
-    // Detect pages whose content overflows the page height
+    // Detect pages whose content overflows the page height.
+    // Re-checks when images inside settle: late-loading product images change
+    // scrollHeight after the first measurement, which caused stale overflow banners.
     useEffect(() => {
         const el = contentRef.current;
         if (!el) return;
-        const pages = el.querySelectorAll('.pdf-page');
-        const overflow: number[] = [];
-        pages.forEach((p, i) => {
-            const pageEl = p as HTMLElement;
-            if (pageEl.scrollHeight > pageEl.clientHeight + 16) overflow.push(i + 1);
-        });
-        setOverflowPages(overflow);
-    }, [renderedConfig, items.length, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, pdfConfig.tableRowHeight, zoomLevel, contentRef]);
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const checkOverflow = () => {
+            const pages = el.querySelectorAll('.pdf-page');
+            const overflow: number[] = [];
+            pages.forEach((p, i) => {
+                const pageEl = p as HTMLElement;
+                if (pageEl.scrollHeight > pageEl.clientHeight + 24) overflow.push(i + 1);
+            });
+            setOverflowPages(overflow);
+        };
+        const scheduleRecheck = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(checkOverflow, 300);
+        };
+        checkOverflow();
+        // Capture phase: img load/error events bubble through the container.
+        el.addEventListener('load', scheduleRecheck, true);
+        el.addEventListener('error', scheduleRecheck, true);
+        return () => {
+            el.removeEventListener('load', scheduleRecheck, true);
+            el.removeEventListener('error', scheduleRecheck, true);
+            if (timer) clearTimeout(timer);
+        };
+    }, [renderedConfig, items.length, pageCount, pdfConfig.theme, pdfConfig.color, pdfConfig.margins, pdfConfig.tableRowHeight, zoomLevel, contentRef]);
 
     // Margin guide overlay (preview only, not included in PDF output)
     useEffect(() => {

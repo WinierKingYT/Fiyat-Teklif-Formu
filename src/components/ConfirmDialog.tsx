@@ -44,10 +44,12 @@ const ConfirmDialog = ({
         handleTouchEnd,
     } = useDialogBehavior(isOpen, onCancel);
 
+    // Approve must resolve directly: going through handleClose would fire onCancel
+    // after the close animation and swallow the approval (promise already settled).
+    // Skipping handleClose is safe — isOpen=false triggers the animated close anyway.
     const handleConfirm = useCallback(() => {
-        handleClose();
-        setTimeout(() => onConfirm(), 200);
-    }, [handleClose, onConfirm]);
+        onConfirm();
+    }, [onConfirm]);
 
     if (!visible) return null;
 
