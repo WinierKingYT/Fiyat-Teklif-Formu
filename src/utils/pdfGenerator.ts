@@ -435,7 +435,9 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                     logging: false,
                     letterRendering: qual.letterRendering,
                     backgroundColor,
-                    imageTimeout: 0,
+                    // Never 0: 0 means "wait forever" and hangs the whole download
+                    // when a product image is slow/broken (failed ones are hidden + warned beforehand).
+                    imageTimeout: 10000,
                     ignoreElements: (el: Element) => {
                         return (
                             el.classList?.contains('no-print') ||
