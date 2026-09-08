@@ -269,27 +269,28 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         rowFactor = 0.78;
     }
 
-    // Measure Item Heights
+    // Measure Item Heights.
+    // Text extras stack on the base row, but the image floor does NOT stack:
+    // when the image is taller than the text block, a short description costs 0.
     const itemHeights = items.map(item => {
         const itemObj = item as Record<string, unknown>;
-        let h = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
+        const base = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
             ? options.tableRowHeight
             : 34; // standard row height
 
-        if (itemObj.image) {
-            h = Math.max(h, 56);
-        }
+        let textH = base;
         if (typeof itemObj.description === 'string' && itemObj.description.trim().length > 0) {
             const lines = itemObj.description.split('\n').length;
             const wrapLines = Math.floor(itemObj.description.length / 65);
             // Any description renders as (at least) a second row line — never cost 0.
             const extraLines = Math.max(1, lines - 1, wrapLines);
-            h += extraLines * 16;
+            textH += extraLines * 16;
         }
         if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
-            h += Math.floor(itemObj.name.length / 50) * 14;
+            textH += Math.floor(itemObj.name.length / 50) * 14;
         }
-        return h * rowFactor;
+        const imageH = itemObj.image ? Math.max(base, 56) : 0;
+        return Math.max(textH, imageH) * rowFactor;
     });
 
     // Measure Fixed Page Sections

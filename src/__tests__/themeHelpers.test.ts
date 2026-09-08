@@ -143,6 +143,26 @@ describe('shouldSqueezeSinglePage', () => {
         expect(chunks[0]).toHaveLength(12);
     });
 
+    it('measures image rows by max(image, text) — short descriptions add nothing on tall images', () => {
+        const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, hasCustomer: true };
+        const withImages = Array.from({ length: 6 }, (_, i) => ({
+            id: `g${i}`, name: `Ürün ${i + 1}`, description: 'Kısa açıklama', image: 'data:image/png;base64,abc'
+        }));
+        const chunks = chunkQuoteItems(withImages, opts);
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(6);
+    });
+
+    it('still accounts long descriptions on image rows (text taller than image)', () => {
+        const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, hasCustomer: true };
+        const items = Array.from({ length: 12 }, (_, i) => ({
+            id: `h${i}`, name: `Ürün ${i + 1}`, description: 'Uzun açıklama satırı bir\nsatır iki\nsatır üç ve devamı', image: 'data:image/png;base64,abc'
+        }));
+        const chunks = chunkQuoteItems(items, opts);
+        expect(chunks.length).toBeGreaterThan(1);
+        expect(chunks.flat()).toHaveLength(12);
+    });
+
     it('keeps small described quotes (4-7 rows) on one page without orphan splits', () => {
         const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, showTerms: true, hasTerms: true, hasCustomer: true };
         for (const n of [4, 5, 6, 7]) {
