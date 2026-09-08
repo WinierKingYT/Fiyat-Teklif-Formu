@@ -159,7 +159,21 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks.flat()).toHaveLength(15);
     });
 
-    it('does not squeeze when items have images', () => {
+    it('paginates 13 image rows without orphan pages', () => {
+        const withImages = generateItems(13).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
+        const chunks = chunkQuoteItems(withImages, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(3);
+        expect(chunks.flat()).toHaveLength(13);
+        // No single-row orphan page at the end.
+        expect(chunks[chunks.length - 1].length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('keeps 11 rows with a single image on one page (fitsTwelve)', () => {
         const withImages = generateItems(11).map((item, i) => i === 0 ? { ...item, image: 'data:image/png;base64,abc' } : item);
         const chunks = chunkQuoteItems(withImages, {
             hasCustomer: true,
@@ -167,7 +181,34 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
             showSummary: true,
             showSignatures: true
         });
-        expect(chunks.length).toBe(2);
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(11);
+    });
+
+    it('paginates 12 image rows without orphans (they exceed one physical A4)', () => {
+        const withImages = generateItems(12).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
+        const chunks = chunkQuoteItems(withImages, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(3);
+        expect(chunks.flat()).toHaveLength(12);
+        // 6+4+2: no single-row orphan page, summary shares the last page.
+        expect(chunks.map((c) => c.length)).toEqual([6, 4, 2]);
+    });
+
+    it('keeps 10 image rows on one page (fitsTwelve)', () => {
+        const withImages = generateItems(10).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
+        const chunks = chunkQuoteItems(withImages, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(10);
     });
 
     // Regression: 12 two-line rows + terms must NOT collapse into one overflowing

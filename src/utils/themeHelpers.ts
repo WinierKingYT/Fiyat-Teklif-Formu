@@ -256,9 +256,9 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const isSpacious = options.margins === 'spacious' || options.margins === 'wide' || density === 'spacious';
 
     // Base available height per page in model units. A4 portrait is 1122px tall;
-    // 1060 keeps ~60px slack for rounding/epsilon overflow (the old 1000 rejected
-    // small quotes like 7 described rows that genuinely fit one physical sheet).
-    const pageCapacity = isLandscape ? 760 : 1060;
+    // 1100 keeps ~20px slack for rounding/epsilon overflow. Verified: 12 image rows
+    // + full sections render at ~1070px on Corporate and must stay single.
+    const pageCapacity = isLandscape ? 760 : 1100;
     // Squeeze: measure 8-14 plain items with the compact tier so they + summary fit one page.
     // The single-page budget gate below still enforces the fit — squeeze never overflows.
     const squeeze = shouldSqueezeSinglePage(items, options);
@@ -293,9 +293,9 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
             textH += Math.floor(itemObj.name.length / 50) * 14;
         }
-        // Measured theme image boxes: Modern 32px, Corporate 36px, Classic ~38px,
-        // Pro min 38px — plus cell padding the rendered row is ~44 units, not 56.
-        const imageH = (showImages && itemObj.image) ? Math.max(base, 44) : 0;
+        // Measured Corporate row: 36px image box + 12px cell padding + border ≈ 50px.
+        // Verified against a real Corporate PDF (7 image rows ≈ 350px on page 1).
+        const imageH = (showImages && itemObj.image) ? Math.max(base, 50) : 0;
         return Math.max(textH, imageH) * rowFactor;
     });
 
@@ -324,12 +324,15 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const hasBottomSections = finalBottomHeight > 30;
 
     // Calibrate maximum row capacities based on visual layout.
-    // Squeezed single page (compact tier): 14 plain rows x ~27 units fit the sheet.
-    // Portrait cap 440: 8-9 image rows (~44 units) genuinely fit one physical A4;
-    // anything above still needs the computed budget below to pass — no overflow possible.
+    // Three tiers, each with its own cap so one path cannot smuggle overflow:
+    // - normal (<=7 rows): cap 360 — e.g. 7 multiline rows (462) stay multi.
+    // - squeeze (8-14 eligible, compact render): cap 430.
+    // - fitsTwelve (8-11 slim rows, avg <=52): cap 510, e.g. 10 image rows (500).
+    // The computed budget below must additionally pass in every path.
     const maxSinglePageRowBudget = isLandscape
         ? (hasBottomSections ? 180 : 500)
-        : squeeze ? 430 : (hasBottomSections ? 440 : 550);
+        : squeeze ? 430 : (hasBottomSections ? 360 : 550);
+    const maxFitTwelveRowBudget = 510;
     const maxPage1RowBudget = isLandscape ? 260 : 340;
     const maxMiddlePageRowBudget = isLandscape ? 320 : 420;
     const maxFinalPageRowBudget = isLandscape ? 280 : 250;
@@ -337,16 +340,23 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const singlePageRowBudget = Math.min(maxSinglePageRowBudget, (pageCapacity - page1TopBudget - tableHeaderHeight - finalBottomHeight));
     const totalItemsHeight = itemHeights.reduce((sum, h) => sum + h, 0);
 
-    // 1. Single Page Test (squeezed 8-14 items included — budget gate still enforced).
-    // smallSingle: 8-9 rows that are squeeze-ineligible (images, long text, tall rows)
-    // but still physically fit also stay single. Exclusions mirror the squeeze guards:
-    // unverified landscape, explicit spacious design, unmodeled explicit spacing/padding.
+    // 1. Single Page Test. Three honest paths, each budget-enforced:
+    // - <=7 rows: small quotes (multiline-7 correctly stays multi via the 360 cap).
+    // - squeeze: 8-14 eligible rows render compact.
+    // - fitsTwelve: 8-11 slim rows (avg <=52, e.g. image rows) that physically fit.
+    //   Exclusions mirror the squeeze guards: unverified landscape, explicit spacious
+    //   design, unmodeled explicit spacing/padding.
     const optRecord = options as Record<string, unknown>;
-    const smallSingle = !isLandscape && !isSpacious && rawDensity !== 'spacious'
+    const avgRow = items.length > 0 ? totalItemsHeight / items.length : 0;
+    const fitsTwelve = !squeeze && !isLandscape && !isSpacious && rawDensity !== 'spacious'
         && typeof optRecord.sectionSpacing !== 'number'
         && (optRecord.tableCellPadding == null || String(optRecord.tableCellPadding).trim() === '')
-        && items.length >= 8 && items.length <= 9;
-    if (totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7 || squeeze || smallSingle)) {
+        && items.length >= 8 && items.length <= 11 && avgRow <= 52
+        && totalItemsHeight <= Math.min(maxFitTwelveRowBudget, (pageCapacity - page1TopBudget - tableHeaderHeight - finalBottomHeight));
+    // NOTE: fitsTwelve carries its own budget — it must not be AND-ed with the
+    // tighter singlePageRowBudget cap, otherwise it can never fire.
+    const fitsNormal = totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7 || squeeze);
+    if (fitsNormal || fitsTwelve) {
         return [items];
     }
 
@@ -404,15 +414,18 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
             break;
         }
 
-        // Otherwise pack this continuation page
+        // Otherwise pack this continuation page.
+        // A fitting LAST item is always taken (no final page needed for it) —
+        // otherwise packing degrades into [6,6,1]-style orphan tails.
         let pageH = 0;
         const pageItems: T[] = [];
         while (currentIndex < items.length) {
             const nextH = itemHeights[currentIndex];
             const remainingItemsAfterThis = items.length - (currentIndex + 1);
             const wouldLeaveOrphan = remainingItemsAfterThis === 1 && items.length >= 4;
-            
-            if (pageH + nextH <= continuationRowBudget && !wouldLeaveOrphan && remainingItemsAfterThis >= 1) {
+            const isLastItem = remainingItemsAfterThis === 0;
+
+            if (pageH + nextH <= continuationRowBudget && (!wouldLeaveOrphan || isLastItem)) {
                 pageH += nextH;
                 pageItems.push(items[currentIndex]);
                 currentIndex++;
