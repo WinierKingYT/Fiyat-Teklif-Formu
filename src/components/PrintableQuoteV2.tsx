@@ -262,6 +262,7 @@ const PrintableQuote = React.memo(({
             tableDensity: mergedRecord.tableDensity as string | undefined,
             sectionSpacing: typeof mergedRecord.sectionSpacing === 'number' ? mergedRecord.sectionSpacing as number : undefined,
             tableCellPadding: mergedRecord.tableCellPadding as string | undefined,
+            showTableImages: mergedRecord.showTableImages !== false,
         });
         if (squeeze && mergedRecord.tableDensity !== 'spacious') {
             mergedRecord.tableDensity = 'compact';

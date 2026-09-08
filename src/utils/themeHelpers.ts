@@ -103,10 +103,11 @@ export function shouldSqueezeSinglePage<T>(rawItems: T[], options: ChunkOptions 
     if (optRecord.tableCellPadding != null && String(optRecord.tableCellPadding).trim() !== '') return false;
     const rh = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0 ? options.tableRowHeight : 35;
     if (rh > 36) return false;
+    const showImages = options.showTableImages !== false;
     for (const it of items) {
         const o = it as Record<string, unknown>;
         if (o && typeof o === 'object') {
-            if (o.image) return false;
+            if (showImages && o.image) return false;
             if (typeof o.name === 'string' && o.name.length > 50) return false;
             if (typeof o.description === 'string' && o.description.length > 120) return false;
         }
@@ -141,6 +142,7 @@ export interface ChunkOptions {
     tableDensity?: string;
     sectionSpacing?: number;
     tableCellPadding?: string;
+    showTableImages?: boolean;
     measuredContentHeight?: number;
 }
 
@@ -272,6 +274,8 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     // Measure Item Heights.
     // Text extras stack on the base row, but the image floor does NOT stack:
     // when the image is taller than the text block, a short description costs 0.
+    // A hidden image column (showTableImages === false) renders text-only rows.
+    const showImages = options.showTableImages !== false;
     const itemHeights = items.map(item => {
         const itemObj = item as Record<string, unknown>;
         const base = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
@@ -291,7 +295,7 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         }
         // Measured theme image boxes: Modern 32px, Corporate 36px, Classic ~38px,
         // Pro min 38px — plus cell padding the rendered row is ~44 units, not 56.
-        const imageH = itemObj.image ? Math.max(base, 44) : 0;
+        const imageH = (showImages && itemObj.image) ? Math.max(base, 44) : 0;
         return Math.max(textH, imageH) * rowFactor;
     });
 
@@ -320,13 +324,12 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const hasBottomSections = finalBottomHeight > 30;
 
     // Calibrate maximum row capacities based on visual layout.
-    // Squeezed single page (compact tier): 14 plain rows x ~27 units fit 1000 with header/customer/summary.
-    // Portrait cap 360: small quotes (<=7 rows, even described) genuinely fit one physical
-    // A4 (~1040px incl. sections) — a tighter cap forces absurd [3,2]/[4,2] orphan splits.
-    // The computed budget above still enforces the true physical fit.
+    // Squeezed single page (compact tier): 14 plain rows x ~27 units fit the sheet.
+    // Portrait cap 440: 8-9 image rows (~44 units) genuinely fit one physical A4;
+    // anything above still needs the computed budget below to pass — no overflow possible.
     const maxSinglePageRowBudget = isLandscape
         ? (hasBottomSections ? 180 : 500)
-        : squeeze ? 430 : (hasBottomSections ? 360 : 550);
+        : squeeze ? 430 : (hasBottomSections ? 440 : 550);
     const maxPage1RowBudget = isLandscape ? 260 : 340;
     const maxMiddlePageRowBudget = isLandscape ? 320 : 420;
     const maxFinalPageRowBudget = isLandscape ? 280 : 250;
@@ -334,8 +337,16 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
     const singlePageRowBudget = Math.min(maxSinglePageRowBudget, (pageCapacity - page1TopBudget - tableHeaderHeight - finalBottomHeight));
     const totalItemsHeight = itemHeights.reduce((sum, h) => sum + h, 0);
 
-    // 1. Single Page Test (squeezed 8-14 items included — budget gate still enforced)
-    if (totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7 || squeeze)) {
+    // 1. Single Page Test (squeezed 8-14 items included — budget gate still enforced).
+    // smallSingle: 8-9 rows that are squeeze-ineligible (images, long text, tall rows)
+    // but still physically fit also stay single. Exclusions mirror the squeeze guards:
+    // unverified landscape, explicit spacious design, unmodeled explicit spacing/padding.
+    const optRecord = options as Record<string, unknown>;
+    const smallSingle = !isLandscape && !isSpacious && rawDensity !== 'spacious'
+        && typeof optRecord.sectionSpacing !== 'number'
+        && (optRecord.tableCellPadding == null || String(optRecord.tableCellPadding).trim() === '')
+        && items.length >= 8 && items.length <= 9;
+    if (totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7 || squeeze || smallSingle)) {
         return [items];
     }
 

@@ -63,6 +63,7 @@ const ItemsTable = ({
       margins: typeof cfg.margins === 'string' ? cfg.margins : undefined,
       tableRowHeight: typeof cfg.tableRowHeight === 'number' ? cfg.tableRowHeight : undefined,
       tableDensity: typeof cfg.tableDensity === 'string' ? cfg.tableDensity : undefined,
+      showTableImages: cfg.showTableImages !== false,
     });
     if (chunks.length <= 1) return breaks;
     let chunkIdx = 0;

@@ -153,6 +153,29 @@ describe('shouldSqueezeSinglePage', () => {
         expect(chunks.flat()).toHaveLength(6);
     });
 
+    it('keeps 8-9 image rows on one page when they physically fit (smallSingle)', () => {
+        const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, hasCustomer: true };
+        for (const n of [8, 9]) {
+            const items = Array.from({ length: n }, (_, i) => ({
+                id: `s${i}`, name: `Ürün ${i + 1}`, image: 'data:image/png;base64,abc'
+            }));
+            const chunks = chunkQuoteItems(items, opts);
+            expect(chunks.length).toBe(1);
+            expect(chunks.flat()).toHaveLength(n);
+        }
+    });
+
+    it('treats rows as imageless when the image column is hidden', () => {
+        const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, hasCustomer: true, showTableImages: false };
+        const items = Array.from({ length: 12 }, (_, i) => ({
+            id: `h${i}`, name: `Ürün ${i + 1}`, image: 'data:image/png;base64,abc'
+        }));
+        const chunks = chunkQuoteItems(items, opts);
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(12);
+        expect(shouldSqueezeSinglePage(items, opts)).toBe(true);
+    });
+
     it('keeps 7 image rows with short descriptions on one page (no [5,2] orphan split)', () => {
         const opts = { showSummary: true, showBankInfo: true, hasBankData: true, showSignatures: true, hasCustomer: true };
         const items = Array.from({ length: 7 }, (_, i) => ({

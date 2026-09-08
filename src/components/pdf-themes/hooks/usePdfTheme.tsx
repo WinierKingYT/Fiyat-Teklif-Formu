@@ -58,7 +58,8 @@ export function usePdfTheme(props: PdfThemeProps) {
             margins: config.margins,
             tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined,
             tableDensity: (config as Record<string, unknown>).tableDensity as string | undefined,
-            sectionSpacing: typeof (config as Record<string, unknown>).sectionSpacing === 'number' ? (config as Record<string, unknown>).sectionSpacing as number : undefined
+            sectionSpacing: typeof (config as Record<string, unknown>).sectionSpacing === 'number' ? (config as Record<string, unknown>).sectionSpacing as number : undefined,
+            showTableImages: config.showTableImages !== false
         });
     }, [items, config, layoutMap, props.bankData, props.customerData, quoteData]);
 
