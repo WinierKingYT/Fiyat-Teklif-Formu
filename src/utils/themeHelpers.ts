@@ -143,7 +143,8 @@ export function buildDensityChunkOptions(source: DensitySource): ChunkOptions & 
         tableDensity: config.tableDensity as string | undefined,
         sectionSpacing: typeof config.sectionSpacing === 'number' ? config.sectionSpacing as number : undefined,
         showTableImages: config.showTableImages !== false,
-        theme: typeof config.theme === 'string' && config.theme ? config.theme : 'modern',
+        theme: typeof config.theme === 'string' ? config.theme : undefined,
+        paginationMode: typeof config.paginationMode === 'string' ? config.paginationMode : undefined,
     };
 }
 
@@ -221,25 +222,29 @@ function hasEffectiveImages<T>(items: T[], options: ChunkOptions): boolean {
     });
 }
 
-function compactContentGuards<T>(items: T[], options: ChunkOptions): boolean {
-    // Long-content safety: pathological content paginates, never clips.
-    if (options.isLandscape) return false;
+/**
+ * Shared compact-content guards with machine-readable rejection reason.
+ * Long-content safety: pathological content paginates, never clips.
+ * Returns null when all guards pass.
+ */
+function compactGuardRejection<T>(items: T[], options: ChunkOptions): DensityReason | null {
+    if (options.isLandscape) return 'insufficient-a4-budget';
     const optRecord = options as Record<string, unknown>;
-    if (optRecord.tableDensity === 'spacious') return false;
+    if (optRecord.tableDensity === 'spacious') return 'spacious-layout';
     const margins = options.margins;
-    if (margins === 'spacious' || margins === 'wide') return false;
-    if (typeof optRecord.sectionSpacing === 'number') return false;
-    if (optRecord.tableCellPadding != null && String(optRecord.tableCellPadding).trim() !== '') return false;
+    if (margins === 'spacious' || margins === 'wide') return 'spacious-layout';
+    if (typeof optRecord.sectionSpacing === 'number') return 'custom-spacing';
+    if (optRecord.tableCellPadding != null && String(optRecord.tableCellPadding).trim() !== '') return 'custom-cell-padding';
     const rh = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0 ? options.tableRowHeight : 35;
-    if (rh > 36) return false;
+    if (rh > 36) return 'custom-row-height';
     for (const it of items) {
         const o = it as Record<string, unknown>;
         if (o && typeof o === 'object') {
-            if (typeof o.name === 'string' && o.name.length > 50) return false;
-            if (typeof o.description === 'string' && o.description.length > 120) return false;
+            if (typeof o.name === 'string' && o.name.length > 50) return 'long-content';
+            if (typeof o.description === 'string' && o.description.length > 120) return 'long-content';
         }
     }
-    return true;
+    return null;
 }
 
 /**
@@ -249,7 +254,42 @@ function compactContentGuards<T>(items: T[], options: ChunkOptions): boolean {
  * both consume this — one decision, no model/render drift.
  */
 export function resolveSinglePageDensity<T>(rawItems: T[], options: ChunkOptions & { theme?: string } = {}): SinglePageDensity | null {
+    return diagnoseSinglePageDensity(rawItems, options).density;
+}
+
+export type DensityReason =
+    | 'fits-normal'
+    | 'dense-plain'
+    | 'dense-image'
+    | 'manual-pagination'
+    | 'unsupported-theme'
+    | 'long-content'
+    | 'spacious-layout'
+    | 'custom-row-height'
+    | 'custom-cell-padding'
+    | 'custom-spacing'
+    | 'insufficient-a4-budget';
+
+export interface DensityDiagnosis {
+    density: SinglePageDensity | null;
+    reason: DensityReason;
+}
+
+function isManualPagination(options: ChunkOptions): boolean {
+    if (options.paginationMode !== 'manual') return false;
+    const v = options.itemsPerPage;
+    const n = typeof v === 'number' ? v : (typeof v === 'string' && v !== 'auto' ? Number(v) : NaN);
+    return !Number.isNaN(n) && n > 0 && n < 50;
+}
+
+/**
+ * Canonical single-page decision WITH machine-readable reason. Pagination
+ * (chunkQuoteItems) and rendering (PrintableQuoteV2 override) both consume
+ * this — one decision, no model/render drift.
+ */
+export function diagnoseSinglePageDensity<T>(rawItems: T[], options: ChunkOptions & { theme?: string } = {}): DensityDiagnosis {
     const items = (rawItems || []).filter(hasValidItemContent);
+    if (isManualPagination(options)) return { density: null, reason: 'manual-pagination' };
     const capacity = pageCapacityFor(options);
 
     // 1) NORMAL — fits as-is, render untouched (includes the comfortable 8-11 path).
@@ -272,39 +312,48 @@ export function resolveSinglePageDensity<T>(rawItems: T[], options: ChunkOptions
             && (optRecord.tableCellPadding == null || String(optRecord.tableCellPadding).trim() === '')
             && items.length >= 8 && items.length <= 11 && avgRow <= 52
             && total <= Math.min(510, capacity - geo.top - geo.thead - geo.bottom);
-        if (total <= budget && (!geo.hasBottom || items.length <= 7)) return 'normal';
-        if (fitsTwelve) return 'normal';
+        if (total <= budget && (!geo.hasBottom || items.length <= 7)) {
+            return { density: 'normal', reason: 'fits-normal' };
+        }
+        if (fitsTwelve) return { density: 'normal', reason: 'fits-normal' };
     }
 
-    if (items.length < 8 || items.length > 14) return null;
+    if (items.length < 8 || items.length > 14) {
+        return { density: null, reason: 'insufficient-a4-budget' };
+    }
+
+    // Shared guard diagnostics — one implementation, used by both dense tracks.
+    const guardRejection = compactGuardRejection(items, options);
+    if (guardRejection) return { density: null, reason: guardRejection };
 
     // 2) DENSE_PLAIN — existing compact tier (tableDensity compact, rowHeight <= 30).
     // Cap 510 admits uniform short-desc rows (14 x ~36); the computed budget below
     // still rejects genuinely tall content. E2E-measured, see e2e/pdf-density.spec.ts.
-    if (!hasEffectiveImages(items, options) && compactContentGuards(items, options)) {
+    if (!hasEffectiveImages(items, options)) {
         const total = items.reduce((sum, it) => sum + measureRow(it as Record<string, unknown>, false, {
             base: 30, descPerLine: 16, namePerChunk: 14, imageFloor: 0, factor: 0.78,
         }), 0);
         const geo = sectionGeometry(options, Math.max(densityScale(options), 1.08));
         const budget = Math.min(510, capacity - geo.top - geo.thead - geo.bottom);
-        if (total <= budget) return 'dense-plain';
+        if (total <= budget) return { density: 'dense-plain', reason: 'dense-plain' };
+        return { density: null, reason: 'insufficient-a4-budget' };
     }
 
-    // 3) DENSE_IMAGE — compact tier + compact image boxes + section compaction (modern only).
+    // 3) DENSE_IMAGE — compact tier + compact image boxes + section compaction.
+    // Capability is theme-aware: only themes whose DOM implements the profile
+    // may claim the fit (see DENSE_IMAGE_THEMES).
     {
         const theme = typeof options.theme === 'string' && options.theme ? options.theme : 'modern';
-        if (!DENSE_IMAGE_THEMES.includes(theme)) return null;
-        if (!compactContentGuards(items, options)) return null;
-        if (!hasEffectiveImages(items, options)) return null;
+        if (!DENSE_IMAGE_THEMES.includes(theme)) return { density: null, reason: 'unsupported-theme' };
         const total = items.reduce((sum, it) => sum + measureRow(it as Record<string, unknown>, true, {
             base: 26, descPerLine: 9, namePerChunk: 7, imageFloor: 36, factor: 1,
         }), 0);
         const geo = sectionGeometry(options, 1.2);
         const budget = Math.min(520, capacity - geo.top - geo.thead - geo.bottom);
-        if (total <= budget) return 'dense-image';
+        if (total <= budget) return { density: 'dense-image', reason: 'dense-image' };
     }
 
-    return null;
+    return { density: null, reason: 'insufficient-a4-budget' };
 }
 
 export function estimateAutoItemsPerPage(availableHeightPx: number, rowHeight?: number): number {
@@ -315,6 +364,12 @@ export function estimateAutoItemsPerPage(availableHeightPx: number, rowHeight?: 
 
 export interface ChunkOptions {
     itemsPerPage?: number | string;
+    /**
+     * Explicit pagination semantics. Only 'manual' honors numeric itemsPerPage
+     * as a hard override. Anything else (including legacy stored numbers
+     * without this key) enters auto-fit via the density resolver.
+     */
+    paginationMode?: string;
     showSummary?: boolean;
     showBankInfo?: boolean;
     hasBankData?: boolean;
@@ -420,10 +475,13 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         return [[]];
     }
 
-    // Manual override if explicitly set (numeric). 'auto' falls through to height-based pagination with max 20 cap.
+    // Explicit MANUAL mode only: numeric itemsPerPage is an intentional user
+    // instruction and bypasses the density resolver. Anything else (including a
+    // legacy stored number without paginationMode) enters auto-fit below.
+    const paginationMode = options.paginationMode === 'manual' ? 'manual' : 'auto-fit';
     const ippRaw = options.itemsPerPage;
     const ippNum = typeof ippRaw === 'number' ? ippRaw : (typeof ippRaw === 'string' && ippRaw !== 'auto' ? Number(ippRaw) : NaN);
-    if (!Number.isNaN(ippNum) && ippNum !== 14 && ippNum > 0 && ippNum < 50) {
+    if (paginationMode === 'manual' && !Number.isNaN(ippNum) && ippNum > 0 && ippNum < 50) {
         const capped = Math.min(20, Math.max(1, Math.floor(ippNum)));
         const chunks: T[][] = [];
         for (let i = 0; i < items.length; i += capped) {

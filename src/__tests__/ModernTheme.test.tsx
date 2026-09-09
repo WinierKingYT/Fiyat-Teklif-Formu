@@ -149,7 +149,7 @@ describe('ModernTheme', () => {
             id: `i${i}`, name: `Ürün ${i}`, description: '', quantity: 1, price: 10, taxRate: 20, discountRate: 0, unit: 'Adet',
         }));
 
-        renderTheme({ items: manyItems, config: { ...baseConfig, itemsPerPage: 2 } });
+        renderTheme({ items: manyItems, config: { ...baseConfig, itemsPerPage: 2, paginationMode: 'manual' } });
 
         expect(document.querySelectorAll('.pdf-page').length).toBe(3);
     });
@@ -217,7 +217,7 @@ describe('ModernTheme', () => {
 
         renderTheme({
             items: eightItems,
-            config: baseConfig,
+            config: { ...baseConfig, paginationMode: 'manual' },
         });
 
         const pages = document.querySelectorAll('.pdf-page');

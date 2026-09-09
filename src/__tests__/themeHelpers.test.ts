@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason, resolveSinglePageDensity, buildDensityChunkOptions, DENSE_IMAGE_THEMES } from '@/utils/themeHelpers';
+import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason, resolveSinglePageDensity, diagnoseSinglePageDensity, buildDensityChunkOptions, DENSE_IMAGE_THEMES } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {
@@ -101,9 +101,16 @@ describe('chunkQuoteItems', () => {
         expect(chunks.flat()).toEqual(items);
     });
 
-    it('should respect custom itemsPerPage when specified and different from 14', () => {
+    it('ignores a bare numeric itemsPerPage without explicit manual mode (auto-fit)', () => {
         const items = Array.from({ length: 6 }, (_, i) => i + 1);
         const chunks = chunkQuoteItems(items, { itemsPerPage: 2 });
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toEqual(items);
+    });
+
+    it('honors numeric itemsPerPage only in explicit manual mode', () => {
+        const items = Array.from({ length: 6 }, (_, i) => i + 1);
+        const chunks = chunkQuoteItems(items, { itemsPerPage: 2, paginationMode: 'manual' });
         expect(chunks.length).toBe(3);
         expect(chunks[0]).toEqual([1, 2]);
         expect(chunks[1]).toEqual([3, 4]);
@@ -231,6 +238,81 @@ describe('resolveSinglePageDensity', () => {
             expect(chunks.flat()).toHaveLength(n);
         }
     });
+});
+
+describe('paginationMode precedence (§3/§6/§8)', () => {
+    const fullSections = {
+        hasCustomer: true, hasBankData: true, showSummary: true, showSignatures: true,
+    };
+    const plain14 = () => Array.from({ length: 14 }, (_, i) => ({ id: `p${i}`, name: `Ürün ${i + 1}` }));
+
+    it.each([6, 7, 9, 14])('legacy stored itemsPerPage=%i without mode enters auto-fit (1 page)', (ipp) => {
+        const chunks = chunkQuoteItems(plain14(), { ...fullSections, itemsPerPage: ipp });
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(14);
+    });
+
+    it('explicit manual itemsPerPage=6 paginates 14 items as 6+6+2 (§9)', () => {
+        const chunks = chunkQuoteItems(plain14(), { ...fullSections, itemsPerPage: 6, paginationMode: 'manual' });
+        expect(chunks.map((c) => c.length)).toEqual([6, 6, 2]);
+    });
+
+    it('manual mode with an invalid number falls back to auto-fit instead of clipping', () => {
+        const chunks = chunkQuoteItems(plain14(), { ...fullSections, itemsPerPage: 'bogus', paginationMode: 'manual' });
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(14);
+    });
+
+    it('manual mode with itemsPerPage=14 keeps 14 items on one page', () => {
+        const chunks = chunkQuoteItems(plain14(), { ...fullSections, itemsPerPage: 14, paginationMode: 'manual' });
+        expect(chunks.length).toBe(1);
+    });
+});
+
+describe('diagnoseSinglePageDensity (§11)', () => {
+    const plain = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `i${i}`, name: `Ürün ${i}` }));
+    const img = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `g${i}`, name: `Ürün ${i + 1}`, image: 'data:abc' }));
+    const fullSections = { hasCustomer: true, hasBankData: true, showSummary: true, showSignatures: true };
+
+    it('reports fits-normal / dense-plain / dense-image for fitting content', () => {
+        expect(diagnoseSinglePageDensity(plain(5), fullSections)).toEqual({ density: 'normal', reason: 'fits-normal' });
+        expect(diagnoseSinglePageDensity(plain(14), fullSections)).toEqual({ density: 'dense-plain', reason: 'dense-plain' });
+        expect(diagnoseSinglePageDensity(img(14), fullSections)).toEqual({ density: 'dense-image', reason: 'dense-image' });
+    });
+
+    it('reports manual-pagination for explicit manual overrides', () => {
+        expect(diagnoseSinglePageDensity(plain(14), { ...fullSections, itemsPerPage: 6, paginationMode: 'manual' }))
+            .toEqual({ density: null, reason: 'manual-pagination' });
+    });
+
+    it('reports why auto-fit rejects: theme, content, layout and budget', () => {
+        expect(diagnoseSinglePageDensity(img(14), { ...fullSections, theme: 'corporate' }).reason).toBe('unsupported-theme');
+        expect(diagnoseSinglePageDensity(plain(12), { ...fullSections, tableDensity: 'spacious' }).reason).toBe('spacious-layout');
+        expect(diagnoseSinglePageDensity(plain(12), { ...fullSections, tableRowHeight: 42 }).reason).toBe('custom-row-height');
+        expect(diagnoseSinglePageDensity(plain(12), { ...fullSections, tableCellPadding: '8px' }).reason).toBe('custom-cell-padding');
+        expect(diagnoseSinglePageDensity(plain(12), { ...fullSections, sectionSpacing: 1 }).reason).toBe('custom-spacing');
+        expect(diagnoseSinglePageDensity(
+            plain(11).concat([{ id: 'y', name: 'A', description: 'x'.repeat(121) }] as never[]), fullSections
+        ).reason).toBe('long-content');
+        expect(diagnoseSinglePageDensity(plain(25), fullSections).reason).toBe('insufficient-a4-budget');
+    });
+});
+
+describe('dense-image theme support matrix (§12)', () => {
+    const img14 = () => Array.from({ length: 14 }, (_, i) => ({ id: `g${i}`, name: `Ürün ${i + 1}`, image: 'data:abc' }));
+    const opts = { hasCustomer: true, hasBankData: true, showSummary: true, showSignatures: true };
+
+    it('modern renders 14 image rows on one page', () => {
+        expect(chunkQuoteItems(img14(), { ...opts, theme: 'modern' }).length).toBe(1);
+    });
+
+    it.each(['classic', 'minimal', 'corporate', 'pro', 'bold', 'invoice'])(
+        '%s does not claim dense-image fit (paginates honestly)',
+        (theme) => {
+            expect(resolveSinglePageDensity(img14(), { ...opts, theme })).toBe(null);
+            expect(chunkQuoteItems(img14(), { ...opts, theme }).length).toBeGreaterThan(1);
+        }
+    );
 });
 
 describe('formatPdfTitle', () => {

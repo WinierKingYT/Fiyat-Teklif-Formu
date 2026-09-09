@@ -232,4 +232,18 @@ describe('pdfConfigSchema and getDefaultPdfConfig', () => {
 
     expect(config).toEqual(getDefaultPdfConfig());
   });
+
+  it('migrates legacy stored config without paginationMode to auto-fit', () => {
+    const config = parseStoredPdfConfig(JSON.stringify({ itemsPerPage: 6 }));
+
+    expect(config.paginationMode).toBe('auto-fit');
+    expect(config.itemsPerPage).toBe(6);
+  });
+
+  it('preserves an explicitly stored manual pagination mode', () => {
+    const config = parseStoredPdfConfig(JSON.stringify({ paginationMode: 'manual', itemsPerPage: 6 }));
+
+    expect(config.paginationMode).toBe('manual');
+    expect(config.itemsPerPage).toBe(6);
+  });
 });

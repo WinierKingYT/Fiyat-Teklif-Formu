@@ -277,6 +277,11 @@ export const pdfConfigSchema = z.object({
     },
     z.union([z.number(), z.literal('auto')]).optional()
   ),
+  // Explicit pagination semantics. Legacy stored configs lack this key and are
+  // migrated to 'auto-fit' (see parseStoredPdfConfig): an old numeric
+  // itemsPerPage must NOT silently become a hard pagination override.
+  // Only 'manual' honors numeric itemsPerPage as an explicit user instruction.
+  paginationMode: z.enum(['auto-fit', 'manual']).optional().default('auto-fit'),
   // Additional fields used by PdfPreviewPanel
   sectionSpacing: z.number().optional(),
   boxBorderStyle: z.string().optional(),

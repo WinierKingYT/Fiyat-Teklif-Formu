@@ -65,6 +65,7 @@ const ItemsTable = ({
       tableDensity: typeof cfg.tableDensity === 'string' ? cfg.tableDensity : undefined,
       showTableImages: cfg.showTableImages !== false,
       theme: typeof cfg.theme === 'string' ? cfg.theme : undefined,
+      paginationMode: typeof cfg.paginationMode === 'string' ? cfg.paginationMode : undefined,
     });
     if (chunks.length <= 1) return breaks;
     let chunkIdx = 0;

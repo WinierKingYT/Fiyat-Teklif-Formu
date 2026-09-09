@@ -225,6 +225,20 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks.flat()).toHaveLength(13);
     });
 
+    it('LEGACY-6 REGRESSION: stored itemsPerPage=6 without paginationMode must enter auto-fit (1 page)', () => {
+        // An existing user browser retains itemsPerPage=6 in localStorage.
+        // Without an explicit manual mode this must NOT bypass the density resolver.
+        const chunks = chunkQuoteItems(generateItems(14), {
+            itemsPerPage: 6,
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(14);
+    });
+
     it('keeps 11 rows with a single image on one page (fitsTwelve)', () => {
         const withImages = generateItems(11).map((item, i) => i === 0 ? { ...item, image: 'data:image/png;base64,abc' } : item);
         const chunks = chunkQuoteItems(withImages, {
