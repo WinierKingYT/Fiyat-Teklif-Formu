@@ -82,18 +82,147 @@ export function getSectionSpacing(density?: unknown): string {
     return '0.6rem';
 }
 
-export const SQUEEZE_MIN_ITEMS = 8;
-export const SQUEEZE_MAX_ITEMS = 14;
+/**
+ * Unified single-page density model.
+ *
+ * NORMAL      — content fits as-is; render is untouched.
+ * DENSE_PLAIN — 8-14 plain rows render with the existing compact tier
+ *               (tableDensity compact, rowHeight <= 30). No images.
+ * DENSE_IMAGE — 8-14 rows with product images render with the dense-image
+ *               profile (compact tier + compact image boxes + section compaction).
+ *
+ * Exactly ONE function decides; pagination and rendering both consume it,
+ * so the model can never claim a fit the DOM does not render.
+ */
+export type SinglePageDensity = 'normal' | 'dense-plain' | 'dense-image';
+
+/** Themes whose DOM implements the dense-image profile. Others paginate instead. */
+export const DENSE_IMAGE_THEMES = ['modern'];
+
+export interface DensitySource {
+    config: Record<string, unknown>;
+    layout?: Array<{ id: string; enabled?: boolean }>;
+    bankData?: { bankName?: unknown; iban?: unknown; accountNumber?: unknown } | null;
+    quoteData?: { deliveryTerms?: unknown; warrantyTerms?: unknown; terms?: unknown; notes?: unknown } | null;
+    customerData?: Record<string, unknown> | null;
+}
 
 /**
- * Squeeze-to-single-page eligibility: 8-14 plain portrait items are auto-compacted
- * (existing compact tier) so the summary never ends up orphaned on page 2.
- * Pure eligibility check — the chunker independently re-verifies the height budget,
- * so enabling squeeze can never cause overflow.
+ * Builds chunk options from quote state. Single source used by BOTH the
+ * pagination engine and the render override, so the two can never disagree
+ * about section visibility, theme, density or table settings.
  */
-export function shouldSqueezeSinglePage<T>(rawItems: T[], options: ChunkOptions = {}): boolean {
-    const items = (rawItems || []).filter(hasValidItemContent);
-    if (items.length < SQUEEZE_MIN_ITEMS || items.length > SQUEEZE_MAX_ITEMS) return false;
+export function buildDensityChunkOptions(source: DensitySource): ChunkOptions & { theme?: string } {
+    const { config } = source;
+    const layoutMap: Record<string, boolean> = {};
+    (source.layout || []).forEach((l) => { layoutMap[l.id] = l.enabled !== false; });
+    const bank = (source.bankData || {}) as Record<string, unknown>;
+    const quote = (source.quoteData || {}) as Record<string, unknown>;
+    const customer = (source.customerData || {}) as Record<string, unknown>;
+    const str = (v: unknown) => (typeof v === 'string' ? v : '');
+    const notes = str(quote.notes);
+    const hasCustomer = ['name', 'company', 'phone', 'email', 'address', 'taxOffice', 'taxNumber']
+        .some((f) => str(customer[f]).trim().length > 0);
+    return {
+        itemsPerPage: (config.itemsPerPage as number | string | undefined) ?? 14,
+        showSummary: config.showSummary !== false && layoutMap['summary'] !== false,
+        showBankInfo: config.showBankInfo !== false && layoutMap['bankInfo'] !== false,
+        hasBankData: !!(bank.bankName || bank.iban || bank.accountNumber),
+        showSignatures: config.showSignatures !== false && layoutMap['signatures'] !== false,
+        showCustomerSignature: !!config.showCustomerSignature,
+        showTerms: config.showTerms !== false && layoutMap['notes'] !== false,
+        hasTerms: !!(quote.deliveryTerms || quote.warrantyTerms || quote.terms),
+        showNotes: config.showNotes !== false && layoutMap['notes'] !== false,
+        hasNotes: notes.trim().length > 0,
+        notesLength: notes.length,
+        hasCustomer,
+        customFooter: config.customFooter as string | undefined,
+        isLandscape: config.pageOrientation === 'landscape',
+        margins: config.margins as string | undefined,
+        tableRowHeight: typeof config.tableRowHeight === 'number' ? config.tableRowHeight : undefined,
+        tableDensity: config.tableDensity as string | undefined,
+        sectionSpacing: typeof config.sectionSpacing === 'number' ? config.sectionSpacing as number : undefined,
+        showTableImages: config.showTableImages !== false,
+        theme: typeof config.theme === 'string' && config.theme ? config.theme : 'modern',
+    };
+}
+
+interface RowSpec {
+    base: number;
+    descPerLine: number;
+    namePerChunk: number;
+    imageFloor: number;
+    factor: number;
+}
+
+function measureRow(itemObj: Record<string, unknown>, showImages: boolean, spec: RowSpec): number {
+    let textH = spec.base;
+    if (typeof itemObj.description === 'string' && itemObj.description.trim().length > 0) {
+        const lines = itemObj.description.split('\n').length;
+        const wrapLines = Math.floor(itemObj.description.length / 65);
+        // Any description renders as (at least) a second row line — never cost 0.
+        const extraLines = Math.max(1, lines - 1, wrapLines);
+        textH += extraLines * spec.descPerLine;
+    }
+    if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
+        textH += Math.floor(itemObj.name.length / 50) * spec.namePerChunk;
+    }
+    // Text extras stack on the base row, but the image floor does NOT stack:
+    // when the image is taller than the text block, a short description costs 0.
+    const imageH = (showImages && itemObj.image) ? Math.max(spec.base, spec.imageFloor) : 0;
+    return Math.max(textH, imageH) * spec.factor;
+}
+
+interface SectionGeometry {
+    top: number;
+    thead: number;
+    bottom: number;
+    hasBottom: boolean;
+    continuation: number;
+}
+
+function sectionGeometry(options: ChunkOptions, scale: number): SectionGeometry {
+    const isLandscape = !!options.isLandscape;
+    const top = (((isLandscape ? 120 : 180) + (options.hasCustomer !== false ? (isLandscape ? 60 : 95) : 0))) / scale;
+    const thead = 36 / scale;
+    let bottom = 0;
+    if (options.showSummary !== false) bottom += 175;
+    if (options.showBankInfo !== false && options.hasBankData !== false) bottom += 20; // in 2-col layout it shares row with summary
+    if (options.showSignatures !== false) {
+        bottom += options.showCustomerSignature ? 100 : 85;
+    }
+    if (options.showTerms !== false && options.hasTerms) bottom += 65;
+    if (options.showNotes !== false && options.hasNotes) {
+        bottom += 45 + Math.min(60, Math.floor((options.notesLength || 0) / 60) * 14);
+    }
+    if (options.customFooter) bottom += 25;
+    const bottomScaled = bottom / scale;
+    return { top, thead, bottom: bottomScaled, hasBottom: bottom > 30, continuation: 40 / scale };
+}
+
+function densityScale(options: ChunkOptions): number {
+    const rawDensity = (options as Record<string, unknown>).tableDensity as unknown;
+    const fallbackDensity = options.margins === 'compact' ? 'compact' : (options.margins === 'spacious' || options.margins === 'wide' ? 'spacious' : undefined);
+    const density = resolveTableDensity(rawDensity ?? fallbackDensity);
+    const isCompact = options.margins === 'compact' || density === 'compact';
+    const isSpacious = options.margins === 'spacious' || options.margins === 'wide' || density === 'spacious';
+    return isCompact ? 1.08 : (isSpacious ? 0.92 : 1.0);
+}
+
+function pageCapacityFor(options: ChunkOptions): number {
+    return options.isLandscape ? 760 : 1100;
+}
+
+function hasEffectiveImages<T>(items: T[], options: ChunkOptions): boolean {
+    if (options.showTableImages === false) return false;
+    return items.some((it) => {
+        const o = it as Record<string, unknown>;
+        return !!o && typeof o === 'object' && !!o.image;
+    });
+}
+
+function compactContentGuards<T>(items: T[], options: ChunkOptions): boolean {
+    // Long-content safety: pathological content paginates, never clips.
     if (options.isLandscape) return false;
     const optRecord = options as Record<string, unknown>;
     if (optRecord.tableDensity === 'spacious') return false;
@@ -103,16 +232,79 @@ export function shouldSqueezeSinglePage<T>(rawItems: T[], options: ChunkOptions 
     if (optRecord.tableCellPadding != null && String(optRecord.tableCellPadding).trim() !== '') return false;
     const rh = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0 ? options.tableRowHeight : 35;
     if (rh > 36) return false;
-    const showImages = options.showTableImages !== false;
     for (const it of items) {
         const o = it as Record<string, unknown>;
         if (o && typeof o === 'object') {
-            if (showImages && o.image) return false;
             if (typeof o.name === 'string' && o.name.length > 50) return false;
             if (typeof o.description === 'string' && o.description.length > 120) return false;
         }
     }
     return true;
+}
+
+/**
+ * Canonical single-page decision. Returns the density the quote must render
+ * with to fit one A4 portrait sheet, or null when it must paginate.
+ * Pagination (chunkQuoteItems) and rendering (PrintableQuoteV2 override)
+ * both consume this — one decision, no model/render drift.
+ */
+export function resolveSinglePageDensity<T>(rawItems: T[], options: ChunkOptions & { theme?: string } = {}): SinglePageDensity | null {
+    const items = (rawItems || []).filter(hasValidItemContent);
+    const capacity = pageCapacityFor(options);
+
+    // 1) NORMAL — fits as-is, render untouched (includes the comfortable 8-11 path).
+    {
+        const scale = densityScale(options);
+        const base = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0 ? options.tableRowHeight : 34;
+        const showImages = options.showTableImages !== false;
+        const total = items.reduce((sum, it) => sum + measureRow(it as Record<string, unknown>, showImages, {
+            base, descPerLine: 16, namePerChunk: 14, imageFloor: 50, factor: 1,
+        }), 0);
+        const geo = sectionGeometry(options, scale);
+        const isLandscape = !!options.isLandscape;
+        const cap = isLandscape ? 500 : 550;
+        const normalCap = isLandscape ? cap : (geo.hasBottom ? 360 : 550);
+        const budget = Math.min(normalCap, capacity - geo.top - geo.thead - geo.bottom);
+        const optRecord = options as Record<string, unknown>;
+        const avgRow = items.length > 0 ? total / items.length : 0;
+        const fitsTwelve = !isLandscape && scale >= 1.0
+            && typeof optRecord.sectionSpacing !== 'number'
+            && (optRecord.tableCellPadding == null || String(optRecord.tableCellPadding).trim() === '')
+            && items.length >= 8 && items.length <= 11 && avgRow <= 52
+            && total <= Math.min(510, capacity - geo.top - geo.thead - geo.bottom);
+        if (total <= budget && (!geo.hasBottom || items.length <= 7)) return 'normal';
+        if (fitsTwelve) return 'normal';
+    }
+
+    if (items.length < 8 || items.length > 14) return null;
+
+    // 2) DENSE_PLAIN — existing compact tier (tableDensity compact, rowHeight <= 30).
+    // Cap 510 admits uniform short-desc rows (14 x ~36); the computed budget below
+    // still rejects genuinely tall content. E2E-measured, see e2e/pdf-density.spec.ts.
+    if (!hasEffectiveImages(items, options) && compactContentGuards(items, options)) {
+        const total = items.reduce((sum, it) => sum + measureRow(it as Record<string, unknown>, false, {
+            base: 30, descPerLine: 16, namePerChunk: 14, imageFloor: 0, factor: 0.78,
+        }), 0);
+        const geo = sectionGeometry(options, Math.max(densityScale(options), 1.08));
+        const budget = Math.min(510, capacity - geo.top - geo.thead - geo.bottom);
+        if (total <= budget) return 'dense-plain';
+    }
+
+    // 3) DENSE_IMAGE — compact tier + compact image boxes + section compaction (modern only).
+    {
+        const theme = typeof options.theme === 'string' && options.theme ? options.theme : 'modern';
+        if (!DENSE_IMAGE_THEMES.includes(theme)) return null;
+        if (!compactContentGuards(items, options)) return null;
+        if (!hasEffectiveImages(items, options)) return null;
+        const total = items.reduce((sum, it) => sum + measureRow(it as Record<string, unknown>, true, {
+            base: 26, descPerLine: 9, namePerChunk: 7, imageFloor: 36, factor: 1,
+        }), 0);
+        const geo = sectionGeometry(options, 1.2);
+        const budget = Math.min(520, capacity - geo.top - geo.thead - geo.bottom);
+        if (total <= budget) return 'dense-image';
+    }
+
+    return null;
 }
 
 export function estimateAutoItemsPerPage(availableHeightPx: number, rowHeight?: number): number {
@@ -144,6 +336,8 @@ export interface ChunkOptions {
     tableCellPadding?: string;
     showTableImages?: boolean;
     measuredContentHeight?: number;
+    /** Rendering theme name — gates theme-specific dense profiles (see DENSE_IMAGE_THEMES). */
+    theme?: string;
 }
 
 /**
@@ -247,123 +441,31 @@ export function chunkQuoteItems<T>(rawItems: T[], options: ChunkOptions = {}): T
         return chunks;
     }
 
-    const isLandscape = !!options.isLandscape;
-    const rawDensity = (options as Record<string, unknown>).tableDensity as unknown;
-    const fallbackDensity = options.margins === 'compact' ? 'compact' : (options.margins === 'spacious' || options.margins === 'wide' ? 'spacious' : undefined);
-    const density = resolveTableDensity(rawDensity ?? fallbackDensity);
-    // isCompact logic considers both margins and tableDensity
-    const isCompact = options.margins === 'compact' || density === 'compact';
-    const isSpacious = options.margins === 'spacious' || options.margins === 'wide' || density === 'spacious';
-
-    // Base available height per page in model units. A4 portrait is 1122px tall;
-    // 1100 keeps ~20px slack for rounding/epsilon overflow. Verified: 12 image rows
-    // + full sections render at ~1070px on Corporate and must stay single.
-    const pageCapacity = isLandscape ? 760 : 1100;
-    // Squeeze: measure 8-14 plain items with the compact tier so they + summary fit one page.
-    // The single-page budget gate below still enforces the fit — squeeze never overflows.
-    const squeeze = shouldSqueezeSinglePage(items, options);
-    let scaleFactor = isCompact ? 1.08 : (isSpacious ? 0.92 : 1.0);
-    let rowFactor = 1;
-    if (squeeze) {
-        scaleFactor = Math.max(scaleFactor, 1.08);
-        // Compact tier rows are genuinely shorter (4px vs 8px vertical padding):
-        // calibrated against rendered output (10 described rows + summary fit one A4).
-        rowFactor = 0.78;
-    }
-
-    // Measure Item Heights.
-    // Text extras stack on the base row, but the image floor does NOT stack:
-    // when the image is taller than the text block, a short description costs 0.
-    // A hidden image column (showTableImages === false) renders text-only rows.
-    const showImages = options.showTableImages !== false;
-    const itemHeights = items.map(item => {
-        const itemObj = item as Record<string, unknown>;
-        const base = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0
-            ? options.tableRowHeight
-            : 34; // standard row height
-
-        let textH = base;
-        if (typeof itemObj.description === 'string' && itemObj.description.trim().length > 0) {
-            const lines = itemObj.description.split('\n').length;
-            const wrapLines = Math.floor(itemObj.description.length / 65);
-            // Any description renders as (at least) a second row line — never cost 0.
-            const extraLines = Math.max(1, lines - 1, wrapLines);
-            textH += extraLines * 16;
-        }
-        if (typeof itemObj.name === 'string' && itemObj.name.length > 50) {
-            textH += Math.floor(itemObj.name.length / 50) * 14;
-        }
-        // Measured Corporate row: 36px image box + 12px cell padding + border ≈ 50px.
-        // Verified against a real Corporate PDF (7 image rows ≈ 350px on page 1).
-        const imageH = (showImages && itemObj.image) ? Math.max(base, 50) : 0;
-        return Math.max(textH, imageH) * rowFactor;
-    });
-
-    // Measure Fixed Page Sections
-    const page1HeaderHeight = (isLandscape ? 120 : 180);
-    const page1CustomerHeight = options.hasCustomer !== false ? (isLandscape ? 60 : 95) : 0;
-    const page1TopBudget = (page1HeaderHeight + page1CustomerHeight) / scaleFactor;
-
-    const continuationHeaderHeight = 40 / scaleFactor;
-    const tableHeaderHeight = 36 / scaleFactor;
-
-    // Bottom sections on final page
-    let finalBottomHeight = 0;
-    if (options.showSummary !== false) finalBottomHeight += 175;
-    if (options.showBankInfo !== false && options.hasBankData !== false) finalBottomHeight += 20; // in 2-col layout it shares row with summary
-    if (options.showSignatures !== false) {
-        finalBottomHeight += options.showCustomerSignature ? 100 : 85;
-    }
-    if (options.showTerms !== false && options.hasTerms) finalBottomHeight += 65;
-    if (options.showNotes !== false && options.hasNotes) {
-        finalBottomHeight += 45 + Math.min(60, Math.floor((options.notesLength || 0) / 60) * 14);
-    }
-    if (options.customFooter) finalBottomHeight += 25;
-    finalBottomHeight = finalBottomHeight / scaleFactor;
-
-    const hasBottomSections = finalBottomHeight > 30;
-
-    // Calibrate maximum row capacities based on visual layout.
-    // Three tiers, each with its own cap so one path cannot smuggle overflow:
-    // - normal (<=7 rows): cap 360 — e.g. 7 multiline rows (462) stay multi.
-    // - squeeze (8-14 eligible, compact render): cap 430.
-    // - fitsTwelve (8-11 slim rows, avg <=52): cap 510, e.g. 10 image rows (500).
-    // The computed budget below must additionally pass in every path.
-    const maxSinglePageRowBudget = isLandscape
-        ? (hasBottomSections ? 180 : 500)
-        : squeeze ? 430 : (hasBottomSections ? 360 : 550);
-    const maxFitTwelveRowBudget = 510;
-    const maxPage1RowBudget = isLandscape ? 260 : 340;
-    const maxMiddlePageRowBudget = isLandscape ? 320 : 420;
-    const maxFinalPageRowBudget = isLandscape ? 280 : 250;
-
-    const singlePageRowBudget = Math.min(maxSinglePageRowBudget, (pageCapacity - page1TopBudget - tableHeaderHeight - finalBottomHeight));
-    const totalItemsHeight = itemHeights.reduce((sum, h) => sum + h, 0);
-
-    // 1. Single Page Test. Three honest paths, each budget-enforced:
-    // - <=7 rows: small quotes (multiline-7 correctly stays multi via the 360 cap).
-    // - squeeze: 8-14 eligible rows render compact.
-    // - fitsTwelve: 8-11 slim rows (avg <=52, e.g. image rows) that physically fit.
-    //   Exclusions mirror the squeeze guards: unverified landscape, explicit spacious
-    //   design, unmodeled explicit spacing/padding.
-    const optRecord = options as Record<string, unknown>;
-    const avgRow = items.length > 0 ? totalItemsHeight / items.length : 0;
-    const fitsTwelve = !squeeze && !isLandscape && !isSpacious && rawDensity !== 'spacious'
-        && typeof optRecord.sectionSpacing !== 'number'
-        && (optRecord.tableCellPadding == null || String(optRecord.tableCellPadding).trim() === '')
-        && items.length >= 8 && items.length <= 11 && avgRow <= 52
-        && totalItemsHeight <= Math.min(maxFitTwelveRowBudget, (pageCapacity - page1TopBudget - tableHeaderHeight - finalBottomHeight));
-    // NOTE: fitsTwelve carries its own budget — it must not be AND-ed with the
-    // tighter singlePageRowBudget cap, otherwise it can never fire.
-    const fitsNormal = totalItemsHeight <= singlePageRowBudget && (!hasBottomSections || items.length <= 7 || squeeze);
-    if (fitsNormal || fitsTwelve) {
+    // One canonical density decision drives BOTH pagination here and the render
+    // override in PrintableQuoteV2 — they can never disagree.
+    const density = resolveSinglePageDensity(items, options);
+    if (density) {
         return [items];
     }
 
-    // 2. Multi-Page Distribution with greedy packing and orphan prevention
-    const page1RowBudget = Math.min(maxPage1RowBudget, pageCapacity - page1TopBudget - tableHeaderHeight);
-    const continuationRowBudget = Math.min(maxMiddlePageRowBudget, pageCapacity - continuationHeaderHeight - tableHeaderHeight);
-    const finalPageRowBudget = Math.min(maxFinalPageRowBudget, pageCapacity - continuationHeaderHeight - tableHeaderHeight - finalBottomHeight);
+    // 2. Multi-Page Distribution with greedy packing and orphan prevention.
+    // Packing always uses the NORMAL (non-override) measurement: if content did not
+    // qualify for a dense profile above, it must paginate as rendered by default.
+    const isLandscape = !!options.isLandscape;
+    const st = { scale: densityScale(options) };
+    const pageCapacity = pageCapacityFor(options);
+    const showImages = options.showTableImages !== false;
+    const baseRow = typeof options.tableRowHeight === 'number' && options.tableRowHeight > 0 ? options.tableRowHeight : 34;
+    const itemHeights = items.map(item => measureRow(item as Record<string, unknown>, showImages, {
+        base: baseRow, descPerLine: 16, namePerChunk: 14, imageFloor: 50, factor: 1,
+    }));
+    const geo = sectionGeometry(options, st.scale);
+    const maxPage1RowBudget = isLandscape ? 260 : 340;
+    const maxMiddlePageRowBudget = isLandscape ? 320 : 420;
+    const maxFinalPageRowBudget = isLandscape ? 280 : 250;
+    const page1RowBudget = Math.min(maxPage1RowBudget, pageCapacity - geo.top - geo.thead);
+    const continuationRowBudget = Math.min(maxMiddlePageRowBudget, pageCapacity - geo.continuation - geo.thead);
+    const finalPageRowBudget = Math.min(maxFinalPageRowBudget, pageCapacity - geo.continuation - geo.thead - geo.bottom);
 
     // For landscape 3-page quotes, distribute evenly to keep middle and final pages well proportioned
     if (isLandscape && items.length > 18 && items.length <= 26) {

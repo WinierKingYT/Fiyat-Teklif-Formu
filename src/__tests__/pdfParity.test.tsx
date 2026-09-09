@@ -126,7 +126,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks[0].length).toBe(5);
     });
 
-    it('squeezes 11 plain items with bank and signature into exactly 1 page (no orphaned summary)', () => {
+    it('keeps 11 plain items with bank and signature on exactly 1 page (no orphaned summary)', () => {
         const chunks = chunkQuoteItems(generateItems(11), {
             hasCustomer: true,
             hasBankData: true,
@@ -137,7 +137,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks[0].length).toBe(11);
     });
 
-    it('squeezes 14 plain items into exactly 1 page', () => {
+    it('keeps 14 plain items on exactly 1 page (CASE 1: dense-plain)', () => {
         const chunks = chunkQuoteItems(generateItems(14), {
             hasCustomer: true,
             hasBankData: true,
@@ -146,6 +146,60 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         });
         expect(chunks.length).toBe(1);
         expect(chunks[0].length).toBe(14);
+    });
+
+    it('keeps 14 image items on exactly 1 page (CASE 3: dense-image, modern)', () => {
+        const withImages = generateItems(14).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
+        const chunks = chunkQuoteItems(withImages, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(14);
+    });
+
+    it('keeps 14 image rows with short descriptions on 1 page (CASE 4)', () => {
+        const items = Array.from({ length: 14 }, (_, i) => ({
+            id: `item-${i + 1}`,
+            name: `Ürün ${i + 1}`,
+            description: 'Kısa tek satır açıklama',
+            quantity: 1,
+            price: 100,
+            taxRate: 20,
+            total: 100,
+            unit: 'Adet'
+        })).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
+        const chunks = chunkQuoteItems(items, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(14);
+    });
+
+    it('paginates 14 image rows with very long descriptions safely (CASE 6)', () => {
+        const items = Array.from({ length: 14 }, (_, i) => ({
+            id: `item-${i + 1}`,
+            name: `Ürün ${i + 1}`,
+            description: 'Uzun açıklama. '.repeat(30),
+            quantity: 1,
+            price: 100,
+            taxRate: 20,
+            total: 100,
+            unit: 'Adet'
+        })).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
+        const chunks = chunkQuoteItems(items, {
+            hasCustomer: true,
+            hasBankData: true,
+            showSummary: true,
+            showSignatures: true
+        });
+        expect(chunks.length).toBeGreaterThan(1);
+        expect(chunks.flat()).toHaveLength(14);
     });
 
     it('does not squeeze 15 items — paginates into exactly 2 pages', () => {
@@ -159,7 +213,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks.flat()).toHaveLength(15);
     });
 
-    it('paginates 13 image rows without orphan pages', () => {
+    it('keeps 13 image rows on exactly 1 page (dense-image)', () => {
         const withImages = generateItems(13).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
         const chunks = chunkQuoteItems(withImages, {
             hasCustomer: true,
@@ -167,10 +221,8 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
             showSummary: true,
             showSignatures: true
         });
-        expect(chunks.length).toBe(3);
+        expect(chunks.length).toBe(1);
         expect(chunks.flat()).toHaveLength(13);
-        // No single-row orphan page at the end.
-        expect(chunks[chunks.length - 1].length).toBeGreaterThanOrEqual(2);
     });
 
     it('keeps 11 rows with a single image on one page (fitsTwelve)', () => {
@@ -185,7 +237,7 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks.flat()).toHaveLength(11);
     });
 
-    it('paginates 12 image rows without orphans (they exceed one physical A4)', () => {
+    it('keeps 12 image rows on exactly 1 page (dense-image, modern)', () => {
         const withImages = generateItems(12).map((item) => ({ ...item, image: 'data:image/png;base64,abc' }));
         const chunks = chunkQuoteItems(withImages, {
             hasCustomer: true,
@@ -193,10 +245,8 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
             showSummary: true,
             showSignatures: true
         });
-        expect(chunks.length).toBe(3);
+        expect(chunks.length).toBe(1);
         expect(chunks.flat()).toHaveLength(12);
-        // 6+4+2: no single-row orphan page, summary shares the last page.
-        expect(chunks.map((c) => c.length)).toEqual([6, 4, 2]);
     });
 
     it('keeps 10 image rows on one page (fitsTwelve)', () => {
@@ -211,9 +261,10 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
         expect(chunks.flat()).toHaveLength(10);
     });
 
-    // Regression: 12 two-line rows + terms must NOT collapse into one overflowing
-    // page (summary orphaned on p2 with wrong 1/1 numbering). Paginates cleanly.
-    it('paginates 12 described items with terms into 2 pages without orphans', () => {
+    // 12 two-line rows + terms fit one compact page (dense-plain). Under the old
+    // comfortable-only model this overflowed; the compact render is E2E-measured
+    // in e2e/pdf-density.spec.ts — if that fixture ever overflows, revisit the cap.
+    it('keeps 12 described items with terms on a single dense page', () => {
         const items = Array.from({ length: 12 }, (_, i) => ({
             id: `item-${i + 1}`,
             name: `Kurumsal Web Sitesi Tasarımı ve Geliştirme ${i + 1}`,
@@ -232,10 +283,8 @@ describe('PDF Export Parity & Non-Destructive Styles', () => {
             showTerms: true,
             hasTerms: true
         });
-        expect(chunks.length).toBe(2);
+        expect(chunks.length).toBe(1);
         expect(chunks.flat()).toHaveLength(12);
-        // No orphan rows and no orphaned summary: last page keeps >= 2 rows
-        expect(chunks[1].length).toBeGreaterThanOrEqual(2);
     });
 
     // Regression: 10 described items + terms fit a single squeezed page.

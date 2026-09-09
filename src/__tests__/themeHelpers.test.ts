@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason, shouldSqueezeSinglePage } from '@/utils/themeHelpers';
+import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason, resolveSinglePageDensity, buildDensityChunkOptions, DENSE_IMAGE_THEMES } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {
@@ -111,30 +111,56 @@ describe('chunkQuoteItems', () => {
     });
 });
 
-describe('shouldSqueezeSinglePage', () => {
+describe('resolveSinglePageDensity', () => {
     const plain = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `i${i}`, name: `Ürün ${i}` }));
 
-    it('accepts 8-14 plain portrait items', () => {
-        expect(shouldSqueezeSinglePage(plain(8))).toBe(true);
-        expect(shouldSqueezeSinglePage(plain(11))).toBe(true);
-        expect(shouldSqueezeSinglePage(plain(14))).toBe(true);
+    it('returns dense-plain for 8-14 plain portrait items', () => {
+        // 8 items fit normal (comfortable); 11-14 need the compact tier.
+        expect(resolveSinglePageDensity(plain(8))).toBe('normal');
+        expect(resolveSinglePageDensity(plain(11))).toBe('normal');
+        expect(resolveSinglePageDensity(plain(14))).toBe('dense-plain');
     });
 
-    it('rejects counts outside 8-14', () => {
-        expect(shouldSqueezeSinglePage(plain(7))).toBe(false);
-        expect(shouldSqueezeSinglePage(plain(15))).toBe(false);
-        expect(shouldSqueezeSinglePage([])).toBe(false);
+    it('returns normal for small quotes and null beyond 14', () => {
+        expect(resolveSinglePageDensity(plain(5))).toBe('normal');
+        expect(resolveSinglePageDensity(plain(15))).toBe(null);
     });
 
-    it('rejects landscape, spacious, explicit spacing/padding, tall rows, images and long text', () => {
-        expect(shouldSqueezeSinglePage(plain(11), { isLandscape: true })).toBe(false);
-        expect(shouldSqueezeSinglePage(plain(11), { tableDensity: 'spacious' })).toBe(false);
-        expect(shouldSqueezeSinglePage(plain(11), { margins: 'wide' })).toBe(false);
-        expect(shouldSqueezeSinglePage(plain(11), { sectionSpacing: 1 })).toBe(false);
-        expect(shouldSqueezeSinglePage(plain(11), { tableCellPadding: '8px 8px' })).toBe(false);
-        expect(shouldSqueezeSinglePage(plain(11), { tableRowHeight: 42 })).toBe(false);
-        expect(shouldSqueezeSinglePage([{ id: 'x', name: 'A', image: 'data:abc' }].concat(plain(10) as never[]))).toBe(false);
-        expect(shouldSqueezeSinglePage(plain(10).concat([{ id: 'y', name: 'A', description: 'x'.repeat(121) }] as never[]))).toBe(false);
+    it('returns null for landscape, spacious, explicit spacing/padding, tall rows and long text', () => {
+        // 12 plain rows would otherwise go dense-plain; each guard must veto.
+        const base = plain(12);
+        expect(resolveSinglePageDensity(base, { isLandscape: true })).toBe(null);
+        expect(resolveSinglePageDensity(base, { tableDensity: 'spacious' })).toBe(null);
+        expect(resolveSinglePageDensity(base, { margins: 'wide' })).toBe(null);
+        expect(resolveSinglePageDensity(base, { sectionSpacing: 1 })).toBe(null);
+        expect(resolveSinglePageDensity(base, { tableCellPadding: '8px 8px' })).toBe(null);
+        expect(resolveSinglePageDensity(base, { tableRowHeight: 42 })).toBe(null);
+        // 12 rows where one has a pathological description: too tall for every tier.
+        expect(resolveSinglePageDensity(plain(11).concat([{ id: 'y', name: 'A', description: 'x'.repeat(121) }] as never[]))).toBe(null);
+    });
+
+    it('returns dense-image for image rows on capable themes, null elsewhere', () => {
+        expect(DENSE_IMAGE_THEMES).toContain('modern');
+        const withImages = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `g${i}`, name: `Ürün ${i + 1}`, image: 'data:image/png;base64,abc' }));
+        expect(resolveSinglePageDensity(withImages(14))).toBe('dense-image');
+        expect(resolveSinglePageDensity(withImages(14), { theme: 'corporate' })).toBe(null);
+        expect(resolveSinglePageDensity(withImages(15))).toBe(null);
+    });
+
+    it('buildDensityChunkOptions derives the same flags the hook uses', () => {
+        const opts = buildDensityChunkOptions({
+            config: { theme: 'modern', showSummary: true, tableDensity: 'comfortable' },
+            layout: [{ id: 'summary', enabled: true }],
+            bankData: { bankName: 'X', iban: '', accountNumber: '' },
+            quoteData: { deliveryTerms: '', warrantyTerms: '', terms: 't', notes: '' },
+            customerData: { name: 'Ali' },
+        });
+        expect(opts.theme).toBe('modern');
+        expect(opts.hasBankData).toBe(true);
+        expect(opts.hasTerms).toBe(true);
+        expect(opts.hasNotes).toBe(false);
+        expect(opts.hasCustomer).toBe(true);
+        expect(opts.showSummary).toBe(true);
     });
 
     it('squeezes 12 plain items with bottom sections into a single chunk', () => {
@@ -173,7 +199,7 @@ describe('shouldSqueezeSinglePage', () => {
         const chunks = chunkQuoteItems(items, opts);
         expect(chunks.length).toBe(1);
         expect(chunks.flat()).toHaveLength(12);
-        expect(shouldSqueezeSinglePage(items, opts)).toBe(true);
+        expect(resolveSinglePageDensity(items, opts)).toBe('dense-plain');
     });
 
     it('keeps 7 image rows with short descriptions on one page (no [5,2] orphan split)', () => {

@@ -64,6 +64,7 @@ const ItemsTable = ({
       tableRowHeight: typeof cfg.tableRowHeight === 'number' ? cfg.tableRowHeight : undefined,
       tableDensity: typeof cfg.tableDensity === 'string' ? cfg.tableDensity : undefined,
       showTableImages: cfg.showTableImages !== false,
+      theme: typeof cfg.theme === 'string' ? cfg.theme : undefined,
     });
     if (chunks.length <= 1) return breaks;
     let chunkIdx = 0;

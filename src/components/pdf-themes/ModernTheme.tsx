@@ -476,6 +476,52 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
             page-break-inside: avoid;
         }
+
+        /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
+           Activated only when pagination measured 8-14 image rows fitting one
+           A4 sheet. Body/description typography is intentionally untouched. */
+        ${(config as Record<string, unknown>).denseImageProfile === true ? `
+        .modern-theme-container .item-image {
+            width: 26px;
+            height: 26px;
+            min-width: 26px;
+            min-height: 26px;
+        }
+        .modern-theme-container .pdf-header {
+            padding-bottom: 0.5rem;
+        }
+        .modern-theme-container .quote-info-box {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .modern-theme-container .customer-box {
+            padding-top: 0.45rem;
+            padding-bottom: 0.45rem;
+        }
+        .modern-theme-container .pdf-summary-grid {
+            padding-top: 0.45rem;
+            padding-bottom: 0.45rem;
+        }
+        .modern-theme-container .totals-section {
+            padding-top: 0.45rem;
+            padding-bottom: 0.45rem;
+        }
+        .modern-theme-container .signature-area,
+        .modern-theme-container .stamp-area {
+            height: 44px;
+        }
+        .modern-theme-container .signature-box {
+            padding-top: 0.35rem;
+            padding-bottom: 0.35rem;
+        }
+        .modern-theme-container .term-card {
+            padding-top: 0.4rem;
+            padding-bottom: 0.4rem;
+        }
+        .modern-theme-container .pdf-footer {
+            padding-top: 0.45rem;
+        }
+        ` : ''}
     `, [color, config, density, derivedCellPadding, derivedHeaderPadding, derivedHeaderFontSize, sectionSpacing]);
 
     const showImageCol = config.showTableImages && hasAnyImage;

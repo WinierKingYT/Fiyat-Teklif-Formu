@@ -365,7 +365,7 @@ const PdfPreviewPanel = React.memo(() => {
                     bankData={bankData}
                     items={items}
                     discount={discount}
-                    pdfConfig={pdfConfig}
+                    pdfConfig={renderedConfig ?? pdfConfig}
                     pdfLayout={pdfLayout}
                     signature={signature}
                 />

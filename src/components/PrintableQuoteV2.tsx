@@ -8,7 +8,7 @@ import ModernTheme from '@/components/pdf-themes/ModernTheme';
 import ProTheme from '@/components/pdf-themes/ProTheme';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { PAGE_SIZES, type PageSize } from '@/utils/pdfGenerator';
-import { hasValidItemContent, shouldSqueezeSinglePage } from '@/utils/themeHelpers';
+import { hasValidItemContent, buildDensityChunkOptions, resolveSinglePageDensity } from '@/utils/themeHelpers';
 import { translations } from '@/utils/translations';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '@/context/quote/types';
 
@@ -251,26 +251,29 @@ const PrintableQuote = React.memo(({
 
         ...(_config || {})
         };
-        // Squeeze-to-single-page: 8-14 plain items render with the existing compact tier
-        // so items + summary fit one page (no orphaned summary on page 2).
-        // Flows to all themes + chunker, hence preview/download/print stay identical.
+        // Canonical single-page density decision — the SAME options builder and
+        // resolver the pagination engine uses, so render and chunking agree.
+        // dense-plain: existing compact tier. dense-image: compact + compact image
+        // boxes + section compaction (Modern only). Runtime-only flags, never persisted.
         const mergedRecord = merged as Record<string, unknown>;
-        const squeeze = shouldSqueezeSinglePage(_items || [], {
-            isLandscape: mergedRecord.pageOrientation === 'landscape',
-            margins: typeof mergedRecord.margins === 'string' ? mergedRecord.margins : undefined,
-            tableRowHeight: typeof mergedRecord.tableRowHeight === 'number' ? mergedRecord.tableRowHeight : undefined,
-            tableDensity: mergedRecord.tableDensity as string | undefined,
-            sectionSpacing: typeof mergedRecord.sectionSpacing === 'number' ? mergedRecord.sectionSpacing as number : undefined,
-            tableCellPadding: mergedRecord.tableCellPadding as string | undefined,
-            showTableImages: mergedRecord.showTableImages !== false,
+        const densityOpts = buildDensityChunkOptions({
+            config: mergedRecord,
+            layout,
+            bankData: _bankData,
+            quoteData,
+            customerData,
         });
-        if (squeeze && mergedRecord.tableDensity !== 'spacious') {
+        const density = resolveSinglePageDensity(_items || [], densityOpts);
+        if ((density === 'dense-plain' || density === 'dense-image') && mergedRecord.tableDensity !== 'spacious') {
             mergedRecord.tableDensity = 'compact';
             const rh = typeof mergedRecord.tableRowHeight === 'number' ? mergedRecord.tableRowHeight : 35;
             mergedRecord.tableRowHeight = Math.min(rh, 30);
+            if (density === 'dense-image') {
+                mergedRecord.denseImageProfile = true;
+            }
         }
         return merged;
-    }, [_config, _items]);
+    }, [_config, _items, layout, _bankData, quoteData, customerData]);
 
     const getContainerStyles = () => {
         const isLandscape = config.pageOrientation === 'landscape';
