@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 
 // 1x1 red PNG — exercises the image pipeline (upload, preview, raster)
@@ -122,6 +123,25 @@ test.describe('PDF 14-item single-page density (real DOM geometry)', () => {
     expect(geo.imageBoxWidth).toBe('26px');
 
     await page.locator(PANEL).screenshot({ path: 'e2e/shots/density-fixture-b.png' });
+  });
+
+  test('downloaded 14-item PDF has exactly 1 physical page', async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedQuote(page, 14);
+    await openPreview(page);
+    await settlePages(page, 1);
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'PDF İNDİR', exact: true }).click();
+    const download = await downloadPromise;
+    const path = await download.path();
+    expect(path).not.toBeNull();
+    const pdf = await readFile(path!);
+    expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
+    // Page tree nodes are uncompressed in jsPDF output; content streams are
+    // FlateDecode-compressed, so a literal scan counts real pages only.
+    const physicalPages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+    expect(physicalPages).toBe(1);
   });
 
   test('15 plain products paginate with every row retained exactly once', async ({ page }) => {
