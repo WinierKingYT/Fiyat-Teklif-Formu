@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban } from '@/utils/themeHelpers';
+import { formatIban, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields, PdfSignatures } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -27,6 +27,10 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
+    // Compact tier: density compact (user-selected or dense-profile override) renders
+    // genuinely compact rows. Dense-image adds smaller image boxes + section compaction.
+    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const denseImage = (config as Record<string, unknown>).denseImageProfile === true;
 
     const invoiceStyles = useMemo(() => `
         .invoice-theme-container {
@@ -105,7 +109,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         .invoice-table th {
             background: ${config.tableHeaderBg || '#f1f5f9'};
             color: ${config.tableHeaderColor || '#1e293b'};
-            padding: ${config.tableHeaderPadding || '6px 8px'};
+            padding: ${config.tableHeaderPadding || (density === 'compact' ? '4px 6px' : '6px 8px')};
             text-align: left;
             font-weight: 700;
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8.5pt')};
@@ -114,7 +118,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         }
 
         .invoice-table td {
-            padding: ${config.tableCellPadding || '5px 8px'};
+            padding: ${config.tableCellPadding || (density === 'compact' ? '3px 6px' : '5px 8px')};
             border: 1px solid #e2e8f0;
             font-size: ${config.tableBodyFontSize || '8.5pt'};
             color: #1e293b;
@@ -205,6 +209,41 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
             page-break-inside: avoid;
         }
+
+        /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
+           Body typography intentionally untouched. */
+        ${denseImage ? `
+        .invoice-theme-container.pdf-dense-profile .invoice-header-bar {
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .invoice-theme-container.pdf-dense-profile .invoice-parties-grid {
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .invoice-theme-container.pdf-dense-profile .invoice-party-card {
+            padding: 6px 10px;
+        }
+        .invoice-theme-container.pdf-dense-profile .invoice-table {
+            margin-bottom: 6px;
+        }
+        .invoice-theme-container.pdf-dense-profile .invoice-summary-wrap {
+            gap: 8px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+        .invoice-theme-container.pdf-dense-profile .invoice-summary-box {
+            padding: 6px 10px;
+        }
+        .invoice-theme-container.pdf-dense-profile .invoice-signatures {
+            gap: 12px;
+            margin-top: 6px;
+            margin-bottom: 4px;
+        }
+        .invoice-theme-container.pdf-dense-profile .invoice-sig-area {
+            min-height: 34px;
+        }
+        ` : ''}
     `, [color, config]);
 
     const renderTable = (chunkItems: QuoteItem[], startIndex: number) => (
@@ -236,7 +275,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
                             {config.showTableImages && (
                                 <td style={{ textAlign: 'center' }}>
                                     {item.image ? (
-                                        <img src={item.image} alt="" style={{ height: '32px', width: '32px', objectFit: 'contain', margin: '0 auto' }} />
+                                        <img src={item.image} alt="" style={{ height: denseImage ? '26px' : '32px', width: denseImage ? '26px' : '32px', objectFit: 'contain', margin: '0 auto' }} />
                                     ) : (
                                         <span style={{ fontSize: '8px', color: '#94a3af' }}>-</span>
                                     )}
@@ -270,7 +309,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className={`invoice-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
+        <div id={id} className={`invoice-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''} ${denseImage ? 'pdf-dense-profile' : ''}`} style={containerStyles}>
             <style>{invoiceStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (

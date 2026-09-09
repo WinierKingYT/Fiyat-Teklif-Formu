@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, type RefObject } from 'react';
 import useDebounce from '@/hooks/useDebounce';
 import { PAGE_SIZES } from '@/utils/pdfGenerator';
+import { measurePdfPages } from '@/utils/pdfLayoutMeasurement';
 import { estimateAutoItemsPerPage } from '@/utils/themeHelpers';
 import type { PdfConfig, QuoteItem } from '@/context/quote/types';
 
@@ -116,13 +117,14 @@ export const usePdfPageObserver = ({
         if (!el) return;
         let timer: ReturnType<typeof setTimeout> | null = null;
         const checkOverflow = () => {
-            const pages = el.querySelectorAll('.pdf-page');
-            const overflow: number[] = [];
-            pages.forEach((p, i) => {
-                const pageEl = p as HTMLElement;
-                if (pageEl.scrollHeight > pageEl.clientHeight + 24) overflow.push(i + 1);
+            // Single shared overflow definition — see pdfLayoutMeasurement.
+            const overflow = measurePdfPages(el)
+                .filter((m) => !m.fits)
+                .map((m) => m.pageIndex);
+            setOverflowPages((prev) => {
+                if (prev.length === overflow.length && prev.every((p, i) => p === overflow[i])) return prev;
+                return overflow;
             });
-            setOverflowPages(overflow);
         };
         const scheduleRecheck = () => {
             if (timer) clearTimeout(timer);

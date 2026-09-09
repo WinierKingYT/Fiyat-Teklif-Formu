@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban } from '@/utils/themeHelpers';
+import { formatIban, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -27,6 +27,10 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
+    // Compact tier: density compact (user-selected or dense-profile override) renders
+    // genuinely compact rows. Dense-image adds smaller image boxes + section compaction.
+    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const denseImage = (config as Record<string, unknown>).denseImageProfile === true;
 
     const minimalStyles = useMemo(() => `
         .minimal-theme-container {
@@ -77,7 +81,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
         .minimal-table th {
             border-bottom: 1.5px solid #0f172a;
             border-top: 1.5px solid #0f172a;
-            padding: ${config.tableHeaderPadding || '5px 6px'};
+            padding: ${config.tableHeaderPadding || (density === 'compact' ? '4px 6px' : '5px 6px')};
             text-align: left;
             font-weight: 700;
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8pt')};
@@ -89,7 +93,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
 
         .minimal-table td {
             border-bottom: 1px solid #f1f5f9;
-            padding: ${config.tableCellPadding || '5px 6px'};
+            padding: ${config.tableCellPadding || (density === 'compact' ? '3px 6px' : '5px 6px')};
             font-size: ${config.tableBodyFontSize || '8.5pt'};
             color: #1e293b;
             vertical-align: middle;
@@ -136,6 +140,22 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
             page-break-inside: avoid;
         }
+
+        /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
+           Body typography intentionally untouched. */
+        ${denseImage ? `
+        .minimal-theme-container.pdf-dense-profile .minimal-header {
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .minimal-theme-container.pdf-dense-profile .minimal-table {
+            margin-top: 4px;
+            margin-bottom: 6px;
+        }
+        .minimal-theme-container.pdf-dense-profile .minimal-box {
+            padding: 6px 8px;
+        }
+        ` : ''}
     `, [config]);
 
 
@@ -169,7 +189,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
                             {config.showTableImages && (
                                 <td style={{ textAlign: 'center' }}>
                                     {item.image ? (
-                                        <img src={item.image} alt="" style={{ width: '28px', height: '28px', objectFit: 'contain', margin: '0 auto' }} />
+                                        <img src={item.image} alt="" style={{ width: denseImage ? '24px' : '28px', height: denseImage ? '24px' : '28px', objectFit: 'contain', margin: '0 auto' }} />
                                     ) : (
                                         <span style={{ fontSize: '8px', color: '#94a3b8' }}>-</span>
                                     )}
@@ -193,7 +213,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className={`minimal-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
+        <div id={id} className={`minimal-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''} ${denseImage ? 'pdf-dense-profile' : ''}`} style={containerStyles}>
             <style>{minimalStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (

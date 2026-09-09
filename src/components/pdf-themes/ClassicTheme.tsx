@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban, formatTaxOfficeDisplay } from '@/utils/themeHelpers';
+import { formatIban, formatTaxOfficeDisplay, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -27,6 +27,10 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
+    // Compact tier: density compact (user-selected or dense-profile override) renders
+    // genuinely compact rows. Dense-image adds smaller image boxes + section compaction.
+    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const denseImage = (config as Record<string, unknown>).denseImageProfile === true;
 
     const classicStyles = useMemo(() => `
         .classic-theme-container {
@@ -96,7 +100,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
         .classic-table th {
             background: ${config.tableHeaderBg || '#334155'};
             color: ${config.tableHeaderColor || '#ffffff'};
-            padding: ${config.tableHeaderPadding || '5px 6px'};
+            padding: ${config.tableHeaderPadding || (density === 'compact' ? '4px 6px' : '5px 6px')};
             font-weight: ${config.tableHeaderFontWeight || 'bold'};
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8pt')} !important;
             text-transform: uppercase;
@@ -105,7 +109,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
         }
 
         .classic-table td {
-            padding: ${config.tableCellPadding || '6px 7px'};
+            padding: ${config.tableCellPadding || (density === 'compact' ? '3px 6px' : '6px 7px')};
             border: 1px solid #cbd5e1;
             font-size: ${config.tableBodyFontSize || '8pt'};
             font-weight: ${config.tableBodyFontWeight || 'normal'};
@@ -232,6 +236,31 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
             page-break-inside: avoid;
         }
+
+        /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
+           Body typography intentionally untouched. */
+        ${denseImage ? `
+        .classic-theme-container.pdf-dense-profile .classic-item-image {
+            width: 24px;
+            height: 24px;
+        }
+        .classic-theme-container.pdf-dense-profile .classic-header-box {
+            margin-bottom: 6px;
+        }
+        .classic-theme-container.pdf-dense-profile .classic-table {
+            margin-bottom: 6px;
+        }
+        .classic-theme-container.pdf-dense-profile .classic-totals-table td {
+            padding: 2px 6px;
+        }
+        .classic-theme-container.pdf-dense-profile .classic-signatures-grid {
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .classic-theme-container.pdf-dense-profile .classic-signature-line {
+            height: 32px;
+        }
+        ` : ''}
     `, [config, color]);
 
     const showImageCol = config.showTableImages && hasAnyImage;
@@ -294,7 +323,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
     };
 
     return (
-        <div id={id} className={`classic-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
+        <div id={id} className={`classic-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''} ${denseImage ? 'pdf-dense-profile' : ''}`} style={containerStyles}>
             <style>{classicStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (

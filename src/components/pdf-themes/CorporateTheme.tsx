@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban, formatTaxOfficeDisplay, formatContactItems } from '@/utils/themeHelpers';
+import { formatIban, formatTaxOfficeDisplay, formatContactItems, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -27,6 +27,10 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
+    // Compact tier: density compact (user-selected or dense-profile override) renders
+    // genuinely compact rows. Dense-image adds smaller image boxes + section compaction.
+    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const denseImage = (config as Record<string, unknown>).denseImageProfile === true;
 
     const corporateStyles = useMemo(() => `
         .corporate-theme-container {
@@ -127,7 +131,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
         .corporate-table th {
             background: ${config.tableHeaderBg || color};
             color: ${config.tableHeaderColor || '#ffffff'};
-            padding: ${config.tableHeaderPadding || '6px 8px'};
+            padding: ${config.tableHeaderPadding || (density === 'compact' ? '4px 6px' : '6px 8px')};
             text-align: left;
             font-weight: ${config.tableHeaderFontWeight || '700'};
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8.5pt')};
@@ -138,7 +142,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
         }
 
         .corporate-table td {
-            padding: ${config.tableCellPadding || '6px 8px'};
+            padding: ${config.tableCellPadding || (density === 'compact' ? '3px 6px' : '6px 8px')};
             border-bottom: 1px solid #e2e8f0;
             font-size: ${config.tableBodyFontSize || '9pt'};
             font-weight: ${config.tableBodyFontWeight || 'normal'};
@@ -271,6 +275,49 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
             page-break-inside: avoid;
         }
+
+        /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
+           Body typography intentionally untouched. */
+        ${denseImage ? `
+        .corporate-theme-container.pdf-dense-profile .corporate-item-image {
+            width: 26px;
+            height: 26px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-top-bar {
+            margin-bottom: 8px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-header {
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-parties-grid {
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-party-card {
+            padding: 6px 10px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-table {
+            margin-bottom: 6px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-summary-section {
+            gap: 8px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-bank-box,
+        .corporate-theme-container.pdf-dense-profile .corporate-totals-box {
+            padding: 6px 10px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-signatures {
+            gap: 12px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+        .corporate-theme-container.pdf-dense-profile .corporate-sig-area {
+            height: 40px;
+        }
+        ` : ''}
     `, [color, config]);
 
     const showImageCol = config.showTableImages && hasAnyImage;
@@ -330,7 +377,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className={`corporate-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
+        <div id={id} className={`corporate-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''} ${denseImage ? 'pdf-dense-profile' : ''}`} style={containerStyles}>
             <style>{corporateStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (

@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import { importX as pluginImportX } from 'eslint-plugin-import-x'
 
 export default defineConfig([
-  globalIgnores(['dist', 'dev-dist', 'node_modules', 'modules', '*.config.js', 'playwright.config.ts']),
+  globalIgnores(['dist', 'dev-dist', 'node_modules', 'modules', '*.config.js', 'playwright.config.ts', 'playwright-report', 'test-results', 'blob-report', 'coverage', 'stats.html', 'e2e/shots']),
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
@@ -29,7 +29,7 @@ export default defineConfig([
     },
     languageOptions: {
       ecmaVersion: 2020,
-      globals: { ...globals.browser, process: 'readonly', IDBValidKey: 'readonly' },
+      globals: { ...globals.browser, process: 'readonly', IDBValidKey: 'readonly', ParentNode: 'readonly' },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },

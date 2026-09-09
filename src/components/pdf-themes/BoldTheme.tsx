@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban } from '@/utils/themeHelpers';
+import { formatIban, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -27,6 +27,10 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
+    // Compact tier: density compact (user-selected or dense-profile override) renders
+    // genuinely compact rows. Dense-image adds smaller image boxes + section compaction.
+    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const denseImage = (config as Record<string, unknown>).denseImageProfile === true;
 
     const boldStyles = useMemo(() => `
         .bold-theme-container {
@@ -113,7 +117,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
         .bold-table th {
             background: ${config.tableHeaderBg || '#0f172a'};
             color: ${config.tableHeaderColor || '#ffffff'};
-            padding: ${config.tableHeaderPadding || '6px 8px'};
+            padding: ${config.tableHeaderPadding || (density === 'compact' ? '4px 6px' : '6px 8px')};
             text-align: left;
             font-weight: 800;
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8.5pt')};
@@ -122,7 +126,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
         }
 
         .bold-table td {
-            padding: ${config.tableCellPadding || '6px 8px'};
+            padding: ${config.tableCellPadding || (density === 'compact' ? '3px 6px' : '6px 8px')};
             border-bottom: 1px solid #e2e8f0;
             font-size: ${config.tableBodyFontSize || '9pt'};
             color: #1e293b;
@@ -215,6 +219,41 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
             page-break-inside: avoid;
         }
+
+        /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
+           Body typography intentionally untouched. */
+        ${denseImage ? `
+        .bold-theme-container.pdf-dense-profile .bold-top-gradient {
+            margin-bottom: 8px;
+        }
+        .bold-theme-container.pdf-dense-profile .bold-header {
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .bold-theme-container.pdf-dense-profile .bold-parties-grid {
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .bold-theme-container.pdf-dense-profile .bold-party-box {
+            padding: 6px 10px;
+        }
+        .bold-theme-container.pdf-dense-profile .bold-table {
+            margin-bottom: 6px;
+        }
+        .bold-theme-container.pdf-dense-profile .bold-summary-section {
+            gap: 8px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+        }
+        .bold-theme-container.pdf-dense-profile .bold-signatures {
+            gap: 12px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+        }
+        .bold-theme-container.pdf-dense-profile .bold-sig-area {
+            height: 40px;
+        }
+        ` : ''}
     `, [color, config]);
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
@@ -245,7 +284,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
                             <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold' }}>{startIndex + index + 1}</td>
                             {config.showTableImages && (
                                 <td>
-                                    <div style={{ width: '36px', height: '36px', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden' }}>
+                                        <div style={{ width: denseImage ? '26px' : '36px', height: denseImage ? '26px' : '36px', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', overflow: 'hidden' }}>
                                         {item.image ? (
                                             <img src={item.image} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
                                         ) : (
@@ -272,7 +311,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
     );
 
     return (
-        <div id={id} className={`bold-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
+        <div id={id} className={`bold-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''} ${denseImage ? 'pdf-dense-profile' : ''}`} style={containerStyles}>
             <style>{boldStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (

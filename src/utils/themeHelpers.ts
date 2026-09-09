@@ -96,8 +96,13 @@ export function getSectionSpacing(density?: unknown): string {
  */
 export type SinglePageDensity = 'normal' | 'dense-plain' | 'dense-image';
 
-/** Themes whose DOM implements the dense-image profile. Others paginate instead. */
-export const DENSE_IMAGE_THEMES = ['modern'];
+/**
+ * Themes whose DOM implements the dense-image profile (compact image boxes +
+ * section compaction keyed on the pdf-dense-profile container class).
+ * Every theme listed here must honestly render the profile — verified per
+ * theme by e2e/pdf-density.spec.ts, never by assumption.
+ */
+export const DENSE_IMAGE_THEMES = ['modern', 'corporate', 'classic', 'minimal', 'pro', 'bold', 'invoice'];
 
 export interface DensitySource {
     config: Record<string, unknown>;
@@ -270,9 +275,23 @@ export type DensityReason =
     | 'custom-spacing'
     | 'insufficient-a4-budget';
 
+export interface DensityPrediction {
+    /** Modeled content height in layout units. */
+    usedHeight: number;
+    /** Modeled usable height (budget incl. caps) in layout units. */
+    availableHeight: number;
+    /** usedHeight - availableHeight; <= 0 fits. */
+    overflowPx: number;
+}
+
 export interface DensityDiagnosis {
     density: SinglePageDensity | null;
     reason: DensityReason;
+    /**
+     * Model-predicted geometry per evaluated profile (dev/test diagnostics only,
+     * never shown in normal UI). Profiles that were not evaluated are absent.
+     */
+    predicted: Partial<Record<'normal' | 'dense-plain' | 'dense-image', DensityPrediction>>;
 }
 
 function isManualPagination(options: ChunkOptions): boolean {
@@ -289,7 +308,8 @@ function isManualPagination(options: ChunkOptions): boolean {
  */
 export function diagnoseSinglePageDensity<T>(rawItems: T[], options: ChunkOptions & { theme?: string } = {}): DensityDiagnosis {
     const items = (rawItems || []).filter(hasValidItemContent);
-    if (isManualPagination(options)) return { density: null, reason: 'manual-pagination' };
+    const predicted: DensityDiagnosis['predicted'] = {};
+    if (isManualPagination(options)) return { density: null, reason: 'manual-pagination', predicted };
     const capacity = pageCapacityFor(options);
 
     // 1) NORMAL — fits as-is, render untouched (includes the comfortable 8-11 path).
@@ -312,19 +332,20 @@ export function diagnoseSinglePageDensity<T>(rawItems: T[], options: ChunkOption
             && (optRecord.tableCellPadding == null || String(optRecord.tableCellPadding).trim() === '')
             && items.length >= 8 && items.length <= 11 && avgRow <= 52
             && total <= Math.min(510, capacity - geo.top - geo.thead - geo.bottom);
+        predicted.normal = { usedHeight: total, availableHeight: budget, overflowPx: total - budget };
         if (total <= budget && (!geo.hasBottom || items.length <= 7)) {
-            return { density: 'normal', reason: 'fits-normal' };
+            return { density: 'normal', reason: 'fits-normal', predicted };
         }
-        if (fitsTwelve) return { density: 'normal', reason: 'fits-normal' };
+        if (fitsTwelve) return { density: 'normal', reason: 'fits-normal', predicted };
     }
 
     if (items.length < 8 || items.length > 14) {
-        return { density: null, reason: 'insufficient-a4-budget' };
+        return { density: null, reason: 'insufficient-a4-budget', predicted };
     }
 
     // Shared guard diagnostics — one implementation, used by both dense tracks.
     const guardRejection = compactGuardRejection(items, options);
-    if (guardRejection) return { density: null, reason: guardRejection };
+    if (guardRejection) return { density: null, reason: guardRejection, predicted };
 
     // 2) DENSE_PLAIN — existing compact tier (tableDensity compact, rowHeight <= 30).
     // Cap 510 admits uniform short-desc rows (14 x ~36); the computed budget below
@@ -335,8 +356,9 @@ export function diagnoseSinglePageDensity<T>(rawItems: T[], options: ChunkOption
         }), 0);
         const geo = sectionGeometry(options, Math.max(densityScale(options), 1.08));
         const budget = Math.min(510, capacity - geo.top - geo.thead - geo.bottom);
-        if (total <= budget) return { density: 'dense-plain', reason: 'dense-plain' };
-        return { density: null, reason: 'insufficient-a4-budget' };
+        predicted['dense-plain'] = { usedHeight: total, availableHeight: budget, overflowPx: total - budget };
+        if (total <= budget) return { density: 'dense-plain', reason: 'dense-plain', predicted };
+        return { density: null, reason: 'insufficient-a4-budget', predicted };
     }
 
     // 3) DENSE_IMAGE — compact tier + compact image boxes + section compaction.
@@ -344,16 +366,17 @@ export function diagnoseSinglePageDensity<T>(rawItems: T[], options: ChunkOption
     // may claim the fit (see DENSE_IMAGE_THEMES).
     {
         const theme = typeof options.theme === 'string' && options.theme ? options.theme : 'modern';
-        if (!DENSE_IMAGE_THEMES.includes(theme)) return { density: null, reason: 'unsupported-theme' };
+        if (!DENSE_IMAGE_THEMES.includes(theme)) return { density: null, reason: 'unsupported-theme', predicted };
         const total = items.reduce((sum, it) => sum + measureRow(it as Record<string, unknown>, true, {
             base: 26, descPerLine: 9, namePerChunk: 7, imageFloor: 36, factor: 1,
         }), 0);
         const geo = sectionGeometry(options, 1.2);
         const budget = Math.min(520, capacity - geo.top - geo.thead - geo.bottom);
-        if (total <= budget) return { density: 'dense-image', reason: 'dense-image' };
+        predicted['dense-image'] = { usedHeight: total, availableHeight: budget, overflowPx: total - budget };
+        if (total <= budget) return { density: 'dense-image', reason: 'dense-image', predicted };
     }
 
-    return { density: null, reason: 'insufficient-a4-budget' };
+    return { density: null, reason: 'insufficient-a4-budget', predicted };
 }
 
 export function estimateAutoItemsPerPage(availableHeightPx: number, rowHeight?: number): number {

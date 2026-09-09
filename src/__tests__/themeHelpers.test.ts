@@ -146,11 +146,14 @@ describe('resolveSinglePageDensity', () => {
         expect(resolveSinglePageDensity(plain(11).concat([{ id: 'y', name: 'A', description: 'x'.repeat(121) }] as never[]))).toBe(null);
     });
 
-    it('returns dense-image for image rows on capable themes, null elsewhere', () => {
-        expect(DENSE_IMAGE_THEMES).toContain('modern');
+    it('returns dense-image for image rows on all capable themes', () => {
+        expect(DENSE_IMAGE_THEMES).toEqual(
+            expect.arrayContaining(['modern', 'classic', 'minimal', 'corporate', 'pro', 'bold', 'invoice'])
+        );
         const withImages = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `g${i}`, name: `Ürün ${i + 1}`, image: 'data:image/png;base64,abc' }));
         expect(resolveSinglePageDensity(withImages(14))).toBe('dense-image');
-        expect(resolveSinglePageDensity(withImages(14), { theme: 'corporate' })).toBe(null);
+        expect(resolveSinglePageDensity(withImages(14), { theme: 'corporate' })).toBe('dense-image');
+        expect(resolveSinglePageDensity(withImages(14), { theme: 'fax' })).toBe(null);
         expect(resolveSinglePageDensity(withImages(15))).toBe(null);
     });
 
@@ -275,18 +278,18 @@ describe('diagnoseSinglePageDensity (§11)', () => {
     const fullSections = { hasCustomer: true, hasBankData: true, showSummary: true, showSignatures: true };
 
     it('reports fits-normal / dense-plain / dense-image for fitting content', () => {
-        expect(diagnoseSinglePageDensity(plain(5), fullSections)).toEqual({ density: 'normal', reason: 'fits-normal' });
-        expect(diagnoseSinglePageDensity(plain(14), fullSections)).toEqual({ density: 'dense-plain', reason: 'dense-plain' });
-        expect(diagnoseSinglePageDensity(img(14), fullSections)).toEqual({ density: 'dense-image', reason: 'dense-image' });
+        expect(diagnoseSinglePageDensity(plain(5), fullSections)).toEqual({ density: 'normal', reason: 'fits-normal', predicted: expect.anything() });
+        expect(diagnoseSinglePageDensity(plain(14), fullSections)).toEqual({ density: 'dense-plain', reason: 'dense-plain', predicted: expect.anything() });
+        expect(diagnoseSinglePageDensity(img(14), fullSections)).toEqual({ density: 'dense-image', reason: 'dense-image', predicted: expect.anything() });
     });
 
     it('reports manual-pagination for explicit manual overrides', () => {
         expect(diagnoseSinglePageDensity(plain(14), { ...fullSections, itemsPerPage: 6, paginationMode: 'manual' }))
-            .toEqual({ density: null, reason: 'manual-pagination' });
+            .toEqual({ density: null, reason: 'manual-pagination', predicted: expect.anything() });
     });
 
     it('reports why auto-fit rejects: theme, content, layout and budget', () => {
-        expect(diagnoseSinglePageDensity(img(14), { ...fullSections, theme: 'corporate' }).reason).toBe('unsupported-theme');
+        expect(diagnoseSinglePageDensity(img(14), { ...fullSections, theme: 'fax' }).reason).toBe('unsupported-theme');
         expect(diagnoseSinglePageDensity(plain(12), { ...fullSections, tableDensity: 'spacious' }).reason).toBe('spacious-layout');
         expect(diagnoseSinglePageDensity(plain(12), { ...fullSections, tableRowHeight: 42 }).reason).toBe('custom-row-height');
         expect(diagnoseSinglePageDensity(plain(12), { ...fullSections, tableCellPadding: '8px' }).reason).toBe('custom-cell-padding');
@@ -295,6 +298,17 @@ describe('diagnoseSinglePageDensity (§11)', () => {
             plain(11).concat([{ id: 'y', name: 'A', description: 'x'.repeat(121) }] as never[]), fullSections
         ).reason).toBe('long-content');
         expect(diagnoseSinglePageDensity(plain(25), fullSections).reason).toBe('insufficient-a4-budget');
+    });
+
+    it('attaches model-predicted geometry per evaluated profile', () => {
+        const report = diagnoseSinglePageDensity(plain(14), fullSections);
+        expect(report.density).toBe('dense-plain');
+        expect(report.predicted.normal).toBeDefined();
+        expect(report.predicted['dense-plain']).toBeDefined();
+        expect(report.predicted['dense-image']).toBeUndefined();
+        const dp = report.predicted['dense-plain']!;
+        expect(dp.overflowPx).toBe(dp.usedHeight - dp.availableHeight);
+        expect(dp.overflowPx).toBeLessThanOrEqual(0);
     });
 });
 
@@ -306,13 +320,25 @@ describe('dense-image theme support matrix (§12)', () => {
         expect(chunkQuoteItems(img14(), { ...opts, theme: 'modern' }).length).toBe(1);
     });
 
-    it.each(['classic', 'minimal', 'corporate', 'pro', 'bold', 'invoice'])(
-        '%s does not claim dense-image fit (paginates honestly)',
+    it.each(['modern', 'classic', 'minimal', 'corporate', 'pro', 'bold', 'invoice'])(
+        '%s claims dense-image fit for 14 image rows (theme parity)',
         (theme) => {
-            expect(resolveSinglePageDensity(img14(), { ...opts, theme })).toBe(null);
-            expect(chunkQuoteItems(img14(), { ...opts, theme }).length).toBeGreaterThan(1);
+            expect(resolveSinglePageDensity(img14(), { ...opts, theme })).toBe('dense-image');
+            expect(chunkQuoteItems(img14(), { ...opts, theme }).length).toBe(1);
         }
     );
+});
+
+describe('corporate dense-image: 14 image rows fit one page (§9/§12)', () => {
+    const img14 = () => Array.from({ length: 14 }, (_, i) => ({ id: `g${i}`, name: `Ürün ${i + 1}`, image: 'data:abc' }));
+    const opts = { hasCustomer: true, hasBankData: true, showSummary: true, showSignatures: true, theme: 'corporate' };
+
+    it('resolves dense-image and chunks single', () => {
+        expect(resolveSinglePageDensity(img14(), opts)).toBe('dense-image');
+        const chunks = chunkQuoteItems(img14(), opts);
+        expect(chunks.length).toBe(1);
+        expect(chunks.flat()).toHaveLength(14);
+    });
 });
 
 describe('formatPdfTitle', () => {

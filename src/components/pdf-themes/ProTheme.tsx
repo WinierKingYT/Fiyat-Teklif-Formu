@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { formatIban } from '@/utils/themeHelpers';
+import { formatIban, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
@@ -27,6 +27,10 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
     } = props;
     const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
+    // Compact tier: density compact (user-selected or dense-profile override) renders
+    // genuinely compact rows. Dense-image adds smaller image boxes + section compaction.
+    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const denseImage = (config as Record<string, unknown>).denseImageProfile === true;
 
     const proStyles = useMemo(() => `
         .pro-theme-container {
@@ -120,7 +124,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
         .pro-table th {
             background: ${config.tableHeaderBg || '#0f172a'};
             color: ${config.tableHeaderColor || '#ffffff'};
-            padding: ${config.tableHeaderPadding || '5px 8px'};
+            padding: ${config.tableHeaderPadding || (density === 'compact' ? '4px 6px' : '5px 8px')};
             font-weight: ${config.tableHeaderFontWeight || '600'};
             font-size: ${typeof config.tableHeaderFontSize === 'number' ? config.tableHeaderFontSize + 'px' : (config.tableHeaderFontSize || '8pt')} !important;
             text-transform: uppercase;
@@ -129,7 +133,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
         }
 
         .pro-table td {
-            padding: ${config.tableCellPadding || '6px 8px'};
+            padding: ${config.tableCellPadding || (density === 'compact' ? '3px 6px' : '6px 8px')};
             border-bottom: 1px solid #e2e8f0;
             font-size: ${config.tableBodyFontSize || '8pt'};
             font-weight: ${config.tableBodyFontWeight || 'normal'};
@@ -247,6 +251,41 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
             break-inside: avoid;
             page-break-inside: avoid;
         }
+
+        /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
+           Body typography intentionally untouched. */
+        ${denseImage ? `
+        .pro-theme-container.pdf-dense-profile .pro-item-image {
+            width: 24px;
+            height: 24px;
+        }
+        .pro-theme-container.pdf-dense-profile .pro-header {
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .pro-theme-container.pdf-dense-profile .pro-customer-grid {
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .pro-theme-container.pdf-dense-profile .pro-card {
+            padding: 6px 8px;
+        }
+        .pro-theme-container.pdf-dense-profile .pro-table {
+            margin-bottom: 6px;
+        }
+        .pro-theme-container.pdf-dense-profile .pro-summary-section {
+            gap: 8px;
+            margin-top: 6px;
+            padding: 6px 10px;
+        }
+        .pro-theme-container.pdf-dense-profile .pro-signatures {
+            gap: 12px;
+            margin-top: 6px;
+        }
+        .pro-theme-container.pdf-dense-profile .pro-sig-area {
+            min-height: 32px;
+        }
+        ` : ''}
     `, [config, color]);
 
     const renderTable = (itemsToRender: QuoteItem[], startIndex: number) => {
@@ -307,7 +346,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
     };
 
     return (
-        <div id={id} className={`pro-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''}`} style={containerStyles}>
+        <div id={id} className={`pro-theme-container w-full max-w-[210mm] mx-auto ${config.margins === 'compact' ? 'pdf-compact-mode' : ''} ${denseImage ? 'pdf-dense-profile' : ''}`} style={containerStyles}>
             <style>{proStyles}</style>
 
             {itemChunks.map((chunk, pageIndex) => (
