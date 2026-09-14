@@ -25,12 +25,11 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
         currentLocale,
         hasLineItemDiscounts,
     } = props;
-    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable } = usePdfTheme(props);
+    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, density: pageDensity, denseImage } = usePdfTheme(props);
     const hasCustomerData = !!(customerData.name || customerData.company || customerData.phone || customerData.email || customerData.address || customerData.taxOffice || customerData.taxNumber || (quoteData.customFields && quoteData.customFields.length > 0));
     // Compact tier: density compact (user-selected or dense-profile override) renders
     // genuinely compact rows. Dense-image adds smaller image boxes + section compaction.
-    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
-    const denseImage = (config as Record<string, unknown>).denseImageProfile === true;
+    const density = pageDensity === 'dense' ? 'compact' : resolveTableDensity((config as Record<string, unknown>).tableDensity);
 
     const invoiceStyles = useMemo(() => `
         .invoice-theme-container {

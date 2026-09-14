@@ -8,7 +8,7 @@ import ModernTheme from '@/components/pdf-themes/ModernTheme';
 import ProTheme from '@/components/pdf-themes/ProTheme';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { PAGE_SIZES, type PageSize } from '@/utils/pdfGenerator';
-import { hasValidItemContent, buildDensityChunkOptions, resolveSinglePageDensity } from '@/utils/themeHelpers';
+import { hasValidItemContent } from '@/utils/themeHelpers';
 import { translations } from '@/utils/translations';
 import type { QuoteData, CustomerData, CompanyData, BankData, QuoteItem, Discount, PdfConfig, PdfLayoutItem } from '@/context/quote/types';
 
@@ -251,29 +251,14 @@ const PrintableQuote = React.memo(({
 
         ...(_config || {})
         };
-        // Canonical single-page density decision — the SAME options builder and
-        // resolver the pagination engine uses, so render and chunking agree.
-        // dense-plain: existing compact tier. dense-image: compact + compact image
-        // boxes + section compaction (Modern only). Runtime-only flags, never persisted.
-        const mergedRecord = merged as Record<string, unknown>;
-        const densityOpts = buildDensityChunkOptions({
-            config: mergedRecord,
-            layout,
-            bankData: _bankData,
-            quoteData,
-            customerData,
-        });
-        const density = resolveSinglePageDensity(_items || [], densityOpts);
-        if ((density === 'dense-plain' || density === 'dense-image') && mergedRecord.tableDensity !== 'spacious') {
-            mergedRecord.tableDensity = 'compact';
-            const rh = typeof mergedRecord.tableRowHeight === 'number' ? mergedRecord.tableRowHeight : 35;
-            mergedRecord.tableRowHeight = Math.min(rh, 30);
-            if (density === 'dense-image') {
-                mergedRecord.denseImageProfile = true;
-            }
-        }
+        // No synchronous density/rows-per-page override here anymore: PDF density
+        // and pagination are decided by the measurement-authority loop inside
+        // useMeasuredPagination, which renders the section as-is, measures the
+        // actual DOM (A4 bounds, real row heights) and only then picks normal vs
+        // dense vs split. Forcing tableDensity/tableRowHeight up front would make
+        // the measurement lie about what gets rendered.
         return merged;
-    }, [_config, _items, layout, _bankData, quoteData, customerData]);
+    }, [_config, layout, _bankData, quoteData, customerData]);
 
     const getContainerStyles = () => {
         const isLandscape = config.pageOrientation === 'landscape';

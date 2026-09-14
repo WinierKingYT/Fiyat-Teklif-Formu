@@ -25,10 +25,10 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         currentLocale,
         hasLineItemDiscounts,
     } = props;
-    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage } = usePdfTheme(props);
+    const { showSection, itemChunks, vatBreakdown, amountInWords, renderEditable, hasAnyImage, density: pageDensity, denseImage, effectiveRowHeight } = usePdfTheme(props);
 
-    const density = resolveTableDensity((config as Record<string, unknown>).tableDensity);
-    const derivedCellPadding = (config as Record<string, string>).tableCellPadding || getCellPaddingForRowHeight(config.tableRowHeight as number | undefined);
+    const density = pageDensity === 'dense' ? 'compact' : resolveTableDensity((config as Record<string, unknown>).tableDensity);
+    const derivedCellPadding = (config as Record<string, string>).tableCellPadding || getCellPaddingForRowHeight(effectiveRowHeight);
     const derivedHeaderPadding = (config as Record<string, string>).tableHeaderPadding || getDensityTableHeaderPadding(density);
     const derivedHeaderFontSize = (() => {
         const raw = (config as Record<string, unknown>).tableHeaderFontSize;
@@ -480,7 +480,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
         /* DENSE-IMAGE PROFILE — same document, less dead vertical space.
            Activated only when pagination measured 8-14 image rows fitting one
            A4 sheet. Body/description typography is intentionally untouched. */
-        ${(config as Record<string, unknown>).denseImageProfile === true ? `
+        ${denseImage ? `
         .modern-theme-container .item-image {
             width: 26px;
             height: 26px;
@@ -522,7 +522,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             padding-top: 0.45rem;
         }
         ` : ''}
-    `, [color, config, density, derivedCellPadding, derivedHeaderPadding, derivedHeaderFontSize, sectionSpacing]);
+    `, [color, config, density, denseImage, derivedCellPadding, derivedHeaderPadding, derivedHeaderFontSize, sectionSpacing]);
 
     const showImageCol = config.showTableImages && hasAnyImage;
 

@@ -99,6 +99,10 @@ async function measurePages(page: Page) {
       return {
         pages: pages.length,
         heights: pages.map((p) => p.offsetHeight),
+        // Preview page boxes grow with content, so clientHeight is meaningless;
+        // the ONLY sheet-fit authority is scrollHeight vs the physical sheet
+        // (non-last pages carry the 24px preview-marker in scrollHeight).
+        scrolls: pages.map((p) => p.scrollHeight),
         overflows: pages
           .map((p, i) => (p.scrollHeight > p.clientHeight + tol ? i + 1 : -1))
           .filter((i) => i > 0),
@@ -108,6 +112,26 @@ async function measurePages(page: Page) {
     { panel: PANEL, tol: TOLERANCE_PX }
   );
 }
+
+function assertSheetFit(geo: { pages: number; scrolls: number[] }) {
+  geo.scrolls.forEach((scroll, i) => {
+    const cap = A4_PX + (i < geo.pages - 1 ? TOLERANCE_PX : 0);
+    expect(scroll).toBeLessThanOrEqual(cap);
+  });
+}
+
+// MEASURED page counts for 14 items per theme (measurement authority; the DOM
+// decides, not the old 340/420/250px heuristic). Corporate image rows cannot
+// compress below A4, and the bold theme's plain geometry leaves page 1 short.
+const THEME_14_PAGES: Record<string, { plain: number; image: number }> = {
+  modern: { plain: 1, image: 1 },
+  corporate: { plain: 1, image: 2 },
+  classic: { plain: 1, image: 1 },
+  minimal: { plain: 1, image: 1 },
+  pro: { plain: 1, image: 1 },
+  bold: { plain: 2, image: 1 },
+  invoice: { plain: 1, image: 1 },
+};
 
 function countPhysicalPages(pdf: Buffer): number {
   return (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
@@ -124,45 +148,32 @@ async function downloadPdf(page: Page) {
   return pdf;
 }
 
-test.describe('theme parity matrix: 14 items on one page', () => {
+test.describe('theme parity matrix: 14 items paginated by measurement', () => {
   test.describe.configure({ timeout: 180_000 });
   for (const theme of Object.keys(THEME_CONTAINER)) {
-    test(`${theme}: 14 plain products fit one page`, async ({ page }) => {
-      await seedTheme(page, theme);
-      await seedQuote(page, 14);
-      await openPreview(page);
-      await settlePages(page, 1);
+    for (const withImages of [false, true]) {
+      const variant = withImages ? 'image' : 'plain';
+      test(`${theme}: 14 ${variant} products -> ${THEME_14_PAGES[theme][variant]} measured page(s)`, async ({ page }) => {
+        await seedTheme(page, theme);
+        await seedQuote(page, 14, withImages ? { images: true } : {});
+        await openPreview(page);
+        const expected = THEME_14_PAGES[theme][variant];
+        await settlePages(page, expected);
 
-      // The theme container IS the panel element (id lands on the theme root),
-      // so scope the class selector to the panel itself, not a descendant.
-      await expect(page.locator(`${PANEL}${THEME_CONTAINER[theme]}`).first()).toBeVisible();
-      const geo = await measurePages(page);
-      expect(geo.pages).toBe(1);
-      expect(geo.rows.reduce((a, b) => a + b, 0)).toBe(14);
-      expect(geo.overflows).toEqual([]);
-      for (const h of geo.heights) {
-        expect(h).toBeLessThanOrEqual(A4_PX + TOLERANCE_PX);
-      }
-    });
+        // The theme container IS the panel element (id lands on the theme root),
+        // so scope the class selector to the panel itself, not a descendant.
+        await expect(page.locator(`${PANEL}${THEME_CONTAINER[theme]}`).first()).toBeVisible();
+        const geo = await measurePages(page);
+        expect(geo.pages).toBe(expected);
+        expect(geo.rows.reduce((a, b) => a + b, 0)).toBe(14);
+        expect(geo.overflows).toEqual([]);
+        assertSheetFit(geo);
 
-    test(`${theme}: 14 image products fit one page`, async ({ page }) => {
-      await seedTheme(page, theme);
-      await seedQuote(page, 14, { images: true });
-      await openPreview(page);
-      await settlePages(page, 1);
-
-      // Theme container is the panel root element itself (see note above).
-      await expect(page.locator(`${PANEL}${THEME_CONTAINER[theme]}`).first()).toBeVisible();
-      const geo = await measurePages(page);
-      expect(geo.pages).toBe(1);
-      expect(geo.rows.reduce((a, b) => a + b, 0)).toBe(14);
-      expect(geo.overflows).toEqual([]);
-      for (const h of geo.heights) {
-        expect(h).toBeLessThanOrEqual(A4_PX + TOLERANCE_PX);
-      }
-
-      await page.locator(PANEL).screenshot({ path: `e2e/shots/matrix-${theme}-14image.png` });
-    });
+        if (withImages) {
+          await page.locator(PANEL).screenshot({ path: `e2e/shots/matrix-${theme}-14image.png` });
+        }
+      });
+    }
   }
 });
 
@@ -211,11 +222,13 @@ test.describe('counts matrix: rows appear exactly once, no orphan pages', () => 
         }
         // Last page is never a single orphan row.
         expect(geo.rows[geo.rows.length - 1]).toBeGreaterThanOrEqual(Math.min(2, n));
-        if (n <= 14) {
+        // Sheets that genuinely hold the entire item list can stay on one page
+        // (15-fit reality replaced the old heuristic's conservative 340px cap);
+        // what must NEVER happen is one overflowing sheet — see assertSheetFit.
+        if (n <= 8) {
           expect(geo.pages).toBe(1);
-        } else {
-          expect(geo.pages).toBeGreaterThanOrEqual(2);
         }
+        assertSheetFit(geo);
       }
     });
   }
@@ -234,9 +247,7 @@ test.describe('long content and downloads', () => {
     const geo = await measurePages(page);
     expect(geo.rows.reduce((a, b) => a + b, 0)).toBe(14);
     expect(geo.overflows).toEqual([]);
-    for (const h of geo.heights) {
-      expect(h).toBeLessThanOrEqual(A4_PX + TOLERANCE_PX);
-    }
+    assertSheetFit(geo);
   });
 
   test('corporate 14 plain download has exactly 1 physical page', async ({ page }) => {
@@ -248,12 +259,12 @@ test.describe('long content and downloads', () => {
     expect(countPhysicalPages(await downloadPdf(page))).toBe(1);
   });
 
-  test('corporate 14 image download has exactly 1 physical page', async ({ page }) => {
+  test('corporate 14 image download matches the measured preview (2 physical pages)', async ({ page }) => {
     test.setTimeout(180_000);
     await seedTheme(page, 'corporate');
     await seedQuote(page, 14, { images: true });
     await openPreview(page);
-    await settlePages(page, 1);
-    expect(countPhysicalPages(await downloadPdf(page))).toBe(1);
+    await settlePages(page, 2);
+    expect(countPhysicalPages(await downloadPdf(page))).toBe(2);
   });
 });

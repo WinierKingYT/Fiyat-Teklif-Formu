@@ -72,3 +72,56 @@ export function measurePdfPages(container: ParentNode): PdfPageMeasurement[] {
     const pages = Array.from(container.querySelectorAll('.pdf-page')) as HTMLElement[];
     return pages.map((page, i) => measurePdfPage(page, i + 1));
 }
+
+// ─── Geometry (measurement-authority pagination) ──────────────────────────────
+// The paginator consumes these to break pages at REAL row heights and REAL
+// section heights — never the legacy heuristic budgets (340/420/250 + 50px floor).
+
+export interface PdfRowMeasure {
+    /** offsetTop relative to the page. */
+    top: number;
+    /** bottom edge (offsetTop + height) relative to the page. */
+    bottom: number;
+    height: number;
+}
+
+export interface PdfPageGeometry extends PdfPageMeasurement {
+    /** Per-item-row geometry, in render order (maps 1:1 to the chunk's items). */
+    rows: PdfRowMeasure[];
+    /** <thead> height, or null when the page has no items table. */
+    theadHeight: number | null;
+    /** Page height consumed above the first item row (header blocks + thead). */
+    aboveTable: number | null;
+    /** Page height consumed below the last item row (bottom sections or the
+     *  continuation note). Measured so page budgets need no per-theme guesses. */
+    belowTable: number | null;
+}
+
+export function measurePdfPageGeometry(page: HTMLElement, pageIndex: number): PdfPageGeometry {
+    const base = measurePdfPage(page, pageIndex);
+    const rowEls = Array.from(page.querySelectorAll('tbody tr')) as HTMLElement[];
+    const rows = rowEls.map((r) => {
+        const top = r.offsetTop;
+        const bottom = offsetBottom(r, page);
+        return { top, bottom, height: bottom - top };
+    });
+    const firstRowTop = rows.length > 0 ? rows[0].top : null;
+    const lastRowBottom = rows.length > 0 ? rows[rows.length - 1].bottom : null;
+    let theadHeight: number | null = null;
+    if (rows.length > 0) {
+        const thead = page.querySelector('table thead');
+        theadHeight = thead ? (thead as HTMLElement).offsetHeight : null;
+    }
+    return {
+        ...base,
+        rows,
+        theadHeight,
+        aboveTable: firstRowTop,
+        belowTable: lastRowBottom != null ? page.scrollHeight - lastRowBottom : null,
+    };
+}
+
+export function measurePdfPageGeometries(container: ParentNode): PdfPageGeometry[] {
+    const pages = Array.from(container.querySelectorAll('.pdf-page')) as HTMLElement[];
+    return pages.map((page, i) => measurePdfPageGeometry(page, i + 1));
+}

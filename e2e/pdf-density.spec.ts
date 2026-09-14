@@ -20,6 +20,9 @@ const TOLERANCE_PX = 24;
 interface PageGeometry {
   pages: number;
   heights: number[];
+  // Preview page boxes grow with content (no max-height), so the ONLY sheet-fit
+  // authority is scrollHeight vs the physical sheet.
+  scrolls: number[];
   overflows: number[];
   rows: number[];
   imageBoxWidth: string | null;
@@ -77,6 +80,7 @@ async function measurePages(page: Page): Promise<PageGeometry> {
       return {
         pages: pages.length,
         heights: pages.map((p) => p.offsetHeight),
+        scrolls: pages.map((p) => p.scrollHeight),
         overflows: pages
           .map((p, i) => (p.scrollHeight > p.clientHeight + tol ? i + 1 : -1))
           .filter((i) => i > 0),
@@ -144,18 +148,28 @@ test.describe('PDF 14-item single-page density (real DOM geometry)', () => {
     expect(physicalPages).toBe(1);
   });
 
-  test('15 plain products paginate with every row retained exactly once', async ({ page }) => {
+  test('15 plain products fit ONE measured page with export parity', async ({ page }) => {
+    test.setTimeout(120_000);
     await seedQuote(page, 15);
     await openPreview(page);
-    await settlePages(page, 2);
+    await settlePages(page, 1);
 
     const geo = await measurePages(page);
-    expect(geo.pages).toBe(2);
+    expect(geo.pages).toBe(1);
     expect(geo.rows.reduce((a, b) => a + b, 0)).toBe(15);
     expect(geo.overflows).toEqual([]);
-    for (const h of geo.heights) {
-      expect(h).toBeLessThanOrEqual(A4_PX + TOLERANCE_PX);
-    }
+    // The single page must clear the physical sheet with the preview/export
+    // safety margin the paginator enforces, not merely the marker tolerance.
+    expect(geo.scrolls[0]).toBeLessThanOrEqual(A4_PX);
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'PDF İNDİR', exact: true }).click();
+    const download = await downloadPromise;
+    const path = await download.path();
+    expect(path).not.toBeNull();
+    const { readFile } = await import('node:fs/promises');
+    const pdf = await readFile(path!);
+    const physicalPages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+    expect(physicalPages).toBe(1);
   });
 
   test('downloaded 14-image PDF has exactly 1 physical page', async ({ page }) => {

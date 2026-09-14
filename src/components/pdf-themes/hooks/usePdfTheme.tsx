@@ -1,7 +1,8 @@
 import { useMemo, useCallback } from 'react';
+import { useMeasuredPagination } from '@/hooks/useMeasuredPagination';
 import { calculateQuoteTotals } from '@/utils/calculations';
 import { numberToWords } from '@/utils/numberToWordsTurkish';
-import { buildDensityChunkOptions, chunkQuoteItems, hasValidItemContent } from '@/utils/themeHelpers';
+import { hasValidItemContent, type DensitySource } from '@/utils/themeHelpers';
 import { PdfEditableField } from '../common';
 import type { PdfThemeProps } from '@/context/quote/types';
 
@@ -20,20 +21,18 @@ export function usePdfTheme(props: PdfThemeProps) {
 
     const hasAnyImage = useMemo(() => validItems.some((item) => !!item.image), [validItems]);
 
-    const itemChunks = useMemo(() => {
-        if (layoutMap['items'] === false) {
-            return [[]];
-        }
-        // Same canonical options the render override uses — pagination and
-        // rendering can never disagree about visibility, theme or density.
-        return chunkQuoteItems(items, buildDensityChunkOptions({
-            config: config as Record<string, unknown>,
-            layout: activeLayout,
-            bankData: props.bankData,
-            quoteData,
-            customerData: props.customerData,
-        }));
-    }, [items, config, activeLayout, layoutMap, props.bankData, props.customerData, quoteData]);
+    // Single canonical source for BOTH pagination measurement and rendering, so
+    // row heights are measured against exactly the visibility/theme/density the
+    // theme component actually renders.
+    const densitySource = useMemo<DensitySource>(() => ({
+        config: config as Record<string, unknown>,
+        layout: activeLayout,
+        bankData: props.bankData,
+        quoteData,
+        customerData: props.customerData,
+    }), [config, activeLayout, props.bankData, props.customerData, quoteData]);
+
+    const { itemChunks, density, denseImage, effectiveRowHeight } = useMeasuredPagination(items, densitySource, props.id);
 
     const vatBreakdown = useMemo(() => {
         const calc = calculateQuoteTotals(items, props.discount, { currency: quoteData.currency, taxMode: quoteData.taxMode });
@@ -108,6 +107,9 @@ export function usePdfTheme(props: PdfThemeProps) {
         layoutMap,
         showSection,
         itemChunks,
+        density,
+        denseImage,
+        effectiveRowHeight,
         vatBreakdown,
         amountInWords,
         renderEditable,
