@@ -27,8 +27,14 @@ export interface PageCaps {
  * - Otherwise a continuation page is packed against `continuation`.
  * - A lone final row is absorbed into the preceding page when the merge still
  *   fits that page's measured budget (orphan prevention, measured not guessed).
+ *
+ * `minPages` (default 1) expresses the caller's lower bound on page count. A
+ * split context passes 2 so a re-plan can never collapse back into the single
+ * overflowing page the caller already rejected: the first page always keeps at
+ * least `minPages - 1` rows for later pages, tail absorption is blocked when it
+ * would drop below `minPages`, and orphan absorption is likewise gated below.
  */
-export function planChunkRowCounts(rowHeights: number[], caps: PageCaps): number[] {
+export function planChunkRowCounts(rowHeights: number[], caps: PageCaps, minPages = 1): number[] {
     const n = rowHeights.length;
     if (n <= 0) return [0];
     const sumFrom = (from: number): number => {
@@ -39,21 +45,22 @@ export function planChunkRowCounts(rowHeights: number[], caps: PageCaps): number
 
     const counts: number[] = [];
 
-    // First page.
+    // First page: greedy, but always leave (minPages - 1) rows behind.
+    const reserve = Math.max(0, minPages - 1);
     let i = 0;
     let used = 0;
-    while (i < n && used + rowHeights[i] <= caps.first) {
+    while (i < n - reserve && used + rowHeights[i] <= caps.first) {
         used += rowHeights[i];
         i++;
     }
-    if (i === 0) i = 1; // even a single tall row gets a page
+    if (i === 0) i = Math.min(1, n); // even a single tall row gets a page
     counts.push(i);
     if (i >= n) return counts;
 
     // Middle + final pages.
     let start = i;
     while (start < n) {
-        if (sumFrom(start) <= caps.last) {
+        if (sumFrom(start) <= caps.last && counts.length + 1 >= minPages) {
             counts.push(n - start);
             start = n;
             break;
@@ -70,8 +77,10 @@ export function planChunkRowCounts(rowHeights: number[], caps: PageCaps): number
     }
 
     // Orphan prevention: absorb a lone final row into the preceding page when
-    // the merge still fits that page's budget.
-    if (counts.length >= 2 && counts[counts.length - 1] === 1 && n > 2) {
+    // the merge still fits that page's budget. Never allowed to drop the plan
+    // below minPages — absorbing a 2-page [P,1] back into one page would embed
+    // the overflowing single page the split caller already rejected.
+    if (counts.length >= minPages + 1 && counts[counts.length - 1] === 1 && n > 2) {
         const lastPageCount = counts.length;
         const prevCount = counts[lastPageCount - 2];
         const prevStart = n - 1 - prevCount;

@@ -31,13 +31,20 @@ export interface PdfPageMeasurement {
     fits: boolean;
     /** Number of item rows rendered on this page. */
     rowCount: number;
-    /** offsetTop of the first item row relative to the page, or null. */
+    /** Top edge of the first item row relative to the page, or null. */
     firstRowTop: number | null;
-    /** Bottom edge (offsetTop + height) of the last item row, or null. */
+    /** Bottom edge (top + height) of the last item row, or null. */
     lastRowBottom: number | null;
 }
 
-function offsetBottom(el: Element, page: HTMLElement): number {
+/**
+ * Vertical position of `el` relative to the page, accumulated through the
+ * offsetParent chain (offsetTop is relative to the offsetParent, NOT the page).
+ * This keeps every measured coordinate in the SAME page-relative space as
+ * scrollHeight/clientHeight, so heights such as `bottom - top` are never
+ * inflated by the header blocks above the items table.
+ */
+export function offsetTopRelativeToPage(el: Element, page: HTMLElement): number {
     const e = el as HTMLElement;
     let top = e.offsetTop;
     let node: HTMLElement | null = e.offsetParent as HTMLElement | null;
@@ -45,15 +52,35 @@ function offsetBottom(el: Element, page: HTMLElement): number {
         top += node.offsetTop;
         node = node.offsetParent as HTMLElement | null;
     }
-    return top + e.offsetHeight;
+    return top;
+}
+
+/** The quote's ITEMS table (the one with a <thead>), or null. Measurement must
+ *  never fall back to blind `tbody tr`: summary/totals tables also carry rows. */
+export function findItemsTable(page: HTMLElement): HTMLTableElement | null {
+    const thead = page.querySelector('table thead');
+    return thead ? (thead.closest('table') as HTMLTableElement | null) : null;
+}
+
+/** Item rows only — descendants of the items table's tbody. */
+export function itemRowElements(page: HTMLElement): HTMLElement[] {
+    const table = findItemsTable(page);
+    if (!table) return [];
+    return Array.from(table.querySelectorAll('tbody > tr')) as HTMLElement[];
+}
+
+function rowTopBottom(row: HTMLElement, page: HTMLElement): { top: number; bottom: number; height: number } {
+    const top = offsetTopRelativeToPage(row, page);
+    const height = row.offsetHeight;
+    return { top, bottom: top + height, height };
 }
 
 export function measurePdfPage(page: HTMLElement, pageIndex: number): PdfPageMeasurement {
     const clientHeight = page.clientHeight;
     const scrollHeight = page.scrollHeight;
-    const rows = Array.from(page.querySelectorAll('tbody tr')) as HTMLElement[];
-    const firstRowTop = rows.length > 0 ? rows[0].offsetTop : null;
-    const lastRowBottom = rows.length > 0 ? offsetBottom(rows[rows.length - 1], page) : null;
+    const rows = itemRowElements(page);
+    const first = rows.length > 0 ? rowTopBottom(rows[0], page) : null;
+    const last = rows.length > 0 ? rowTopBottom(rows[rows.length - 1], page) : null;
     const overflowPx = scrollHeight - clientHeight - OVERFLOW_TOLERANCE_PX;
     return {
         pageIndex,
@@ -63,8 +90,8 @@ export function measurePdfPage(page: HTMLElement, pageIndex: number): PdfPageMea
         overflowPx,
         fits: overflowPx <= 0,
         rowCount: rows.length,
-        firstRowTop,
-        lastRowBottom,
+        firstRowTop: first ? first.top : null,
+        lastRowBottom: last ? last.bottom : null,
     };
 }
 
@@ -80,7 +107,7 @@ export function measurePdfPages(container: ParentNode): PdfPageMeasurement[] {
 export interface PdfRowMeasure {
     /** offsetTop relative to the page. */
     top: number;
-    /** bottom edge (offsetTop + height) relative to the page. */
+    /** bottom edge (top + height) relative to the page. */
     bottom: number;
     height: number;
 }
@@ -92,19 +119,30 @@ export interface PdfPageGeometry extends PdfPageMeasurement {
     theadHeight: number | null;
     /** Page height consumed above the first item row (header blocks + thead). */
     aboveTable: number | null;
-    /** Page height consumed below the last item row (bottom sections or the
-     *  continuation note). Measured so page budgets need no per-theme guesses. */
+    /** Page height consumed below the last item row.
+     *  Final page (has `.bottom-section`): the section's own height (it is
+     *  flex-pinned via margin-top:auto, so position-based math would count the
+     *  elastic blank). Continuation page: the note block that follows the table
+     *  (table.nextElementSibling), measured position-based from the last row. */
     belowTable: number | null;
+}
+
+function belowRowsOverhead(page: HTMLElement, lastRowBottom: number | null): number {
+    if (lastRowBottom == null) return 0;
+    const bottomSection = page.querySelector('.bottom-section') as HTMLElement | null;
+    if (bottomSection) return bottomSection.offsetHeight;
+    const table = findItemsTable(page);
+    const note = table ? (table.nextElementSibling as HTMLElement | null) : null;
+    if (note && note.textContent && note.textContent.trim()) {
+        return Math.max(0, offsetTopRelativeToPage(note, page) + note.offsetHeight - lastRowBottom);
+    }
+    return 0;
 }
 
 export function measurePdfPageGeometry(page: HTMLElement, pageIndex: number): PdfPageGeometry {
     const base = measurePdfPage(page, pageIndex);
-    const rowEls = Array.from(page.querySelectorAll('tbody tr')) as HTMLElement[];
-    const rows = rowEls.map((r) => {
-        const top = r.offsetTop;
-        const bottom = offsetBottom(r, page);
-        return { top, bottom, height: bottom - top };
-    });
+    const rowEls = itemRowElements(page);
+    const rows = rowEls.map((r) => rowTopBottom(r, page));
     const firstRowTop = rows.length > 0 ? rows[0].top : null;
     const lastRowBottom = rows.length > 0 ? rows[rows.length - 1].bottom : null;
     let theadHeight: number | null = null;
@@ -117,7 +155,7 @@ export function measurePdfPageGeometry(page: HTMLElement, pageIndex: number): Pd
         rows,
         theadHeight,
         aboveTable: firstRowTop,
-        belowTable: lastRowBottom != null ? page.scrollHeight - lastRowBottom : null,
+        belowTable: belowRowsOverhead(page, lastRowBottom),
     };
 }
 

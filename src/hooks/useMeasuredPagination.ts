@@ -1,4 +1,4 @@
-import { useMemo, useRef, useLayoutEffect, useState } from 'react';
+import { useMemo, useRef, useLayoutEffect, useState, useCallback } from 'react';
 import { PAGE_SIZES } from '@/utils/pdfGenerator';
 import { OVERFLOW_TOLERANCE_PX, measurePdfPageGeometries, type PdfPageGeometry } from '@/utils/pdfLayoutMeasurement';
 import { chunkByCounts, moveOverflowRows, planChunkRowCounts, type PageCaps } from '@/utils/pdfPagination';
@@ -44,6 +44,18 @@ interface PlanState<T> {
 const MINI_HEADER_EST = 46;
 const NOTE_EST = 46;
 const MAX_PASSES = 8;
+
+/**
+ * Final 'done' plans shared across containers with the same planKey.  The
+ * canonical export surface mounts fresh at download time; if it had to re-derive
+ * the split from scratch, the exporter snapshot races the (slow) split render and
+ * a 2-page preview can capture as 1 page.  Seeding it with the plan the preview
+ * already converged on makes the first paint WYSIWYG.  Keyed by planKey (theme +
+ * item fingerprints + density options), bounded LRU-style; re-measuring is always
+ * the fallback when the key is absent (e.g. download without opening a preview).
+ */
+const PLAN_CACHE_LIMIT = 20;
+const donePlanCache = new Map<string, { chunks: unknown[][]; density: PaginationDensity }>();
 /**
  * Headroom a single page must keep below the physical sheet to be accepted.
  * With the export parity fix (manual rasterize-per-page for all quotes),
@@ -68,52 +80,69 @@ function contentOverflow(g: PdfPageGeometry, sheet: number): number {
     return g.scrollHeight - sheet - OVERFLOW_TOLERANCE_PX;
 }
 
-/** Content consumed below the item rows (totals on the single page). */
-function belowContent(g: PdfPageGeometry): number {
-    if (g.lastRowBottom == null || g.theadHeight == null) return NOTE_EST;
-    return Math.max(0, g.scrollHeight - g.lastRowBottom);
-}
-
+/** Bootstrap budgets derived from the single (overflowing) dense page, used only
+ *  until the split stage has real first/continuation/final pages to measure.
+ *  `belowTable` is already measured (real bottom-section / note block), so no
+ *  theme guesses are baked in here beyond the continuation-note fallbacks. */
 function capsFromSinglePage(g: PdfPageGeometry, sheet: number): PageCaps {
     const above = Math.max(0, g.aboveTable ?? 0);
     const thead = g.theadHeight ?? 0;
+    const below = g.belowTable ?? NOTE_EST;
     return {
         first: sheet - above - NOTE_EST,
         continuation: sheet - MINI_HEADER_EST - thead - NOTE_EST,
-        last: sheet - above - Math.max(NOTE_EST, belowContent(g)),
+        last: sheet - above - below,
     };
 }
 
-/** Real budgets: first/last reuse the (tall) single page, continuation uses the
- *  real mini-header from the freshly rendered multi-page DOM. */
-function capsFromPages(pages: PdfPageGeometry[], seed: PdfPageGeometry, sheet: number): PageCaps {
-    const above0 = Math.max(0, seed.aboveTable ?? 0);
-    const cont = pages.length > 1 ? pages[1] : pages[0];
+/** Real budgets measured from the freshly rendered split DOM:
+ *  - `first` from the real first page (big header + real continuation note),
+ *  - `continuation` from a real middle page when one exists (mini header + real
+ *    note); for a 2-page quote there is no middle page, so the mini header is
+ *    measured from the last page while the note keeps the NOTE_EST fallback,
+ *  - `last` from the real last page (mini header + real bottom-section).
+ *  Every number is page-relative (same coordinate space as the sheet). */
+function capsFromPages(pages: PdfPageGeometry[], sheet: number): PageCaps {
+    const first = pages[0];
+    const lastPage = pages[pages.length - 1];
+    const hasMiddle = pages.length > 2;
+    const cont = hasMiddle ? pages[1] : lastPage;
+    const aboveFirst = Math.max(0, first.aboveTable ?? 0);
     const aboveCont = Math.max(0, cont.aboveTable ?? 0);
+    const aboveLast = Math.max(0, lastPage.aboveTable ?? 0);
     return {
-        first: sheet - above0 - NOTE_EST,
-        continuation: sheet - aboveCont - NOTE_EST,
-        last: sheet - above0 - Math.max(NOTE_EST, belowContent(seed)),
+        first: sheet - aboveFirst - (first.belowTable ?? NOTE_EST),
+        continuation: sheet - aboveCont - (hasMiddle ? (cont.belowTable ?? NOTE_EST) : NOTE_EST),
+        last: sheet - aboveLast - (lastPage.belowTable ?? NOTE_EST),
     };
 }
 
-/** Absorb a lone trailing row into the previous page ONLY when that page has
- *  measured free sheet space for it (real rows + safe header/note estimates).
- *  Free space is asserted before merging, so the result cannot re-overflow. */
+/** Prevents a 1-item orphan final page WITHOUT changing the page count or the
+ *  header types involved: move one row BACK from the penultimate page into the
+ *  lone final page so it ends with 2 rows (14+1 → 13+2). Both the losing page
+ *  (keeps its continuation budget) and the gaining final page (its real
+ *  bottom-section budget) are re-checked against MEASURED free space, so the
+ *  move can never re-overflow a page. The penultimate page must be thick enough
+ *  (≥ 4 rows) that losing one row does not create a new orphan. */
 function maybeMergeLoneTail<T>(pages: PdfPageGeometry[], chunks: T[][], sheet: number): T[][] {
     if (chunks.length < 2) return chunks;
     const lastIdx = chunks.length - 1;
     if (chunks[lastIdx].length !== 1) return chunks;
-    const prev = pages[lastIdx - 1];
-    if (!prev || !prev.rows) return chunks;
-    const tailRowH = pages[lastIdx]?.rows?.[0]?.height ?? 0;
-    const above = Math.max(0, prev.aboveTable ?? 0);
-    const used = prev.rows.reduce((s, r) => s + r.height, 0);
-    const free = sheet - above - NOTE_EST - used;
-    if (free - tailRowH >= OVERFLOW_TOLERANCE_PX) {
+    const prevIdx = lastIdx - 1;
+    const prevCount = chunks[prevIdx].length;
+    if (prevCount < 4) return chunks;
+    const prev = pages[prevIdx];
+    const tail = pages[lastIdx];
+    if (!prev || !tail || prev.rows.length < prevCount || tail.rows.length < 1) return chunks;
+    const moveH = prev.rows[prevCount - 1].height;
+    const tailH = tail.rows[0].height;
+    const prevUsedAfter = prev.rows.slice(0, prevCount - 1).reduce((s, r) => s + r.height, 0);
+    const prevFits = sheet - Math.max(0, prev.aboveTable ?? 0) - (prev.belowTable ?? 0) - prevUsedAfter >= OVERFLOW_TOLERANCE_PX;
+    const tailFits = sheet - Math.max(0, tail.aboveTable ?? 0) - (tail.belowTable ?? 0) - (tailH + moveH) >= 1;
+    if (prevFits && tailFits) {
         const out = chunks.map((c) => c.slice());
-        out[lastIdx - 1] = out[lastIdx - 1].concat(out[lastIdx]);
-        out.pop();
+        out[prevIdx] = chunks[prevIdx].slice(0, prevCount - 1);
+        out[lastIdx] = [chunks[prevIdx][prevCount - 1]].concat(chunks[lastIdx]);
         return out;
     }
     return chunks;
@@ -175,14 +204,29 @@ export function useMeasuredPagination<T>(
         return items.length > 0 ? [items] : [[]];
     }, [isManual, manualChunks, items]);
 
-    const [plan, setPlan] = useState<PlanState<T>>({
-        stage: isManual ? 'done' : 'fit-normal',
-        chunks: initialChunks,
-        density: 'normal',
-        pass: 0,
+    const [plan, setPlan] = useState<PlanState<T>>(() => {
+        if (isManual) {
+            return { stage: 'done', chunks: initialChunks, density: 'normal', pass: 0 };
+        }
+        const cached = donePlanCache.get(planKey);
+        if (cached) {
+            return { stage: 'done', chunks: cached.chunks as T[][], density: cached.density, pass: 0 };
+        }
+        return { stage: 'fit-normal', chunks: initialChunks, density: 'normal', pass: 0 };
     });
     const planKeyRef = useRef<string>(planKey);
     const itemsRef = useRef<T[]>(items);
+
+    const persistDone = useCallback((next: PlanState<T>) => {
+        if (next.stage === 'done' && planKeyRef.current) {
+            donePlanCache.set(planKeyRef.current, { chunks: next.chunks, density: next.density });
+            if (donePlanCache.size > PLAN_CACHE_LIMIT) {
+                const oldest = donePlanCache.keys().next().value;
+                if (oldest !== undefined) donePlanCache.delete(oldest);
+            }
+        }
+        setPlan(next);
+    }, []);
 
     useLayoutEffect(() => {
         itemsRef.current = items;
@@ -211,7 +255,7 @@ export function useMeasuredPagination<T>(
             // headroom (SINGLE_PAGE_SAFETY_PX), never on the 24px preview-marker
             // tolerance that only exists for non-last pages.
             if (contentFits(pages[0], sheet, -SINGLE_PAGE_SAFETY_PX)) {
-                setPlan({ stage: 'done', chunks: [currentItems], density: plan.density, pass: 0 });
+                persistDone({ stage: 'done', chunks: [currentItems], density: plan.density, pass: 0 });
                 return;
             }
             if (plan.stage === 'fit-normal' && canTryDense) {
@@ -220,7 +264,7 @@ export function useMeasuredPagination<T>(
             }
             // A single sheet is genuinely impossible — split by MEASURED geometry.
             const caps = capsFromSinglePage(pages[0], sheet);
-            const counts = planChunkRowCounts(pages[0].rows.map((r) => r.height), caps);
+            const counts = planChunkRowCounts(pages[0].rows.map((r) => r.height), caps, 2);
             setPlan({ stage: 'split', chunks: chunkByCounts(currentItems, counts), density: plan.density, pass: 0 });
             return;
         }
@@ -231,9 +275,9 @@ export function useMeasuredPagination<T>(
             // budgets from that DOM and re-pack tightly across ALL pages (single-row
             // heights never carry the whole list, so never derive counts from page 0
             // alone — that silently dropped trailing items).
-            const caps = capsFromPages(pages, pages[0], sheet);
+            const caps = capsFromPages(pages, sheet);
             const heights = pages.flatMap((p) => p.rows.map((r) => r.height));
-            const counts = planChunkRowCounts(heights, caps);
+            const counts = planChunkRowCounts(heights, caps, 2);
             setPlan({ stage: 'split', chunks: chunkByCounts(currentItems, counts), density: plan.density, pass: 1 });
             return;
         }
@@ -241,10 +285,10 @@ export function useMeasuredPagination<T>(
         if (plan.pass >= MAX_PASSES) {
             // Terminal safety: budgets and row heights are real measurements, so
             // the re-pack cannot overflow the physical sheet.
-            const caps = capsFromPages(pages, pages[0], sheet);
+            const caps = capsFromPages(pages, sheet);
             const heights = pages.flatMap((p) => p.rows.map((r) => r.height));
-            const counts = planChunkRowCounts(heights, caps);
-            setPlan({ stage: 'done', chunks: chunkByCounts(currentItems, counts), density: plan.density, pass: plan.pass });
+            const counts = planChunkRowCounts(heights, caps, 2);
+            persistDone({ stage: 'done', chunks: chunkByCounts(currentItems, counts), density: plan.density, pass: plan.pass });
             return;
         }
 
@@ -253,7 +297,7 @@ export function useMeasuredPagination<T>(
         const overflowByPage = pages.map((p) => Math.max(0, contentOverflow(p, sheet)));
         const { chunks: moved, changed } = moveOverflowRows(plan.chunks, heightsByPage, overflowByPage);
         if (!changed) {
-            setPlan({
+            persistDone({
                 stage: 'done',
                 chunks: maybeMergeLoneTail(pages, plan.chunks, sheet),
                 density: plan.density,
@@ -262,7 +306,7 @@ export function useMeasuredPagination<T>(
             return;
         }
         setPlan({ stage: 'split', chunks: moved, density: plan.density, pass: plan.pass + 1 });
-    }, [plan, planKey, isManual, containerId, canTryDense, sheet]);
+    }, [plan, planKey, isManual, containerId, canTryDense, sheet, persistDone]);
 
     const effectiveRowHeight = useMemo(() => {
         const raw =

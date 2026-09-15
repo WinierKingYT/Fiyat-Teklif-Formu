@@ -312,6 +312,31 @@ const getPdfPageElements = (element: HTMLElement): HTMLElement[] => {
     const pages = Array.from(element.querySelectorAll<HTMLElement>('.pdf-page'));
     return pages.length > 0 ? pages : [element];
 };
+
+// The canonical export surface mounts RIGHT before generation starts, so its
+// useMeasuredPagination plan (fit-normal -> fit-dense -> split) is still in
+// flight when the exporter captures `.pdf-page` nodes.  Reading a half-measured
+// plan turns a 2-page preview into a 1-page PDF (the overflow rows get clipped).
+// Wait until the rendered page count is stable so the export sees the FINAL
+// measured split; the measurement loop is deterministic and terminates, so a
+// stability check never hangs — this only bounds the wait if fonts/layout are
+// slow.  Long-settled containers (the preview panel) are stable on the first
+// sample and pass through after one interval.
+const waitForMeasuredPlan = async (element: HTMLElement, stableMs = 250, maxMs = 5000): Promise<void> => {
+    const start = Date.now();
+    let lastCount = element.querySelectorAll('.pdf-page').length;
+    let lastChangeAt = Date.now();
+    while (Date.now() - start < maxMs) {
+        await new Promise<void>(resolve => setTimeout(resolve, 50));
+        const count = element.querySelectorAll('.pdf-page').length;
+        if (count !== lastCount) {
+            lastCount = count;
+            lastChangeAt = Date.now();
+        } else if (Date.now() - lastChangeAt >= stableMs) {
+            return;
+        }
+    }
+};
 const getElementPixelBounds = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     return {
@@ -405,6 +430,15 @@ export const generatePDF = async (elementId: string, filename?: string, options:
 
     try {
         onStage?.('fonts');
+
+        // Fresh canonical surface: let the measured pagination settle BEFORE any
+        // heavy work (html2pdf import / font load / canvas render all fight React
+        // for the main thread).  Reading `.pdf-page` too early turns a 2-page
+        // preview into a 1-page PDF because the split's re-render hasn't flushed.
+        if (elementId === 'canonical-pdf-export-surface') {
+            await waitForMeasuredPlan(element);
+        }
+
         const { default: html2pdf } = await import('html2pdf.js');
         await loadPdfFonts(fontFamilies);
 
@@ -426,6 +460,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         // Calculate max allowed scale based on actual DOM pixel dimensions (HTML5 canvas limit max 16384px, iOS Safari max 4096px)
         const isIos = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
         const maxCanvasDim = isIos ? 4096 : 16384;
+
         const pageElements = getPdfPageElements(element);
         pageWidthNormalizer(pageElements);
         const pageScales = pageElements.map(page => getEffectivePdfScale(page, qual.scale, maxCanvasDim));
