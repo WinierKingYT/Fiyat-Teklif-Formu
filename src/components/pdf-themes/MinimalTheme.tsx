@@ -155,7 +155,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
             padding: 6px 8px;
         }
         ` : ''}
-    `, [config]);
+    `, [config, density, denseImage]);
 
 
 

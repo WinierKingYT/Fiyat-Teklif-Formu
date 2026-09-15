@@ -80,4 +80,11 @@ export default defineConfig([
     files: ['src/utils/logger.ts'],
     rules: { 'no-console': 'off' },
   },
+  {
+    files: ['e2e/**/*.{ts,js}'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+    rules: { 'no-console': 'off' },
+  },
 ])

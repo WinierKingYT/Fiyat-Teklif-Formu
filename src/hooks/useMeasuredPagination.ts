@@ -46,12 +46,11 @@ const NOTE_EST = 46;
 const MAX_PASSES = 8;
 /**
  * Headroom a single page must keep below the physical sheet to be accepted.
- * Empirically (E2E vs download parity): a page at scrollHeight 1111px exported
- * as 2 physical pages while 1058px exported as 1, so the exported sheet is
- * smaller than the raw 297mm box (font/html2canvas rounding). A single page is
- * only "measured fit" when it clears the sheet by at least this margin.
+ * With the export parity fix (manual rasterize-per-page for all quotes),
+ * preview and export geometry now agree.  This 2px margin only covers
+ * sub-pixel rounding in html2canvas.
  */
-const SINGLE_PAGE_SAFETY_PX = 56;
+const SINGLE_PAGE_SAFETY_PX = 2;
 
 /** Physical sheet height in px for the configured page size/orientation. */
 export function sheetHeightPx(config: Record<string, unknown>): number {
@@ -187,16 +186,19 @@ export function useMeasuredPagination<T>(
 
     useLayoutEffect(() => {
         itemsRef.current = items;
-        if (isManual || plan.stage === 'done') return;
+        if (isManual) return;
         if (!containerId) return;
-        const el = document.getElementById(containerId);
-        if (!el) return;
 
         if (planKeyRef.current !== planKey) {
             planKeyRef.current = planKey;
             setPlan({ stage: 'fit-normal', chunks: itemsRef.current.length > 0 ? [itemsRef.current] : [[]], density: 'normal', pass: 0 });
             return;
         }
+
+        if (plan.stage === 'done') return;
+
+        const el = document.getElementById(containerId);
+        if (!el) return;
 
         const pages = measurePdfPageGeometries(el);
         if (pages.length === 0) return;

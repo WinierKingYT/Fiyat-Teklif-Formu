@@ -317,7 +317,7 @@ const CorporateTheme: React.FC<PdfThemeProps> = (props) => {
             height: 40px;
         }
         ` : ''}
-    `, [color, config]);
+    `, [color, config, density, denseImage]);
 
     const showImageCol = config.showTableImages && hasAnyImage;
 

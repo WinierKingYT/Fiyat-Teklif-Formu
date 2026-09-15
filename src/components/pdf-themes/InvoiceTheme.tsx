@@ -243,7 +243,7 @@ const InvoiceTheme: React.FC<PdfThemeProps> = (props) => {
             min-height: 34px;
         }
         ` : ''}
-    `, [color, config]);
+    `, [color, config, density, denseImage]);
 
     const renderTable = (chunkItems: QuoteItem[], startIndex: number) => (
         <table className="invoice-table">

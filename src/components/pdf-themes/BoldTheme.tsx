@@ -253,7 +253,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
             height: 40px;
         }
         ` : ''}
-    `, [color, config]);
+    `, [color, config, density, denseImage]);
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
         <table className="bold-table">

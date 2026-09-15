@@ -159,14 +159,16 @@ test.describe('Legacy persisted pagination (§7/§9/§10)', () => {
     await seedRealisticQuote(page, 14, { images: true });
     await openPreview(page);
 
-    // 14 image rows + the full legacy section head (company, customer, bank)
-    // cannot physically fit one A4 sheet, so measurement authority must yield
-    // > 1 fitted page (the old override lied with a single overflowing page).
+    // The legacy config has sectionSpacing: 8, but with the CSS useMemo deps
+    // fix (§4 regression) corporate 14 image items genuinely fit one A4 page
+    // even with the legacy spacing. The plan must re-measure (not stay frozen)
+    // and confirm this reality.
     await expect
       .poll(async () => page.locator(`${PANEL} .pdf-page`).count(), { timeout: 25000 })
-      .toBeGreaterThanOrEqual(2);
+      .toBe(1);
 
     const geo = await measurePages(page);
+    expect(geo.pages).toBe(1);
     expect(geo.rows.reduce((a, b) => a + b, 0)).toBe(14);
     expect(geo.overflows).toEqual([]);
     geo.scrolls.forEach((scroll, i) => {

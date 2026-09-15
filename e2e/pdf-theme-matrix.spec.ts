@@ -121,15 +121,18 @@ function assertSheetFit(geo: { pages: number; scrolls: number[] }) {
 }
 
 // MEASURED page counts for 14 items per theme (measurement authority; the DOM
-// decides, not the old 340/420/250px heuristic). Corporate image rows cannot
-// compress below A4, and the bold theme's plain geometry leaves page 1 short.
+// decides, not the old 340/420/250px heuristic). Every theme fits 14 plain OR
+// image rows on one A4 page in dense profile — previously corporate image and
+// bold plain split to 2 pages because the themes' dense CSS never re-rendered
+// (stale useMemo deps), so the paginator measured normal-padding geometry and
+// the split was based on wrong sizes.
 const THEME_14_PAGES: Record<string, { plain: number; image: number }> = {
   modern: { plain: 1, image: 1 },
-  corporate: { plain: 1, image: 2 },
+  corporate: { plain: 1, image: 1 },
   classic: { plain: 1, image: 1 },
   minimal: { plain: 1, image: 1 },
   pro: { plain: 1, image: 1 },
-  bold: { plain: 2, image: 1 },
+  bold: { plain: 1, image: 1 },
   invoice: { plain: 1, image: 1 },
 };
 
@@ -259,12 +262,12 @@ test.describe('long content and downloads', () => {
     expect(countPhysicalPages(await downloadPdf(page))).toBe(1);
   });
 
-  test('corporate 14 image download matches the measured preview (2 physical pages)', async ({ page }) => {
+  test('corporate 14 image download matches the measured preview (1 physical page)', async ({ page }) => {
     test.setTimeout(180_000);
     await seedTheme(page, 'corporate');
     await seedQuote(page, 14, { images: true });
     await openPreview(page);
-    await settlePages(page, 2);
-    expect(countPhysicalPages(await downloadPdf(page))).toBe(2);
+    await settlePages(page, 1);
+    expect(countPhysicalPages(await downloadPdf(page))).toBe(1);
   });
 });

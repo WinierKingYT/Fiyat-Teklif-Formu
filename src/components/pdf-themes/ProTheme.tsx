@@ -285,7 +285,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
             min-height: 32px;
         }
         ` : ''}
-    `, [config, color]);
+    `, [config, color, density, denseImage]);
 
     const renderTable = (itemsToRender: QuoteItem[], startIndex: number) => {
         const isTr = (currentLocale || 'tr').startsWith('tr');

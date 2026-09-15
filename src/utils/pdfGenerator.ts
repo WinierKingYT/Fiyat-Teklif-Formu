@@ -326,6 +326,35 @@ const getEffectivePdfScale = (element: HTMLElement, requestedScale: number, maxC
     return Math.max(0.5, Math.min(requestedScale, Math.floor(maxCanvasDimension / maxDimension)));
 };
 
+// A4 reference width (210mm @ 96dpi CSS px): the width PDF pages are rendered at.
+const A4_REFERENCE_WIDTH_PX = 794;
+
+// Tracks pages whose width we temporarily forced to the A4 reference width so
+// the export canvas always has the physical sheet's aspect ratio.
+let restorePageWidths: (() => void) | null = null;
+
+/**
+ * Normalizes every PDF page element to the reference A4 width before capture.
+ * In split-screen the preview column is narrow (~300px), so the DOM page reflows
+ * to a canvas aspect that does NOT match the physical sheet and html2pdf silently
+ * tiles "one" page into several physical pages, breaking preview/export parity.
+ * Rendering at the reference A4 width gives the canvas the sheet's true aspect;
+ * in the full preview the page is already ~794px wide, so this is a no-op there.
+ * Must be balanced by restorePageWidths() (normally from generatePDF's finally).
+ */
+const pageWidthNormalizer = (pageElements: HTMLElement[]) => {
+    const saved = pageElements.map(p => ({ el: p, saved: p.style.width }));
+    for (const p of pageElements) {
+        p.style.width = `${A4_REFERENCE_WIDTH_PX}px`;
+    }
+    restorePageWidths = () => {
+        for (const { el, saved: w } of saved) {
+            el.style.width = w;
+        }
+        restorePageWidths = null;
+    };
+};
+
 const addCanvasToPdf = (pdf: PdfDocumentLike, canvas: HTMLCanvasElement, pageWidth: number, margin: number) => {
     if (canvas.width <= 0 || canvas.height <= 0) return;
     const innerWidth = Math.max(1, pageWidth - (margin * 2));
@@ -398,6 +427,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         const isIos = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
         const maxCanvasDim = isIos ? 4096 : 16384;
         const pageElements = getPdfPageElements(element);
+        pageWidthNormalizer(pageElements);
         const pageScales = pageElements.map(page => getEffectivePdfScale(page, qual.scale, maxCanvasDim));
         const effectiveScale = Math.max(...pageScales, 0.5);
         const { width: domWidthPx, height: domHeightPx } = getElementPixelBounds(element);
@@ -473,10 +503,12 @@ export const generatePDF = async (elementId: string, filename?: string, options:
             });
 
             let pdfBlob: Blob;
-            if (pageElements.length > 1) {
-                // Rendering the complete quote as one canvas makes the scale shrink
-                // with every additional page. Render each designed page separately
-                // so a long quote keeps the same print quality as a one-page quote.
+            {
+                // Always render each designed page separately so a single-page
+                // quote gets the same rasterize-per-page treatment as a multi-page
+                // one.  This eliminates html2canvas auto-pagination (the "includePageBreaks"
+                // path) which can silently split one DOM page into two physical pages,
+                // breaking preview/export parity.
                 const originalPageDisplays = pageElements.map(page => page.style.display);
                 const showOnlyPage = (pageToShow: HTMLElement) => {
                     pageElements.forEach((page, index) => {
@@ -495,8 +527,31 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                     .from(element);
                 try {
                     const firstCanvasWorker = firstWorker.toCanvas();
+                    const firstCanvas = await firstCanvasWorker.get('canvas') as unknown as HTMLCanvasElement;
                     const firstPdfWorker = firstCanvasWorker.toPdf();
                     const pdf = await firstPdfWorker.get('pdf') as unknown as PdfDocumentLike;
+
+                    // html2canvas may add ~100px of padding/bleed beyond the
+                    // actual page element, causing html2pdf's auto-tiling to
+                    // over-split a single DOM page into 2 physical pages. The
+                    // measurement authority already confirmed the content fits
+                    // one A4 sheet; collapse any over-tiled pages back to 1 and
+                    // re-add the full canvas fitted to the page width (the excess
+                    // below the page boundary is empty space that gets clipped).
+                    const rawPdf = pdf as unknown as {
+                        getNumberOfPages(): number;
+                        deletePage(n: number): void;
+                        setPage(n: number): void;
+                        setFillColor(r: number, g: number, b: number): void;
+                        rect(x: number, y: number, w: number, h: number, style: string): void;
+                    };
+                    while (rawPdf.getNumberOfPages() > 1) {
+                        rawPdf.deletePage(rawPdf.getNumberOfPages());
+                    }
+                    rawPdf.setPage(1);
+                    rawPdf.setFillColor(255, 255, 255);
+                    rawPdf.rect(0, 0, size.width, size.height, 'F');
+                    addCanvasToPdf(pdf, firstCanvas, size.width, margin);
 
                     for (let pageIndex = 1; pageIndex < pageElements.length; pageIndex++) {
                         showOnlyPage(pageElements[pageIndex]);
@@ -514,12 +569,6 @@ export const generatePDF = async (elementId: string, filename?: string, options:
                 } finally {
                     restorePageDisplays();
                 }
-            } else {
-                const worker = html2pdf()
-                    .set(buildOptions(effectiveScale, true) as unknown as Html2PdfOptions)
-                    .from(element);
-                pdfBlob = await worker.outputPdf('blob');
-                if (saveFile) await worker.save();
             }
             const realSizeKB = Math.round(pdfBlob.size / 1024);
 
@@ -547,6 +596,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         return undefined;
     } finally {
         removePageBreakStyles();
+        restorePageWidths?.();
     }
 };
 

@@ -133,22 +133,23 @@ async function downloadPdf(page: Page) {
 test.describe('measurement authority: legacy-guarded configs never re-produce the greedy 6/5/2 split', () => {
   test.describe.configure({ timeout: 180_000 });
 
-  test('corporate 13 image items + legacy sectionSpacing reject-key split by MEASURED geometry, never the greedy 6/5/2', async ({ page }) => {
+  test('corporate 13 image items + legacy sectionSpacing now fit ONE measured page, never the greedy 6/5/2', async ({ page }) => {
     // sectionSpacing: 8 is ignored by corporate rendering but made the OLD dense
     // guard bail (custom-spacing) → greedy fallback → [6,5,2]. This test fails if
-    // that fingerprint ever returns. 13 image rows cannot physically fit one A4
-    // sheet (dense measured ~1122px with the header), so measurement authority
-    // yields TWO fitted pages and the download reports the SAME two physical
-    // pages (preview/export parity, unlike the old heuristic's 1-page lie).
+    // that fingerprint ever returns. With the theme dense CSS deps fixed, the
+    // dense profile genuinely renders on the DOM, so 13 image rows + header +
+    // totals now MEASURE one fitted A4 sheet — never an over-split, and the
+    // download reports the SAME single physical page (preview/export parity).
     await seedConfig(page, { theme: 'corporate', sectionSpacing: 8 });
     await seedQuote(page, { images: true });
     await openPreview(page);
-    await settlePages(page, 2);
+    await settlePages(page, 1);
 
     await expect(page.locator(`${PANEL}.corporate-theme-container`).first()).toBeVisible();
     const geo = await measurePages(page);
     expect(geo.rows.reduce((a, b) => a + b, 0)).toBe(13);
     expect(geo.rows).not.toEqual([6, 5, 2]);
+    expect(geo.pages).toBe(1);
     for (const r of geo.rows) {
       expect(r).toBeGreaterThanOrEqual(1);
     }

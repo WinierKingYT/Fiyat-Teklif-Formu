@@ -260,7 +260,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
             height: 32px;
         }
         ` : ''}
-    `, [config, color]);
+    `, [config, color, density, denseImage]);
 
     const showImageCol = config.showTableImages && hasAnyImage;
 
