@@ -1,7 +1,6 @@
 import { useMemo, useRef, useLayoutEffect, useState, useCallback } from 'react';
 import { PAGE_SIZES } from '@/utils/pdfGenerator';
-import { OVERFLOW_TOLERANCE_PX, measurePdfPageGeometries, type PdfPageGeometry } from '@/utils/pdfLayoutMeasurement';
-import { chunkByCounts, moveOverflowRows, planChunkRowCounts, type PageCaps } from '@/utils/pdfPagination';
+import { OVERFLOW_TOLERANCE_PX, measurePdfPageGeometries, type PdfPageGeometry } from '@/utils/pdfLayoutMeasurement';import { chunkByCounts, moveOverflowRows, planChunkRowCounts, type PageCaps } from '@/utils/pdfPagination';
 import { buildDensityChunkOptions, chunkQuoteItems, DENSE_IMAGE_THEMES, hasValidItemContent, type DensitySource } from '@/utils/themeHelpers';
 
 /**
@@ -64,12 +63,21 @@ const donePlanCache = new Map<string, { chunks: unknown[][]; density: Pagination
  */
 const SINGLE_PAGE_SAFETY_PX = 2;
 
-/** Physical sheet height in px for the configured page size/orientation. */
-export function sheetHeightPx(config: Record<string, unknown>): number {
+/** Physical sheet size in mm for the configured page size/orientation. */
+export function sheetSizeMm(config: Record<string, unknown>): { widthMm: number; heightMm: number } {
     const key = typeof config.pageSize === 'string' ? (config.pageSize as keyof typeof PAGE_SIZES) : 'a4';
     const size = PAGE_SIZES[key] || PAGE_SIZES.a4;
-    const portraitHeight = config.pageOrientation === 'landscape' ? size.width : size.height;
-    return (portraitHeight * 96) / 25.4;
+    const landscape = config.pageOrientation === 'landscape';
+    return {
+        widthMm: landscape ? size.height : size.width,
+        heightMm: landscape ? size.width : size.height,
+    };
+}
+
+/** Physical sheet height in px for the configured page size/orientation. */
+export function sheetHeightPx(config: Record<string, unknown>): number {
+    const { heightMm } = sheetSizeMm(config);
+    return (heightMm * 96) / 25.4;
 }
 
 function contentFits(g: PdfPageGeometry, sheet: number, tol: number): boolean {
@@ -247,6 +255,11 @@ export function useMeasuredPagination<T>(
         const pages = measurePdfPageGeometries(el);
         if (pages.length === 0) return;
         const currentItems = itemsRef.current;
+        // Budget is the physical SHEET height, never derived from the page's live
+        // width: the preview panel can render the page at 517px or 746px depending
+        // on the split layout, and a width-derived budget would make the preview
+        // pack a different number of rows than the export surface does.
+        const budget = sheet;
 
         if (plan.stage === 'fit-normal' || plan.stage === 'fit-dense') {
             // Strict single-page acceptance: the export sheet is EXACTLY the
@@ -254,7 +267,7 @@ export function useMeasuredPagination<T>(
             // (font/html2canvas rounding), so "fits one page" must hold with real
             // headroom (SINGLE_PAGE_SAFETY_PX), never on the 24px preview-marker
             // tolerance that only exists for non-last pages.
-            if (contentFits(pages[0], sheet, -SINGLE_PAGE_SAFETY_PX)) {
+            if (contentFits(pages[0], budget, -SINGLE_PAGE_SAFETY_PX)) {
                 persistDone({ stage: 'done', chunks: [currentItems], density: plan.density, pass: 0 });
                 return;
             }
@@ -263,7 +276,7 @@ export function useMeasuredPagination<T>(
                 return;
             }
             // A single sheet is genuinely impossible — split by MEASURED geometry.
-            const caps = capsFromSinglePage(pages[0], sheet);
+            const caps = capsFromSinglePage(pages[0], budget);
             const counts = planChunkRowCounts(pages[0].rows.map((r) => r.height), caps, 2);
             setPlan({ stage: 'split', chunks: chunkByCounts(currentItems, counts), density: plan.density, pass: 0 });
             return;
@@ -275,7 +288,7 @@ export function useMeasuredPagination<T>(
             // budgets from that DOM and re-pack tightly across ALL pages (single-row
             // heights never carry the whole list, so never derive counts from page 0
             // alone — that silently dropped trailing items).
-            const caps = capsFromPages(pages, sheet);
+            const caps = capsFromPages(pages, budget);
             const heights = pages.flatMap((p) => p.rows.map((r) => r.height));
             const counts = planChunkRowCounts(heights, caps, 2);
             setPlan({ stage: 'split', chunks: chunkByCounts(currentItems, counts), density: plan.density, pass: 1 });
@@ -285,7 +298,7 @@ export function useMeasuredPagination<T>(
         if (plan.pass >= MAX_PASSES) {
             // Terminal safety: budgets and row heights are real measurements, so
             // the re-pack cannot overflow the physical sheet.
-            const caps = capsFromPages(pages, sheet);
+            const caps = capsFromPages(pages, budget);
             const heights = pages.flatMap((p) => p.rows.map((r) => r.height));
             const counts = planChunkRowCounts(heights, caps, 2);
             persistDone({ stage: 'done', chunks: chunkByCounts(currentItems, counts), density: plan.density, pass: plan.pass });
@@ -294,12 +307,12 @@ export function useMeasuredPagination<T>(
 
         // Verify & adjust: every real sheet overflow moves trailing rows forward.
         const heightsByPage = pages.map((p) => p.rows.map((r) => r.height));
-        const overflowByPage = pages.map((p) => Math.max(0, contentOverflow(p, sheet)));
+        const overflowByPage = pages.map((p) => Math.max(0, contentOverflow(p, budget)));
         const { chunks: moved, changed } = moveOverflowRows(plan.chunks, heightsByPage, overflowByPage);
         if (!changed) {
             persistDone({
                 stage: 'done',
-                chunks: maybeMergeLoneTail(pages, plan.chunks, sheet),
+                chunks: maybeMergeLoneTail(pages, plan.chunks, budget),
                 density: plan.density,
                 pass: plan.pass + 1,
             });

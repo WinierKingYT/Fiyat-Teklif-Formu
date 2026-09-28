@@ -160,7 +160,7 @@ const MinimalTheme: React.FC<PdfThemeProps> = (props) => {
 
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
-        <table className="minimal-table">
+                <table className="minimal-table" data-pdf-items-table="true">
             <thead>
                 <tr>
                     <th style={{ width: '30px', textAlign: 'center' }}>#</th>

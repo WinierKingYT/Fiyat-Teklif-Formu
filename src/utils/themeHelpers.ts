@@ -13,6 +13,38 @@ export const getAdjustedFontSize = (size: unknown, factor: number = 0.9, default
 };
 
 /**
+ * Splits a long visible PDF title into a two-level heading: a short "lead"
+ * line (what the quote is about) above a longer "detail" line (the subject +
+ * document type). Purely presentational — the stored title is untouched.
+ *
+ * The lead line greedily takes the leading words that fit within
+ * `LEAD_BUDGET_CHARS`, so:
+ *   "KURTARMA SERVİSİ MALZEME VE TEÇHİZAT FİYAT TEKLİFİ"
+ *     -> "KURTARMA SERVİSİ" / "MALZEME VE TEÇHİZAT FİYAT TEKLİFİ"
+ *   "FİYAT TEKLİFİ" (short) -> no split, stays a single line.
+ * No business name, locale keyword or document type is hardcoded, so the same
+ * rule works for every quote and every supported language.
+ */
+const LEAD_BUDGET_CHARS = 22;
+const MIN_SPLIT_LENGTH = 28;
+
+export function splitQuoteTitleLines(value: unknown): { lead: string; detail: string | null } {
+    const text = String(value ?? '').trim().replace(/\s+/g, ' ');
+    if (!text || text.length < MIN_SPLIT_LENGTH) return { lead: text, detail: null };
+    const words = text.split(' ');
+    if (words.length < 3) return { lead: text, detail: null };
+    let lead = words[0]!;
+    for (let i = 1; i < words.length - 1; i++) {
+        const candidate = `${lead} ${words[i]}`;
+        if (candidate.length > LEAD_BUDGET_CHARS) break;
+        lead = candidate;
+    }
+    const detail = words.slice(lead.split(' ').length).join(' ');
+    if (!detail) return { lead: text, detail: null };
+    return { lead, detail };
+}
+
+/**
  * Uppercases visible PDF titles with the locale-aware rules required by
  * Turkish dotted/dotless I characters (and the other supported quote
  * languages). The stored value remains unchanged for editing.

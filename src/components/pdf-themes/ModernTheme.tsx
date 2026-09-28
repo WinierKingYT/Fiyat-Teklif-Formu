@@ -1,8 +1,31 @@
 import React, { useMemo } from 'react';
-import { formatTaxOfficeDisplay, formatPdfTitle, formatIban, getCellPaddingForRowHeight, getDensityTableHeaderPadding, getDensityHeaderFontSize, getSectionSpacing, resolveTableDensity } from '@/utils/themeHelpers';
+import { formatTaxOfficeDisplay, formatPdfTitle, splitQuoteTitleLines, formatIban, getCellPaddingForRowHeight, getDensityTableHeaderPadding, getDensityHeaderFontSize, getSectionSpacing, resolveTableDensity } from '@/utils/themeHelpers';
 import { PdfWatermark, PdfPageNumber, PdfCustomFields } from './common';
 import { usePdfTheme } from './hooks/usePdfTheme';
 import type { QuoteItem, PdfThemeProps } from '@/context/quote/types';
+
+type EditableRenderer = (value: unknown, fieldKey: string, type?: string, className?: string) => React.ReactNode;
+
+/**
+ * Two-level quote heading. A long title is split presentationaly into a short
+ * lead line plus a smaller detail line; the stored title keeps its full value
+ * and both lines stay click-to-edit against the same `quoteTitle` field.
+ */
+const QuoteTitleHeading: React.FC<{ value: string; renderEditable: EditableRenderer }> = ({ value, renderEditable }) => {
+    const { lead, detail } = useMemo(() => splitQuoteTitleLines(value), [value]);
+    // A short title renders EXACTLY as before - no extra box, no metric change.
+    // That matters: single-page quotes clear the A4 fit check by only a few
+    // pixels, so any added box on the default title would push them to 2 pages.
+    if (!detail) {
+        return <div className="quote-title">{renderEditable(value, 'quoteTitle')}</div>;
+    }
+    return (
+        <div className="quote-title">
+            <span className="quote-title-lead">{renderEditable(lead, 'quoteTitle')}</span>
+            <span className="quote-title-detail">{renderEditable(detail, 'quoteTitle')}</span>
+        </div>
+    );
+};
 
 const ModernTheme: React.FC<PdfThemeProps> = (props) => {
     const {
@@ -107,6 +130,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             flex-direction: column;
             align-items: flex-start;
             flex: 1;
+            min-width: 0;
             padding-right: 1rem;
         }
 
@@ -148,6 +172,10 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             border: 1px solid #e2e8f0;
             border-left: 3px solid ${color};
             min-width: 190px;
+            /* A long title must never be able to eat the header: the box used to
+               grow to the title's max-content width (measured 472px of a 706px
+               content box) and crush .header-left down to 16px. */
+            max-width: 58%;
             flex-shrink: 0;
         }
 
@@ -158,6 +186,24 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
             margin-bottom: 0.35rem;
             text-transform: uppercase;
             letter-spacing: 0.03em;
+        }
+
+        /* Two-level heading (long titles only). Font sizes are inherited from
+           .quote-title rather than restated in rem so the two lines cannot
+           compound against each other. */
+        .modern-theme-container .quote-title-lead {
+            display: block;
+            line-height: 1.2;
+        }
+
+        .modern-theme-container .quote-title-detail {
+            display: block;
+            font-size: 0.78em;
+            font-weight: 600;
+            color: #475569;
+            letter-spacing: 0.06em;
+            line-height: 1.25;
+            margin-top: 0.15rem;
         }
 
         .modern-theme-container .quote-meta-line {
@@ -529,7 +575,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
     const currencySymbol = quoteData.currency === 'USD' ? '$' : quoteData.currency === 'EUR' ? '€' : quoteData.currency === 'GBP' ? '£' : '₺';
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
-        <table className="pdf-items-table">
+                <table className="pdf-items-table" data-pdf-items-table="true">
             <thead>
                 <tr>
                     <th style={{ width: '28px', textAlign: 'center' }}>#</th>
@@ -625,7 +671,7 @@ const ModernTheme: React.FC<PdfThemeProps> = (props) => {
                                 )}
                             </div>
                             <div className="quote-info-box">
-                                <div className="quote-title">{renderEditable(formatPdfTitle(quoteData.title || config.title || t.quoteTitle, quoteData.language), 'quoteTitle')}</div>
+                                <QuoteTitleHeading value={formatPdfTitle(quoteData.title || config.title || t.quoteTitle, quoteData.language)} renderEditable={renderEditable} />
                                 {quoteData.number && (
                                     <div className="quote-meta-line"><strong>{t.quoteNumber || 'Teklif No'}:</strong> <span style={{ fontWeight: 600, color: color }}>#{quoteData.number}</span></div>
                                 )}

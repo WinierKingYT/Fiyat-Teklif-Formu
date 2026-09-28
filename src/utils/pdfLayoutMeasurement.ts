@@ -35,6 +35,9 @@ export interface PdfPageMeasurement {
     firstRowTop: number | null;
     /** Bottom edge (top + height) of the last item row, or null. */
     lastRowBottom: number | null;
+    /** Border-box width of the page in CSS px — the exporter maps this onto the
+     *  full physical sheet width, so the vertical sheet budget depends on it. */
+    pageWidthPx: number;
 }
 
 /**
@@ -55,9 +58,15 @@ export function offsetTopRelativeToPage(el: Element, page: HTMLElement): number 
     return top;
 }
 
-/** The quote's ITEMS table (the one with a <thead>), or null. Measurement must
- *  never fall back to blind `tbody tr`: summary/totals tables also carry rows. */
+/** Explicit marker every theme puts on its ITEMS table. */
+export const ITEMS_TABLE_SELECTOR = '[data-pdf-items-table="true"]';
+
+/** The quote's ITEMS table, or null. Measurement must never fall back to blind
+ *  `tbody tr`: summary/totals tables also carry rows. The explicit marker wins;
+ *  the `table thead` probe stays as the fallback for third-party/custom themes. */
 export function findItemsTable(page: HTMLElement): HTMLTableElement | null {
+    const marked = page.querySelector(ITEMS_TABLE_SELECTOR);
+    if (marked) return marked.closest('table') as HTMLTableElement | null;
     const thead = page.querySelector('table thead');
     return thead ? (thead.closest('table') as HTMLTableElement | null) : null;
 }
@@ -92,6 +101,7 @@ export function measurePdfPage(page: HTMLElement, pageIndex: number): PdfPageMea
         rowCount: rows.length,
         firstRowTop: first ? first.top : null,
         lastRowBottom: last ? last.bottom : null,
+        pageWidthPx: page.offsetWidth,
     };
 }
 
@@ -123,8 +133,17 @@ export interface PdfPageGeometry extends PdfPageMeasurement {
      *  Final page (has `.bottom-section`): the section's own height (it is
      *  flex-pinned via margin-top:auto, so position-based math would count the
      *  elastic blank). Continuation page: the note block that follows the table
-     *  (table.nextElementSibling), measured position-based from the last row. */
+     *  (table.nextElementSibling), measured as its OWN outer box height so the
+     *  wrapper's elastic `flex: 1` slack is never charged to the budget. */
     belowTable: number | null;
+}
+
+/** Outer box height (margins + border box) of an element, transform-immune. */
+function outerHeight(el: HTMLElement): number {
+    const cs = getComputedStyle(el);
+    const mt = parseFloat(cs.marginTop) || 0;
+    const mb = parseFloat(cs.marginBottom) || 0;
+    return mt + el.offsetHeight + mb;
 }
 
 function belowRowsOverhead(page: HTMLElement, lastRowBottom: number | null): number {
@@ -134,7 +153,14 @@ function belowRowsOverhead(page: HTMLElement, lastRowBottom: number | null): num
     const table = findItemsTable(page);
     const note = table ? (table.nextElementSibling as HTMLElement | null) : null;
     if (note && note.textContent && note.textContent.trim()) {
-        return Math.max(0, offsetTopRelativeToPage(note, page) + note.offsetHeight - lastRowBottom);
+        // The note block's OWN height — never the residual distance down to the
+        // page bottom. The items wrapper is `flex: 1`, so the slack between the
+        // last row and the note is elastic free space that the rows themselves
+        // are meant to consume. Charging that slack to `belowTable` made the
+        // overhead grow as a page got SPARSER, which shrank the first page's
+        // budget, which kept the first page sparse: a self-reinforcing collapse
+        // that left page 1 mostly empty while page 2 stayed full.
+        return outerHeight(note);
     }
     return 0;
 }
@@ -147,7 +173,9 @@ export function measurePdfPageGeometry(page: HTMLElement, pageIndex: number): Pd
     const lastRowBottom = rows.length > 0 ? rows[rows.length - 1].bottom : null;
     let theadHeight: number | null = null;
     if (rows.length > 0) {
-        const thead = page.querySelector('table thead');
+        // From the ITEMS table, never a blind `table thead` probe: a summary or
+        // totals table can also carry a <thead> and would poison the budget.
+        const thead = findItemsTable(page)?.querySelector('thead');
         theadHeight = thead ? (thead as HTMLElement).offsetHeight : null;
     }
     return {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, getExportBlockReason, resolveSinglePageDensity, diagnoseSinglePageDensity, buildDensityChunkOptions, DENSE_IMAGE_THEMES } from '@/utils/themeHelpers';
+import { getAdjustedFontSize, chunkQuoteItems, formatIban, formatTaxOfficeDisplay, formatContactItems, formatPdfTitle, splitQuoteTitleLines, getExportBlockReason, resolveSinglePageDensity, diagnoseSinglePageDensity, buildDensityChunkOptions, DENSE_IMAGE_THEMES } from '@/utils/themeHelpers';
 
 describe('getAdjustedFontSize', () => {
     it('should return default for null/undefined', () => {

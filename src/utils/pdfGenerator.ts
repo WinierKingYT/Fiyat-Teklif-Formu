@@ -359,22 +359,45 @@ const A4_REFERENCE_WIDTH_PX = 794;
 let restorePageWidths: (() => void) | null = null;
 
 /**
- * Normalizes every PDF page element to the reference A4 width before capture.
+ * Normalizes the quote root to the reference A4 width before capture.
  * In split-screen the preview column is narrow (~300px), so the DOM page reflows
  * to a canvas aspect that does NOT match the physical sheet and html2pdf silently
  * tiles "one" page into several physical pages, breaking preview/export parity.
  * Rendering at the reference A4 width gives the canvas the sheet's true aspect;
- * in the full preview the page is already ~794px wide, so this is a no-op there.
+ * in the full preview the root is already ~794px wide, so this is a no-op there.
+ *
+ * The width is normalized on the ROOT, never on the page elements: the root
+ * carries its own padding, so forcing a page to 794px inside a 746px content box
+ * overflowed the root by the full padding pair (measured 818px scrollWidth on a
+ * 794px root, i.e. 24px past the right sheet edge) and pushed the page's own
+ * right padding off the exported canvas. Widening the root instead keeps every
+ * page at exactly its natural width while the canvas keeps the sheet's aspect.
  * Must be balanced by restorePageWidths() (normally from generatePDF's finally).
  */
-const pageWidthNormalizer = (pageElements: HTMLElement[]) => {
-    const saved = pageElements.map(p => ({ el: p, saved: p.style.width }));
-    for (const p of pageElements) {
-        p.style.width = `${A4_REFERENCE_WIDTH_PX}px`;
+const pageWidthNormalizer = (root: HTMLElement, pageElements: HTMLElement[]) => {
+    if (root.classList.contains('pdf-page')) return;
+    const savedRootWidth = root.style.width;
+    const savedRootMaxWidth = root.style.maxWidth;
+    const savedPages = pageElements.map((p) => ({
+        el: p,
+        width: p.style.width,
+        maxWidth: p.style.maxWidth,
+        boxSizing: p.style.boxSizing,
+    }));
+    root.style.width = `${A4_REFERENCE_WIDTH_PX}px`;
+    root.style.maxWidth = `${A4_REFERENCE_WIDTH_PX}px`;
+    for (const { el } of savedPages) {
+        el.style.width = '100%';
+        el.style.maxWidth = '100%';
+        el.style.boxSizing = 'border-box';
     }
     restorePageWidths = () => {
-        for (const { el, saved: w } of saved) {
-            el.style.width = w;
+        root.style.width = savedRootWidth;
+        root.style.maxWidth = savedRootMaxWidth;
+        for (const { el, width, maxWidth, boxSizing } of savedPages) {
+            el.style.width = width;
+            el.style.maxWidth = maxWidth;
+            el.style.boxSizing = boxSizing;
         }
         restorePageWidths = null;
     };
@@ -462,7 +485,7 @@ export const generatePDF = async (elementId: string, filename?: string, options:
         const maxCanvasDim = isIos ? 4096 : 16384;
 
         const pageElements = getPdfPageElements(element);
-        pageWidthNormalizer(pageElements);
+        pageWidthNormalizer(element, pageElements);
         const pageScales = pageElements.map(page => getEffectivePdfScale(page, qual.scale, maxCanvasDim));
         const effectiveScale = Math.max(...pageScales, 0.5);
         const { width: domWidthPx, height: domHeightPx } = getElementPixelBounds(element);

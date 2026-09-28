@@ -267,7 +267,7 @@ const ClassicTheme: React.FC<PdfThemeProps> = (props) => {
     const renderTable = (itemsToRender: QuoteItem[], startIndex: number) => {
         const isTr = (currentLocale || 'tr').startsWith('tr');
         return (
-            <table className="classic-table">
+                <table className="classic-table" data-pdf-items-table="true">
                 <thead>
                     <tr>
                         <th style={{ width: '28px', textAlign: 'center' }}>#</th>

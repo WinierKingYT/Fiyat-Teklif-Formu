@@ -256,7 +256,7 @@ const BoldTheme: React.FC<PdfThemeProps> = (props) => {
     `, [color, config, density, denseImage]);
 
     const renderTable = (tableItems: QuoteItem[], startIndex: number) => (
-        <table className="bold-table">
+                <table className="bold-table" data-pdf-items-table="true">
             <thead>
                 <tr>
                     <th style={{ width: '35px', textAlign: 'center' }}>#</th>

@@ -290,7 +290,7 @@ const ProTheme: React.FC<PdfThemeProps> = (props) => {
     const renderTable = (itemsToRender: QuoteItem[], startIndex: number) => {
         const isTr = (currentLocale || 'tr').startsWith('tr');
         return (
-            <table className="pro-table">
+                <table className="pro-table" data-pdf-items-table="true">
                 <thead>
                     <tr>
                         <th style={{ width: '28px', textAlign: 'center' }}>#</th>

@@ -3,8 +3,25 @@ import { expect, test, type Page } from '@playwright/test';
 
 export const PANEL = '#printable-quote-container-panel';
 export const A4_PX = 1122.5;
+/** A4 portrait physical sheet in mm — the exporter maps a page's own width onto this. */
+export const A4_MM = { width: 210, height: 297 };
 // Same 24px rule as usePdfPageObserver (preview marker ::after on non-last pages).
 export const TOLERANCE_PX = 24;
+
+/**
+ * The vertical capacity in PAGE pixels for a page rendered `pageWidthPx` wide.
+ *
+ * The exporter scales a page element's own width onto the full physical sheet,
+ * so a 746px page (default 24px page margins) has ~1055px of paper height, not
+ * the 1122.5px a full 794px-wide A4 has. Informational only: the paginator
+ * deliberately budgets the plain sheet height, because the preview panel can
+ * lay the page out at 517px or 746px depending on the split layout and a
+ * width-derived budget would make the preview pack a different row count than
+ * the export surface does.
+ */
+export function realSheetBudgetPx(pageWidthPx: number, sheet = A4_MM): number {
+    return (sheet.height * pageWidthPx) / sheet.width;
+}
 
 export interface PagesGeo {
     pages: number;
@@ -17,22 +34,27 @@ export interface PagesGeo {
     headroom: number[];
     /** Item rows rendered per page (sum must equal the quote item count). */
     rows: number[];
+    /** Rendered width of each page in CSS px. */
+    widths: number[];
+    /** Real, width-derived vertical budget per page. */
+    budgets: number[];
 }
 
 export async function measurePages(page: Page, panel: string = PANEL, tol: number = TOLERANCE_PX): Promise<PagesGeo> {
     return page.evaluate(
-        ({ panel, tol }) => {
+        ({ panel, tol, sheetW, sheetH }) => {
             // Split-screen live preview can mount two in-sync PdfPreviewPanel
             // copies; always measure the FIRST panel element (rows/pages would
             // otherwise be counted twice).
             const root = document.querySelector(panel) as HTMLElement | null;
-            if (!root) return { pages: 0, heights: [], scrolls: [], overflows: [], headroom: [], rows: [] };
+            if (!root) return { pages: 0, heights: [], scrolls: [], overflows: [], headroom: [], rows: [], widths: [], budgets: [] };
             const pages = Array.from(root.querySelectorAll('.pdf-page')) as HTMLElement[];
             const itemRows = (p: HTMLElement) => {
-                const itemTable = p.querySelector('table thead')?.closest('table');
+                const marked = p.querySelector('[data-pdf-items-table="true"]');
+                const itemTable = marked ? marked.closest('table') : p.querySelector('table thead')?.closest('table');
                 return itemTable ? itemTable.querySelectorAll('tbody tr').length : 0;
             };
-            const sheet = 1122.5;
+            const sheet = (sheetH * 96) / 25.4;
             return {
                 pages: pages.length,
                 heights: pages.map((p) => p.offsetHeight),
@@ -42,9 +64,11 @@ export async function measurePages(page: Page, panel: string = PANEL, tol: numbe
                     .filter((i) => i > 0),
                 headroom: pages.map((p) => p.scrollHeight - sheet),
                 rows: pages.map(itemRows),
+                widths: pages.map((p) => p.offsetWidth),
+                budgets: pages.map((p) => (sheetH * p.offsetWidth) / sheetW),
             };
         },
-        { panel, tol }
+        { panel, tol, sheetW: A4_MM.width, sheetH: A4_MM.height }
     );
 }
 
@@ -52,6 +76,14 @@ export function assertSheetFit(geo: PagesGeo) {
     geo.scrolls.forEach((scroll, i) => {
         const cap = A4_PX + (i < geo.pages - 1 ? TOLERANCE_PX : 0);
         expect(scroll).toBeLessThanOrEqual(cap);
+    });
+}
+
+/** Every page must sit fully inside its own rendered width (no export overflow). */
+export function assertNoHorizontalOverflow(geo: PagesGeo, rootScrollWidth: number, rootOffsetWidth: number) {
+    expect(rootScrollWidth).toBeLessThanOrEqual(rootOffsetWidth);
+    geo.widths.forEach((w) => {
+        expect(w).toBeLessThanOrEqual(rootOffsetWidth);
     });
 }
 
@@ -92,6 +124,18 @@ export async function waitPageCount(page: Page, predicate: (n: number) => boolea
         .poll(async () => countPageNodes(page), { timeout })
         .toSatisfy(predicate);
     return value;
+}
+
+export async function waitPageNodesStable(page: Page, panel: string = PANEL, timeout = 30000): Promise<number> {
+    let previous = -1;
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+        const current = await countPageNodes(page, panel);
+        if (current > 0 && current === previous) return current;
+        previous = current;
+        await page.waitForTimeout(400);
+    }
+    return previous;
 }
 
 export async function countPageNodes(page: Page, panel: string = PANEL): Promise<number> {
